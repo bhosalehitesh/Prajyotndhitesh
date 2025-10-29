@@ -1,7 +1,7 @@
-import OrderCard from './components/OrderCard';
+import OrderCard from '../../components/orders/OrderCard';
 import React from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import type { Order } from './components/OrderCard';
+import type { Order } from '../../components/orders/OrderCard';
 
 // Dummy data for pending orders
 const dummyPendingOrders: Order[] = [

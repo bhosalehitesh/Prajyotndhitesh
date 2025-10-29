@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { View, FlatList, StyleSheet, RefreshControl, Text } from "react-native";
-import OrderCard from "./components/OrderCard";
-import type { Order } from "./components/OrderCard";
+import OrderCard from "../../components/orders/OrderCard";
+import type { Order } from "../../components/orders/OrderCard";
 
 // Dummy data for shipped orders
 const dummyShippedOrders: Order[] = [

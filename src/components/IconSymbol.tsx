@@ -1,58 +1,32 @@
 import React from 'react';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Text, View } from 'react-native';
+
+type IconName = 'bag' | 'tag' | 'folder' | string;
 
 interface IconSymbolProps {
-  name: string;
+  name: IconName;
   size?: number;
   color?: string;
 }
 
-// SF Symbol to Ionicons mapping for all icons
-const SF_TO_IONICONS_MAPPING: {[key: string]: string} = {
-  // Tab bar icons
-  'house.fill': 'home',
-  'square.grid.2x2': 'grid',
-  'chart.bar.fill': 'bar-chart',
-  
-  // Catalog icons
-  'list.bullet': 'list',
-  'heart': 'heart',
-  'plus': 'add',
-  'magnifyingglass': 'search',
-  'person': 'person',
-  
-  // Custom icons for Catalog
-  'shopping-bag': 'bag-outline',
-  'tag-icon': 'pricetag-outline',
-  'folder-icon': 'folder-outline',
-  
-  // Products, Categories, Collections icons
-  'bag': 'bag-outline',
-  'tag': 'pricetag-outline',
-  'folder': 'folder-outline',
-  
-  // Navigation and UI icons
-  'chevron-back': 'chevron-back',
-  'filter': 'options-outline',
-  'swap-vertical': 'swap-vertical',
+const mapToGlyph = (name: IconName) => {
+  switch (name) {
+    case 'bag':
+      return '👜';
+    case 'tag':
+      return '🏷️';
+    case 'folder':
+      return '📁';
+    default:
+      return '◻️';
+  }
 };
 
-const IconSymbol: React.FC<IconSymbolProps> = ({
-  name,
-  size = 24,
-  color = '#333333',
-}) => {
-  // Get the Ionicons name
-  const ioniconsName = SF_TO_IONICONS_MAPPING[name] || name;
-
+const IconSymbol: React.FC<IconSymbolProps> = ({ name, size = 18, color = '#6B7280' }) => {
   return (
-    <Ionicons 
-      name={ioniconsName as any}
-      size={size}
-      color={color}
-    />
+    <Text style={{ fontSize: size, color }}>{mapToGlyph(name)}</Text>
   );
 };
 
 export default IconSymbol;
+

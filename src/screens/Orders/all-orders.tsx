@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, FlatList, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
-import OrderCard from './components/OrderCard';
-import type { Order } from './components/OrderCard';
+import OrderCard from '../../components/orders/OrderCard';
+import type { Order } from '../../components/orders/OrderCard';
 // import Icon from "react-native-vector-icons/Ionicons";
 
 // Dummy data for pending orders
