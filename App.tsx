@@ -18,6 +18,13 @@ import CatalogScreen from './src/screens/Catalog/CatalogScreen';
 import AnalyticsScreen from './src/screens/Analytics/AnalyticsScreen';
 import ProfileScreen from './src/screens/Profile/ProfileScreen';
 import ProductsScreen from './src/screens/Catalog/products/ProductsScreen';
+import AddProductScreen from './src/screens/Catalog/products/AddProductScreen';
+import CategoriesScreen from './src/screens/Catalog/categories/CategoriesScreen';
+import AddCategoryScreen from './src/screens/Catalog/categories/AddCategoryScreen';
+import CollectionsScreen from './src/screens/Catalog/collections/CollectionsScreen';
+import AddCollectionScreen from './src/screens/Catalog/collections/AddCollectionScreen';
+import SelectProductsScreen from './src/screens/Catalog/collections/SelectProductsScreen';
+import StoreAppearanceScreen from './src/screens/StoreAppearance/StoreAppearanceScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -28,6 +35,14 @@ function CatalogStack() {
     <Stack.Navigator screenOptions={{headerShown: false}}>
       <Stack.Screen name="CatalogMain" component={CatalogScreen} />
       <Stack.Screen name="Products" component={ProductsScreen} />
+      <Stack.Screen name="AddProduct" component={AddProductScreen} />
+      <Stack.Screen name="Categories" component={CategoriesScreen} />
+      <Stack.Screen name="AddCategory" component={AddCategoryScreen} />
+      <Stack.Screen name="EditCategory" component={AddCategoryScreen} />
+      <Stack.Screen name="Collections" component={CollectionsScreen} />
+      <Stack.Screen name="AddCollection" component={AddCollectionScreen} />
+      <Stack.Screen name="EditCollection" component={AddCollectionScreen} />
+      <Stack.Screen name="SelectProducts" component={SelectProductsScreen} />
     </Stack.Navigator>
   );
 }
@@ -61,7 +76,8 @@ function CustomTabBar({state, descriptors, navigation}: any) {
         };
 
         const getIcon = (routeName: string, isFocused: boolean) => {
-          const iconColor = isFocused ? '#007AFF' : '#888888';
+          // Icons are white for active, light gray for inactive on dark background
+          const iconColor = isFocused ? '#FFFFFF' : '#D0D0D0';
           
           switch (routeName) {
             case 'Home':
@@ -140,20 +156,37 @@ function CustomTabBar({state, descriptors, navigation}: any) {
   );
 }
 
+// Main Stack Navigator (includes tabs + modal screens)
+function MainStack() {
+  return (
+    <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Screen name="MainTabs" component={TabNavigator} />
+      <Stack.Screen name="StoreAppearance" component={StoreAppearanceScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Tab Navigator
+function TabNavigator() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+      }}>
+      <Tab.Screen name="Home" component={HomeScreen} options={{tabBarLabel: 'Home'}} />
+      <Tab.Screen name="Orders" component={OrdersScreen} options={{tabBarLabel: 'My Orders'}} />
+      <Tab.Screen name="Catalog" component={CatalogStack} options={{tabBarLabel: 'Catalog'}} />
+      <Tab.Screen name="Analytics" component={AnalyticsScreen} options={{tabBarLabel: 'Analytics'}} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{tabBarLabel: 'Profile'}} />
+    </Tab.Navigator>
+  );
+}
+
 function App(): JSX.Element {
   return (
     <NavigationContainer>
-      <Tab.Navigator
-        tabBar={(props) => <CustomTabBar {...props} />}
-        screenOptions={{
-          headerShown: false,
-        }}>
-        <Tab.Screen name="Home" component={HomeScreen} options={{tabBarLabel: 'Home'}} />
-        <Tab.Screen name="Orders" component={OrdersScreen} options={{tabBarLabel: 'My Orders'}} />
-        <Tab.Screen name="Catalog" component={CatalogStack} options={{tabBarLabel: 'Catalog'}} />
-        <Tab.Screen name="Analytics" component={AnalyticsScreen} options={{tabBarLabel: 'Analytics'}} />
-        <Tab.Screen name="Profile" component={ProfileScreen} options={{tabBarLabel: 'Profile'}} />
-      </Tab.Navigator>
+      <MainStack />
     </NavigationContainer>
   );
 }
@@ -183,9 +216,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    backgroundColor: '#800040',
+    borderTopWidth: 0,
     height: 60,
     paddingBottom: 5,
   },
@@ -301,13 +333,14 @@ const styles = StyleSheet.create({
     borderRadius: 9,
   },
   tabLabel: {
-    fontSize: 10,
-    color: '#888888',
-    marginTop: 2,
+    fontSize: 11,
+    color: '#D0D0D0',
+    marginTop: 4,
+    fontWeight: '400',
   },
   focusedTabLabel: {
-    color: '#007AFF',
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontWeight: '400',
   },
 });
 
