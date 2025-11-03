@@ -225,7 +225,7 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
               <TouchableOpacity
                 style={styles.menuButton}
                 onPress={() => handleMenuPress(collection.id)}>
-                <IconSymbol name="ellipsis-vertical" size={20} color="#6B7280" />
+                <IconSymbol name="ellipsis-vertical" size={20} color="#6c757d" />
               </TouchableOpacity>
             </View>
             
@@ -235,8 +235,8 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
               <Switch
                 value={collection.hideFromWebsite}
                 onValueChange={value => toggleHideFromWebsite(collection.id, value)}
-                trackColor={{false: '#D1D5DB', true: '#800040'}}
-                thumbColor={collection.hideFromWebsite ? '#FFFFFF' : '#F3F4F6'}
+                trackColor={{false: '#D1D5DB', true: '#e61580'}}
+                thumbColor={collection.hideFromWebsite ? '#FFFFFF' : '#f8f9fa'}
                 ios_backgroundColor="#D1D5DB"
               />
             </View>
@@ -458,12 +458,12 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingHorizontal: 16,
     paddingVertical: 12,
     height: 56,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#dee2e6',
   },
   searchInput: {
     flex: 1,
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   },
   collectionCount: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#6c757d',
   },
   menuButton: {
     padding: 8,
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#dee2e6',
   },
   toggleLabel: {
     fontSize: 14,
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     bottom: 80,
     left: 16,
     right: 16,
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#dee2e6',
   },
   actionRowText: {
     fontSize: 16,
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#6B7280',
+    backgroundColor: '#6c757d',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   shareCancelButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

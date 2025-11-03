@@ -252,7 +252,7 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
               <TouchableOpacity
                 style={styles.changeLogoButton}
                 onPress={() => setUploadLogoModalOpen(true)}>
-                <IconSymbol name="pencil" size={16} color="#800040" />
+                <IconSymbol name="pencil" size={16} color="#e61580" />
                 <Text style={styles.changeLogoText}>Change Logo</Text>
               </TouchableOpacity>
             </View>
@@ -260,7 +260,7 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
             <TouchableOpacity
               style={styles.uploadLogoButton}
               onPress={() => setUploadLogoModalOpen(true)}>
-              <IconSymbol name="add" size={24} color="#800040" />
+              <IconSymbol name="add" size={24} color="#e61580" />
               <Text style={styles.uploadLogoText}>Upload Logo</Text>
             </TouchableOpacity>
           )}
@@ -341,7 +341,7 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   },
   infoBannerLink: {
     fontSize: 14,
-    color: '#800040',
+    color: '#e61580',
     fontWeight: '500',
   },
   section: {
@@ -428,13 +428,13 @@ const styles = StyleSheet.create({
   },
   demoLinkText: {
     fontSize: 14,
-    color: '#800040',
+    color: '#e61580',
     fontWeight: '500',
   },
   previewContainer: {
     position: 'relative',
     marginBottom: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 16,
     overflow: 'visible',
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
   },
   desktopLogo: {
     flex: 1,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   shopNowButton: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   mobileHeader: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     padding: 8,
     alignItems: 'center',
   },
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   mobileShopNowButton: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   },
   previewButton: {
     borderWidth: 2,
-    borderColor: '#800040',
+    borderColor: '#e61580',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   previewButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#800040',
+    color: '#e61580',
   },
   logoDescription: {
     fontSize: 14,
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#800040',
+    borderColor: '#e61580',
     borderStyle: 'dashed',
     borderRadius: 8,
     paddingVertical: 20,
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   uploadLogoText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#800040',
+    color: '#e61580',
   },
   logoPreviewContainer: {
     alignItems: 'center',
@@ -607,12 +607,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#800040',
+    borderColor: '#e61580',
   },
   changeLogoText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#800040',
+    color: '#e61580',
   },
   saveButtonContainer: {
     paddingHorizontal: 20,
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E2E8F0',
   },
   saveButton: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   modalUploadButton: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -692,7 +692,7 @@ const styles = StyleSheet.create({
   },
   modalCameraButton: {
     borderWidth: 2,
-    borderColor: '#800040',
+    borderColor: '#e61580',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
   modalCameraButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#800040',
+    color: '#e61580',
   },
 });
 

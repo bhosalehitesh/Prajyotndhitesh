@@ -194,7 +194,7 @@ function App(): JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
   },
   mainContent: {
     flex: 1,
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     borderTopWidth: 0,
     height: 60,
     paddingBottom: 5,

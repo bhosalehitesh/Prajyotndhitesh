@@ -72,7 +72,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   };
 
   const handleConfigPress = (config: typeof data.storeConfiguration[0]) => {
-    navigation.navigate(config.route);
+    // Special handling for Collections - navigate to Catalog tab then Collections screen
+    if (config.route === 'Collections') {
+      navigation.navigate('Catalog', { screen: 'Collections' });
+    } else {
+      navigation.navigate(config.route);
+    }
   };
 
   const handleHelpPress = (help: typeof data.helpOptions[0]) => {
@@ -253,7 +258,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
                 style={styles.configItem}
                 onPress={() => handleConfigPress(config)}>
                 <View style={styles.configIconContainer}>
-                  <IconSymbol name={config.icon} size={28} color="#800040" />
+                  <IconSymbol name={config.icon} size={28} color="#e61580" />
                 </View>
                 <Text style={styles.configItemText}>{config.title}</Text>
               </TouchableOpacity>
@@ -271,7 +276,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
                 style={styles.helpItem}
                 onPress={() => handleHelpPress(help)}>
                 <View style={styles.helpIconContainer}>
-                  <IconSymbol name={help.icon} size={28} color="#800040" />
+                  <IconSymbol name={help.icon} size={28} color="#e61580" />
                 </View>
                 <Text style={styles.helpItemText}>{help.title}</Text>
               </TouchableOpacity>
@@ -293,7 +298,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8f9fa',
   },
   scrollView: {
     flex: 1,
@@ -304,7 +309,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerSection: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingTop: 20,
     paddingBottom: 60,
     paddingHorizontal: 20,
@@ -348,7 +353,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -421,7 +426,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     borderRadius: 4,
   },
   tasksList: {
@@ -462,7 +467,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   featureHeader: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     padding: 20,
     minHeight: 120,
     justifyContent: 'center',
@@ -511,7 +516,7 @@ const styles = StyleSheet.create({
   featureActionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#800040',
+    color: '#e61580',
   },
   carouselDots: {
     flexDirection: 'row',

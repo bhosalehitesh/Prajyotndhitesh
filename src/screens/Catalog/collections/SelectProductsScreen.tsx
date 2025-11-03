@@ -226,12 +226,12 @@ const SelectProductsScreen: React.FC<SelectProductsScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingHorizontal: 16,
     paddingVertical: 12,
     height: 56,
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#dee2e6',
   },
   searchInput: {
     flex: 1,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   selectedCountText: {
     fontSize: 14,
-    color: '#800040',
+    color: '#e61580',
     fontWeight: '500',
   },
   content: {
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#6c757d',
     marginTop: 12,
   },
   productCard: {
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   productCardSelected: {
-    borderColor: '#800040',
+    borderColor: '#e61580',
     backgroundColor: '#EFF6FF',
   },
   productLeft: {
@@ -329,8 +329,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#800040',
-    borderColor: '#800040',
+    backgroundColor: '#e61580',
+    borderColor: '#e61580',
   },
   productImageContainer: {
     marginRight: 12,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   },
   productMrp: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#6c757d',
     textDecorationLine: 'line-through',
     marginRight: 8,
   },
@@ -414,12 +414,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },
   saveButton: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

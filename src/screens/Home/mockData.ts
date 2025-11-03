@@ -56,7 +56,7 @@ export const mockHomeData: HomeScreenData = {
       badge: 'New!',
       actionText: 'Setup Google Analytics',
       actionRoute: 'GoogleAnalytics',
-      backgroundColor: '#800040',
+      backgroundColor: '#e61580',
     },
     // Add more feature items as needed
   ],

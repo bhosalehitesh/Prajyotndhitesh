@@ -192,7 +192,7 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
             <TouchableOpacity
               style={styles.menuButton}
               onPress={() => handleMenuPress(category.id)}>
-              <IconSymbol name="ellipsis-vertical" size={20} color="#6B7280" />
+              <IconSymbol name="ellipsis-vertical" size={20} color="#6c757d" />
             </TouchableOpacity>
           </View>
         ))}
@@ -408,7 +408,7 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#dee2e6',
   },
   searchInput: {
     flex: 1,
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   },
   categoryCount: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#6c757d',
   },
   menuButton: {
     padding: 8,
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     bottom: 80,
     left: 16,
     right: 16,
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#dee2e6',
   },
   actionRowText: {
     fontSize: 16,
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#6B7280',
+    backgroundColor: '#6c757d',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   shareCancelButton: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

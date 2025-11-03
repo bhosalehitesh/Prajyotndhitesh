@@ -64,7 +64,7 @@ const SF_TO_IONICONS_MAPPING: {[key: string]: string} = {
   'eye': 'eye-outline',
   'open-outline': 'open-outline',
   'storefront': 'storefront-outline',
-  'palette': 'palette-outline',
+  'palette': 'color-palette-outline',
   'card': 'card-outline',
   'car': 'car-outline',
   'help-circle': 'help-circle-outline',
@@ -73,7 +73,7 @@ const SF_TO_IONICONS_MAPPING: {[key: string]: string} = {
   'download-outline': 'download-outline',
 };
 
-const IconSymbol: React.FC<IconSymbolProps> = ({ name, size = 18, color = '#6B7280' }) => {
+const IconSymbol: React.FC<IconSymbolProps> = ({ name, size = 18, color = '#6c757d' }) => {
   // Get the Ionicons name from mapping, or use the name directly if not mapped
   const iconName = SF_TO_IONICONS_MAPPING[name] || name;
   

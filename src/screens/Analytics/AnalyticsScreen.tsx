@@ -852,7 +852,7 @@ const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
@@ -891,7 +891,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: '#800040',
+    borderBottomColor: '#e61580',
   },
   tabText: {
     fontSize: 16,
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   tabTextActive: {
-    color: '#800040',
+    color: '#e61580',
     fontWeight: '600',
   },
   dateContainer: {
@@ -1065,8 +1065,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#800040',
-    borderColor: '#800040',
+    backgroundColor: '#e61580',
+    borderColor: '#e61580',
   },
   statusOptionText: {
     fontSize: 16,
@@ -1088,12 +1088,12 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     fontSize: 16,
-    color: '#800040',
+    color: '#e61580',
     fontWeight: '600',
   },
   applyButton: {
     flex: 1,
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -1124,7 +1124,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   dateRangeOptionTextActive: {
-    color: '#800040',
+    color: '#e61580',
     fontWeight: '600',
   },
   customDateModal: {
@@ -1159,7 +1159,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   dateInputActive: {
-    borderColor: '#800040',
+    borderColor: '#e61580',
     borderWidth: 2,
   },
   dateInputLabel: {
@@ -1213,14 +1213,14 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   calendarDaySelected: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
   },
   calendarDayInRange: {
     backgroundColor: '#EEF2FF',
   },
   calendarDayToday: {
     borderWidth: 1,
-    borderColor: '#800040',
+    borderColor: '#e61580',
   },
   calendarDayText: {
     fontSize: 14,
@@ -1234,11 +1234,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   calendarDayTextToday: {
-    color: '#800040',
+    color: '#e61580',
     fontWeight: '600',
   },
   applyCustomButton: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',

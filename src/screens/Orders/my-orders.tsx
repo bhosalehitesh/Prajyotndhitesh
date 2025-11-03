@@ -138,12 +138,12 @@ const MyOrders = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#f8f9fa",
   },
   header: {
     paddingVertical: 16,
     alignItems: "center",
-    backgroundColor: "#1E3A8A",
+    backgroundColor: "#e61580",
   },
   headerText: {
     fontSize: 22,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   tabScrollContainer: {
     borderBottomWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#dee2e6",
     backgroundColor: "#FFFFFF",
   },
   tabContainer: {
@@ -168,15 +168,15 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: "#1E3A8A",
+    borderBottomColor: "#e61580",
   },
   tabText: {
-    color: "#6B7280",
+    color: "#6c757d",
     fontSize: 14,
     textAlign: "center",
   },
   activeTabText: {
-    color: "#1E3A8A",
+    color: "#e61580",
     fontWeight: "600",
   },
   contentContainer: {
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   refreshButton: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#f8f9fa",
     padding: 10,
     borderRadius: 50,
     marginBottom: 15,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   subText: {
-    color: "#6B7280",
+    color: "#6c757d",
     fontSize: 13,
     textAlign: "center",
     paddingHorizontal: 30,

@@ -168,7 +168,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
         <View style={styles.imageRow}>
           <TouchableOpacity style={styles.imagePlaceholder} onPress={() => setPickerOpen(true)}>
             {images.length === 0 ? (
-              <IconSymbol name="add" size={28} color="#6B7280" />
+              <IconSymbol name="add" size={28} color="#6c757d" />
             ) : (
               <Image source={{uri: images[0]}} style={styles.previewImg} />
             )}
@@ -206,7 +206,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
             <TextInput
               style={styles.boxInput}
               placeholder="MRP"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor="#6c757d"
               keyboardType="numeric"
               value={mrp}
               onChangeText={setMrp}
@@ -217,7 +217,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
             <TextInput
               style={styles.boxInput}
               placeholder="Selling Price"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor="#6c757d"
               keyboardType="numeric"
               value={price}
               onChangeText={setPrice}
@@ -227,7 +227,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
 
         {/* Business Category */}
         <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryOpen(true)}>
-          <Text style={{color: businessCategory ? '#111827' : '#6B7280'}}>
+          <Text style={{color: businessCategory ? '#111827' : '#6c757d'}}>
             {businessCategory || 'Business Category'}
           </Text>
         </TouchableOpacity>
@@ -243,13 +243,13 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
             setProductCategoryOpen(true);
           }}
         >
-          <Text style={{color: productCategory ? '#111827' : '#6B7280'}}>
+          <Text style={{color: productCategory ? '#111827' : '#6c757d'}}>
             {productCategory || 'Product Category'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.addSecondary} onPress={() => setNewCategoryOpen(true)}>
-          <IconSymbol name="add" size={18} color="#800040" />
+          <IconSymbol name="add" size={18} color="#e61580" />
           <Text style={styles.addSecondaryText}>Add New Product Category</Text>
         </TouchableOpacity>
 
@@ -286,7 +286,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
         {/* Variants / Tax */}
         <Text style={styles.sectionHeader}>Variants</Text>
         <Text style={styles.helperBody}>Add different size and color options</Text>
-        <TouchableOpacity style={styles.addSecondary}><IconSymbol name="add" size={18} color="#800040" /><Text style={styles.addSecondaryText}>Add New Variant</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.addSecondary}><IconSymbol name="add" size={18} color="#e61580" /><Text style={styles.addSecondaryText}>Add New Variant</Text></TouchableOpacity>
 
         <Text style={styles.sectionHeader}>Tax Details <Text style={styles.optional}>(Optional)</Text></Text>
         <Text style={styles.helperBody}>Enter a valid HSN code with 2, 4, 6 or 8 digits.</Text>
@@ -438,41 +438,41 @@ const styles = StyleSheet.create({
   imageRow: {marginBottom: 16},
   imagePlaceholder: {width: 120, height: 120, borderWidth: 1, borderStyle: 'dashed', borderColor: '#9CA3AF', borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
   previewImg: {width: 120, height: 120, borderRadius: 8},
-  imageHint: {color: '#6B7280', marginTop: 8},
+  imageHint: {color: '#6c757d', marginTop: 8},
 
   sectionLabel: {fontWeight: 'bold', color: '#111827', marginTop: 12},
   optional: {color: '#9CA3AF', fontWeight: 'normal'},
-  input: {borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, marginTop: 8, color: '#111827'},
+  input: {borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, marginTop: 8, color: '#111827'},
   textarea: {height: 160, textAlignVertical: 'top'},
   helper: {color: '#9CA3AF', marginTop: 6},
-  helperBody: {color: '#6B7280', marginTop: 6},
+  helperBody: {color: '#6c757d', marginTop: 6},
 
   row2: {flexDirection: 'row', gap: 16, marginTop: 8},
-  boxField: {flex: 1, flexDirection: 'row', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, overflow: 'hidden'},
-  boxLeftIcon: {width: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F4F6', borderRightWidth: 1, borderRightColor: '#E5E7EB'},
+  boxField: {flex: 1, flexDirection: 'row', borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, overflow: 'hidden'},
+  boxLeftIcon: {width: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa', borderRightWidth: 1, borderRightColor: '#dee2e6'},
   currency: {fontWeight: 'bold', color: '#111827'},
   boxInput: {flex: 1, paddingHorizontal: 12, color: '#111827'},
 
-  dropdown: {borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, marginTop: 12, color: '#111827'},
+  dropdown: {borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, marginTop: 12, color: '#111827'},
   addSecondary: {marginTop: 10, borderWidth: 1, borderColor: '#C7F2F9', backgroundColor: '#ECFEFF', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8},
-  addSecondaryText: {color: '#800040', fontWeight: '600'},
+  addSecondaryText: {color: '#e61580', fontWeight: '600'},
 
   subTitle: {marginTop: 16, fontWeight: 'bold', color: '#111827'},
-  uploadBtn: {marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, alignSelf: 'flex-start'},
+  uploadBtn: {marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, alignSelf: 'flex-start'},
   uploadText: {color: '#111827'},
-  guidelineCard: {marginTop: 12, padding: 12, backgroundColor: '#F3F4F6', borderRadius: 8},
+  guidelineCard: {marginTop: 12, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 8},
   guidelineTitle: {fontWeight: '600', marginBottom: 4, color: '#111827'},
-  guidelineBody: {color: '#6B7280'},
+  guidelineBody: {color: '#6c757d'},
 
   sectionHeader: {marginTop: 18, fontWeight: 'bold', color: '#111827'},
 
-  link: {color: '#800040', marginTop: 6},
+  link: {color: '#e61580', marginTop: 6},
   checkRow: {flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12},
   checkbox: {width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF'},
-  checkboxChecked: {backgroundColor: '#800040', borderColor: '#800040'},
+  checkboxChecked: {backgroundColor: '#e61580', borderColor: '#e61580'},
   checkLabel: {color: '#111827'},
 
-  submitBtn: {marginTop: 16, backgroundColor: '#800040', padding: 14, borderRadius: 10},
+  submitBtn: {marginTop: 16, backgroundColor: '#e61580', padding: 14, borderRadius: 10},
   submitBtnDisabled: {backgroundColor: '#D1D5DB'},
   submitText: {textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold'},
 
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   listCard: {backgroundColor:'#FFFFFF', borderRadius:12, paddingBottom:8, width:'100%', maxHeight:'80%'},
   listHeader: {flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:16, paddingVertical:14, backgroundColor:'#111827', borderTopLeftRadius:12, borderTopRightRadius:12},
   listTitle: {color:'#FFFFFF', fontWeight:'600'},
-  listItem: {paddingHorizontal:16, paddingVertical:14, borderBottomWidth:1, borderBottomColor:'#F3F4F6'},
+  listItem: {paddingHorizontal:16, paddingVertical:14, borderBottomWidth:1, borderBottomColor:'#dee2e6'},
   listItemText: {color:'#111827', fontSize:16},
 
   // Create Category Modal
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   categoryLabel: {fontWeight:'600', color:'#111827', marginBottom:8},
   categoryInput: {borderWidth:1, borderColor:'#E5E7EB', borderRadius:8, padding:12, color:'#111827'},
   createCategoryButtons: {marginTop:20, gap:12},
-  createCategoryBtn: {backgroundColor:'#800040', padding:14, borderRadius:8, alignItems:'center'},
+  createCategoryBtn: {backgroundColor:'#e61580', padding:14, borderRadius:8, alignItems:'center'},
   createCategoryBtnDisabled: {backgroundColor:'#D1D5DB'},
   createCategoryBtnText: {color:'#FFFFFF', fontWeight:'bold'},
   createCategoryBtnTextDisabled: {color:'#9CA3AF'},

@@ -83,7 +83,7 @@ const ShippedOrders = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#f8f9fa",
   },
   listContent: {
     paddingVertical: 8,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   emptyText: {
-    color: "#6B7280",
+    color: "#6c757d",
     fontSize: 15,
     fontWeight: "500",
   },

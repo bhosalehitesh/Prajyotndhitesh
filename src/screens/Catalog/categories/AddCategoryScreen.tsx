@@ -214,7 +214,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
             ) : (
               <View style={styles.uploadPlaceholder}>
                 <View style={styles.uploadIconCircle}>
-                  <IconSymbol name="add" size={32} color="#800040" />
+                  <IconSymbol name="add" size={32} color="#e61580" />
                 </View>
                 <Text style={styles.uploadText}>Upload Image</Text>
               </View>
@@ -274,7 +274,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
               ]}>
               {businessCategory || 'Select Business Category'}
             </Text>
-            <IconSymbol name="chevron-down" size={20} color="#6B7280" />
+            <IconSymbol name="chevron-down" size={20} color="#6c757d" />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -310,13 +310,13 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
             <TouchableOpacity
               style={styles.pickerOption}
               onPress={handleCamera}>
-              <IconSymbol name="camera" size={24} color="#800040" />
+              <IconSymbol name="camera" size={24} color="#e61580" />
               <Text style={styles.pickerOptionText}>Take Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.pickerOption}
               onPress={handleImageLibrary}>
-              <IconSymbol name="image" size={24} color="#800040" />
+              <IconSymbol name="image" size={24} color="#e61580" />
               <Text style={styles.pickerOptionText}>Choose from Library</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -355,7 +355,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
                   }}>
                   <Text style={styles.categoryItemText}>{category}</Text>
                   {businessCategory === category && (
-                    <IconSymbol name="checkmark" size={20} color="#800040" />
+                    <IconSymbol name="checkmark" size={20} color="#e61580" />
                   )}
                 </TouchableOpacity>
               ))}
@@ -370,7 +370,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#6c757d',
     marginBottom: 8,
   },
   required: {
@@ -414,9 +414,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#dee2e6',
     overflow: 'hidden',
   },
   imageWrapper: {
@@ -457,17 +457,17 @@ const styles = StyleSheet.create({
   uploadText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#800040',
+    color: '#e61580',
   },
   input: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
     color: '#111827',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#dee2e6',
   },
   textarea: {
     minHeight: 100,
@@ -483,12 +483,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#dee2e6',
   },
   dropdownText: {
     fontSize: 16,
@@ -503,12 +503,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },
   saveButton: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   },
   pickerCancelText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#6c757d',
     fontWeight: '500',
   },
   categoryModal: {
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#dee2e6',
   },
   categoryItemText: {
     fontSize: 16,

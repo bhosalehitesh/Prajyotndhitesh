@@ -63,7 +63,7 @@ const CatalogScreen: React.FC<CatalogScreenProps> = ({navigation}) => {
           onPress={() => handleNavigation('Products')}>
           <View style={styles.optionLeft}>
             <View style={styles.optionIcon}>
-              <IconSymbol name="bag" size={20} color="#6B7280" />
+              <IconSymbol name="bag" size={20} color="#6c757d" />
             </View>
             <Text style={styles.optionText}>Products</Text>
           </View>
@@ -76,7 +76,7 @@ const CatalogScreen: React.FC<CatalogScreenProps> = ({navigation}) => {
           onPress={() => handleNavigation('Categories')}>
           <View style={styles.optionLeft}>
             <View style={styles.optionIcon}>
-              <IconSymbol name="tag" size={20} color="#6B7280" />
+              <IconSymbol name="tag" size={20} color="#6c757d" />
             </View>
             <Text style={styles.optionText}>Categories</Text>
           </View>
@@ -89,7 +89,7 @@ const CatalogScreen: React.FC<CatalogScreenProps> = ({navigation}) => {
           onPress={() => handleNavigation('Collections')}>
           <View style={styles.optionLeft}>
             <View style={styles.optionIcon}>
-              <IconSymbol name="folder" size={20} color="#6B7280" />
+              <IconSymbol name="folder" size={20} color="#6c757d" />
             </View>
             <Text style={styles.optionText}>Collections</Text>
           </View>
@@ -150,10 +150,10 @@ const CatalogScreen: React.FC<CatalogScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
   },
   header: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     height: 120,
     justifyContent: 'center',
     paddingHorizontal: 20,
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#dee2e6',
   },
   optionLeft: {
     flexDirection: 'row',
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

@@ -55,7 +55,7 @@ const PendingOrders = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
   },
   listContent: {
     paddingVertical: 8,

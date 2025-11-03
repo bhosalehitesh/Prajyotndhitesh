@@ -181,7 +181,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
         </TouchableOpacity>
         {filteredProducts.length === 0 && (
           <View style={{alignItems:'center', marginBottom:24}}>
-            <Text style={{color:'#6B7280'}}>No products match your filters</Text>
+            <Text style={{color:'#6c757d'}}>No products match your filters</Text>
           </View>
         )}
       </ScrollView>
@@ -247,7 +247,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
                     <View style={styles.sliderTrack} />
                     <TouchableOpacity style={styles.sliderBtn} onPress={() => setPriceRange(p=>({...p,max: Math.min(absoluteMaxPrice, p.max+10)}))}><Text>+</Text></TouchableOpacity>
                   </View>
-                  <Text style={{color:'#6B7280', marginTop:8}}>Range from ₹{absoluteMinPrice} to ₹{absoluteMaxPrice}</Text>
+                  <Text style={{color:'#6c757d', marginTop:8}}>Range from ₹{absoluteMinPrice} to ₹{absoluteMaxPrice}</Text>
                 </>
               )}
             </View>
@@ -319,7 +319,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
           <View style={styles.deleteCard}>
             <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
               <Text style={styles.sheetTitle}>Delete Product</Text>
-              <TouchableOpacity onPress={() => setConfirmDeleteOpen(false)}><IconSymbol name="close" size={20} color="#6B7280"/></TouchableOpacity>
+              <TouchableOpacity onPress={() => setConfirmDeleteOpen(false)}><IconSymbol name="close" size={20} color="#6c757d"/></TouchableOpacity>
             </View>
             <Text style={styles.deleteQuestion}>Are you sure you want to delete {activeProduct?.title}?</Text>
             <TouchableOpacity style={styles.deleteBtn} onPress={() => {
@@ -347,8 +347,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
             const name = newCollectionName.trim();
             if (name && !collections.includes(name)) setCollections(prev=>[name,...prev]);
           }}>
-            <IconSymbol name="add" size={18} color="#800040" />
-            <Text style={{color:'#800040', marginLeft:8, fontWeight:'600'}}>Add a Collection</Text>
+            <IconSymbol name="add" size={18} color="#e61580" />
+            <Text style={{color:'#e61580', marginLeft:8, fontWeight:'600'}}>Add a Collection</Text>
           </TouchableOpacity>
           {collections.map(c => (
             <TouchableOpacity key={c} style={styles.collectionRow} onPress={() => setSelectedCollections(p=>({...p,[c]:!p[c]}))}>
@@ -365,10 +365,10 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
   },
   header: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingHorizontal: 20,
     paddingVertical: 15,
     flexDirection: 'row',
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     borderRadius: 10,
     paddingHorizontal: 15,
     marginRight: 10,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 10,
@@ -438,10 +438,10 @@ const styles = StyleSheet.create({
   mrp: {textDecorationLine:'line-through', color:'#9CA3AF'},
   kebab: {padding:8},
   stockBadgeRow: {marginTop:8, flexDirection:'row', alignItems:'center', justifyContent:'space-between'},
-  outOfStockBadge: {backgroundColor:'#F3E8E2', color:'#6B7280', paddingVertical:6, paddingHorizontal:10, borderRadius:8},
+  outOfStockBadge: {backgroundColor:'#F3E8E2', color:'#6c757d', paddingVertical:6, paddingHorizontal:10, borderRadius:8},
   updateInventory: {color:'#B91C1C', fontWeight:'600'},
   addButton: {
-    backgroundColor: '#800040',
+    backgroundColor: '#e61580',
     paddingVertical: 15,
     paddingHorizontal: 40,
     borderRadius: 10,
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   sheetTitle: {fontSize: 18, fontWeight: 'bold', color: '#111827'},
   clearAll: {color: '#9CA3AF', fontWeight: '600'},
   sheetBody: {flexDirection: 'row', minHeight: 260},
-  sheetTabs: {width: 120, borderRightWidth: 1, borderRightColor: '#E5E7EB'},
+  sheetTabs: {width: 120, borderRightWidth: 1, borderRightColor: '#dee2e6'},
   tabItem: {paddingVertical: 14, paddingHorizontal: 12},
   tabItemActive: {backgroundColor: '#EEF2FF'},
   tabText: {color: '#111827'},
@@ -473,17 +473,17 @@ const styles = StyleSheet.create({
   optionLabel: {flex: 1, color: '#4B5563', fontSize: 16, marginLeft: 10},
   optionCount: {color: '#9CA3AF'},
   radioOuter: {width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#9CA3AF', justifyContent: 'center', alignItems: 'center'},
-  radioOuterActive: {borderColor: '#800040'},
-  radioInner: {width: 10, height: 10, borderRadius: 5, backgroundColor: '#800040'},
+  radioOuterActive: {borderColor: '#e61580'},
+  radioInner: {width: 10, height: 10, borderRadius: 5, backgroundColor: '#e61580'},
   checkbox: {width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF'},
-  checkboxChecked: {backgroundColor: '#800040', borderColor: '#800040'},
+  checkboxChecked: {backgroundColor: '#e61580', borderColor: '#e61580'},
   priceHeaderRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16},
-  priceHeaderLabel: {color: '#6B7280', marginBottom: 6},
+  priceHeaderLabel: {color: '#6c757d', marginBottom: 6},
   priceValue: {fontWeight: 'bold', color: '#111827'},
   sliderRow: {flexDirection: 'row', alignItems: 'center'},
   sliderBtn: {width: 32, height: 32, borderRadius: 16, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center'},
   sliderTrack: {flex: 1, height: 6, backgroundColor: '#E5E7EB', marginHorizontal: 10, borderRadius: 3},
-  primaryCta: {backgroundColor: '#800040', paddingVertical: 14, borderRadius: 12, marginTop: 12},
+  primaryCta: {backgroundColor: '#e61580', paddingVertical: 14, borderRadius: 12, marginTop: 12},
   primaryCtaText: {color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold'},
   deleteCard: {backgroundColor:'#FFFFFF', borderTopLeftRadius:16, borderTopRightRadius:16, padding:16},
   deleteQuestion: {fontSize:16, color:'#111827', marginVertical:16},
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   collectionRow: {flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingVertical:12},
   collectionName: {color:'#111827'},
   checkBox: {width:20, height:20, borderRadius:4, borderWidth:2, borderColor:'#9CA3AF'},
-  checkBoxChecked: {backgroundColor:'#800040', borderColor:'#800040'},
+  checkBoxChecked: {backgroundColor:'#e61580', borderColor:'#e61580'},
 });
 
 export default ProductsScreen;
