@@ -1,246 +1,319 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
   ScrollView,
+  View,
+  Text,
   TouchableOpacity,
+  StyleSheet,
+  Switch
 } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-interface ProfileScreenProps {
-  navigation: any;
-}
+import LegalScreen from './Profile-tabs/LegalScreen';
+import StoreConfigScreen from './Profile-tabs/StoreConfigScreen';
+import ShippingScreen from './Profile-tabs/ShippingScreen';
+import PaymentsScreen from './Profile-tabs/PaymentsScreen';
+import GrowthEngagementScreen from './Profile-tabs/GrowthEngagementScreen';
+import TrustMarkersScreen from './Profile-tabs/TrustMarkersScreen';
+import NeedHelpScreen from './Profile-tabs/NeedHelpScreen';
+import {
+  EditProfileScreen,
+  CashOnDeliveryScreen,
+  OnlinePaymentScreen,
+  OffersDiscountsScreen,
+  MarketingAutomationScreen,
+  InstagramFeedScreen,
+  SellUsingWhatsAppScreen,
+  HelpCenterScreen,
+  HowToScreen,
+  TalkToUsScreen,
+  ChatScreen,
+  TrustBadgesScreen,
+  DeliverySettingsScreen,
+  ReturnsScreen,
+  StoreAppearanceScreen,
+  CustomDomainScreen,
+  GoogleAnalyticsScreen,
+  StoreTimingsScreen,
+  StorePoliciesScreen,
+  TermsScreen,
+  PrivacyPolicyScreen,
+} from './Profile-tabs/Rdirect';
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({navigation}) => {
-  const handleMenuAction = (action: string) => {
-    console.log('Menu action:', action);
-    // Handle different menu actions
-  };
+const menuList = [
+  { label: 'Store Configuration', subtitle: 'Appearance, Domain, Timings & more' },
+  { label: 'Shipping', subtitle: 'Delivery Settings & Returns' },
+  { label: 'Payments', subtitle: 'Cash on Delivery & Online Payments' },
+  { label: 'Growth & Engagement', subtitle: 'Coupons, Campaigns, SEO' },
+  { label: 'Trust Markers', subtitle: 'Trust Badges & Social Media Links' },
+  { label: 'Need Help?', subtitle: 'FAQs, How Tos, Contact Us' },
+  { label: 'Legal', subtitle: 'Terms of Use, Privacy Policy' },
+];
 
-  const handleLogout = () => {
-    console.log('Logout');
-    // Handle logout logic
-  };
+type SubPage = null | 'store' | 'shipping' | 'payments' | 'growth' | 'trust' | 'help' | 'legal' | 'edit' 
+  | 'editProfile' | 'cod' | 'onlinePayment' | 'offers' | 'marketing' | 'instagram' | 'whatsapp'
+  | 'helpCenter' | 'howTo' | 'talkToUs' | 'chat' | 'trustBadges' | 'deliverySettings' | 'returns'
+  | 'storeAppearance' | 'customDomain' | 'analytics' | 'timings' | 'policies' | 'terms' | 'privacy';
 
+const ProfileScreen = () => {
+  const [acceptOrders, setAcceptOrders] = useState(true);
+  const [pickup, setPickup] = useState(true);
+  const [delivery, setDelivery] = useState(true);
+  const [subPage, setSubPage] = useState<SubPage>(null);
+
+  // --- SUB SCREEN CONDITIONAL RENDER ---
+  if (subPage === 'legal') return <LegalScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'store') return <StoreConfigScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'shipping') return <ShippingScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'payments') return <PaymentsScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'growth') return <GrowthEngagementScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'trust') return <TrustMarkersScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'help') return <NeedHelpScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'edit' || subPage === 'editProfile') return <EditProfileScreen onBack={() => setSubPage(null)} />;
+  
+  // Rdirect screens
+  if (subPage === 'cod') return <CashOnDeliveryScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'onlinePayment') return <OnlinePaymentScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'offers') return <OffersDiscountsScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'marketing') return <MarketingAutomationScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'instagram') return <InstagramFeedScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'whatsapp') return <SellUsingWhatsAppScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'helpCenter') return <HelpCenterScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'howTo') return <HowToScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'talkToUs') return <TalkToUsScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'chat') return <ChatScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'trustBadges') return <TrustBadgesScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'deliverySettings') return <DeliverySettingsScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'returns') return <ReturnsScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'storeAppearance') return <StoreAppearanceScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'customDomain') return <CustomDomainScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'analytics') return <GoogleAnalyticsScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'timings') return <StoreTimingsScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'policies') return <StorePoliciesScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'terms') return <TermsScreen onBack={() => setSubPage(null)} />;
+  if (subPage === 'privacy') return <PrivacyPolicyScreen onBack={() => setSubPage(null)} />;
+
+  // --- MAIN PROFILE SCREEN ---
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.profileImage}>
-            <Text style={styles.profileInitial}>U</Text>
+      <ScrollView contentContainerStyle={{paddingBottom:36}}>
+        {/* Top Card */}
+        <TouchableOpacity
+          style={styles.profileCard}
+          onPress={() => setSubPage('edit')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.avatarWrap}>
+            <View style={styles.avatar}><Text style={styles.avatarText}>G</Text></View>
           </View>
-          <Text style={styles.userName}>User Name</Text>
-          <Text style={styles.userEmail}>user@example.com</Text>
+          <View style={{flex:1, marginLeft:16}}>
+            <Text style={styles.name}>Girnai</Text>
+            <Text style={styles.phone}>+91 8766408154</Text>
         </View>
+          <MaterialCommunityIcons name="chevron-right" size={28} color="#1E3A8A" />
+        </TouchableOpacity>
 
-        {/* Profile Info */}
-        <View style={styles.profileInfo}>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Business Name</Text>
-            <Text style={styles.infoValue}>Your Business LLC</Text>
-          </View>
-          
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Member Since</Text>
-            <Text style={styles.infoValue}>October 2024</Text>
-          </View>
-          
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Account Status</Text>
-            <Text style={[styles.infoValue, styles.statusActive]}>Active</Text>
-          </View>
-        </View>
-
-        {/* Menu Options */}
+        {/* Menu Items */}
         <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Account Settings</Text>
+          {menuList.map((item, idx) => (
+            <TouchableOpacity
+              key={item.label}
+              style={styles.menuItem}
+              onPress={() => {
+                switch(item.label) {
+                  case 'Legal':
+                    setSubPage('legal');
+                    break;
+                  case 'Need Help?':
+                    setSubPage('help');
+                    break;
+                  case 'Trust Markers':
+                    setSubPage('trust');
+                    break;
+                  case 'Store Configuration':
+                    setSubPage('store');
+                    break;
+                  case 'Shipping':
+                    setSubPage('shipping');
+                    break;
+                  case 'Payments':
+                    setSubPage('payments');
+                    break;
+                  case 'Growth & Engagement':
+                    setSubPage('growth');
+                    break;
+                  default:
+                    // no-op
+                }
+              }}
+            >
+              <View>
+                <Text style={styles.menuLabel}>{item.label}</Text>
+                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#10B981" />
+            </TouchableOpacity>
+          ))}
+          </View>
           
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => handleMenuAction('personal_info')}>
-            <Text style={styles.menuItemText}>Personal Information</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => handleMenuAction('business_info')}>
-            <Text style={styles.menuItemText}>Business Information</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => handleMenuAction('documents')}>
-            <Text style={styles.menuItemText}>Documents</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => handleMenuAction('notifications')}>
-            <Text style={styles.menuItemText}>Notifications</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => handleMenuAction('security')}>
-            <Text style={styles.menuItemText}>Security</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
+        {/* Toggles */}
+        <View style={styles.togglesSection}>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleText}>Accept Orders</Text>
+            <Switch value={acceptOrders} onValueChange={setAcceptOrders} />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleText}>Pickup</Text>
+            <Switch value={pickup} onValueChange={setPickup} />
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleText}>Delivery</Text>
+            <Switch value={delivery} onValueChange={setDelivery} />
+          </View>
         </View>
 
-        {/* Support Section */}
-        <View style={styles.supportSection}>
-          <Text style={styles.sectionTitle}>Support</Text>
-          
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => handleMenuAction('help')}>
-            <Text style={styles.menuItemText}>Help Center</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => handleMenuAction('contact')}>
-            <Text style={styles.menuItemText}>Contact Support</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => handleMenuAction('feedback')}>
-            <Text style={styles.menuItemText}>Send Feedback</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
+        {/* Developer Section - All Screens */}
+        <View style={styles.devSection}>
+          <Text style={styles.devSectionTitle}>Developer: All Screens</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.devScroll}>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('editProfile')}>
+              <Text style={styles.devButtonText}>Edit Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('cod')}>
+              <Text style={styles.devButtonText}>COD</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('onlinePayment')}>
+              <Text style={styles.devButtonText}>Online Payment</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('offers')}>
+              <Text style={styles.devButtonText}>Offers</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('marketing')}>
+              <Text style={styles.devButtonText}>Marketing</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('instagram')}>
+              <Text style={styles.devButtonText}>Instagram</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('whatsapp')}>
+              <Text style={styles.devButtonText}>WhatsApp</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('helpCenter')}>
+              <Text style={styles.devButtonText}>Help Center</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('howTo')}>
+              <Text style={styles.devButtonText}>How To</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('talkToUs')}>
+              <Text style={styles.devButtonText}>Talk To Us</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('chat')}>
+              <Text style={styles.devButtonText}>Chat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('trustBadges')}>
+              <Text style={styles.devButtonText}>Trust Badges</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('deliverySettings')}>
+              <Text style={styles.devButtonText}>Delivery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('returns')}>
+              <Text style={styles.devButtonText}>Returns</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('storeAppearance')}>
+              <Text style={styles.devButtonText}>Appearance</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('customDomain')}>
+              <Text style={styles.devButtonText}>Domain</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('analytics')}>
+              <Text style={styles.devButtonText}>Analytics</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('timings')}>
+              <Text style={styles.devButtonText}>Timings</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('policies')}>
+              <Text style={styles.devButtonText}>Policies</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('terms')}>
+              <Text style={styles.devButtonText}>Terms</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.devButton} onPress={() => setSubPage('privacy')}>
+              <Text style={styles.devButtonText}>Privacy</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
-        {/* Logout Button */}
-        <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
+        {/* App Info & Actions */}
+        <View style={styles.appSection}>
+          <Text style={styles.appName}>SmartBiz App</Text>
+          <Text style={styles.appInfo}>Build Number: 1.0.7662.0</Text>
+          <Text style={styles.appInfo}>© 2012-2023 Amazon.com, Inc or its affiliates</Text>
         </View>
+        <TouchableOpacity style={styles.shareBtn}>
+          <MaterialCommunityIcons name="share-variant" size={20} color="#1E3A8A" />
+          <Text style={styles.shareText}>Share Store</Text>
+          </TouchableOpacity>
+        <TouchableOpacity style={styles.logoutBtn}>
+          <MaterialCommunityIcons name="logout" size={20} color="#d73a33" />
+          <Text style={styles.logoutText}>Log Out</Text>
+          </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
+  container: { flex:1, backgroundColor:'#F3F4F6' },
+  profileCard: {
+    backgroundColor:'#fff',
+    flexDirection:'row',
+    alignItems:'center',
+    margin:16,
+    marginBottom:10,
+    borderRadius:16,
+    paddingHorizontal:18,
+    paddingVertical:15,
+    elevation:1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
   },
-  scrollView: {
-    flex: 1,
+  avatarWrap: { marginRight:0 },
+  avatar: {
+    width:64, height:64, borderRadius:32, backgroundColor:'#F3F4F6',
+    alignItems:'center', justifyContent:'center',
   },
-  header: {
-    backgroundColor: '#FFFFFF',
-    padding: 30,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+  avatarText: { fontWeight:'bold', fontSize:28, color:'#1E3A8A' },
+  name: { fontWeight:'bold', fontSize:22, color:'#333333' },
+  phone: { color:'#6B7280', fontWeight:'500', marginTop:2, fontSize:15 },
+  menuSection: { backgroundColor:'#fff', borderRadius:14, marginHorizontal:16, marginBottom:18, overflow: 'hidden' },
+  menuItem: { flexDirection:'row', justifyContent:'space-between', alignItems:'center', padding:16, borderBottomWidth:1, borderColor:'#F3F4F6' },
+  menuLabel: { fontWeight:'bold', fontSize:17, color:'#333333' },
+  menuSubtitle: { fontSize:14, color:'#6B7280', marginTop:3 },
+  togglesSection: { backgroundColor:'#fff', marginHorizontal:16, borderRadius:13, marginBottom:18, padding:16 },
+  toggleRow: { flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:6 },
+  toggleText: { fontSize:16, color:'#333333', fontWeight:'400' },
+  devSection: { backgroundColor:'#fff', marginHorizontal:16, borderRadius:13, marginBottom:18, padding:16 },
+  devSectionTitle: { fontSize:16, fontWeight:'bold', color:'#1E3A8A', marginBottom:12 },
+  devScroll: { marginHorizontal: -16 },
+  devButton: { backgroundColor:'#F3F4F6', paddingHorizontal:16, paddingVertical:8, borderRadius:20, marginRight:8 },
+  devButtonText: { fontSize:12, color:'#333333', fontWeight:'500' },
+  appSection: {alignItems:'flex-start', paddingHorizontal:18, marginTop:8, marginBottom:12},
+  appName: {fontWeight:'bold', color:'#6B7280', fontSize:16, marginBottom:2},
+  appInfo: {color:'#6B7280', fontSize:14 },
+  shareBtn: {
+    flexDirection:'row', justifyContent:'center', alignItems:'center',
+    backgroundColor:'#fff', borderRadius:24, marginHorizontal:22, paddingVertical:12, marginTop:5,
+    borderWidth:1, borderColor:'#1E3A8A'
   },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
+  shareText: { color:'#1E3A8A', fontSize:17, fontWeight:'bold', marginLeft:8 },
+  logoutBtn: {
+    flexDirection:'row', justifyContent:'center', alignItems:'center',
+    backgroundColor:'#fff', borderRadius:24, marginHorizontal:22, paddingVertical:12, marginTop:11,
+    borderWidth:1, borderColor:'#f3d4d0'
   },
-  profileInitial: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 5,
-  },
-  userEmail: {
-    fontSize: 16,
-    color: '#666666',
-  },
-  profileInfo: {
-    padding: 20,
-  },
-  infoCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 5,
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333333',
-  },
-  statusActive: {
-    color: '#34C759',
-  },
-  menuSection: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 15,
-  },
-  menuItem: {
-    backgroundColor: '#FFFFFF',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  menuItemText: {
-    fontSize: 16,
-    color: '#333333',
-  },
-  menuItemArrow: {
-    fontSize: 20,
-    color: '#666666',
-  },
-  supportSection: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  logoutSection: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  logoutButton: {
-    backgroundColor: '#FF3B30',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  logoutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  logoutText: { color:'#d73a33', fontSize:17, fontWeight:'bold', marginLeft:8 },
 });
 
 export default ProfileScreen;
