@@ -11,25 +11,25 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { AuthProvider, useAuth } from './src/authentication/AuthContext';
-import AuthScreen from './src/authentication/AuthScreen';
-import { storage, AUTH_TOKEN_KEY } from './src/authentication/storage';
-import OnboardingFlow from './src/authentication/onboarding/OnboardingFlow';
+import { AuthProvider, useAuth } from './Frontend/src/authentication/AuthContext';
+import AuthScreen from './Frontend/src/authentication/AuthScreen';
+import { storage, AUTH_TOKEN_KEY } from './Frontend/src/authentication/storage';
+import OnboardingFlow from './Frontend/src/authentication/onboarding/OnboardingFlow';
 
 // Import screens from organized folders
-import HomeScreen from './src/screens/Home/HomeScreen';
-import OrdersScreen from './src/screens/Orders/OrdersScreen';
-import CatalogScreen from './src/screens/Catalog/CatalogScreen';
-import AnalyticsScreen from './src/screens/Analytics/AnalyticsScreen';
-import ProfileScreen from './src/screens/Profile/ProfileScreen';
-import ProductsScreen from './src/screens/Catalog/products/ProductsScreen';
-import AddProductScreen from './src/screens/Catalog/products/AddProductScreen';
-import CategoriesScreen from './src/screens/Catalog/categories/CategoriesScreen';
-import AddCategoryScreen from './src/screens/Catalog/categories/AddCategoryScreen';
-import CollectionsScreen from './src/screens/Catalog/collections/CollectionsScreen';
-import AddCollectionScreen from './src/screens/Catalog/collections/AddCollectionScreen';
-import SelectProductsScreen from './src/screens/Catalog/collections/SelectProductsScreen';
-import StoreAppearanceScreen from './src/screens/StoreAppearance/StoreAppearanceScreen';
+import HomeScreen from './Frontend/src/screens/Home/HomeScreen';
+import OrdersScreen from './Frontend/src/screens/Orders/OrdersScreen';
+import CatalogScreen from './Frontend/src/screens/Catalog/CatalogScreen';
+import AnalyticsScreen from './Frontend/src/screens/Analytics/AnalyticsScreen';
+import ProfileScreen from './Frontend/src/screens/Profile/ProfileScreen';
+import ProductsScreen from './Frontend/src/screens/Catalog/products/ProductsScreen';
+import AddProductScreen from './Frontend/src/screens/Catalog/products/AddProductScreen';
+import CategoriesScreen from './Frontend/src/screens/Catalog/categories/CategoriesScreen';
+import AddCategoryScreen from './Frontend/src/screens/Catalog/categories/AddCategoryScreen';
+import CollectionsScreen from './Frontend/src/screens/Catalog/collections/CollectionsScreen';
+import AddCollectionScreen from './Frontend/src/screens/Catalog/collections/AddCollectionScreen';
+import SelectProductsScreen from './Frontend/src/screens/Catalog/collections/SelectProductsScreen';
+import StoreAppearanceScreen from './Frontend/src/screens/StoreAppearance/StoreAppearanceScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
