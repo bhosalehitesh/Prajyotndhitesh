@@ -852,7 +852,7 @@ const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFF4FA',
   },
   header: {
     flexDirection: 'row',
@@ -860,17 +860,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#e61580',
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#0F172A',
+    color: '#FFFFFF',
   },
   headerTime: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#FFFFFF',
     fontWeight: '500',
+    opacity: 0.9,
   },
   tabsScrollView: {
     backgroundColor: '#FFFFFF',

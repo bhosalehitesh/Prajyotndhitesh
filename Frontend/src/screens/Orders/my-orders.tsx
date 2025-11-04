@@ -138,7 +138,7 @@ const MyOrders = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#FFF4FA",
   },
   header: {
     paddingVertical: 16,
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   refreshButton: {
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#FFF4FA",
     padding: 10,
     borderRadius: 50,
     marginBottom: 15,

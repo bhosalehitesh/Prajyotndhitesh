@@ -13,7 +13,7 @@ export const theme = {
   secondary: '#6c757d', // Gray - used for links, accents, muted text
   
   // Background Colors
-  background: '#f8f9fa', // Light gray - main background
+  background: '#FFF4FA', // Light pink - main background
   surface: '#FFFFFF', // White - cards, containers
   
   // Text Colors
@@ -39,7 +39,7 @@ export const theme = {
   
   // Border Colors
   border: '#dee2e6', // Light border
-  borderLight: '#f8f9fa', // Very light border
+  borderLight: '#FFF4FA', // Very light border
   
   // Shadow
   shadow: '#000000',

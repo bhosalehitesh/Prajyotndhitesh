@@ -57,7 +57,7 @@ const RejectedOrders = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa', // unified app background
+    backgroundColor: '#FFF4FA', // unified app background
   },
   listContent: {
     paddingVertical: 8,

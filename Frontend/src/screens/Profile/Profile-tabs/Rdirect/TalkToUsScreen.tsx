@@ -8,7 +8,7 @@ export default function TalkToUsScreen({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
+    <View style={{ flex: 1, backgroundColor: '#FFF4FA' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
           <MaterialCommunityIcons name="arrow-left" size={28} color="#FFFFFF" />

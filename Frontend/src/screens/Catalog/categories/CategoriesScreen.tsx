@@ -408,7 +408,7 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFF4FA',
   },
   header: {
     flexDirection: 'row',

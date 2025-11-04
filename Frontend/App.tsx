@@ -194,7 +194,7 @@ function App(): JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFF4FA',
   },
   mainContent: {
     flex: 1,

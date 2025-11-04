@@ -150,7 +150,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  container: { flex: 1, backgroundColor: '#FFF4FA' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

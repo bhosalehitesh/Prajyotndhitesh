@@ -74,7 +74,7 @@ const AllOrders = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFF4FA',
   },
   listContent: {
     paddingVertical: 8,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   refreshButton: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#FFF4FA",
     padding: 12,
     borderRadius: 50,
     marginBottom: 20,

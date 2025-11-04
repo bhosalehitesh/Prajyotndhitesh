@@ -55,7 +55,7 @@ const AcceptedOrders = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFF4FA',
   },
   listContent: {
     paddingVertical: 8,
