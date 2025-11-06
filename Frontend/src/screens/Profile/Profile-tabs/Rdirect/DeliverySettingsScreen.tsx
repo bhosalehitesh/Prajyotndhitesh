@@ -74,7 +74,7 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Delivery Settings</Text>
       </View>
@@ -94,7 +94,7 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
               </Text>
             </Text>
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#17aba5" />
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#e61580" />
         </TouchableOpacity>
 
         {/* Set delivery radius */}
@@ -111,7 +111,7 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
               </Text>
             </Text>
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#17aba5" />
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#e61580" />
         </TouchableOpacity>
 
         {/* Manage courier for delivery */}
@@ -126,7 +126,7 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
               <Text style={styles.valueText}>{courierPartner}</Text>
             </Text>
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#17aba5" />
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#e61580" />
         </TouchableOpacity>
 
         {/* Delivery Time */}
@@ -141,7 +141,7 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
               <Text style={styles.valueText}>3-5 Days</Text>
             </Text>
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#17aba5" />
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#e61580" />
         </TouchableOpacity>
       </ScrollView>
 
@@ -157,7 +157,7 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Set delivery charges</Text>
               <TouchableOpacity onPress={() => setShowDeliveryChargesModal(false)}>
-                <MaterialCommunityIcons name="close" size={28} color="#222" />
+                <MaterialCommunityIcons name="close" size={28} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
 
@@ -232,7 +232,7 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Set delivery coverage for home delivery</Text>
               <TouchableOpacity onPress={() => setShowDeliveryRadiusModal(false)}>
-                <MaterialCommunityIcons name="close" size={28} color="#222" />
+                <MaterialCommunityIcons name="close" size={28} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
 
@@ -295,7 +295,7 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Manage courier for delivery</Text>
               <TouchableOpacity onPress={() => setShowCourierModal(false)}>
-                <MaterialCommunityIcons name="close" size={28} color="#222" />
+                <MaterialCommunityIcons name="close" size={28} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
 
@@ -325,7 +325,7 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
                     </Text>
                   </View>
                   {courierPartner === courier && (
-                    <MaterialCommunityIcons name="check-circle" size={24} color="#17aba5" />
+                    <MaterialCommunityIcons name="check-circle" size={24} color="#e61580" />
                   )}
                 </TouchableOpacity>
               ))}
@@ -340,13 +340,15 @@ export default function DeliverySettingsScreen({ onBack }: DeliverySettingsScree
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
@@ -354,7 +356,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -385,7 +387,7 @@ const styles = StyleSheet.create({
     color: '#888',
   },
   valueText: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   modalOverlay: {
@@ -431,7 +433,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -440,7 +442,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   radioLabel: {
     fontSize: 16,
@@ -454,7 +456,7 @@ const styles = StyleSheet.create({
     marginLeft: 36,
   },
   currencyBox: {
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderTopLeftRadius: 8,
@@ -506,7 +508,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   unitButton: {
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#1a1a1a',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
@@ -519,7 +521,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   saveButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -545,8 +547,8 @@ const styles = StyleSheet.create({
     borderColor: '#e2e4ec',
   },
   courierOptionSelected: {
-    backgroundColor: '#f0fdfa',
-    borderColor: '#17aba5',
+    backgroundColor: '#fff5f8',
+    borderColor: '#e61580',
   },
   courierOptionContent: {
     flexDirection: 'row',
@@ -559,7 +561,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   courierOptionTextSelected: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
 });

@@ -4,10 +4,10 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 
 export default function StoreAppearanceScreen({ onBack }: { onBack: () => void }) {
   return (
-    <View style={{ flex: 1, backgroundColor: '#edeff3' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Website Appearance</Text>
       </View>
@@ -21,9 +21,9 @@ export default function StoreAppearanceScreen({ onBack }: { onBack: () => void }
             Unlock endless customization possibilities for your store with our Desktop Themes Editor.
             Edit layouts, widgets, images, and more!
           </Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://smartbiz.amazon.in/store-appearance')}>
+          <TouchableOpacity onPress={() => Linking.openURL('https://www.sakhi.store/store-appearance')}>
             <Text style={styles.infoLink}>
-              Visit smartbiz.amazon.in/store-appearance for more!
+              Visit sakhi.store/store-appearance for more!
             </Text>
           </TouchableOpacity>
         </View>
@@ -42,7 +42,7 @@ export default function StoreAppearanceScreen({ onBack }: { onBack: () => void }
           
           <TouchableOpacity style={styles.viewDemoLink}>
             <Text style={styles.viewDemoText}>View Demo Store</Text>
-            <MaterialCommunityIcons name="chevron-right" size={20} color="#17aba5" />
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#e61580" />
           </TouchableOpacity>
 
           {/* Theme Preview Image */}
@@ -64,7 +64,7 @@ export default function StoreAppearanceScreen({ onBack }: { onBack: () => void }
           <Text style={styles.logoTitle}>Logo</Text>
           <Text style={styles.logoSubtitle}>Personalise your store's identity with your logo.</Text>
           <TouchableOpacity style={styles.uploadButton}>
-            <MaterialCommunityIcons name="plus" size={24} color="#17aba5" />
+            <MaterialCommunityIcons name="plus" size={24} color="#e61580" />
             <Text style={styles.uploadButtonText}>Upload Logo</Text>
           </TouchableOpacity>
         </View>
@@ -85,7 +85,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
@@ -93,7 +95,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   scrollViewContent: {
     paddingBottom: 100,
@@ -118,7 +120,7 @@ const styles = StyleSheet.create({
   },
   infoLink: {
     fontSize: 14,
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
@@ -166,7 +168,7 @@ const styles = StyleSheet.create({
   },
   viewDemoText: {
     fontSize: 16,
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
     marginRight: 4,
   },
@@ -215,7 +217,7 @@ const styles = StyleSheet.create({
   },
   uploadButton: {
     borderWidth: 2,
-    borderColor: '#4361ee',
+    borderColor: '#e61580',
     borderRadius: 8,
     padding: 16,
     flexDirection: 'row',
@@ -225,7 +227,7 @@ const styles = StyleSheet.create({
   uploadButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#4361ee',
+    color: '#e61580',
     marginLeft: 8,
   },
   saveButtonContainer: {
@@ -239,7 +241,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e4ec',
   },
   saveButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -247,7 +249,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#ffffff',
   },
 });
 

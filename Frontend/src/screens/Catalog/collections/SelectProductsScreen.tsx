@@ -121,7 +121,7 @@ const SelectProductsScreen: React.FC<SelectProductsScreenProps> = ({
           filteredProducts.map(product => {
             const isSelected = selectedProductIds.includes(product.id);
             const discount =
-              product.mrp && product.mrp > product.price
+              product.mrp && product.mrp > 0 && product.price > 0 && product.mrp > product.price
                 ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
                 : 0;
 

@@ -66,10 +66,10 @@ export default function NeedHelpScreen({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#edeff3' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Need Help?</Text>
       </View>
@@ -99,13 +99,13 @@ export default function NeedHelpScreen({ onBack }: { onBack: () => void }) {
             <MaterialCommunityIcons
               name={item.icon as any}
               size={26}
-              color="#888"
+              color="#e61580"
             />
             <Text style={styles.label}>{item.label}</Text>
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
-              color="#17aba5"
+              color="#e61580"
               style={styles.arrow}
             />
           </TouchableOpacity>
@@ -125,7 +125,7 @@ export default function NeedHelpScreen({ onBack }: { onBack: () => void }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Contact Us</Text>
               <TouchableOpacity onPress={() => setShowContactModal(false)}>
-                <MaterialCommunityIcons name="close" size={28} color="#222" />
+                <MaterialCommunityIcons name="close" size={28} color="#e61580" />
               </TouchableOpacity>
             </View>
 
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
   },
   title: {
     fontWeight: 'bold',
@@ -163,13 +163,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
+    color: '#ffffff',
   },
   desc: {
-    color: '#858997',
+    color: '#6B7280',
     fontSize: 17,
     margin: 24,
     marginBottom: 18,
     marginTop: 22,
+    opacity: 0.9,
   },
   row: {
     flexDirection: 'row',
@@ -187,7 +189,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 20,
-    color: '#363740',
+    color: '#1a1a1a',
     marginLeft: 12,
     flex: 1,
   },
@@ -225,7 +227,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   chatButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: 'center',
@@ -233,7 +235,7 @@ const styles = StyleSheet.create({
   chatButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#ffffff',
   },
   callButton: {
     backgroundColor: '#fff',
@@ -241,13 +243,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     marginTop: 16,
   },
   callButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#17aba5',
+    color: '#e61580',
   },
   writeButton: {
     backgroundColor: '#fff',
@@ -255,13 +257,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     marginTop: 16,
   },
   writeButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#17aba5',
+    color: '#e61580',
   },
 });
 

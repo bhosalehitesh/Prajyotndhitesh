@@ -24,7 +24,7 @@ interface MessageTemplate {
   editable: boolean;
 }
 
-export default function SelectMessageScreen({ campaignData, onNext, onEdit }: SelectMessageScreenProps) {
+export default function SelectMessageScreen({ campaignData = {}, onNext, onEdit }: SelectMessageScreenProps) {
   const [selectedMessage, setSelectedMessage] = useState<any>(null);
   const [expandedMessage, setExpandedMessage] = useState<string | null>(null);
 
@@ -157,7 +157,7 @@ export default function SelectMessageScreen({ campaignData, onNext, onEdit }: Se
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Select your marketing message</Text>
         <TouchableOpacity>
-          <MaterialCommunityIcons name="filter-variant" size={24} color="#888" />
+          <MaterialCommunityIcons name="filter-variant" size={24} color="#e61580" />
         </TouchableOpacity>
       </View>
 
@@ -182,7 +182,7 @@ export default function SelectMessageScreen({ campaignData, onNext, onEdit }: Se
                 <Text style={styles.messageTitle}>{message.title}</Text>
               </View>
               {selectedMessage?.id === message.id && (
-                <MaterialCommunityIcons name="check-circle" size={24} color="#17aba5" />
+                <MaterialCommunityIcons name="check-circle" size={24} color="#e61580" />
               )}
             </View>
 
@@ -199,7 +199,7 @@ export default function SelectMessageScreen({ campaignData, onNext, onEdit }: Se
                 <MaterialCommunityIcons
                   name={expandedMessage === message.id ? 'chevron-up' : 'chevron-down'}
                   size={16}
-                  color="#17aba5"
+                  color="#e61580"
                 />
               </TouchableOpacity>
             )}
@@ -257,8 +257,8 @@ const styles = StyleSheet.create({
     borderColor: '#e2e4ec',
   },
   messageCardSelected: {
-    borderColor: '#17aba5',
-    backgroundColor: '#f0fdfa',
+    borderColor: '#e61580',
+    backgroundColor: '#fff5f8',
   },
   messageHeader: {
     flexDirection: 'row',
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   },
   readMoreText: {
     fontSize: 14,
-    color: '#17aba5',
+    color: '#e61580',
     marginRight: 4,
   },
   editButtonContainer: {
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e4ec',
   },
   editButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     fontSize: 18,
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: 'bold',
   },
 });

@@ -15,15 +15,15 @@ interface EditMessageScreenProps {
   onNext: (data: any) => void;
 }
 
-export default function EditMessageScreen({ campaignData, onNext }: EditMessageScreenProps) {
+export default function EditMessageScreen({ campaignData = {}, onNext }: EditMessageScreenProps) {
   const [campaignName, setCampaignName] = useState(
-    campaignData.campaignName || campaignData.selectedMessage?.type || ''
+    campaignData?.campaignName || campaignData?.selectedMessage?.type || ''
   );
   const [discountPercentage, setDiscountPercentage] = useState(
-    campaignData.discountPercentage || ''
+    campaignData?.discountPercentage || ''
   );
   const [messageContent, setMessageContent] = useState(
-    campaignData.messageContent || campaignData.selectedMessage?.content || ''
+    campaignData?.messageContent || campaignData?.selectedMessage?.content || ''
   );
 
   const handleNext = () => {
@@ -31,7 +31,8 @@ export default function EditMessageScreen({ campaignData, onNext }: EditMessageS
       Alert.alert('Error', 'Please enter a campaign name');
       return;
     }
-    if (!discountPercentage || parseFloat(discountPercentage) <= 0) {
+    const parsedValue = parseFloat(discountPercentage);
+    if (!discountPercentage || isNaN(parsedValue) || parsedValue <= 0) {
       Alert.alert('Error', 'Please enter a valid discount percentage');
       return;
     }
@@ -243,12 +244,12 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   messagePreview: {
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#e2e4ec',
+    borderColor: '#e61580',
   },
   messagePreviewHeader: {
     marginBottom: 12,
@@ -279,14 +280,14 @@ const styles = StyleSheet.create({
   },
   messagePreviewTextBoldTeal: {
     fontWeight: 'bold',
-    color: '#17aba5',
+    color: '#e61580',
   },
   messageEmoji: {
     fontSize: 20,
     marginRight: 8,
   },
   confirmButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

@@ -22,10 +22,10 @@ export default function PrivacyPolicyScreen({ onBack }: { onBack: () => void }) 
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Privacy Policy</Text>
         <View style={{ width: 28 }} />
@@ -51,7 +51,7 @@ export default function PrivacyPolicyScreen({ onBack }: { onBack: () => void }) 
             <Text style={styles.logo}>
               smart<Text style={styles.logoTeal}>commerce</Text>
             </Text>
-            <Text style={styles.logoSub}>by amazon</Text>
+            <Text style={styles.logoSub}>SmartBiz Sakhi store</Text>
           </View>
         </View>
 
@@ -236,25 +236,25 @@ export default function PrivacyPolicyScreen({ onBack }: { onBack: () => void }) 
         <View style={styles.footer}>
           <View style={styles.socialIcons}>
             <TouchableOpacity style={styles.socialIcon}>
-              <MaterialCommunityIcons name="instagram" size={20} color="#fff" />
+              <MaterialCommunityIcons name="instagram" size={20} color="#1a1a1a" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialIcon}>
-              <MaterialCommunityIcons name="facebook" size={20} color="#fff" />
+              <MaterialCommunityIcons name="facebook" size={20} color="#1a1a1a" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialIcon}>
-              <MaterialCommunityIcons name="youtube" size={20} color="#fff" />
+              <MaterialCommunityIcons name="youtube" size={20} color="#1a1a1a" />
             </TouchableOpacity>
           </View>
           <View style={styles.logoContainerFooter}>
             <Text style={styles.logoText}>smartcommerce</Text>
-            <Text style={styles.logoSubtext}>by amazon</Text>
+            <Text style={styles.logoSubtext}>SmartBiz Sakhi store</Text>
           </View>
           <View style={styles.footerInfo}>
             <Text style={styles.footerText}>Built in</Text>
             <Text style={styles.flag}>🇮🇳</Text>
           </View>
           <Text style={styles.copyright}>
-            © 2023 Amazon.com, Inc. or its affiliates. All rights reserved
+            © 2025 SmartBiz Sakhi store. All rights reserved
           </Text>
           <View style={styles.footerLinks}>
             <TouchableOpacity>
@@ -279,14 +279,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   logoTeal: {
-    color: '#17aba5',
+    color: '#e61580',
   },
   logoSub: {
     fontSize: 12,

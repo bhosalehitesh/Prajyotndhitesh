@@ -18,18 +18,18 @@ interface OfferSettingsScreenProps {
   onNext: (data: any) => void;
 }
 
-export default function OfferSettingsScreen({ offerData, onNext }: OfferSettingsScreenProps) {
-  const [percentageValue, setPercentageValue] = useState(offerData.percentageValue || '');
-  const [maxDiscount, setMaxDiscount] = useState(offerData.maxDiscount || '');
-  const [minPurchase, setMinPurchase] = useState(offerData.minPurchase || '');
-  const [usageLimit, setUsageLimit] = useState(offerData.usageLimit || '1');
-  const [startDate, setStartDate] = useState(offerData.startDate || '');
-  const [endDate, setEndDate] = useState(offerData.endDate || '');
-  const [setEndDateEnabled, setSetEndDateEnabled] = useState(offerData.setEndDate || false);
+export default function OfferSettingsScreen({ offerData = {}, onNext }: OfferSettingsScreenProps) {
+  const [percentageValue, setPercentageValue] = useState(offerData?.percentageValue || '');
+  const [maxDiscount, setMaxDiscount] = useState(offerData?.maxDiscount || '');
+  const [minPurchase, setMinPurchase] = useState(offerData?.minPurchase || '');
+  const [usageLimit, setUsageLimit] = useState(offerData?.usageLimit || '1');
+  const [startDate, setStartDate] = useState(offerData?.startDate || '');
+  const [endDate, setEndDate] = useState(offerData?.endDate || '');
+  const [setEndDateEnabled, setSetEndDateEnabled] = useState(offerData?.setEndDate || false);
   const [customerType, setCustomerType] = useState<'any' | 'firstTime' | 'repeat'>(
-    offerData.customerType || 'any'
+    offerData?.customerType || 'any'
   );
-  const [couponCode, setCouponCode] = useState(offerData.couponCode || '');
+  const [couponCode, setCouponCode] = useState(offerData?.couponCode || '');
 
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
@@ -37,13 +37,15 @@ export default function OfferSettingsScreen({ offerData, onNext }: OfferSettings
   const [tempEndDate, setTempEndDate] = useState(new Date());
 
   const handleNext = () => {
-    if (offerData.offerType === 'percentage') {
-      if (!percentageValue || parseFloat(percentageValue) <= 0 || parseFloat(percentageValue) > 100) {
+    if (offerData?.offerType === 'percentage') {
+      const parsedValue = parseFloat(percentageValue);
+      if (!percentageValue || isNaN(parsedValue) || parsedValue <= 0 || parsedValue > 100) {
         Alert.alert('Error', 'Please enter a valid percentage value (1-100)');
         return;
       }
     } else {
-      if (!percentageValue || parseFloat(percentageValue) <= 0) {
+      const parsedValue = parseFloat(percentageValue);
+      if (!percentageValue || isNaN(parsedValue) || parsedValue <= 0) {
         Alert.alert('Error', 'Please enter a valid discount amount');
         return;
       }
@@ -96,6 +98,9 @@ export default function OfferSettingsScreen({ offerData, onNext }: OfferSettings
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
     const year = parseInt(parts[2], 10);
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+    if (month < 0 || month > 11) return null;
+    if (day < 1 || day > 31) return null;
     return new Date(year, month, day);
   };
 
@@ -135,7 +140,7 @@ export default function OfferSettingsScreen({ offerData, onNext }: OfferSettings
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        {offerData.offerType === 'percentage' ? (
+        {offerData?.offerType === 'percentage' ? (
           <>
             {/* Percentage Value */}
             <View style={styles.section}>
@@ -255,7 +260,7 @@ export default function OfferSettingsScreen({ offerData, onNext }: OfferSettings
           >
             <View style={styles.checkbox}>
               {setEndDateEnabled && (
-                <MaterialCommunityIcons name="check" size={16} color="#17aba5" />
+                <MaterialCommunityIcons name="check" size={16} color="#e61580" />
               )}
             </View>
             <Text style={styles.checkboxLabel}>Set End Date</Text>
@@ -390,7 +395,7 @@ export default function OfferSettingsScreen({ offerData, onNext }: OfferSettings
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Select Start Date</Text>
                   <TouchableOpacity onPress={() => setShowStartDatePicker(false)}>
-                    <MaterialCommunityIcons name="close" size={24} color="#222" />
+                    <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.datePickerContainer}>
@@ -419,7 +424,7 @@ export default function OfferSettingsScreen({ offerData, onNext }: OfferSettings
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Select End Date</Text>
                   <TouchableOpacity onPress={() => setShowEndDatePicker(false)}>
-                    <MaterialCommunityIcons name="close" size={24} color="#222" />
+                    <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.datePickerContainer}>
@@ -487,7 +492,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   unitBox: {
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderTopRightRadius: 8,
@@ -502,7 +507,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   currencyBox: {
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff',
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderTopLeftRadius: 8,
@@ -551,7 +556,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -593,7 +598,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -602,14 +607,14 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   customerText: {
     fontSize: 16,
     color: '#363740',
   },
   nextButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
@@ -663,7 +668,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   confirmButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

@@ -104,7 +104,7 @@ export default function HelpCenterScreen({ onBack }: { onBack: () => void }) {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setSelectedArticle(null)}>
-            <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+            <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Help</Text>
           <View style={{ width: 28 }} />
@@ -132,7 +132,7 @@ export default function HelpCenterScreen({ onBack }: { onBack: () => void }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help</Text>
         <View style={{ width: 28 }} />
@@ -142,16 +142,16 @@ export default function HelpCenterScreen({ onBack }: { onBack: () => void }) {
       <View style={styles.banner}>
         <View style={styles.bannerLeft}>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="store" size={32} color="#fff" />
+            <MaterialCommunityIcons name="store" size={32} color="#ffffff" />
           </View>
           <View style={styles.logoText}>
             <Text style={styles.logoMain}>Sakhi</Text>
-            <Text style={styles.logoSub}>by amazon</Text>
+            <Text style={styles.logoSub}>SmartBiz Sakhi store</Text>
           </View>
         </View>
         <Text style={styles.bannerText}>Help Center</Text>
         <TouchableOpacity>
-          <MaterialCommunityIcons name="menu" size={24} color="#fff" />
+          <MaterialCommunityIcons name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
 
@@ -213,7 +213,7 @@ export default function HelpCenterScreen({ onBack }: { onBack: () => void }) {
         {/* Footer */}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.footerButton}>
-            <MaterialCommunityIcons name="arrow-up" size={20} color="#fff" />
+            <MaterialCommunityIcons name="arrow-up" size={20} color="#e61580" />
           </TouchableOpacity>
           <View style={styles.footerLinks}>
             <TouchableOpacity>
@@ -248,27 +248,27 @@ export default function HelpCenterScreen({ onBack }: { onBack: () => void }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#222',
+    color: '#ffffff',
   },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     padding: 16,
     paddingHorizontal: 20,
   },
@@ -340,16 +340,16 @@ const styles = StyleSheet.create({
   },
   breadcrumbText: {
     fontSize: 14,
-    color: '#17aba5',
+    color: '#e61580',
   },
   breadcrumbSeparator: {
     fontSize: 14,
-    color: '#17aba5',
+    color: '#e61580',
     marginHorizontal: 4,
   },
   breadcrumbActive: {
     fontSize: 14,
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   faqsSection: {
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   },
   articleLink: {
     fontSize: 16,
-    color: '#17aba5',
+    color: '#e61580',
     flex: 1,
   },
   footer: {
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -75,7 +75,7 @@ export default function NewCustomerScreen({ onBack }: NewCustomerScreenProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="close" size={28} color="#222" />
+          <MaterialCommunityIcons name="close" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Add new customer</Text>
         <View style={{ width: 28 }} />
@@ -126,21 +126,21 @@ export default function NewCustomerScreen({ onBack }: NewCustomerScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
     fontSize: 22,
-    color: '#222',
+    color: '#ffffff',
   },
   content: {
     padding: 20,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   addButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

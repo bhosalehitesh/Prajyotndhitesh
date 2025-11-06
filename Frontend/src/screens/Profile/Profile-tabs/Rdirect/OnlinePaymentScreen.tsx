@@ -78,7 +78,7 @@ export default function OnlinePaymentScreen({ onBack }: OnlinePaymentScreenProps
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setShowAccountForm(false)}>
-            <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+            <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.title}>Manage Payments</Text>
         </View>
@@ -98,7 +98,7 @@ export default function OnlinePaymentScreen({ onBack }: OnlinePaymentScreenProps
               <Text style={[styles.selectText, !businessType && styles.placeholderText]}>
                 {businessType || 'Select Business Type'}
               </Text>
-              <MaterialCommunityIcons name="chevron-down" size={24} color="#888" />
+              <MaterialCommunityIcons name="chevron-down" size={24} color="#e61580" />
             </TouchableOpacity>
           </View>
 
@@ -169,7 +169,7 @@ export default function OnlinePaymentScreen({ onBack }: OnlinePaymentScreenProps
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Business Type</Text>
                 <TouchableOpacity onPress={() => setShowBusinessTypeModal(false)}>
-                  <MaterialCommunityIcons name="close" size={28} color="#222" />
+                  <MaterialCommunityIcons name="close" size={28} color="#ffffff" />
                 </TouchableOpacity>
               </View>
               <ScrollView>
@@ -184,7 +184,7 @@ export default function OnlinePaymentScreen({ onBack }: OnlinePaymentScreenProps
                   >
                     <Text style={styles.modalOptionText}>{type}</Text>
                     {businessType === type && (
-                      <MaterialCommunityIcons name="check" size={24} color="#17aba5" />
+                      <MaterialCommunityIcons name="check" size={24} color="#e61580" />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -201,7 +201,7 @@ export default function OnlinePaymentScreen({ onBack }: OnlinePaymentScreenProps
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Manage Payments</Text>
       </View>
@@ -234,13 +234,13 @@ export default function OnlinePaymentScreen({ onBack }: OnlinePaymentScreenProps
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
   },
   title: {
     fontWeight: 'bold',
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#fff',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#4361ee',
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -304,27 +304,27 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   createAccountButton: {
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
   },
   createAccountButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
   },
   linkAccountButton: {
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e4ec',
+    borderColor: '#e61580',
   },
   linkAccountButtonText: {
-    color: '#363740',
+    color: '#e61580',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     borderColor: '#e2e4ec',
   },
   disabledInput: {
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#f5f5f5',
     color: '#888',
   },
   selectInput: {
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
     borderLeftWidth: 4,
-    borderLeftColor: '#17aba5',
+    borderLeftColor: '#e61580',
   },
   infoText: {
     fontSize: 14,
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   createButton: {
-    backgroundColor: '#888',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',

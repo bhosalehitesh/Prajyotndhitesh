@@ -16,10 +16,10 @@ export default function ChatScreen({ onBack }: { onBack: () => void }) {
   const [message, setMessage] = useState('');
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Sakhi</Text>
         <View style={{ width: 28 }} />
@@ -78,18 +78,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#2d5016',
+    backgroundColor: '#e61580',
   },
   title: {
     fontWeight: 'bold',
     fontSize: 20,
     textAlign: 'center',
     flex: 1,
-    color: '#FFFFFF',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#fff5f8',
   },
   chatContainer: {
     padding: 16,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   onlineText: {
-    color: '#FFFFFF',
+    color: '#1a1a1a',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1a1a1a',
   },
   botBubble: {
     flex: 1,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   botMessageText: {
     fontSize: 15,
-    color: '#FFFFFF',
+    color: '#1a1a1a',
     marginBottom: 6,
     lineHeight: 20,
   },
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#FFFFFF',
+    color: '#1a1a1a',
     maxHeight: 100,
   },
 });

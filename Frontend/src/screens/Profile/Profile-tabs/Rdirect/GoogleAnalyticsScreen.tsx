@@ -4,10 +4,10 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 
 export default function GoogleAnalyticsScreen({ onBack }: { onBack: () => void }) {
   return (
-    <View style={{ flex: 1, backgroundColor: '#edeff3' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Google Analytics</Text>
       </View>
@@ -48,7 +48,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
@@ -56,7 +58,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -114,7 +116,7 @@ const styles = StyleSheet.create({
   },
   desc: {
     fontSize: 16,
-    color: '#363740',
+    color: '#1a1a1a',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,
@@ -124,22 +126,27 @@ const styles = StyleSheet.create({
   },
   getStartedText: {
     fontSize: 15,
-    color: '#4361ee',
+    color: '#e61580',
     textDecorationLine: 'underline',
     fontWeight: '600',
   },
   signInButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 8,
     paddingVertical: 16,
     paddingHorizontal: 40,
     width: '100%',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   signInButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#ffffff',
   },
 });
 

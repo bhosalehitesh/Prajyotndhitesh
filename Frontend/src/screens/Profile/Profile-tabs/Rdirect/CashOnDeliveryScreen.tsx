@@ -59,7 +59,7 @@ export default function CashOnDeliveryScreen({ onBack }: CashOnDeliveryScreenPro
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Cash on Delivery</Text>
       </View>
@@ -74,7 +74,7 @@ export default function CashOnDeliveryScreen({ onBack }: CashOnDeliveryScreenPro
             <Switch
               value={codEnabled}
               onValueChange={setCodEnabled}
-              trackColor={{ false: '#E5E7EB', true: '#10B981' }}
+              trackColor={{ false: '#E5E7EB', true: '#e61580' }}
               thumbColor={codEnabled ? '#FFFFFF' : '#F3F4F6'}
             />
           </View>
@@ -103,7 +103,7 @@ export default function CashOnDeliveryScreen({ onBack }: CashOnDeliveryScreenPro
                 >
                   <View style={styles.checkbox}>
                     {setupCharges && (
-                      <MaterialCommunityIcons name="check" size={18} color="#17aba5" />
+                      <MaterialCommunityIcons name="check" size={18} color="#e61580" />
                     )}
                   </View>
                   <Text style={styles.checkboxLabel}>Setup additional charges for COD</Text>
@@ -211,13 +211,13 @@ export default function CashOnDeliveryScreen({ onBack }: CashOnDeliveryScreenPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
   },
   title: {
     fontWeight: 'bold',
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#fff',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -242,8 +242,8 @@ const styles = StyleSheet.create({
     borderColor: '#e2e4ec',
   },
   toggleCardActive: {
-    backgroundColor: '#f0fdfa',
-    borderColor: '#17aba5',
+    backgroundColor: '#fff5f8',
+    borderColor: '#e61580',
   },
   toggleContent: {
     flexDirection: 'row',
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   radioLabel: {
     fontSize: 16,
@@ -426,11 +426,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   learnMoreText: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#888',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
   },
   saveButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
   },

@@ -150,7 +150,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
             <View
               style={[
                 styles.progressBarFill,
-                {width: `${data.onboardingProgress.percentage}%`},
+                {
+                  width: data?.onboardingProgress?.percentage != null && !isNaN(data.onboardingProgress.percentage)
+                    ? `${Math.max(0, Math.min(100, data.onboardingProgress.percentage))}%`
+                    : '0%',
+                },
               ]}
             />
           </View>

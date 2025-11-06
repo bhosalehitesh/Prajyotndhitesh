@@ -13,8 +13,13 @@ interface IconSymbolProps {
 const SF_TO_IONICONS_MAPPING: {[key: string]: string} = {
   // Tab bar icons
   'house.fill': 'home',
+  'home-outline': 'home-outline',
   'square.grid.2x2': 'grid',
+  'grid': 'grid',
+  'grid-outline': 'grid-outline',
   'chart.bar.fill': 'bar-chart',
+  'stats-chart-outline': 'stats-chart-outline',
+  'menu-outline': 'menu-outline',
   
   // Catalog icons
   'list.bullet': 'list',
@@ -32,6 +37,7 @@ const SF_TO_IONICONS_MAPPING: {[key: string]: string} = {
   'bag': 'bag-outline',
   'tag': 'pricetag-outline',
   'folder': 'folder-outline',
+  'folder-outline': 'folder-outline',
   
   // Navigation and UI icons
   'chevron-back': 'chevron-back',
@@ -71,6 +77,7 @@ const SF_TO_IONICONS_MAPPING: {[key: string]: string} = {
   'document-text': 'document-text-outline',
   'call': 'call-outline',
   'download-outline': 'download-outline',
+  'ellipse-outline': 'ellipse-outline',
 };
 
 const IconSymbol: React.FC<IconSymbolProps> = ({ name, size = 18, color = '#6c757d' }) => {

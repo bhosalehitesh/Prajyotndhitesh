@@ -11,6 +11,7 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SAFE_SCREEN_WIDTH = SCREEN_WIDTH && !isNaN(SCREEN_WIDTH) && SCREEN_WIDTH > 0 ? SCREEN_WIDTH : 375; // Fallback to iPhone width
 
 interface CongratulationsScreenProps {
   onContinue: () => void;
@@ -28,7 +29,7 @@ const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ onContinu
                 onPress={onContinue}
                 activeOpacity={0.7}
               >
-                <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
+                <MaterialCommunityIcons name="close" size={24} color="#e61580" />
               </TouchableOpacity>
 
               <Text style={styles.title}>Congratulations</Text>
@@ -55,7 +56,7 @@ const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ onContinu
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f4f7',
+    backgroundColor: '#fff5f8',
   },
   content: {
     flex: 1,
@@ -70,11 +71,12 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: Math.max(32, SCREEN_WIDTH * 0.08),
-    width: Math.min('100%', SCREEN_WIDTH - 40),
+    padding: Math.max(32, SAFE_SCREEN_WIDTH * 0.08),
+    width: Math.min(SAFE_SCREEN_WIDTH - 40, SAFE_SCREEN_WIDTH * 0.9),
+    maxWidth: '100%',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#22b0a7',
+    borderColor: '#e61580',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
@@ -101,10 +103,10 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#10b981',
+    backgroundColor: '#e61580',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#10b981',
+    shadowColor: '#e61580',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -118,13 +120,13 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   continueButton: {
-    backgroundColor: '#22b0a7',
+    backgroundColor: '#e61580',
     borderRadius: 24,
     paddingVertical: 16,
     paddingHorizontal: 48,
     alignItems: 'center',
     width: '100%',
-    shadowColor: '#22b0a7',
+    shadowColor: '#e61580',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

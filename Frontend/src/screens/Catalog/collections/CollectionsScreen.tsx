@@ -141,22 +141,30 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
   };
 
   const showSuccessMessage = (message: string) => {
+    if (!messageOpacity) return;
     setSuccessMessage(message);
-    Animated.sequence([
-      Animated.timing(messageOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.delay(2000),
-      Animated.timing(messageOpacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    try {
+      Animated.sequence([
+        Animated.timing(messageOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(2000),
+        Animated.timing(messageOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start((finished) => {
+        if (finished) {
+          setSuccessMessage(null);
+        }
+      });
+    } catch (error) {
+      console.error('Animation error:', error);
       setSuccessMessage(null);
-    });
+    }
   };
 
   const toggleHideFromWebsite = (collectionId: string, value: boolean) => {
@@ -245,11 +253,13 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
       </ScrollView>
 
       {/* Success Message Toast */}
-      {successMessage && (
+      {successMessage && messageOpacity && (
         <Animated.View
           style={[
             styles.successMessageContainer,
-            {opacity: messageOpacity},
+            {
+              opacity: messageOpacity,
+            },
           ]}>
           <IconSymbol name="checkmark-circle" size={20} color="#FFFFFF" />
           <Text style={styles.successMessageText}>{successMessage}</Text>

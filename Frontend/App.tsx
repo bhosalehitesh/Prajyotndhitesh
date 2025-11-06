@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -10,6 +10,13 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
+import IconSymbol from './src/components/IconSymbol';
+
+// Import authentication
+import { AuthProvider, useAuth } from './src/authentication/AuthContext';
+import UnifiedAuthScreen from './src/authentication/UnifiedAuthScreen';
+import OnboardingFlow from './src/authentication/onboarding/OnboardingFlow';
+import { storage } from './src/authentication/storage';
 
 // Import screens from organized folders
 import HomeScreen from './src/screens/Home/HomeScreen';
@@ -76,66 +83,57 @@ function CustomTabBar({state, descriptors, navigation}: any) {
         };
 
         const getIcon = (routeName: string, isFocused: boolean) => {
-          // Icons are white for active, light gray for inactive on dark background
-          const iconColor = isFocused ? '#FFFFFF' : '#D0D0D0';
+          // Icons are black for inactive, solid black for active Catalog
+          const iconColor = '#000000';
           
           switch (routeName) {
             case 'Home':
               return (
-                <View style={styles.iconContainer}>
-                  <View style={[styles.houseIcon, {borderColor: iconColor}]}>
-                    <View style={[styles.houseRoof, {borderColor: iconColor}]} />
-                    <View style={[styles.houseDoor, {backgroundColor: iconColor}]} />
-                  </View>
-                </View>
+                <IconSymbol 
+                  name="home-outline" 
+                  size={24} 
+                  color={iconColor} 
+                />
               );
             case 'Orders':
               return (
-                <View style={styles.iconContainer}>
-                  <View style={[styles.boxIcon, {borderColor: iconColor}]}>
-                    <View style={[styles.boxArrow, {borderColor: iconColor}]} />
-                  </View>
-                </View>
+                <IconSymbol 
+                  name="folder-outline" 
+                  size={24} 
+                  color={iconColor} 
+                />
               );
             case 'Catalog':
               return (
-                <View style={styles.iconContainer}>
-                  <View style={styles.gridIcon}>
-                    <View style={[styles.gridDot, {backgroundColor: iconColor}]} />
-                    <View style={[styles.gridDot, {backgroundColor: iconColor}]} />
-                    <View style={[styles.gridDot, {backgroundColor: iconColor}]} />
-                    <View style={[styles.gridDot, {backgroundColor: iconColor}]} />
-                    <View style={[styles.gridDot, {backgroundColor: iconColor}]} />
-                    <View style={[styles.gridDot, {backgroundColor: iconColor}]} />
-                    <View style={[styles.gridDot, {backgroundColor: iconColor}]} />
-                    <View style={[styles.gridDot, {backgroundColor: iconColor}]} />
-                    <View style={[styles.gridDot, {backgroundColor: iconColor}]} />
-                  </View>
-                </View>
+                <IconSymbol 
+                  name={isFocused ? "grid" : "grid-outline"} 
+                  size={24} 
+                  color={iconColor} 
+                />
               );
             case 'Analytics':
               return (
-                <View style={styles.iconContainer}>
-                  <View style={[styles.chartIcon, {borderColor: iconColor}]}>
-                    <View style={[styles.chartLine, {borderColor: iconColor}]} />
-                  </View>
-                </View>
+                <IconSymbol 
+                  name="stats-chart-outline" 
+                  size={24} 
+                  color={iconColor} 
+                />
               );
             case 'Profile':
               return (
-                <View style={styles.iconContainer}>
-                  <View style={styles.menuIcon}>
-                    <View style={[styles.menuLine, {backgroundColor: iconColor}]} />
-                    <View style={[styles.menuLine, {backgroundColor: iconColor}]} />
-                    <View style={[styles.menuLine, {backgroundColor: iconColor}]} />
-                  </View>
-                </View>
+                <IconSymbol 
+                  name="menu-outline" 
+                  size={24} 
+                  color={iconColor} 
+                />
               );
             default:
               return (
-                <View style={styles.iconContainer}>
-                  <View style={[styles.defaultIcon, {backgroundColor: iconColor}]} />
-                </View>
+                <IconSymbol 
+                  name="ellipse-outline" 
+                  size={24} 
+                  color={iconColor} 
+                />
               );
           }
         };
@@ -183,7 +181,58 @@ function TabNavigator() {
   );
 }
 
-function App(): JSX.Element {
+// App Content Component (wrapped with AuthProvider)
+function AppContent(): JSX.Element {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [showAuth, setShowAuth] = useState(!isAuthenticated);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // If user is already authenticated (e.g., returning session), decide whether to show onboarding
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (isAuthenticated && !showAuth) {
+        const completed = await storage.getItem('onboardingCompleted');
+        setShowOnboarding(completed !== 'true');
+      }
+    };
+    checkOnboarding();
+  }, [isAuthenticated, showAuth]);
+
+  // Show auth screen if not authenticated
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!isAuthenticated || showAuth) {
+    return (
+      <UnifiedAuthScreen
+        onAuthenticated={async () => {
+          // After successful auth, decide whether to show onboarding
+          const completed = await storage.getItem('onboardingCompleted');
+          if (completed !== 'true') {
+            setShowOnboarding(true);
+          }
+          setShowAuth(false);
+        }}
+      />
+    );
+  }
+
+  // Show onboarding flow if pending
+  if (showOnboarding) {
+    return (
+      <OnboardingFlow
+        onComplete={() => {
+          setShowOnboarding(false);
+        }}
+      />
+    );
+  }
+
   return (
     <NavigationContainer>
       <MainStack />
@@ -191,7 +240,25 @@ function App(): JSX.Element {
   );
 }
 
+function App(): JSX.Element {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#333333',
+  },
   container: {
     flex: 1,
     backgroundColor: '#FFF4FA',
@@ -216,9 +283,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#e61580',
-    borderTopWidth: 0,
+    backgroundColor: '#fff5f8',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e4ec',
     height: 60,
+    paddingTop: 5,
     paddingBottom: 5,
   },
   tabItem: {
@@ -226,6 +295,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 5,
+    paddingBottom: 5,
   },
   iconContainer: {
     width: 24,
@@ -334,13 +404,13 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 11,
-    color: '#D0D0D0',
+    color: '#000000',
     marginTop: 4,
     fontWeight: '400',
   },
   focusedTabLabel: {
-    color: '#FFFFFF',
-    fontWeight: '400',
+    color: '#007AFF',
+    fontWeight: '500',
   },
 });
 

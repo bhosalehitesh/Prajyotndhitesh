@@ -28,10 +28,10 @@ export default function StorePoliciesScreen({ onBack }: { onBack: () => void }) 
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#edeff3' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Store Policies</Text>
         <TouchableOpacity>
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
   },
   title: {
     fontWeight: 'bold',
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   },
   editButton: {
     borderWidth: 1,
-    borderColor: '#4361ee',
+    borderColor: '#e61580',
     borderRadius: 4,
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   editButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#4361ee',
+    color: '#e61580',
   },
   policyPreview: {
     fontSize: 15,

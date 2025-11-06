@@ -43,15 +43,30 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
   const activeProduct = useMemo(() => products.find(p=>p.id===activeProductId) || null, [products, activeProductId]);
 
   // Compute absolute price bounds from product data
-  const absoluteMinPrice = useMemo(() => products.length ? Math.min(...products.map(p=>p.price)) : 0, [products]);
-  const absoluteMaxPrice = useMemo(() => products.length ? Math.max(...products.map(p=>p.price)) : 0, [products]);
+  const absoluteMinPrice = useMemo(() => {
+    if (!products.length) return 0;
+    const prices = products.map(p => p.price).filter(p => typeof p === 'number' && !isNaN(p) && p >= 0);
+    return prices.length ? Math.min(...prices) : 0;
+  }, [products]);
+  
+  const absoluteMaxPrice = useMemo(() => {
+    if (!products.length) return 0;
+    const prices = products.map(p => p.price).filter(p => typeof p === 'number' && !isNaN(p) && p >= 0);
+    return prices.length ? Math.max(...prices) : 0;
+  }, [products]);
 
   // Initialize/keep price range in bounds when products change
   React.useEffect(() => {
+    if (isNaN(absoluteMinPrice) || isNaN(absoluteMaxPrice) || absoluteMinPrice < 0 || absoluteMaxPrice < 0) {
+      return;
+    }
     setPriceRange(prev => {
-      const nextMin = prev.min === 0 && prev.max === 0 ? absoluteMinPrice : Math.min(Math.max(prev.min, absoluteMinPrice), absoluteMaxPrice);
-      const nextMax = prev.min === 0 && prev.max === 0 ? absoluteMaxPrice : Math.max(Math.min(prev.max, absoluteMaxPrice), absoluteMinPrice);
-      return {min: nextMin, max: nextMax};
+      const nextMin = prev.min === 0 && prev.max === 0 ? absoluteMinPrice : Math.min(Math.max(prev.min || 0, absoluteMinPrice), absoluteMaxPrice);
+      const nextMax = prev.min === 0 && prev.max === 0 ? absoluteMaxPrice : Math.max(Math.min(prev.max || 0, absoluteMaxPrice), absoluteMinPrice);
+      return {
+        min: isNaN(nextMin) ? 0 : nextMin,
+        max: isNaN(nextMax) ? 0 : nextMax,
+      };
     });
   }, [absoluteMinPrice, absoluteMaxPrice]);
 
@@ -77,11 +92,17 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
         return selectedRanges.some(r => {
           // r like '0 - 20%' or '81% and above'
           if (r.includes('and above')) {
-            const low = parseInt(r);
-            return d >= low;
+            const low = parseInt(r, 10);
+            if (!isNaN(low)) {
+              return d >= low;
+            }
+            return false;
           }
-          const [lo, hi] = r.replace('%','').split(' - ').map(x=>parseInt(x));
-          return d >= lo && d <= hi;
+          const [lo, hi] = r.replace('%','').split(' - ').map(x=>parseInt(x, 10)).filter(x => !isNaN(x));
+          if (lo != null && hi != null) {
+            return d >= lo && d <= hi;
+          }
+          return false;
         });
       });
     }
@@ -103,11 +124,16 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
       const d = getDiscountPercent(p);
       for (const r of discountRanges) {
         if (r.includes('and above')) {
-          const low = parseInt(r);
-          if (d >= low) map[r] += 1;
+          const low = parseInt(r, 10);
+          if (!isNaN(low) && d >= low) {
+            map[r] += 1;
+          }
         } else {
-          const [lo, hi] = r.replace('%','').split(' - ').map(x=>parseInt(x));
-          if (d >= lo && d <= hi) { map[r] += 1; break; }
+          const parts = r.replace('%','').split(' - ').map(x=>parseInt(x, 10)).filter(x => !isNaN(x));
+          if (parts.length === 2 && d >= parts[0] && d <= parts[1]) {
+            map[r] += 1;
+            break;
+          }
         }
       }
     }

@@ -96,7 +96,7 @@ export default function SelectCustomerScreen({
           <View style={styles.emptyState}>
             <View style={styles.illustration}>
               <View style={styles.phoneCircle}>
-                <MaterialCommunityIcons name="phone" size={40} color="#17aba5" />
+                <MaterialCommunityIcons name="phone" size={40} color="#e61580" />
                 <View style={styles.bubble}>
                   <MaterialCommunityIcons name="phone-outline" size={20} color="#10B981" />
                 </View>
@@ -122,7 +122,7 @@ export default function SelectCustomerScreen({
                 </View>
                 <View style={styles.checkbox}>
                   {selectedCustomers.has(customer.id) && (
-                    <MaterialCommunityIcons name="check" size={20} color="#17aba5" />
+                    <MaterialCommunityIcons name="check" size={20} color="#e61580" />
                   )}
                 </View>
               </TouchableOpacity>
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabTextActive: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   tabUnderline: {
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   scrollView: {
     flex: 1,
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e4ec',
   },
   sendButton: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   sendButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: '#ffffff',
   },
 });
 

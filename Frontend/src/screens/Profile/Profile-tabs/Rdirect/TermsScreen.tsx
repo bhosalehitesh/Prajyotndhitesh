@@ -153,10 +153,10 @@ export default function TermsScreen({ onBack }: { onBack: () => void }) {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Terms of Use</Text>
         <View style={{ width: 28 }} />
@@ -189,25 +189,25 @@ export default function TermsScreen({ onBack }: { onBack: () => void }) {
         <View style={styles.footer}>
           <View style={styles.socialIcons}>
             <TouchableOpacity style={styles.socialIcon}>
-              <MaterialCommunityIcons name="instagram" size={20} color="#fff" />
+              <MaterialCommunityIcons name="instagram" size={20} color="#1a1a1a" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialIcon}>
-              <MaterialCommunityIcons name="facebook" size={20} color="#fff" />
+              <MaterialCommunityIcons name="facebook" size={20} color="#1a1a1a" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialIcon}>
-              <MaterialCommunityIcons name="youtube" size={20} color="#fff" />
+              <MaterialCommunityIcons name="youtube" size={20} color="#1a1a1a" />
             </TouchableOpacity>
           </View>
           <View style={styles.logoContainer}>
             <Text style={styles.logoText}>smartcommerce</Text>
-            <Text style={styles.logoSubtext}>by amazon</Text>
+            <Text style={styles.logoSubtext}>SmartBiz Sakhi store</Text>
           </View>
           <View style={styles.footerInfo}>
             <Text style={styles.footerText}>Built in</Text>
             <Text style={styles.flag}>🇮🇳</Text>
           </View>
           <Text style={styles.copyright}>
-            © 2023 Amazon.com, Inc. or its affiliates. All rights reserved
+            © 2025 SmartBiz Sakhi store. All rights reserved
           </Text>
           <View style={styles.footerLinks}>
             <TouchableOpacity>
@@ -232,14 +232,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   },
   banner: {
     height: 110,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',

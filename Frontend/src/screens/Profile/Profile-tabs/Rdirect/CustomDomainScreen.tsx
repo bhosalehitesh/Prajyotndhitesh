@@ -46,7 +46,7 @@ export default function CustomDomainScreen({ onBack }: { onBack: () => void }) {
             currentStep === 1 ? styles.stepCircleActive : currentStep > 1 ? styles.stepCompleted : styles.stepCircleInactive
           ]}>
             {currentStep > 1 ? (
-              <MaterialCommunityIcons name="check" size={16} color="#fff" />
+              <MaterialCommunityIcons name="check" size={16} color="#ffffff" />
             ) : currentStep === 1 ? (
               <Text style={styles.stepNumber}>1</Text>
             ) : (
@@ -70,7 +70,7 @@ export default function CustomDomainScreen({ onBack }: { onBack: () => void }) {
             currentStep === 2 ? styles.stepCircleActive : currentStep > 2 ? styles.stepCompleted : styles.stepCircleInactive
           ]}>
             {currentStep > 2 ? (
-              <MaterialCommunityIcons name="check" size={16} color="#fff" />
+              <MaterialCommunityIcons name="check" size={16} color="#ffffff" />
             ) : (
               <Text style={currentStep === 2 ? styles.stepNumber : [styles.stepNumber, styles.stepNumberInactive]}>2</Text>
             )}
@@ -105,10 +105,10 @@ export default function CustomDomainScreen({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#edeff3' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Custom Domain</Text>
       </View>
@@ -124,7 +124,7 @@ export default function CustomDomainScreen({ onBack }: { onBack: () => void }) {
               <Text style={styles.subTitle}>Things to know before you begin</Text>
               
               <View style={styles.infoCard}>
-                <MaterialCommunityIcons name="information-outline" size={24} color="#17aba5" />
+                <MaterialCommunityIcons name="information-outline" size={24} color="#e61580" />
                 <Text style={styles.infoText}>
                   Ensure you have access to your domain registrar to update DNS settings.
                 </Text>
@@ -192,7 +192,7 @@ export default function CustomDomainScreen({ onBack }: { onBack: () => void }) {
                     const allRecords = dnsRecords.map(r => `${r.type} ${r.name} ${r.value || r.caDomain}`).join('\n');
                     copyToClipboard(allRecords);
                   }}>
-                    <MaterialCommunityIcons name="content-copy" size={18} color="#17aba5" />
+                    <MaterialCommunityIcons name="content-copy" size={18} color="#e61580" />
                     <Text style={styles.copyAllText}>Copy all</Text>
                   </TouchableOpacity>
                 </View>
@@ -243,7 +243,7 @@ export default function CustomDomainScreen({ onBack }: { onBack: () => void }) {
           {currentStep === 3 && (
             <>
               <View style={styles.statusCard}>
-                <MaterialCommunityIcons name="check-circle" size={64} color="#17aba5" />
+                <MaterialCommunityIcons name="check-circle" size={64} color="#e61580" />
                 <Text style={styles.statusTitle}>Verification in Progress</Text>
                 <Text style={styles.statusText}>
                   We are verifying your domain connection. This may take a few minutes.
@@ -262,7 +262,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
@@ -270,7 +272,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -298,10 +300,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stepCompleted: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   stepCircleActive: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   stepCircleInactive: {
     backgroundColor: '#e2e4ec',
@@ -319,7 +321,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   stepTextActive: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   stepTextInactive: {
@@ -332,7 +334,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   lineCompleted: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   lineInactive: {
     backgroundColor: '#e2e4ec',
@@ -390,7 +392,9 @@ const styles = StyleSheet.create({
   copyHintBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
@@ -421,7 +425,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   verifyButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#1a1a1a',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -480,7 +484,7 @@ const styles = StyleSheet.create({
     borderColor: '#e2e4ec',
   },
   submitButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#1a1a1a',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',

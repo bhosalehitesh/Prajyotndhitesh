@@ -25,7 +25,7 @@ export default function ReturnsScreen({ onBack }: ReturnsScreenProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Returns</Text>
       </View>
@@ -56,19 +56,19 @@ export default function ReturnsScreen({ onBack }: ReturnsScreenProps) {
 
           <View style={styles.featuresList}>
             <View style={styles.featureItem}>
-              <MaterialCommunityIcons name="check-circle" size={20} color="#10B981" />
+              <MaterialCommunityIcons name="check-circle" size={20} color="#e61580" />
               <Text style={styles.featureText}>View and manage your return requests</Text>
             </View>
             <View style={styles.featureItem}>
-              <MaterialCommunityIcons name="check-circle" size={20} color="#10B981" />
+              <MaterialCommunityIcons name="check-circle" size={20} color="#e61580" />
               <Text style={styles.featureText}>Notify customers about their returns</Text>
             </View>
             <View style={styles.featureItem}>
-              <MaterialCommunityIcons name="check-circle" size={20} color="#10B981" />
+              <MaterialCommunityIcons name="check-circle" size={20} color="#e61580" />
               <Text style={styles.featureText}>Process refund pickups via Shiprocket</Text>
             </View>
             <View style={styles.featureItem}>
-              <MaterialCommunityIcons name="check-circle" size={20} color="#10B981" />
+              <MaterialCommunityIcons name="check-circle" size={20} color="#e61580" />
               <Text style={styles.featureText}>Leverage Razorpay to issue refunds</Text>
             </View>
           </View>
@@ -76,7 +76,7 @@ export default function ReturnsScreen({ onBack }: ReturnsScreenProps) {
           <View style={styles.separator} />
 
           <View style={styles.comingSoonSection}>
-            <MaterialCommunityIcons name="star" size={18} color="#17aba5" />
+            <MaterialCommunityIcons name="star" size={18} color="#e61580" />
             <Text style={styles.comingSoonText}>Coming Soon</Text>
           </View>
 
@@ -111,13 +111,13 @@ export default function ReturnsScreen({ onBack }: ReturnsScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
   },
   title: {
     fontWeight: 'bold',
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#fff',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   comingSoonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#17aba5',
+    color: '#e61580',
     marginLeft: 6,
   },
   comingSoonList: {
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   enableButton: {
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     marginHorizontal: 16,
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   enableButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
   },

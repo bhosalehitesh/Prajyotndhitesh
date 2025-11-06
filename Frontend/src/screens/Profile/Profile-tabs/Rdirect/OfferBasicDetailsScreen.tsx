@@ -15,15 +15,15 @@ interface OfferBasicDetailsScreenProps {
 }
 
 export default function OfferBasicDetailsScreen({
-  offerData,
+  offerData = {},
   onNext,
 }: OfferBasicDetailsScreenProps) {
   const [offerType, setOfferType] = useState<'percentage' | 'flat'>(
-    offerData.offerType || 'percentage'
+    offerData?.offerType || 'percentage'
   );
-  const [offerName, setOfferName] = useState(offerData.offerName || '');
+  const [offerName, setOfferName] = useState(offerData?.offerName || '');
   const [offerVisibility, setOfferVisibility] = useState<'visible' | 'secret'>(
-    offerData.offerVisibility || 'visible'
+    offerData?.offerVisibility || 'visible'
   );
 
   const handleNext = () => {
@@ -170,15 +170,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   typeCardActive: {
-    borderColor: '#17aba5',
-    backgroundColor: '#f0fdfa',
+    borderColor: '#e61580',
+    backgroundColor: '#fff5f8',
   },
   radioButton: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   typeContent: {
     flex: 1,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   nextButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',

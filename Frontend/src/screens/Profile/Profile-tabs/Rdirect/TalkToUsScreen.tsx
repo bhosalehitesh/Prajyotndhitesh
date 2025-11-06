@@ -8,10 +8,10 @@ export default function TalkToUsScreen({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFF4FA' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Talk To Us</Text>
       </View>
@@ -20,7 +20,7 @@ export default function TalkToUsScreen({ onBack }: { onBack: () => void }) {
           <Text style={styles.desc}>Call our support team for immediate assistance and personalized help.</Text>
 
           <View style={styles.infoCard}>
-            <MaterialCommunityIcons name="phone" size={48} color="#10B981" />
+            <MaterialCommunityIcons name="phone" size={48} color="#e61580" />
             <Text style={styles.infoTitle}>24/7 Support Available</Text>
             <Text style={styles.infoText}>
               Our support team is available round the clock to help you with any questions or issues.
@@ -28,7 +28,7 @@ export default function TalkToUsScreen({ onBack }: { onBack: () => void }) {
           </View>
 
           <View style={styles.contactCard}>
-            <MaterialCommunityIcons name="phone-outline" size={24} color="#1E3A8A" />
+            <MaterialCommunityIcons name="phone-outline" size={24} color="#e61580" />
             <View style={styles.contactInfo}>
               <Text style={styles.contactLabel}>Support Number</Text>
               <Text style={styles.contactNumber}>+91 8766408154</Text>
@@ -36,7 +36,7 @@ export default function TalkToUsScreen({ onBack }: { onBack: () => void }) {
           </View>
 
           <TouchableOpacity style={styles.callButton} onPress={handleCall}>
-            <MaterialCommunityIcons name="phone" size={24} color="#FFFFFF" />
+            <MaterialCommunityIcons name="phone" size={24} color="#ffffff" />
             <Text style={styles.callButtonText}>Call Support Now</Text>
           </TouchableOpacity>
 
@@ -58,7 +58,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
@@ -66,7 +68,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#FFFFFF',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -81,7 +83,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   infoCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 24,
     alignItems: 'center',
@@ -106,7 +108,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   contactCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 18,
     flexDirection: 'row',
@@ -133,7 +135,7 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   callButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#e61580',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -142,13 +144,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   callButtonText: {
-    color: '#FFFFFF',
+    color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 8,
   },
   hoursCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 18,
     flexDirection: 'row',

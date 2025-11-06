@@ -58,10 +58,10 @@ export default function StoreConfigScreen({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#edeff3' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Store Configuration</Text>
       </View>
@@ -93,13 +93,13 @@ export default function StoreConfigScreen({ onBack }: { onBack: () => void }) {
             <MaterialCommunityIcons
               name={item.icon as any}
               size={26}
-              color="#888"
+              color="#e61580"
             />
             <Text style={styles.label}>{item.label}</Text>
             <MaterialCommunityIcons
               name="chevron-right"
               size={24}
-              color="#17aba5"
+              color="#e61580"
               style={styles.arrow}
             />
           </TouchableOpacity>
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
   },
   title: {
     fontWeight: 'bold',
@@ -122,28 +122,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
+    color: '#ffffff',
   },
   desc: {
-    color: '#858997',
+    color: '#6B7280',
     fontSize: 17,
     margin: 24,
     marginBottom: 18,
     marginTop: 22,
+    opacity: 0.9,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
     borderBottomWidth: 1,
-    borderColor: '#e2e4ec',
+    borderColor: '#f3f4f6',
     backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginBottom: 0,
   },
   lastRow: {
     borderBottomWidth: 0,
+    marginBottom: 16,
   },
   label: {
     fontSize: 20,
-    color: '#363740',
+    color: '#1a1a1a',
     marginLeft: 12,
     flex: 1,
   },

@@ -83,7 +83,7 @@ export default function CreateNewOfferScreen({ onBack }: CreateNewOfferScreenPro
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Create New Offer</Text>
         <View style={{ width: 28 }} />
@@ -103,7 +103,7 @@ export default function CreateNewOfferScreen({ onBack }: CreateNewOfferScreenPro
                 ]}
               >
                 {currentStep > step.number ? (
-                  <MaterialCommunityIcons name="check" size={18} color="#fff" />
+                  <MaterialCommunityIcons name="check" size={18} color="#ffffff" />
                 ) : (
                   <Text
                     style={[
@@ -148,21 +148,21 @@ export default function CreateNewOfferScreen({ onBack }: CreateNewOfferScreenPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
     fontSize: 22,
-    color: '#222',
+    color: '#ffffff',
   },
   progressContainer: {
     flexDirection: 'row',
@@ -187,14 +187,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stepCircleCompleted: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
   },
   stepCircleActive: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
   },
   stepCircleInactive: {
     backgroundColor: '#fff',
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   stepLabelActive: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   stepLabelInactive: {
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -10,
   },
   stepLineActive: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   stepLineInactive: {
     backgroundColor: '#e2e4ec',

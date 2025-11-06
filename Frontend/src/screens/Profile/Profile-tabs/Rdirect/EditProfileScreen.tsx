@@ -23,7 +23,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#333333" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
         <View style={{ width: 28 }} />
@@ -87,7 +87,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
               onChangeText={(text) => setProfileData({ ...profileData, address: text })}
               multiline
             />
-            <MaterialCommunityIcons name="pencil-outline" size={18} color="#1E3A8A" style={{ marginLeft: 8 }} />
+            <MaterialCommunityIcons name="pencil-outline" size={18} color="#e61580" style={{ marginLeft: 8 }} />
           </View>
           <View style={styles.divider} />
           <View style={styles.switchRow}>
@@ -114,7 +114,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
             <MaterialCommunityIcons
               name={supportOption === 'login' ? 'radiobox-marked' : 'radiobox-blank'}
               size={20}
-              color={supportOption === 'login' ? '#1E3A8A' : '#ccc'}
+              color={supportOption === 'login' ? '#e61580' : '#ccc'}
             />
             <Text style={styles.radioLabel}>Same as Login ({loginNumber})</Text>
           </TouchableOpacity>
@@ -125,7 +125,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
             <MaterialCommunityIcons
               name={supportOption === 'other' ? 'radiobox-marked' : 'radiobox-blank'}
               size={20}
-              color={supportOption === 'other' ? '#1E3A8A' : '#ccc'}
+              color={supportOption === 'other' ? '#e61580' : '#ccc'}
             />
             <Text style={styles.radioLabel}>Use another number</Text>
           </TouchableOpacity>
@@ -150,14 +150,14 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF4FA' },
+  container: { flex: 1, backgroundColor: '#fff5f8' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#e2e4ec',
   },
   headerTitle: {
     fontWeight: 'bold',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#333333',
+    color: '#ffffff',
   },
   avatarSection: { alignItems: 'center', paddingTop: 40, paddingBottom: 16 },
   avatar: {
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  avatarText: { fontSize: 44, fontWeight: 'bold', color: '#1E3A8A' },
+  avatarText: { fontSize: 44, fontWeight: 'bold', color: '#e61580' },
   name: { fontSize: 24, fontWeight: 'bold', color: '#333333', marginBottom: 6 },
   card: {
     backgroundColor: '#fff',
@@ -238,13 +238,13 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   saveButton: {
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#e61580',
     margin: 20,
     marginTop: 20,
     borderRadius: 7,
     padding: 15,
     alignItems: 'center',
   },
-  saveButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  saveButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
 });
 

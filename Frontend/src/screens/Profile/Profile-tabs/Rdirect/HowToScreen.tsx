@@ -211,7 +211,7 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setSelectedArticle(null)}>
-            <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+            <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Help</Text>
           <View style={{ width: 28 }} />
@@ -243,7 +243,7 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setSelectedCategory(null)}>
-            <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+            <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Help</Text>
           <View style={{ width: 28 }} />
@@ -252,16 +252,16 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
         <View style={styles.banner}>
           <View style={styles.bannerLeft}>
             <View style={styles.logoContainer}>
-              <MaterialCommunityIcons name="store" size={32} color="#fff" />
+              <MaterialCommunityIcons name="store" size={32} color="#ffffff" />
             </View>
             <View style={styles.logoText}>
               <Text style={styles.logoMain}>Sakhi</Text>
-              <Text style={styles.logoSub}>by amazon</Text>
+              <Text style={styles.logoSub}>SmartBiz Sakhi store</Text>
             </View>
           </View>
           <Text style={styles.bannerText}>Help Center</Text>
           <TouchableOpacity>
-            <MaterialCommunityIcons name="menu" size={24} color="#fff" />
+            <MaterialCommunityIcons name="menu" size={24} color="#ffffff" />
           </TouchableOpacity>
         </View>
 
@@ -280,7 +280,7 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
                 <Text style={styles.articleCardTitle}>{article.title}</Text>
                 <Text style={styles.articleCardDescription}>{article.description}</Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={20} color="#17aba5" />
+              <MaterialCommunityIcons name="chevron-right" size={20} color="#e61580" />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -293,7 +293,7 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+            <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help</Text>
         <View style={{ width: 28 }} />
@@ -302,16 +302,16 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
       <View style={styles.banner}>
         <View style={styles.bannerLeft}>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="store" size={32} color="#fff" />
+            <MaterialCommunityIcons name="store" size={32} color="#ffffff" />
           </View>
           <View style={styles.logoText}>
             <Text style={styles.logoMain}>Sakhi</Text>
-            <Text style={styles.logoSub}>by amazon</Text>
+            <Text style={styles.logoSub}>SmartBiz Sakhi store</Text>
           </View>
         </View>
         <Text style={styles.bannerText}>Help Center</Text>
         <TouchableOpacity>
-          <MaterialCommunityIcons name="menu" size={24} color="#fff" />
+          <MaterialCommunityIcons name="menu" size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
 
@@ -369,7 +369,7 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
             onPress={() => handleCategoryPress(category)}
           >
             <View style={styles.categoryIconContainer}>
-              <MaterialCommunityIcons name={category.icon as any} size={48} color="#17aba5" />
+              <MaterialCommunityIcons name={category.icon as any} size={48} color="#e61580" />
             </View>
             <Text style={styles.categoryTitle}>{category.title}</Text>
             <Text style={styles.categoryDescription}>{category.description}</Text>
@@ -379,7 +379,7 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
         {/* FAQs Card */}
         <TouchableOpacity style={styles.faqCard} onPress={() => setShowFAQs(true)}>
           <View style={styles.faqIconContainer}>
-            <MaterialCommunityIcons name="help-circle" size={48} color="#222" />
+            <MaterialCommunityIcons name="help-circle" size={48} color="#e61580" />
           </View>
           <Text style={styles.faqCardTitle}>FAQs</Text>
         </TouchableOpacity>
@@ -387,7 +387,7 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
         {/* Featured Articles Section */}
         <View style={styles.featuredSection}>
           <View style={styles.featuredHeader}>
-            <MaterialCommunityIcons name="chart-line" size={20} color="#17aba5" />
+            <MaterialCommunityIcons name="chart-line" size={20} color="#e61580" />
             <Text style={styles.featuredTitle}>Featured articles</Text>
           </View>
           {featuredArticles.map((article) => (
@@ -430,7 +430,7 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
           onPress={() => handleGetInTouch('instagram')}
         >
           <View style={styles.supportIconContainer}>
-            <MaterialCommunityIcons name="store" size={32} color="#17aba5" />
+            <MaterialCommunityIcons name="store" size={32} color="#e61580" />
           </View>
           <View style={styles.supportCardContent}>
             <Text style={styles.supportCardTitle}>Get social with us</Text>
@@ -457,7 +457,7 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
 
           {/* Scroll to Top Button */}
           <TouchableOpacity style={styles.scrollToTopButton} onPress={handleScrollToTop}>
-            <MaterialCommunityIcons name="arrow-up" size={20} color="#222" />
+            <MaterialCommunityIcons name="arrow-up" size={20} color="#ffffff" />
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -468,27 +468,27 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#222',
+    color: '#ffffff',
   },
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     padding: 16,
     paddingHorizontal: 20,
   },
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   },
   mainContentWrapper: {
     flex: 1,
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#fff5f8',
   },
   scrollView: {
     flex: 1,
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
   mainHeading: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#363740',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   },
   popularSearchesLabel: {
     fontSize: 14,
-    color: '#fff',
+    color: '#363740',
     marginBottom: 12,
   },
   popularSearches: {
@@ -568,14 +568,14 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   popularSearchButton: {
-    backgroundColor: '#333',
+    backgroundColor: '#e61580',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   popularSearchText: {
     fontSize: 14,
-    color: '#fff',
+    color: '#ffffff',
     fontWeight: '500',
   },
   categoryCard: {
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#17aba5',
+    color: '#e61580',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     marginRight: 12,
     marginTop: 8,
   },
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
   featuredArticleTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#17aba5',
+    color: '#e61580',
     marginBottom: 4,
   },
   featuredArticleDescription: {
@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
   supportCardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#17aba5',
+    color: '#e61580',
     marginBottom: 8,
   },
   supportCardText: {
@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
   articleCardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#17aba5',
+    color: '#e61580',
     marginBottom: 4,
   },
   articleCardDescription: {

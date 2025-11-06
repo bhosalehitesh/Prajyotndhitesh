@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow HTTP connections for development (Android 9+ blocks cleartext by default) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Android emulator localhost -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- Localhost for physical devices (replace with your computer's IP) -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+    
+    <!-- Production: HTTPS only -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
+

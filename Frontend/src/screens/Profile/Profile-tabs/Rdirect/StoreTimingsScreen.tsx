@@ -20,10 +20,10 @@ export default function StoreTimingsScreen({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#edeff3' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Store Timings</Text>
       </View>
@@ -127,7 +127,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -215,7 +217,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dayButtonActive: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#1a1a1a',
   },
   dayButtonText: {
     fontSize: 14,
@@ -236,7 +238,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e4ec',
   },
   saveButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#1a1a1a',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',

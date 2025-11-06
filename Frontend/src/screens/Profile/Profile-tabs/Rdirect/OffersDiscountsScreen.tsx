@@ -34,7 +34,7 @@ export default function OffersDiscountsScreen({ onBack }: OffersDiscountsScreenP
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Offers & Discounts</Text>
       </View>
@@ -91,7 +91,7 @@ export default function OffersDiscountsScreen({ onBack }: OffersDiscountsScreenP
         style={styles.createButton}
         onPress={() => setShowCreateOffer(true)}
       >
-        <MaterialCommunityIcons name="plus" size={24} color="#fff" />
+        <MaterialCommunityIcons name="plus" size={24} color="#ffffff" />
         <Text style={styles.createButtonText}>Create New Offer</Text>
       </TouchableOpacity>
       </View>
@@ -102,13 +102,13 @@ export default function OffersDiscountsScreen({ onBack }: OffersDiscountsScreenP
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   sortSection: {
     flexDirection: 'row',
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabTextActive: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   tabUnderline: {
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     height: 3,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 2,
   },
   scrollView: {
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e4ec',
   },
   createButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     flexDirection: 'row',
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   createButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 8,

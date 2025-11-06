@@ -75,18 +75,18 @@ const BusinessInfoScreen: React.FC<BusinessInfoScreenProps> = ({ onNext, onBack 
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="store" size={24} color="#1a1a1a" />
+            <MaterialCommunityIcons name="store" size={24} color="#ffffff" />
             <Text style={styles.logoText}>
-              smart<Text style={styles.logoTextAccent}>biz</Text>
+              Sakhi <Text style={styles.logoTextAccent}>Store</Text>
             </Text>
           </View>
           <View style={styles.headerLinks}>
             <TouchableOpacity style={styles.headerLink}>
-              <MaterialCommunityIcons name="help-circle-outline" size={18} color="#007185" />
+              <MaterialCommunityIcons name="help-circle-outline" size={18} color="#ffffff" />
               <Text style={styles.headerLinkText}>Help</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.headerLink}>
-              <MaterialCommunityIcons name="logout" size={18} color="#007185" />
+              <MaterialCommunityIcons name="logout" size={18} color="#ffffff" />
               <Text style={styles.headerLinkText}>Logout</Text>
             </TouchableOpacity>
           </View>
@@ -205,7 +205,7 @@ const BusinessInfoScreen: React.FC<BusinessInfoScreenProps> = ({ onNext, onBack 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f4f7',
+    backgroundColor: '#fff5f8',
   },
   scrollContent: {
     paddingBottom: 20,
@@ -217,6 +217,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
+    backgroundColor: '#e61580',
   },
   logoContainer: {
     flexDirection: 'row',
@@ -226,10 +227,10 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: '#ffffff',
   },
   logoTextAccent: {
-    color: '#22b0a7',
+    color: '#ffffff',
     fontStyle: 'italic',
     fontWeight: '300',
   },
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   },
   headerLinkText: {
     fontSize: 14,
-    color: '#007185',
+    color: '#ffffff',
     fontWeight: '500',
   },
   card: {
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#007185',
+    borderColor: '#e61580',
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#007185',
+    backgroundColor: '#e61580',
   },
   radioText: {
     fontSize: 14,
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#007185',
+    borderColor: '#e61580',
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -341,7 +342,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxChecked: {
-    backgroundColor: '#007185',
+    backgroundColor: '#e61580',
   },
   checkboxText: {
     fontSize: 14,
@@ -368,11 +369,11 @@ const styles = StyleSheet.create({
   },
   finishButton: {
     flex: 1,
-    backgroundColor: '#22b0a7',
+    backgroundColor: '#e61580',
     borderRadius: 24,
     paddingVertical: 16,
     alignItems: 'center',
-    shadowColor: '#22b0a7',
+    shadowColor: '#e61580',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#035f6b',
+    backgroundColor: '#e61580',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

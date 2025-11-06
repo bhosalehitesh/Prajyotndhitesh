@@ -38,7 +38,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 smart<Text style={styles.logoTextAccent}>biz</Text>
               </Text>
             </View>
-            <Text style={styles.byAmazon}>by amazon</Text>
+            <Text style={styles.byAmazon}>SmartBiz Sakhi store</Text>
           </View>
 
           {/* Welcome Text */}
@@ -64,7 +64,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
 
           {/* Footer Copyright */}
           <Text style={styles.copyright}>
-            © 1996-2025, Amazon.com, Inc. or its affiliates
+            © 2025, SmartBiz Sakhi store
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

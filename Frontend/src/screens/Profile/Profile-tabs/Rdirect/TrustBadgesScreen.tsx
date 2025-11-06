@@ -219,7 +219,7 @@ export default function TrustBadgesScreen({ onBack }: { onBack: () => void }) {
     if (badge.name === 'Assured Quality') {
       return (
         <View style={styles.ribbonIcon}>
-          <MaterialCommunityIcons name="check" size={20} color="#222" />
+          <MaterialCommunityIcons name="check" size={20} color="#1a1a1a" />
         </View>
       );
     }
@@ -298,7 +298,7 @@ export default function TrustBadgesScreen({ onBack }: { onBack: () => void }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Trust Badges</Text>
         <View style={{ width: 28 }} />
@@ -347,7 +347,7 @@ export default function TrustBadgesScreen({ onBack }: { onBack: () => void }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select a Badge Category</Text>
               <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#222" />
+                <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
             <ScrollView>
@@ -358,7 +358,7 @@ export default function TrustBadgesScreen({ onBack }: { onBack: () => void }) {
                   onPress={() => handleSelectCategory(category)}
                 >
                   <Text style={styles.categoryName}>{category.name}</Text>
-                  <MaterialCommunityIcons name="chevron-right" size={24} color="#888" />
+                  <MaterialCommunityIcons name="chevron-right" size={24} color="#e61580" />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -389,7 +389,7 @@ export default function TrustBadgesScreen({ onBack }: { onBack: () => void }) {
                   setShowCategoryModal(true);
                 }}
               >
-                <MaterialCommunityIcons name="arrow-left" size={24} color="#222" />
+                <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>{selectedCategory?.name}</Text>
               {selectedCategory?.id !== 'services' &&
@@ -530,21 +530,21 @@ export default function TrustBadgesScreen({ onBack }: { onBack: () => void }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   saveButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: '#ffffff',
   },
   modalOverlay: {
     flex: 1,
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   serviceTabActive: {
-    borderBottomColor: '#17aba5',
+    borderBottomColor: '#e61580',
   },
   serviceTabText: {
     fontSize: 14,
@@ -765,7 +765,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   serviceTabTextActive: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   badgeScrollView: {
@@ -793,8 +793,8 @@ const styles = StyleSheet.create({
     borderColor: '#e2e4ec',
   },
   badgeCardSelected: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#17aba5',
+    backgroundColor: '#fff5f8',
+    borderColor: '#e61580',
     borderWidth: 2,
   },
   recommendedStar: {
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   badgeNameSelected: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   emptyBadgesContainer: {

@@ -36,7 +36,7 @@ export default function InstagramFeedScreen({ onBack }: InstagramFeedScreenProps
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Instagram Feed</Text>
       </View>
@@ -105,7 +105,7 @@ export default function InstagramFeedScreen({ onBack }: InstagramFeedScreenProps
               }
             }}
           >
-            <MaterialCommunityIcons name="camera" size={20} color="#fff" />
+            <MaterialCommunityIcons name="camera" size={20} color="#1a1a1a" />
             <Text style={styles.connectButtonText}>Connect with Instagram</Text>
           </TouchableOpacity>
         </View>
@@ -117,13 +117,13 @@ export default function InstagramFeedScreen({ onBack }: InstagramFeedScreenProps
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
   },
   title: {
     fontWeight: 'bold',
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#fff',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   promoSection: {
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
     padding: 24,
     marginTop: 16,
   },
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   connectButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     flexDirection: 'row',

@@ -68,12 +68,12 @@ export default function ReturnSettingsScreen({ onBack }: ReturnSettingsScreenPro
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Return Settings</Text>
         <TouchableOpacity onPress={() => setShowPreview(true)}>
           <View style={styles.previewButton}>
-            <MaterialCommunityIcons name="eye-outline" size={20} color="#10B981" />
+            <MaterialCommunityIcons name="eye-outline" size={20} color="#e61580" />
             <Text style={styles.previewText}>Preview</Text>
           </View>
         </TouchableOpacity>
@@ -184,7 +184,7 @@ export default function ReturnSettingsScreen({ onBack }: ReturnSettingsScreenPro
                         style={styles.saveReasonButton}
                         onPress={() => handleSaveReason(index)}
                       >
-                        <MaterialCommunityIcons name="check" size={20} color="#10B981" />
+                        <MaterialCommunityIcons name="check" size={20} color="#e61580" />
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.cancelReasonButton}
@@ -203,7 +203,7 @@ export default function ReturnSettingsScreen({ onBack }: ReturnSettingsScreenPro
                       style={styles.editButton}
                       onPress={() => handleEditReason(index)}
                     >
-                      <MaterialCommunityIcons name="pencil" size={20} color="#10B981" />
+                      <MaterialCommunityIcons name="pencil" size={20} color="#e61580" />
                     </TouchableOpacity>
                   </>
                 )}
@@ -230,7 +230,7 @@ export default function ReturnSettingsScreen({ onBack }: ReturnSettingsScreenPro
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Preview - Return Settings</Text>
               <TouchableOpacity onPress={() => setShowPreview(false)}>
-                <MaterialCommunityIcons name="close" size={28} color="#222" />
+                <MaterialCommunityIcons name="close" size={28} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
             <ScrollView>
@@ -263,13 +263,13 @@ export default function ReturnSettingsScreen({ onBack }: ReturnSettingsScreenPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   previewButton: {
     flexDirection: 'row',
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   previewText: {
-    color: '#10B981',
+    color: '#e61580',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 4,
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   feeToggle: {
     flexDirection: 'row',
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#f5f5f5',
     borderRadius: 8,
     padding: 4,
     marginBottom: 12,
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   toggleButtonActive: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   toggleButtonText: {
     fontSize: 16,
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     marginRight: 8,
   },
   editButtons: {
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   saveButton: {
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',

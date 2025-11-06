@@ -60,10 +60,10 @@ export default function WriteToUsScreen({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Write to us instead</Text>
         <View style={{ width: 28 }} />
@@ -129,7 +129,7 @@ export default function WriteToUsScreen({ onBack }: { onBack: () => void }) {
             style={styles.useAnotherContact}
             onPress={() => setShowContactModal(true)}
           >
-            <MaterialCommunityIcons name="plus" size={18} color="#17aba5" />
+            <MaterialCommunityIcons name="plus" size={18} color="#e61580" />
             <Text style={styles.useAnotherContactText}>Use another contact</Text>
           </TouchableOpacity>
         </View>
@@ -153,7 +153,7 @@ export default function WriteToUsScreen({ onBack }: { onBack: () => void }) {
       {/* Request Call Back Button */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.requestButton} onPress={handleRequestCallback}>
-          <MaterialCommunityIcons name="phone" size={20} color="#fff" />
+          <MaterialCommunityIcons name="phone" size={20} color="#1a1a1a" />
           <Text style={styles.requestButtonText}>Request Call Back</Text>
         </TouchableOpacity>
       </View>
@@ -170,7 +170,7 @@ export default function WriteToUsScreen({ onBack }: { onBack: () => void }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Category</Text>
               <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#222" />
+                <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
             <ScrollView>
@@ -203,7 +203,7 @@ export default function WriteToUsScreen({ onBack }: { onBack: () => void }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Issue</Text>
               <TouchableOpacity onPress={() => setShowIssueModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#222" />
+                <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
             <ScrollView>
@@ -236,7 +236,7 @@ export default function WriteToUsScreen({ onBack }: { onBack: () => void }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Language</Text>
               <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#222" />
+                <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
             <ScrollView>
@@ -269,7 +269,7 @@ export default function WriteToUsScreen({ onBack }: { onBack: () => void }) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Contact</Text>
               <TouchableOpacity onPress={() => setShowContactModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#222" />
+                <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
             <View style={styles.contactInputContainer}>
@@ -310,14 +310,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#1a1a1a',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   saveContactButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#1a1a1a',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',

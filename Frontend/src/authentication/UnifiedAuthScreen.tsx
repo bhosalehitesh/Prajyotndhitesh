@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
+import { apiService } from '../services/api';
+import { useAuth } from './AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -25,6 +27,7 @@ type AuthMode = 'signup' | 'signin';
 type SignInMethod = 'password' | 'otp';
 
 const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }) => {
+  const { login } = useAuth();
   const [authMode, setAuthMode] = useState<AuthMode>('signup');
   const [signInMethod, setSignInMethod] = useState<SignInMethod>('password');
   
@@ -72,8 +75,6 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
     return /^\d{6}$/.test(signInOtp);
   }, [signInOtp]);
 
-  const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
-
   // Sign Up Functions
   const handleVerifyMobile = async () => {
     if (!isSignUpFormValid) {
@@ -83,38 +84,27 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
 
     setLoading(true);
     const cleanMobile = mobileNumber.replace(/\D/g, '');
-    
-    const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-    if (existingPhone === cleanMobile) {
-      setLoading(false);
-      Alert.alert(
-        'Account Already Exists',
-        'This mobile number is already registered. Would you like to recreate your account?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Recreate Account',
-            onPress: async () => {
-              const code = generateOtp();
-              setOtpSent(code);
-              setStep('verification');
-              setLoading(false);
-              Alert.alert('OTP Sent', `Verification code: ${code}\n\nPlease enter this code to verify.`);
-            },
-          },
-        ]
-      );
-      return;
-    }
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
 
-    const code = generateOtp();
-    setOtpSent(code);
+    try {
+      const response = await apiService.signup({
+        fullName,
+        phone: cleanMobile,
+        password,
+      });
+
+      // Store OTP for verification
+      if (response.otp) {
+        setOtpSent(response.otp);
+      }
+
     setStep('verification');
     setLoading(false);
-    Alert.alert('OTP Sent', `Verification code: ${code}\n\nPlease enter this code to verify your mobile number.`);
+    } catch (error) {
+      setLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send OTP. Please try again.';
+      Alert.alert('Error', errorMessage);
+    }
   };
 
   const handleVerifyOtp = async () => {
@@ -123,41 +113,65 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       return;
     }
 
-    if (otp !== otpSent) {
-      Alert.alert('Error', 'Incorrect OTP. Please try again.');
-      return;
-    }
-
     setLoading(true);
-    await handleCreateAccount();
-  };
+    const cleanMobile = mobileNumber.replace(/\D/g, '');
 
-  const handleCreateAccount = async () => {
     try {
-      const cleanMobile = mobileNumber.replace(/\D/g, '');
-      const token = `jwt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await storage.setItem(AUTH_TOKEN_KEY, token);
+      // Verify OTP
+      await apiService.verifyOtp({
+        phone: cleanMobile,
+        code: otp,
+      });
+
+      // After OTP verification, login to get token
+      const authResponse = await apiService.login({
+        phone: cleanMobile,
+        password,
+      });
+
+      // Store authentication data
+      await login(authResponse.token);
       await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
       await storage.setItem('userName', `${firstName} ${lastName}`);
       await storage.setItem('userPassword', password);
-      // Don't mark onboarding as completed for new users
-      // They will be redirected to onboarding flow
+      await storage.setItem('userId', authResponse.userId.toString());
       
       setLoading(false);
-      // Don't show alert, directly redirect to onboarding
-      // The onboarding flow will handle the success message
       onAuthenticated();
     } catch (error) {
       setLoading(false);
-      Alert.alert('Error', 'Failed to create account. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to verify OTP. Please try again.';
+      Alert.alert('Error', errorMessage);
     }
   };
 
   const handleResendOtp = async () => {
-    const code = generateOtp();
-    setOtpSent(code);
+    if (!isSignUpFormValid) {
+      Alert.alert('Validation', 'Please ensure all fields are filled correctly.');
+      return;
+    }
+
+    setLoading(true);
+    const cleanMobile = mobileNumber.replace(/\D/g, '');
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+
+    try {
+      const response = await apiService.signup({
+        fullName,
+        phone: cleanMobile,
+        password,
+      });
+
+      if (response.otp) {
+        setOtpSent(response.otp);
+      }
     setOtp('');
-    Alert.alert('OTP Resent', `New verification code: ${code}`);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to resend OTP. Please try again.';
+      Alert.alert('Error', errorMessage);
+    }
   };
 
   // Sign In Functions
@@ -167,9 +181,14 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       return;
     }
 
+    setLoading(true);
     const cleanMobile = signInMobile.replace(/\D/g, '');
-    const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-    if (!existingPhone || existingPhone !== cleanMobile) {
+
+    try {
+      // Check if user exists
+      const storedPhone = await storage.getItem(AUTH_PHONE_KEY);
+      if (!storedPhone || storedPhone !== cleanMobile) {
+        setLoading(false);
       Alert.alert(
         'Account Not Found',
         'No account found with this mobile number. Please create an account first.',
@@ -178,11 +197,14 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       return;
     }
 
-    setLoading(true);
-    const code = generateOtp();
-    setSignInOtpSent(code);
+      // Generate OTP for sign-in
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      setSignInOtpSent(otpCode);
     setLoading(false);
-    Alert.alert('OTP Sent', `Your OTP is: ${code}\n\nUse this code to sign in.`);
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Error', 'Failed to send OTP. Please try again.');
+    }
   };
 
   const handleSignIn = async () => {
@@ -200,31 +222,29 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       setLoading(true);
       const cleanMobile = signInMobile.replace(/\D/g, '');
       
-      const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-      if (!existingPhone || existingPhone !== cleanMobile) {
-        setLoading(false);
-        Alert.alert(
-          'Account Not Found',
-          'No account found with this mobile number. Please sign up first.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
+      try {
+        // Login with mock API
+        const authResponse = await apiService.login({
+          phone: cleanMobile,
+          password: signInPassword,
+        });
 
-      const storedPassword = await storage.getItem('userPassword');
-      if (storedPassword !== signInPassword) {
-        setLoading(false);
-        Alert.alert('Error', 'Incorrect password. Please try again or use OTP.');
-        return;
-      }
-
-      const token = `jwt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await storage.setItem(AUTH_TOKEN_KEY, token);
+        // Store authentication data
+        await login(authResponse.token);
       await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
+        await storage.setItem('userName', authResponse.fullName);
+        await storage.setItem('userPassword', signInPassword);
+        await storage.setItem('userId', authResponse.userId.toString());
       
       setLoading(false);
       onAuthenticated();
+      } catch (error) {
+        setLoading(false);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to sign in. Please check your credentials.';
+        Alert.alert('Error', errorMessage);
+      }
     } else {
+      // OTP-based sign-in
       if (!isSignInOtpValid) {
         Alert.alert('Validation', 'Please enter a valid 6-digit OTP.');
         return;
@@ -242,8 +262,11 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
 
       setLoading(true);
       const cleanMobile = signInMobile.replace(/\D/g, '');
-      const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-      if (!existingPhone || existingPhone !== cleanMobile) {
+
+      try {
+        // Get stored user info
+        const storedPhone = await storage.getItem(AUTH_PHONE_KEY);
+        if (!storedPhone || storedPhone !== cleanMobile) {
         setLoading(false);
         Alert.alert(
           'Account Not Found',
@@ -253,12 +276,21 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
         return;
       }
 
-      const token = `jwt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await storage.setItem(AUTH_TOKEN_KEY, token);
+        // Generate token and sign in
+        const token = `mock_jwt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const userName = await storage.getItem('userName') || 'User';
+        const userId = await storage.getItem('userId') || '1';
+
+        await login(token);
       await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
+        await storage.setItem('userId', userId);
       
       setLoading(false);
       onAuthenticated();
+      } catch (error) {
+        setLoading(false);
+        Alert.alert('Error', 'Failed to sign in. Please try again.');
+      }
     }
   };
 
@@ -269,8 +301,9 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
     }
 
     const cleanMobile = signInMobile.replace(/\D/g, '');
-    const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-    if (!existingPhone || existingPhone !== cleanMobile) {
+    const storedPhone = await storage.getItem(AUTH_PHONE_KEY);
+    
+    if (!storedPhone || storedPhone !== cleanMobile) {
       Alert.alert(
         'Account Not Found',
         'No account found with this mobile number. Please sign up first.',
@@ -279,15 +312,14 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       return;
     }
 
-    setLoading(true);
-    const code = generateOtp();
-    setSignInOtpSent(code);
+    // Generate OTP for password reset
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    setSignInOtpSent(otpCode);
     setSignInMethod('otp');
     setSignInPassword('');
-    setLoading(false);
     Alert.alert(
       'OTP Sent',
-      `We've sent an OTP to ${signInMobile}. Use this OTP to sign in.\n\nOTP: ${code}`,
+      `We've sent an OTP to ${signInMobile}. Use this OTP to sign in.\n\nOTP: ${otpCode}`,
       [{ text: 'OK' }]
     );
   };
@@ -314,16 +346,16 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
           {/* Header with Logo */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>
-                smart<Text style={styles.logoTextAccent}>biz</Text>
-              </Text>
+              <View style={styles.logoCircle}>
+                <Text style={styles.logoText}>S</Text>
             </View>
-            <Text style={styles.byAmazon}>by amazon</Text>
+              <Text style={styles.logoTextMain}>Sakhi</Text>
+            </View>
           </View>
 
           {/* Welcome Text */}
           <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeText}>Welcome</Text>
+            <Text style={styles.welcomeText}>Welcome!</Text>
           </View>
 
           {/* Toggle Buttons */}
@@ -370,6 +402,26 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
                   <Text style={styles.verificationHelp}>
                     We've sent a One Time Password (OTP) to the mobile number above. Please enter it to complete verification.
                   </Text>
+
+                  {/* Demo OTP Display Box */}
+                  {otpSent && (
+                    <View style={styles.demoOtpContainer}>
+                      <View style={styles.demoOtpBox}>
+                        <Text style={styles.demoOtpLabel}>Demo OTP (for testing):</Text>
+                        <Text style={styles.demoOtpCode}>{otpSent}</Text>
+                        <TouchableOpacity
+                          style={styles.autoFillButton}
+                          onPress={() => {
+                            setOtp(otpSent);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <MaterialCommunityIcons name="content-copy" size={16} color="#ffffff" />
+                          <Text style={styles.autoFillText}>Auto Fill</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
 
                   <Text style={[styles.label, styles.labelMargin]}>Enter OTP</Text>
                   <TextInput
@@ -504,7 +556,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
                   </TouchableOpacity>
 
                   <Text style={styles.termsText}>
-                    By continuing, you agree to SmartBiz's{' '}
+                  By continuing, you agree to Sakhi's{' '}
                     <Text style={styles.linkText} onPress={handleTermsPress}>
                       Terms and conditions of use
                     </Text>{' '}
@@ -572,6 +624,26 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
                   </>
                 ) : (
                   <>
+                    {/* Demo OTP Display Box for Sign In */}
+                    {signInOtpSent && (
+                      <View style={styles.demoOtpContainer}>
+                        <View style={styles.demoOtpBox}>
+                          <Text style={styles.demoOtpLabel}>Demo OTP (for testing):</Text>
+                          <Text style={styles.demoOtpCode}>{signInOtpSent}</Text>
+                          <TouchableOpacity
+                            style={styles.autoFillButton}
+                            onPress={() => {
+                              setSignInOtp(signInOtpSent);
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <MaterialCommunityIcons name="content-copy" size={16} color="#ffffff" />
+                            <Text style={styles.autoFillText}>Auto Fill</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
+
                     <Text style={[styles.label, styles.labelMargin]}>Enter OTP</Text>
                     <TextInput
                       style={styles.input}
@@ -651,7 +723,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
                 </TouchableOpacity>
 
                 <Text style={styles.termsText}>
-                  By continuing, you agree to SmartBiz's{' '}
+                  By continuing, you agree to Sakhi's{' '}
                   <Text style={styles.linkText} onPress={handleTermsPress}>
                     Terms and conditions of use
                   </Text>{' '}
@@ -667,7 +739,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
 
           {/* Footer Copyright */}
           <Text style={styles.copyright}>
-            © 1996-2025, Amazon.com, Inc. or its affiliates
+            © 2025 Sakhi. All rights reserved.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -678,7 +750,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f2f4f7',
+    backgroundColor: '#e61580', // Bright pink background
   },
   keyboardView: {
     flex: 1,
@@ -688,29 +760,38 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 16,
+    marginTop: 40,
+    marginBottom: 24,
   },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    justifyContent: 'center',
+    gap: 12,
+  },
+  logoCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   logoText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: '#e61580',
+  },
+  logoTextMain: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#ffffff',
     letterSpacing: -0.5,
-  },
-  logoTextAccent: {
-    color: '#22b0a7',
-    fontStyle: 'italic',
-    fontWeight: '300',
-  },
-  byAmazon: {
-    fontSize: 12,
-    color: '#035f6b',
-    fontWeight: '400',
   },
   welcomeContainer: {
     marginHorizontal: Math.max(16, SCREEN_WIDTH * 0.04),
@@ -720,7 +801,7 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: '#ffffff',
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -742,7 +823,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   toggleButtonActive: {
-    backgroundColor: '#007185',
+    backgroundColor: '#e61580', // Bright pink
   },
   toggleText: {
     fontSize: 16,
@@ -868,7 +949,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#007185',
+    backgroundColor: '#e61580', // Bright pink
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
@@ -895,14 +976,14 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#007185',
+    borderColor: '#e61580', // Bright pink
     marginRight: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff',
   },
   checkboxChecked: {
-    backgroundColor: '#007185',
+    backgroundColor: '#e61580', // Bright pink
   },
   checkboxText: {
     fontSize: 14,
@@ -915,13 +996,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   primaryButton: {
-    backgroundColor: '#ff9900',
-    borderRadius: 24,
+    backgroundColor: '#e61580', // Bright pink
+    borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
     marginBottom: 16,
-    shadowColor: '#ff9900',
+    shadowColor: '#e61580',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -942,7 +1023,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   linkText: {
-    color: '#007185',
+    color: '#e61580', // Bright pink
     textDecorationLine: 'underline',
   },
   alreadyCustomer: {
@@ -957,7 +1038,7 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    color: '#007185',
+    color: '#e61580', // Bright pink
     textDecorationLine: 'underline',
   },
   sendOtpButton: {
@@ -968,7 +1049,7 @@ const styles = StyleSheet.create({
   },
   sendOtpText: {
     fontSize: 14,
-    color: '#007185',
+    color: '#e61580', // Bright pink
     fontWeight: '500',
   },
   resendOtpButton: {
@@ -979,7 +1060,7 @@ const styles = StyleSheet.create({
   },
   resendOtpText: {
     fontSize: 14,
-    color: '#007185',
+    color: '#e61580', // Bright pink
     textDecorationLine: 'underline',
   },
   resendButton: {
@@ -988,7 +1069,7 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    color: '#007185',
+    color: '#e61580', // Bright pink
     textDecorationLine: 'underline',
   },
   methodToggle: {
@@ -1004,7 +1085,7 @@ const styles = StyleSheet.create({
   },
   methodOptionText: {
     fontSize: 14,
-    color: '#007185',
+    color: '#e61580', // Bright pink
     fontWeight: '500',
   },
   methodSeparator: {
@@ -1023,7 +1104,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   changeText: {
-    color: '#007185',
+    color: '#e61580', // Bright pink
     textDecorationLine: 'underline',
   },
   verificationHelp: {
@@ -1032,12 +1113,64 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 20,
   },
+  demoOtpContainer: {
+    marginBottom: 20,
+  },
+  demoOtpBox: {
+    backgroundColor: '#fff5f9', // Light pink background
+    borderWidth: 2,
+    borderColor: '#e61580', // Bright pink border
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#e61580',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  demoOtpLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  demoOtpCode: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#e61580', // Bright pink
+    letterSpacing: 8,
+    marginBottom: 16,
+    fontFamily: 'monospace',
+  },
+  autoFillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e61580', // Bright pink background
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    gap: 8,
+    shadowColor: '#e61580',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  autoFillText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
   copyright: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: '#ffffff', // White text for visibility on pink background
     textAlign: 'center',
     marginTop: 24,
     marginBottom: 16,
+    opacity: 0.8,
   },
 });
 

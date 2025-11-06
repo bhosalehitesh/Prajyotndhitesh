@@ -7,42 +7,62 @@ interface OfferPreviewScreenProps {
   onCreateOffer: () => void;
 }
 
-export default function OfferPreviewScreen({ offerData, onCreateOffer }: OfferPreviewScreenProps) {
+export default function OfferPreviewScreen({ offerData = {}, onCreateOffer }: OfferPreviewScreenProps) {
+  // Ensure offerData always has valid structure
+  const safeOfferData = {
+    offerType: offerData?.offerType || 'percentage',
+    percentageValue: offerData?.percentageValue || '',
+    maxDiscount: offerData?.maxDiscount || '',
+    minPurchase: offerData?.minPurchase || '',
+    couponCode: offerData?.couponCode || '',
+    startDate: offerData?.startDate || '',
+    endDate: offerData?.endDate || '',
+    usageLimit: offerData?.usageLimit || '1',
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    const [day, month, year] = dateString.split('/');
+    const parts = dateString.split('/');
+    if (parts.length !== 3) return dateString;
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const year = parts[2];
+    if (isNaN(day) || isNaN(month) || !year) return dateString;
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${parseInt(day)} ${months[parseInt(month) - 1]} ${year}`;
+    const monthIndex = month - 1;
+    if (monthIndex < 0 || monthIndex >= months.length) return dateString;
+    return `${day} ${months[monthIndex]} ${year}`;
   };
 
   const getDiscountText = () => {
-    if (offerData.offerType === 'percentage') {
-      let text = `${offerData.percentageValue}%`;
-      if (offerData.maxDiscount) {
-        text += ` off up to ₹${offerData.maxDiscount}`;
+    if (safeOfferData.offerType === 'percentage') {
+      const value = safeOfferData.percentageValue || '';
+      let text = `${value}%`;
+      if (safeOfferData.maxDiscount) {
+        text += ` off up to ₹${safeOfferData.maxDiscount}`;
       } else {
         text += ' off';
       }
       return text;
     } else {
-      return `₹${offerData.percentageValue} off`;
+      return `₹${safeOfferData.percentageValue || ''} off`;
     }
   };
 
   const getFullDiscountText = () => {
     let text = '';
-    if (offerData.minPurchase) {
-      text += `Buy for ₹${offerData.minPurchase} or more, `;
+    if (safeOfferData.minPurchase) {
+      text += `Buy for ₹${safeOfferData.minPurchase} or more, `;
     }
-    text += `Get ${getDiscountText()} using **${offerData.couponCode}**.`;
+    text += `Get ${getDiscountText()} using **${safeOfferData.couponCode || ''}**.`;
     return text;
   };
 
   const getValidityText = () => {
-    if (offerData.startDate && offerData.endDate) {
-      return `Offer is valid from ${formatDate(offerData.startDate)} - ${formatDate(offerData.endDate)}. Hurry!.`;
-    } else if (offerData.startDate) {
-      return `Offer is valid from ${formatDate(offerData.startDate)}.`;
+    if (safeOfferData.startDate && safeOfferData.endDate) {
+      return `Offer is valid from ${formatDate(safeOfferData.startDate)} - ${formatDate(safeOfferData.endDate)}. Hurry!.`;
+    } else if (safeOfferData.startDate) {
+      return `Offer is valid from ${formatDate(safeOfferData.startDate)}.`;
     }
     return '';
   };
@@ -60,11 +80,11 @@ export default function OfferPreviewScreen({ offerData, onCreateOffer }: OfferPr
           <View style={styles.offerCard}>
             <Text style={styles.limitedPeriodText}>LIMITED PERIOD OFFER</Text>
             <Text style={styles.offerMainText}>
-              {offerData.offerType === 'percentage'
-                ? `Get ${offerData.percentageValue}% OFF!`
-                : `Get ₹${offerData.percentageValue} OFF!`}
+              {safeOfferData.offerType === 'percentage'
+                ? `Get ${safeOfferData.percentageValue || ''}% OFF!`
+                : `Get ₹${safeOfferData.percentageValue || ''} OFF!`}
             </Text>
-            <Text style={styles.offerCodeText}>Use code {offerData.couponCode}</Text>
+            <Text style={styles.offerCodeText}>Use code {safeOfferData.couponCode || ''}</Text>
           </View>
         </View>
 
@@ -76,37 +96,37 @@ export default function OfferPreviewScreen({ offerData, onCreateOffer }: OfferPr
           </View>
 
           <Text style={styles.detailsText}>
-            {offerData.minPurchase
-              ? `Buy for ₹${offerData.minPurchase} or more, Get ${
-                  offerData.offerType === 'percentage'
-                    ? `${offerData.percentageValue}% off`
-                    : `₹${offerData.percentageValue} off`
+            {safeOfferData.minPurchase
+              ? `Buy for ₹${safeOfferData.minPurchase} or more, Get ${
+                  safeOfferData.offerType === 'percentage'
+                    ? `${safeOfferData.percentageValue || ''}% off`
+                    : `₹${safeOfferData.percentageValue || ''} off`
                 }${
-                  offerData.offerType === 'percentage' && offerData.maxDiscount
-                    ? ` up to ₹${offerData.maxDiscount}`
+                  safeOfferData.offerType === 'percentage' && safeOfferData.maxDiscount
+                    ? ` up to ₹${safeOfferData.maxDiscount}`
                     : ''
-                } using **${offerData.couponCode}**. `
+                } using **${safeOfferData.couponCode || ''}**. `
               : `Get ${
-                  offerData.offerType === 'percentage'
-                    ? `${offerData.percentageValue}% off`
-                    : `₹${offerData.percentageValue} off`
+                  safeOfferData.offerType === 'percentage'
+                    ? `${safeOfferData.percentageValue || ''}% off`
+                    : `₹${safeOfferData.percentageValue || ''} off`
                 }${
-                  offerData.offerType === 'percentage' && offerData.maxDiscount
-                    ? ` up to ₹${offerData.maxDiscount}`
+                  safeOfferData.offerType === 'percentage' && safeOfferData.maxDiscount
+                    ? ` up to ₹${safeOfferData.maxDiscount}`
                     : ''
-                } using **${offerData.couponCode}**. `}
-            {getValidityText()} This offer can be redeemed only {offerData.usageLimit || '1'} times per
+                } using **${safeOfferData.couponCode || ''}**. `}
+            {getValidityText()} This offer can be redeemed only {safeOfferData.usageLimit || '1'} times per
             customer.
           </Text>
 
-          <TouchableOpacity onPress={() => Linking.openURL('https://www.smartbiz.in/Girnai')}>
-            <Text style={styles.visitLink}>Visit: https://www.smartbiz.in/Girnai</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('https://www.sakhi.store/Girnai')}>
+            <Text style={styles.visitLink}>Visit: https://www.sakhi.store/Girnai</Text>
           </TouchableOpacity>
         </View>
 
         {/* Note */}
         <View style={styles.noteContainer}>
-          <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#888" />
+          <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#e61580" />
           <Text style={styles.noteText}>Note: Offers can't be edited once</Text>
         </View>
 
@@ -142,33 +162,38 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   offerCardContainer: {
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
     borderRadius: 12,
     padding: 12,
     marginBottom: 24,
+    borderWidth: 2,
+    borderColor: '#e61580',
   },
   offerCard: {
-    backgroundColor: '#424242',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 24,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e61580',
   },
   limitedPeriodText: {
     fontSize: 11,
-    color: '#fff',
+    color: '#e61580',
     opacity: 0.9,
     letterSpacing: 1,
     marginBottom: 8,
+    fontWeight: '600',
   },
   offerMainText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#e61580',
     marginBottom: 8,
   },
   offerCodeText: {
     fontSize: 16,
-    color: '#fff',
+    color: '#363740',
     opacity: 0.95,
   },
   detailsSection: {
@@ -193,7 +218,7 @@ const styles = StyleSheet.create({
   },
   visitLink: {
     fontSize: 15,
-    color: '#17aba5',
+    color: '#e61580',
     textDecorationLine: 'underline',
     marginTop: 8,
   },
@@ -211,7 +236,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   createButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',

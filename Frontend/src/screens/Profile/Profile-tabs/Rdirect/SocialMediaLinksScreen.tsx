@@ -73,7 +73,7 @@ export default function SocialMediaLinksScreen({ onBack }: { onBack: () => void 
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Social Media Links</Text>
         <View style={{ width: 28 }} />
@@ -102,7 +102,7 @@ export default function SocialMediaLinksScreen({ onBack }: { onBack: () => void 
                 <Text style={styles.platformName}>{platform.name}</Text>
                 {hasLink && (
                   <View style={styles.linkIndicator}>
-                    <MaterialCommunityIcons name="check-circle" size={16} color="#17aba5" />
+                    <MaterialCommunityIcons name="check-circle" size={16} color="#e61580" />
                     <Text style={styles.linkIndicatorText}>Linked</Text>
                   </View>
                 )}
@@ -114,7 +114,7 @@ export default function SocialMediaLinksScreen({ onBack }: { onBack: () => void 
                 <MaterialCommunityIcons
                   name={hasLink ? 'pencil' : 'link'}
                   size={20}
-                  color={hasLink ? '#17aba5' : '#666'}
+                  color={hasLink ? '#e61580' : '#666'}
                 />
               </TouchableOpacity>
             </View>
@@ -141,7 +141,7 @@ export default function SocialMediaLinksScreen({ onBack }: { onBack: () => void 
                 Add {selectedPlatform?.name} Link
               </Text>
               <TouchableOpacity onPress={() => setShowLinkModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#222" />
+                <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
 
@@ -202,19 +202,21 @@ export default function SocialMediaLinksScreen({ onBack }: { onBack: () => void 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 18,
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -269,7 +271,7 @@ const styles = StyleSheet.create({
   },
   linkIndicatorText: {
     fontSize: 12,
-    color: '#17aba5',
+    color: '#e61580',
     marginLeft: 4,
     fontWeight: '500',
   },
@@ -349,7 +351,7 @@ const styles = StyleSheet.create({
   },
   saveLinkButton: {
     flex: 1,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#1a1a1a',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

@@ -64,7 +64,7 @@ export default function DeliveryTimeScreen({ onBack }: DeliveryTimeScreenProps) 
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Delivery Time</Text>
       </View>
@@ -82,7 +82,7 @@ export default function DeliveryTimeScreen({ onBack }: DeliveryTimeScreenProps) 
             <Text style={styles.deliveryTimeValue}>
               {formatDeliveryTime(withinPuneMin, withinPuneMax, withinPuneUnit)}
             </Text>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#17aba5" />
+            <MaterialCommunityIcons name="chevron-right" size={24} color="#e61580" />
           </View>
         </TouchableOpacity>
 
@@ -97,14 +97,14 @@ export default function DeliveryTimeScreen({ onBack }: DeliveryTimeScreenProps) 
             <Text style={styles.deliveryTimeValue}>
               {formatDeliveryTime(acrossIndiaMin, acrossIndiaMax, acrossIndiaUnit)}
             </Text>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#17aba5" />
+            <MaterialCommunityIcons name="chevron-right" size={24} color="#e61580" />
           </View>
         </TouchableOpacity>
 
         {/* Recommendation Section */}
         <View style={styles.recommendationSection}>
           <View style={styles.recommendationHeader}>
-            <MaterialCommunityIcons name="lightbulb-outline" size={20} color="#17aba5" />
+            <MaterialCommunityIcons name="lightbulb-outline" size={20} color="#e61580" />
             <Text style={styles.recommendationTitle}>
               Our Recommendation for average delivery times
             </Text>
@@ -129,7 +129,7 @@ export default function DeliveryTimeScreen({ onBack }: DeliveryTimeScreenProps) 
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Delivery time within Pune</Text>
               <TouchableOpacity onPress={() => setShowWithinPuneModal(false)}>
-                <MaterialCommunityIcons name="close" size={28} color="#222" />
+                  <MaterialCommunityIcons name="close" size={28} color="#ffffff" />
               </TouchableOpacity>
             </View>
 
@@ -183,7 +183,7 @@ export default function DeliveryTimeScreen({ onBack }: DeliveryTimeScreenProps) 
             <View style={styles.previewContainer}>
               <Text style={styles.previewLabel}>This is what your customer sees</Text>
               <View style={styles.previewBox}>
-                <MaterialCommunityIcons name="truck-check" size={24} color="#10B981" />
+                <MaterialCommunityIcons name="truck-check" size={24} color="#e61580" />
                 <Text style={styles.previewText}>
                   Delivered in {formatDeliveryTime(withinPuneMin, withinPuneMax, withinPuneUnit)}
                 </Text>
@@ -217,7 +217,7 @@ export default function DeliveryTimeScreen({ onBack }: DeliveryTimeScreenProps) 
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Delivery time across India</Text>
               <TouchableOpacity onPress={() => setShowAcrossIndiaModal(false)}>
-                <MaterialCommunityIcons name="close" size={28} color="#222" />
+                  <MaterialCommunityIcons name="close" size={28} color="#ffffff" />
               </TouchableOpacity>
             </View>
 
@@ -271,7 +271,7 @@ export default function DeliveryTimeScreen({ onBack }: DeliveryTimeScreenProps) 
             <View style={styles.previewContainer}>
               <Text style={styles.previewLabel}>This is what your customer sees</Text>
               <View style={styles.previewBox}>
-                <MaterialCommunityIcons name="truck-check" size={24} color="#10B981" />
+                <MaterialCommunityIcons name="truck-check" size={24} color="#e61580" />
                 <Text style={styles.previewText}>
                   Delivered in {formatDeliveryTime(acrossIndiaMin, acrossIndiaMax, acrossIndiaUnit)}
                 </Text>
@@ -299,13 +299,15 @@ export default function DeliveryTimeScreen({ onBack }: DeliveryTimeScreenProps) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
@@ -313,7 +315,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -344,7 +346,7 @@ const styles = StyleSheet.create({
   },
   deliveryTimeValue: {
     fontSize: 16,
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
     marginRight: 8,
   },
@@ -437,7 +439,7 @@ const styles = StyleSheet.create({
   unitSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#f5f5f5',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
@@ -482,7 +484,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#f5f5f5',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -497,7 +499,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

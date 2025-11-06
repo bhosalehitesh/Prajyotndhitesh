@@ -18,10 +18,10 @@ export default function SocialMediaScreen({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFF4FA' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Link Social Media</Text>
       </View>
@@ -62,7 +62,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
@@ -70,7 +72,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#FFFFFF',
+    color: '#ffffff',
   },
   content: {
     padding: 20,
@@ -98,14 +100,14 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   saveButton: {
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#e61580',
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
   },
   saveButtonText: {
-    color: '#FFFFFF',
+    color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
   },

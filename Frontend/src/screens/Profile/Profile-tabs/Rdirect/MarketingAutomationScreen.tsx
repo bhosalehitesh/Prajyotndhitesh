@@ -24,7 +24,7 @@ export default function MarketingAutomationScreen({ onBack }: MarketingAutomatio
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Marketing Automation</Text>
       </View>
@@ -105,7 +105,7 @@ export default function MarketingAutomationScreen({ onBack }: MarketingAutomatio
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Setup WhatsApp Business Account</Text>
               <TouchableOpacity onPress={() => setShowSetupModal(false)}>
-                <MaterialCommunityIcons name="close" size={28} color="#222" />
+                <MaterialCommunityIcons name="close" size={28} color="#1a1a1a" />
               </TouchableOpacity>
             </View>
             <Text style={styles.modalText}>
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   contentSection: {
-    backgroundColor: '#0d9488',
+    backgroundColor: '#e61580',
     padding: 24,
     marginTop: -20,
     borderTopLeftRadius: 20,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -241,12 +241,12 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   stepLine: {
     width: 2,
     height: 24,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     marginLeft: 12,
     marginBottom: 8,
   },
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   setupButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   modalButton: {
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',

@@ -30,10 +30,10 @@ export default function PaymentsScreen({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#edeff3' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff5f8' }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#fff" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Manage Payments</Text>
       </View>
@@ -74,7 +74,7 @@ export default function PaymentsScreen({ onBack }: { onBack: () => void }) {
               <MaterialCommunityIcons
                 name="chevron-right"
                 size={24}
-                color="#17aba5"
+                color="#e61580"
                 style={styles.arrow}
               />
             </TouchableOpacity>
@@ -86,7 +86,7 @@ export default function PaymentsScreen({ onBack }: { onBack: () => void }) {
               <MaterialCommunityIcons
                 name="star"
                 size={16}
-                color="#ff6b35"
+                color="#e61580"
               />
               <Text style={styles.recommendationLabel}>Our Recommendation</Text>
             </View>
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#1a237e',
+    backgroundColor: '#e61580',
   },
   title: {
     fontWeight: 'bold',
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#fff',
+    color: '#ffffff',
   },
   content: {
     padding: 24,
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   desc: {
-    color: '#858997',
+    color: '#6B7280',
     fontSize: 17,
     marginBottom: 24,
     lineHeight: 24,
@@ -181,10 +181,12 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   recommendationBox: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#fff5f8',
     borderRadius: 12,
     padding: 20,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#e61580',
   },
   recommendationHeader: {
     flexDirection: 'row',
@@ -192,13 +194,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   recommendationLabel: {
-    color: '#ff6b35',
+    color: '#e61580',
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 6,
   },
   recommendationText: {
-    color: '#fff',
+    color: '#1a1a1a',
     fontSize: 16,
     lineHeight: 24,
   },

@@ -31,7 +31,7 @@ export default function ManageCustomersScreen({ onBack }: ManageCustomersScreenP
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Manage Customers</Text>
       </View>
@@ -72,9 +72,9 @@ export default function ManageCustomersScreen({ onBack }: ManageCustomersScreenP
         <View style={styles.emptyState}>
           <View style={styles.illustration}>
             <View style={styles.phoneCircle}>
-              <MaterialCommunityIcons name="phone" size={40} color="#17aba5" />
+              <MaterialCommunityIcons name="phone" size={40} color="#e61580" />
               <View style={styles.bubble}>
-                <MaterialCommunityIcons name="phone-outline" size={20} color="#10B981" />
+                <MaterialCommunityIcons name="phone-outline" size={20} color="#e61580" />
               </View>
             </View>
           </View>
@@ -108,13 +108,13 @@ export default function ManageCustomersScreen({ onBack }: ManageCustomersScreenP
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabTextActive: {
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   tabUnderline: {
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
   },
   scrollView: {
     flex: 1,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#f0fdfa',
+    backgroundColor: '#fff5f8',
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 2,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   importButton: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   },
   newCustomerButton: {
     flex: 1,
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   newCustomerButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#ffffff',
   },
 });
 

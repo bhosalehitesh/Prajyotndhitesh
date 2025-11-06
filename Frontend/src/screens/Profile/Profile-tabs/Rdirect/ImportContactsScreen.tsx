@@ -78,14 +78,14 @@ export default function ImportContactsScreen({ onBack }: ImportContactsScreenPro
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Import Contacts</Text>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <MaterialCommunityIcons name="magnify" size={20} color="#888" style={styles.searchIcon} />
+        <MaterialCommunityIcons name="magnify" size={20} color="#e61580" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search by name or mobile number"
@@ -117,7 +117,7 @@ export default function ImportContactsScreen({ onBack }: ImportContactsScreenPro
               <MaterialCommunityIcons
                 name={selectedContacts.has(contact.id) ? 'check' : 'plus'}
                 size={20}
-                color={selectedContacts.has(contact.id) ? '#10B981' : '#888'}
+                color={selectedContacts.has(contact.id) ? '#e61580' : '#888'}
               />
             </TouchableOpacity>
             <View style={styles.contactInfo}>
@@ -126,7 +126,7 @@ export default function ImportContactsScreen({ onBack }: ImportContactsScreenPro
             </View>
             <View style={styles.checkbox}>
               {selectedContacts.has(contact.id) && (
-                <MaterialCommunityIcons name="check" size={20} color="#17aba5" />
+                <MaterialCommunityIcons name="check" size={20} color="#e61580" />
               )}
             </View>
           </TouchableOpacity>
@@ -148,13 +148,13 @@ export default function ImportContactsScreen({ onBack }: ImportContactsScreenPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   },
   selectAllText: {
     fontSize: 16,
-    color: '#17aba5',
+    color: '#e61580',
     fontWeight: '600',
   },
   scrollView: {
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#17aba5',
+    borderColor: '#e61580',
     justifyContent: 'center',
     alignItems: 'center',
   },

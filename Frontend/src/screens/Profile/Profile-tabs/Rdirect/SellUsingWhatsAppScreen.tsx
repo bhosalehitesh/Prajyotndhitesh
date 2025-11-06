@@ -24,7 +24,7 @@ export default function SellUsingWhatsAppScreen({ onBack }: SellUsingWhatsAppScr
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Sell using WhatsApp</Text>
       </View>
@@ -36,7 +36,7 @@ export default function SellUsingWhatsAppScreen({ onBack }: SellUsingWhatsAppScr
           onPress={() => setShowManageCustomers(true)}
         >
           <Text style={styles.menuItemText}>Manage Customers</Text>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#17aba5" />
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#e61580" />
         </TouchableOpacity>
 
         {/* Marketing Campaign */}
@@ -45,7 +45,7 @@ export default function SellUsingWhatsAppScreen({ onBack }: SellUsingWhatsAppScr
           onPress={() => setShowMarketingCampaign(true)}
         >
           <Text style={styles.menuItemText}>Marketing Campaign</Text>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#17aba5" />
+          <MaterialCommunityIcons name="chevron-right" size={24} color="#e61580" />
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -55,13 +55,15 @@ export default function SellUsingWhatsAppScreen({ onBack }: SellUsingWhatsAppScr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#e61580',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e4ec',
   },
   title: {
     fontWeight: 'bold',
@@ -69,7 +71,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,

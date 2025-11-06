@@ -24,7 +24,7 @@ export default function MarketingCampaignScreen({ onBack }: MarketingCampaignScr
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={28} color="#222" />
+          <MaterialCommunityIcons name="arrow-left" size={28} color="#ffffff" />
         </TouchableOpacity>
         <Text style={styles.title}>Marketing Campaign</Text>
       </View>
@@ -52,7 +52,7 @@ export default function MarketingCampaignScreen({ onBack }: MarketingCampaignScr
             <Text style={styles.campaignsTitle}>Campaigns</Text>
             <View style={styles.filterDropdown}>
               <Text style={styles.filterText}>Last 7 days</Text>
-              <MaterialCommunityIcons name="chevron-down" size={20} color="#888" />
+              <MaterialCommunityIcons name="chevron-down" size={20} color="#e61580" />
             </View>
           </View>
 
@@ -72,7 +72,7 @@ export default function MarketingCampaignScreen({ onBack }: MarketingCampaignScr
           style={styles.createButton}
           onPress={() => setShowCreateCampaign(true)}
         >
-          <MaterialCommunityIcons name="plus" size={24} color="#fff" />
+          <MaterialCommunityIcons name="plus" size={24} color="#ffffff" />
           <Text style={styles.createButtonText}>Create New Campaign</Text>
         </TouchableOpacity>
       </View>
@@ -83,13 +83,13 @@ export default function MarketingCampaignScreen({ onBack }: MarketingCampaignScr
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff5f8',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#e61580',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e4ec',
   },
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 12,
     flex: 1,
-    color: '#222',
+    color: '#ffffff',
   },
   scrollView: {
     flex: 1,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#f5f5fa',
+    backgroundColor: '#f5f5f5',
     borderRadius: 8,
   },
   filterText: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e4ec',
   },
   createButton: {
-    backgroundColor: '#17aba5',
+    backgroundColor: '#e61580',
     borderRadius: 12,
     padding: 18,
     flexDirection: 'row',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   createButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 8,
