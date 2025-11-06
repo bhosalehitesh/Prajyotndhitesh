@@ -25,6 +25,8 @@ import CollectionsScreen from './src/screens/Catalog/collections/CollectionsScre
 import AddCollectionScreen from './src/screens/Catalog/collections/AddCollectionScreen';
 import SelectProductsScreen from './src/screens/Catalog/collections/SelectProductsScreen';
 import StoreAppearanceScreen from './src/screens/StoreAppearance/StoreAppearanceScreen';
+import { AuthProvider, useAuth } from './src/authentication/AuthContext';
+import { AuthScreen } from './src/authentication';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -183,11 +185,33 @@ function TabNavigator() {
   );
 }
 
+function RootNavigator() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={[styles.mainContent, {backgroundColor: '#ffffff'}]}>
+        <Text style={styles.welcomeText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AuthScreen onAuthenticated={() => { /* state updates via AuthContext.login in screens */ }} />
+    );
+  }
+
+  return <MainStack />;
+}
+
 function App(): JSX.Element {
   return (
-    <NavigationContainer>
-      <MainStack />
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 

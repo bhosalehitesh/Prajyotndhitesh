@@ -56,6 +56,11 @@ function CatalogStack() {
 
 // Custom Tab Bar Component
 function CustomTabBar({state, descriptors, navigation}: any) {
+  // Safety check for navigation object
+  if (!navigation || typeof navigation.navigate !== 'function') {
+    return null;
+  }
+
   return (
     <View style={styles.bottomTabBar}>
       {state.routes.map((route: any, index: number) => {
@@ -69,14 +74,18 @@ function CustomTabBar({state, descriptors, navigation}: any) {
         const isFocused = state.index === index;
 
         const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
+          try {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
 
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
+            if (!isFocused && (!event || !event.defaultPrevented)) {
+              navigation.navigate(route.name);
+            }
+          } catch (error) {
+            console.error('Navigation error:', error);
           }
         };
 

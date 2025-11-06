@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
+import { login } from '../utils/api';
+import { useAuth } from './AuthContext';
 
 interface SignInScreenProps {
   onAuthenticated: () => void;
@@ -19,6 +21,7 @@ interface SignInScreenProps {
 type SignInMethod = 'password' | 'otp';
 
 const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchToSignUp }) => {
+  const auth = useAuth();
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
@@ -39,33 +42,17 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchTo
     return /^\d{6}$/.test(otp);
   }, [otp]);
 
-  const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
-
   const handleSendOtp = async () => {
     if (!isMobileValid) {
       Alert.alert('Validation', 'Please enter a valid 10-digit mobile number.');
       return;
     }
 
-    // Check if account exists
-    const cleanMobile = mobileNumber.replace(/\D/g, '');
-    const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-    if (!existingPhone || existingPhone !== cleanMobile) {
-      Alert.alert(
-        'Account Not Found',
-        'No account found with this mobile number. Please sign up first.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    setLoading(true);
-    const code = generateOtp();
-    setOtpSent(code);
-    setLoading(false);
-    
-    // In production, send OTP via SMS service
-    Alert.alert('OTP Sent', `Your OTP is: ${code}\n\nUse this code to sign in.`);
+    Alert.alert(
+      'Info',
+      'OTP login is not available yet. Please use password login. OTP login will be available soon.',
+      [{ text: 'OK' }]
+    );
   };
 
   const handleSignIn = async () => {
@@ -83,74 +70,50 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchTo
       setLoading(true);
       const cleanMobile = mobileNumber.replace(/\D/g, '');
       
-      // Check if account exists
-      const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-      if (!existingPhone || existingPhone !== cleanMobile) {
-        setLoading(false);
-        Alert.alert(
-          'Account Not Found',
-          'No account found with this mobile number. Please sign up first.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
+      try {
+        // Call backend login API
+        const authResponse = await login({
+          phone: cleanMobile,
+          password: password,
+        });
 
-      // Verify password
-      const storedPassword = await storage.getItem('userPassword');
-      if (storedPassword !== password) {
+        // Store auth token and user info
+        await auth.login(authResponse.token);
+        await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
+        await storage.setItem(AUTH_PHONE_KEY, authResponse.phone);
+        await storage.setItem('userName', authResponse.fullName);
+        
         setLoading(false);
-        Alert.alert('Error', 'Incorrect password. Please try again or use OTP.');
-        return;
+        onAuthenticated();
+      } catch (error) {
+        setLoading(false);
+        const errorMessage = error instanceof Error ? error.message : 'Login failed';
+        
+        if (errorMessage.includes('not found')) {
+          Alert.alert(
+            'Account Not Found',
+            'No account found with this mobile number. Please sign up first.',
+            [{ text: 'OK' }]
+          );
+        } else if (errorMessage.includes('password') || errorMessage.includes('Invalid')) {
+          Alert.alert('Error', 'Incorrect password. Please try again or use OTP.');
+        } else if (errorMessage.includes('not verified')) {
+          Alert.alert(
+            'Account Not Verified',
+            'Please verify your account with OTP first. You can do this from the sign up screen.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert('Login Error', errorMessage);
+        }
       }
-
-      // Create JWT token and sign in
-      const token = `jwt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await storage.setItem(AUTH_TOKEN_KEY, token);
-      await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
-      
-      setLoading(false);
-      onAuthenticated();
     } else {
-      // OTP sign in
-      if (!isOtpValid) {
-        Alert.alert('Validation', 'Please enter a valid 6-digit OTP.');
-        return;
-      }
-
-      if (!otpSent || otpSent === '') {
-        Alert.alert('Info', 'Please send OTP first.');
-        return;
-      }
-
-      setLoading(true);
-      const cleanMobile = mobileNumber.replace(/\D/g, '');
-      
-      // Verify OTP (in production, this would be verified with backend)
-      // For demo, we check against the sent OTP
-      if (otp !== otpSent) {
-        setLoading(false);
-        Alert.alert('Error', 'Incorrect OTP. Please try again.');
-        return;
-      }
-
-      // Check if account exists for OTP sign in
-      const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-      if (!existingPhone || existingPhone !== cleanMobile) {
-        setLoading(false);
-        Alert.alert(
-          'Account Not Found',
-          'No account found with this mobile number. Please sign up first.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const token = `jwt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await storage.setItem(AUTH_TOKEN_KEY, token);
-      await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
-      
-      setLoading(false);
-      onAuthenticated();
+      // OTP sign in - not available yet (backend needs to implement)
+      Alert.alert(
+        'Info',
+        'OTP login is not available yet. Please use password login. OTP login will be available soon.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -160,28 +123,9 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchTo
       return;
     }
 
-    // Check if account exists
-    const cleanMobile = mobileNumber.replace(/\D/g, '');
-    const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-    if (!existingPhone || existingPhone !== cleanMobile) {
-      Alert.alert(
-        'Account Not Found',
-        'No account found with this mobile number. Please sign up first.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    setLoading(true);
-    const code = generateOtp();
-    setOtpSent(code);
-    setSignInMethod('otp');
-    setPassword(''); // Clear password field
-    setLoading(false);
-    
     Alert.alert(
-      'OTP Sent',
-      `We've sent an OTP to ${mobileNumber}. Use this OTP to sign in.\n\nOTP: ${code}`,
+      'Info',
+      'Password reset via OTP is not available yet. Please contact support or use the sign up flow.',
       [{ text: 'OK' }]
     );
   };
@@ -277,6 +221,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchTo
             <TouchableOpacity
               style={styles.resendOtpButton}
               onPress={handleSendOtp}
+              disabled={loading}
               activeOpacity={0.7}
             >
               <Text style={styles.resendOtpText}>Resend OTP</Text>

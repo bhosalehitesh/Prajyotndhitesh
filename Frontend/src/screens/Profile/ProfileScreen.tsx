@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -6,9 +6,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Switch
+  Switch,
+  Share,
+  Alert
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { storage, AUTH_PHONE_KEY } from '../../authentication/storage';
 
 import LegalScreen from './Profile-tabs/LegalScreen';
 import StoreConfigScreen from './Profile-tabs/StoreConfigScreen';
@@ -61,6 +64,54 @@ const ProfileScreen = () => {
   const [pickup, setPickup] = useState(true);
   const [delivery, setDelivery] = useState(true);
   const [subPage, setSubPage] = useState<SubPage>(null);
+  const [userName, setUserName] = useState('User');
+  const [phoneNumber, setPhoneNumber] = useState('');
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const name = await storage.getItem('userName');
+      const phone = await storage.getItem(AUTH_PHONE_KEY);
+      if (name) setUserName(name);
+      if (phone) setPhoneNumber(phone);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const handleShareStore = async () => {
+    try {
+      // Get store link from storage or use default format
+      const phone = phoneNumber || await storage.getItem(AUTH_PHONE_KEY);
+      const storeLink = phone ? `sakhi.in/store/${phone}` : 'sakhi.in/store';
+      
+      const shareMessage = `Check out my store on SmartBiz!\n\nStore: ${storeLink}\n\nShop now and discover amazing products!`;
+      
+      const result = await Share.share({
+        message: shareMessage,
+        title: 'Share My Store',
+      });
+
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          // Shared with activity type of result.activityType
+          console.log('Shared via:', result.activityType);
+        } else {
+          // Shared
+          console.log('Store shared successfully');
+        }
+      } else if (result.action === Share.dismissedAction) {
+        // Dismissed
+        console.log('Share dismissed');
+      }
+    } catch (error) {
+      console.error('Error sharing store:', error);
+      Alert.alert('Error', 'Failed to share store. Please try again.');
+    }
+  };
 
   // --- SUB SCREEN CONDITIONAL RENDER ---
   if (subPage === 'legal') return <LegalScreen onBack={() => setSubPage(null)} />;
@@ -105,11 +156,13 @@ const ProfileScreen = () => {
           activeOpacity={0.7}
         >
           <View style={styles.avatarWrap}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>G</Text></View>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{userName.charAt(0).toUpperCase()}</Text>
+            </View>
           </View>
           <View style={{flex:1, marginLeft:16}}>
-            <Text style={styles.name}>Girnai</Text>
-            <Text style={styles.phone}>+91 8766408154</Text>
+            <Text style={styles.name}>{userName}</Text>
+            <Text style={styles.phone}>{phoneNumber ? `+91 ${phoneNumber}` : ''}</Text>
         </View>
           <MaterialCommunityIcons name="chevron-right" size={28} color="#1E3A8A" />
         </TouchableOpacity>
@@ -244,7 +297,7 @@ const ProfileScreen = () => {
         </View>
 
         {/* App Actions */}
-        <TouchableOpacity style={styles.shareBtn}>
+        <TouchableOpacity style={styles.shareBtn} onPress={handleShareStore}>
           <MaterialCommunityIcons name="share-variant" size={20} color="#1E3A8A" />
           <Text style={styles.shareText}>Share Store</Text>
           </TouchableOpacity>

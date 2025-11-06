@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
+import { signup, verifyOtp, login } from '../utils/api';
+import { useAuth } from './AuthContext';
 
 interface SignUpScreenProps {
   onAuthenticated: () => void;
@@ -17,6 +19,7 @@ interface SignUpScreenProps {
 }
 
 const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchToSignIn }) => {
+  const auth = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
@@ -38,8 +41,6 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
     return /^\d{6}$/.test(otp);
   }, [otp]);
 
-  const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
-
   const handleVerifyMobile = async () => {
     if (!isFormValid) {
       Alert.alert('Validation', 'Please fill all fields correctly. Password must be at least 6 characters.');
@@ -49,42 +50,34 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
     setLoading(true);
     const cleanMobile = mobileNumber.replace(/\D/g, '');
     
-    // Check if number already exists
-    const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-    if (existingPhone === cleanMobile) {
-      setLoading(false);
-      Alert.alert(
-        'Account Already Exists',
-        'This mobile number is already registered. Would you like to recreate your account?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Recreate Account',
-            onPress: async () => {
-              // Proceed with verification for recreation
-              const code = generateOtp();
-              setOtpSent(code);
-              setStep('verification');
-              setLoading(false);
-              Alert.alert('OTP Sent', `Verification code: ${code}\n\nPlease enter this code to verify.`);
-            },
-          },
-        ]
-      );
-      return;
-    }
+    try {
+      // Call backend signup API
+      const otpCode = await signup({
+        fullName: `${firstName} ${lastName}`.trim(),
+        phone: cleanMobile,
+        password: password,
+      });
 
-    // Generate and send OTP for new account
-    const code = generateOtp();
-    setOtpSent(code);
-    setStep('verification');
-    setLoading(false);
-    
-    // In production, send OTP via SMS service
-    Alert.alert('OTP Sent', `Verification code: ${code}\n\nPlease enter this code to verify your mobile number.`);
+      // Store OTP for verification
+      setOtpSent(otpCode);
+      setStep('verification');
+      setLoading(false);
+      
+      Alert.alert('OTP Sent', `Verification code: ${otpCode}\n\nPlease enter this code to verify your mobile number.`);
+    } catch (error) {
+      setLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create account';
+      
+      if (errorMessage.includes('already exists')) {
+        Alert.alert(
+          'Account Already Exists',
+          'This mobile number is already registered. Please sign in instead.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
+    }
   };
 
   const handleVerifyOtp = async () => {
@@ -93,48 +86,81 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
       return;
     }
 
-    if (otp !== otpSent) {
-      Alert.alert('Error', 'Incorrect OTP. Please try again.');
-      return;
-    }
-
     setLoading(true);
-    await handleCreateAccount();
-  };
-
-  const handleResendOtp = async () => {
-    const code = generateOtp();
-    setOtpSent(code);
-    setOtp('');
-    Alert.alert('OTP Resent', `New verification code: ${code}`);
-  };
-
-  const handleCreateAccount = async () => {
+    const cleanMobile = mobileNumber.replace(/\D/g, '');
+    
     try {
-      const cleanMobile = mobileNumber.replace(/\D/g, '');
-      
-      // Create account and JWT token
-      const token = `jwt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await storage.setItem(AUTH_TOKEN_KEY, token);
-      await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
-      await storage.setItem('userName', `${firstName} ${lastName}`);
-      await storage.setItem('userPassword', password); // Store password for sign in
+      // Verify OTP with backend
+      await verifyOtp({
+        phone: cleanMobile,
+        code: otp,
+      });
+
+      // After OTP verification, login to get JWT token
+      const authResponse = await login({
+        phone: cleanMobile,
+        password: password,
+      });
+
+      // Store auth token and user info
+      await auth.login(authResponse.token);
+      await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
+      await storage.setItem(AUTH_PHONE_KEY, authResponse.phone);
+      await storage.setItem('userName', authResponse.fullName);
       
       setLoading(false);
       Alert.alert('Success', 'Account created successfully!', [
         {
           text: 'OK',
           onPress: () => {
-            // Navigate to seller info screen
             onAuthenticated();
           },
         },
       ]);
     } catch (error) {
       setLoading(false);
-      Alert.alert('Error', 'Failed to create account. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'OTP verification failed';
+      
+      if (errorMessage.includes('Invalid OTP') || errorMessage.includes('Incorrect')) {
+        Alert.alert('Error', 'Incorrect OTP. Please try again.');
+      } else if (errorMessage.includes('expired')) {
+        Alert.alert('Error', 'OTP expired. Please request a new one.');
+      } else if (errorMessage.includes('Max attempts')) {
+        Alert.alert('Error', 'Maximum attempts exceeded. Please request a new OTP.');
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
     }
   };
+
+  const handleResendOtp = async () => {
+    setLoading(true);
+    const cleanMobile = mobileNumber.replace(/\D/g, '');
+    
+    try {
+      // Resend OTP by calling signup again (backend will handle cooldown)
+      const otpCode = await signup({
+        fullName: `${firstName} ${lastName}`.trim(),
+        phone: cleanMobile,
+        password: password,
+      });
+
+      setOtpSent(otpCode);
+      setOtp('');
+      setLoading(false);
+      Alert.alert('OTP Resent', `New verification code: ${otpCode}`);
+    } catch (error) {
+      setLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to resend OTP';
+      
+      if (errorMessage.includes('wait')) {
+        Alert.alert('Please Wait', 'Please wait before requesting another OTP.');
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
+    }
+  };
+
 
   const handleTermsPress = () => {
     Alert.alert('Terms and Conditions', 'Terms and conditions content will be displayed here.');

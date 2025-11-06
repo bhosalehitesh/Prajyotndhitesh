@@ -134,6 +134,7 @@ public class AuthService {
     private final OtpRepository otpRepo;
     private final JwtUtil jwtUtil;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final SmsClient smsClient;
 
     // Configurable values (could be externalized later)
     private static final int OTP_LENGTH = 6;
@@ -141,10 +142,11 @@ public class AuthService {
     private static final int RESEND_COOLDOWN_SECONDS = 60;
     private static final int MAX_OTP_ATTEMPTS = 5;
 
-    public AuthService(UserRepository userRepo, OtpRepository otpRepo, JwtUtil jwtUtil) {
+    public AuthService(UserRepository userRepo, OtpRepository otpRepo, JwtUtil jwtUtil, SmsClient smsClient) {
         this.userRepo = userRepo;
         this.otpRepo = otpRepo;
         this.jwtUtil = jwtUtil;
+        this.smsClient = smsClient;
     }
 
     @Transactional
@@ -183,7 +185,10 @@ public class AuthService {
         otp.setAttempts(0);
         otpRepo.save(otp);
 
-        // TODO: integrate Kutility SMS API here
+        // Send SMS via Kutility (will log OTP in dev mode)
+        smsClient.sendOtp(phone, code);
+        
+        // Return OTP code in response (for testing during development)
         return code;
     }
 
