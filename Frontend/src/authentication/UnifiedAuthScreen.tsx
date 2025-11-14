@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
-import { apiService } from '../services/api';
+import { signup, verifyOtp, login as apiLogin } from '../utils/api';
 import { useAuth } from './AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -87,19 +87,20 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
 
     try {
-      const response = await apiService.signup({
+      // Call backend API to signup and get OTP
+      const otpCode = await signup({
         fullName,
         phone: cleanMobile,
         password,
       });
 
       // Store OTP for verification
-      if (response.otp) {
-        setOtpSent(response.otp);
+      if (otpCode) {
+        setOtpSent(otpCode);
       }
 
-    setStep('verification');
-    setLoading(false);
+      setStep('verification');
+      setLoading(false);
     } catch (error) {
       setLoading(false);
       const errorMessage = error instanceof Error ? error.message : 'Failed to send OTP. Please try again.';
@@ -117,29 +118,39 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
     const cleanMobile = mobileNumber.replace(/\D/g, '');
 
     try {
-      // Verify OTP
-      await apiService.verifyOtp({
+      // Verify OTP with backend
+      await verifyOtp({
         phone: cleanMobile,
         code: otp,
       });
 
+      // Small delay to ensure user is enabled in database
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // After OTP verification, login to get token
-      const authResponse = await apiService.login({
+      const authResponse = await apiLogin({
         phone: cleanMobile,
         password,
       });
 
+      // Validate response
+      if (!authResponse || !authResponse.token) {
+        throw new Error('Login failed: Invalid response from server');
+      }
+
       // Store authentication data
       await login(authResponse.token);
+      await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
       await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
-      await storage.setItem('userName', `${firstName} ${lastName}`);
+      await storage.setItem('userName', authResponse.fullName || `${firstName} ${lastName}`);
       await storage.setItem('userPassword', password);
-      await storage.setItem('userId', authResponse.userId.toString());
+      await storage.setItem('userId', authResponse.userId?.toString() || '');
       
       setLoading(false);
       onAuthenticated();
     } catch (error) {
       setLoading(false);
+      console.error('OTP verification error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to verify OTP. Please try again.';
       Alert.alert('Error', errorMessage);
     }
@@ -156,16 +167,17 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
 
     try {
-      const response = await apiService.signup({
+      // Resend OTP by calling signup again
+      const otpCode = await signup({
         fullName,
         phone: cleanMobile,
         password,
       });
 
-      if (response.otp) {
-        setOtpSent(response.otp);
+      if (otpCode) {
+        setOtpSent(otpCode);
       }
-    setOtp('');
+      setOtp('');
       setLoading(false);
     } catch (error) {
       setLoading(false);
@@ -223,23 +235,30 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       const cleanMobile = signInMobile.replace(/\D/g, '');
       
       try {
-        // Login with mock API
-        const authResponse = await apiService.login({
+        // Login with backend API
+        const authResponse = await apiLogin({
           phone: cleanMobile,
           password: signInPassword,
         });
 
+        // Validate response
+        if (!authResponse || !authResponse.token) {
+          throw new Error('Login failed: Invalid response from server');
+        }
+
         // Store authentication data
         await login(authResponse.token);
-      await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
-        await storage.setItem('userName', authResponse.fullName);
+        await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
+        await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
+        await storage.setItem('userName', authResponse.fullName || '');
         await storage.setItem('userPassword', signInPassword);
-        await storage.setItem('userId', authResponse.userId.toString());
+        await storage.setItem('userId', authResponse.userId?.toString() || '');
       
-      setLoading(false);
-      onAuthenticated();
+        setLoading(false);
+        onAuthenticated();
       } catch (error) {
         setLoading(false);
+        console.error('Login error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Failed to sign in. Please check your credentials.';
         Alert.alert('Error', errorMessage);
       }

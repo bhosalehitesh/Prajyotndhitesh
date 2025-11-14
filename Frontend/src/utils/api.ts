@@ -172,14 +172,35 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
 
     console.log('Login response status:', response.status);
 
+    // Get response text (can only read once)
+    const responseText = await response.text();
+    console.log('Login response text:', responseText);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Login error response:', errorText);
-      throw new Error(errorText || 'Login failed');
+      console.error('Login error response:', responseText);
+      throw new Error(responseText || 'Login failed');
+    }
+    
+    if (!responseText || responseText.trim() === '') {
+      throw new Error('Empty response from server');
     }
 
-    const result: AuthResponse = await response.json();
-    console.log('Login success:', { userId: result.userId, phone: result.phone });
+    // Parse JSON response
+    let result: AuthResponse;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse login response:', parseError, 'Response:', responseText);
+      throw new Error('Invalid response format from server');
+    }
+
+    // Validate required fields
+    if (!result || !result.token) {
+      console.error('Login response missing token:', result);
+      throw new Error('Login response missing token');
+    }
+
+    console.log('Login success:', { userId: result.userId, phone: result.phone, hasToken: !!result.token });
     return result;
   } catch (error) {
     console.error('Login exception:', error);

@@ -4,16 +4,17 @@
     <domain-config cleartextTrafficPermitted="true">
         <!-- Android emulator localhost -->
         <domain includeSubdomains="true">10.0.2.2</domain>
-        <!-- Localhost for physical devices (replace with your computer's IP) -->
+        <!-- Localhost for physical devices -->
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
+        <!-- Your computer's IP address for direct connection -->
+        <domain includeSubdomains="true">192.168.1.45</domain>
     </domain-config>
     
-    <!-- Production: HTTPS only -->
-    <base-config cleartextTrafficPermitted="false">
+    <!-- Allow all HTTP connections in development (more permissive for any IP) -->
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
 </network-security-config>
-

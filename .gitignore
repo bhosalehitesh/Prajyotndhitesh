@@ -116,6 +116,7 @@ ENV/
 # Java (if Backend uses Java)
 *.class
 *.jar
+!**/gradle-wrapper.jar
 *.war
 target/
 
