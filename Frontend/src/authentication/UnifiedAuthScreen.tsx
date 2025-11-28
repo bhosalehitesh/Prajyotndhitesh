@@ -374,7 +374,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
 
           {/* Welcome Text */}
           <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeText}>Welcome!</Text>
+            <Text style={styles.welcomeText}>Welcome Sellers!</Text>
           </View>
 
           {/* Toggle Buttons */}
