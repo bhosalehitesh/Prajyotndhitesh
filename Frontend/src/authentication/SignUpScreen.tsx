@@ -295,7 +295,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
       </TouchableOpacity>
 
       <Text style={styles.verificationText}>
-        To verify your number, we will send you a text message with a temporary code. Message and data rates may apply.
+        To verify your mobile number, we will send you a text message with a temporary code. Message and data rates may apply.
       </Text>
 
       <TouchableOpacity
