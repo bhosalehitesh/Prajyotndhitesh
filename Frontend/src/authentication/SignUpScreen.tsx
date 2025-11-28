@@ -277,7 +277,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
         <View style={styles.infoIcon}>
           <Text style={styles.infoIconText}>i</Text>
         </View>
-        <Text style={styles.infoText}>Passwords must be at least 6 characters.</Text>
+        <Text style={styles.infoText}>Passwords must be at least 6 to 10 characters.</Text>
       </View>
 
       <TouchableOpacity
