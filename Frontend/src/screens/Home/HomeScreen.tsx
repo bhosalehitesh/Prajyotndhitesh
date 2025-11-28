@@ -116,7 +116,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
             </View>
 
             {/* Welcome Text */}
-            <Text style={styles.welcomeText}>Welcome Sellers!</Text>
+            <Text style={styles.welcomeText}>Welcome!</Text>
 
             {/* User Name */}
             <Text style={styles.userName}>{data.profile.name}</Text>
