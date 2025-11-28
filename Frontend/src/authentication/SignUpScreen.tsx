@@ -310,7 +310,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
       </TouchableOpacity>
 
       <Text style={styles.termsText}>
-        By continuing, you agree to SmartBiz's{' '}
+        By continuing the registration process, you agree to SmartBiz's{' '}
         <Text style={styles.linkText} onPress={handleTermsPress}>
           Terms and conditions of use
         </Text>{' '}
