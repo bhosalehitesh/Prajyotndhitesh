@@ -305,12 +305,12 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
         activeOpacity={0.8}
       >
         <Text style={styles.verifyButtonText}>
-          {loading ? 'Sending...' : 'Verify mobile number'}
+          {loading ? 'Sending...' : 'Trying to verify mobile number'}
         </Text>
       </TouchableOpacity>
 
       <Text style={styles.termsText}>
-        By continuing, you agree to SmartBiz's{' '}
+        By continuing the process, you agree to SmartBiz's{' '}
         <Text style={styles.linkText} onPress={handleTermsPress}>
           Terms and conditions of use
         </Text>{' '}
