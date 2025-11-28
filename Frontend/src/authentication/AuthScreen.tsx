@@ -43,7 +43,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
 
           {/* Welcome Text */}
           <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeText}>Welcome Sellers!</Text>
+            <Text style={styles.welcomeText}>Welcome</Text>
           </View>
 
           {/* Main Card */}

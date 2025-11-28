@@ -260,7 +260,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
         />
       </View>
 
-      <Text style={[styles.label, styles.labelMargin]}>Create a password</Text>
+      <Text style={[styles.label, styles.labelMargin]}>Create a strong password</Text>
       <View style={styles.passwordContainer}>
         <TextInput
           style={styles.passwordInput}
