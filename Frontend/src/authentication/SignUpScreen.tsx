@@ -277,7 +277,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
         <View style={styles.infoIcon}>
           <Text style={styles.infoIconText}>i</Text>
         </View>
-        <Text style={styles.infoText}>Passwords must be at least 6 characters.</Text>
+        <Text style={styles.infoText}>Passwords must be at least 6 to 10 characters.</Text>
       </View>
 
       <TouchableOpacity
@@ -295,7 +295,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
       </TouchableOpacity>
 
       <Text style={styles.verificationText}>
-        To verify your number, we will send you a text message with a temporary code. Message and data rates may apply.
+        To verify your mobile number, we will send you a text message with a temporary code. Message and data rates may apply.
       </Text>
 
       <TouchableOpacity
@@ -305,7 +305,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
         activeOpacity={0.8}
       >
         <Text style={styles.verifyButtonText}>
-          {loading ? 'Sending...' : 'Verify mobile number'}
+          {loading ? 'Sending...' : 'Trying to verify mobile number'}
         </Text>
       </TouchableOpacity>
 
@@ -394,6 +394,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    
   },
   passwordContainer: {
     position: 'relative',
