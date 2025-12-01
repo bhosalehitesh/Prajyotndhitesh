@@ -1,0 +1,84 @@
+package com.smartbiz.sakhistore.modules.store.service;
+
+import java.util.List;
+
+import java.util.NoSuchElementException;
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.stereotype.Service;
+
+import org.springframework.transaction.annotation.Transactional;
+
+
+
+import com.smartbiz.sakhistore.modules.store.model.StoreAddress;
+import com.smartbiz.sakhistore.modules.store.repository.StoreAddressRepo;
+
+import lombok.RequiredArgsConstructor;
+
+
+
+@Service
+
+@RequiredArgsConstructor
+
+@Transactional
+
+public class StoreAddressService {
+
+
+
+    @Autowired
+
+    private StoreAddressRepo storeAddressRepository;
+
+
+
+    // ✅ Get all store addresses
+
+    public List<StoreAddress> allAddresses() {
+
+        return storeAddressRepository.findAll();
+
+    }
+
+
+
+    // ✅ Add or update store address
+
+    public StoreAddress addAddress(StoreAddress address) {
+
+        return storeAddressRepository.save(address);
+
+    }
+
+
+
+    // ✅ Get store address by ID
+
+    public StoreAddress findById(Long addressId) {
+
+        return storeAddressRepository.findById(addressId)
+
+                .orElseThrow(() -> new NoSuchElementException("Store Address not found with ID: " + addressId));
+
+    }
+
+
+
+    // ✅ Delete store address
+
+    public void deleteAddress(Long addressId) {
+
+        StoreAddress address = storeAddressRepository.findById(addressId)
+
+                .orElseThrow(() -> new NoSuchElementException("Store Address not found with ID: " + addressId));
+
+        storeAddressRepository.delete(address);
+
+    }
+
+}

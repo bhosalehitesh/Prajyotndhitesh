@@ -7,6 +7,7 @@ import ProductCategoriesScreen from './ProductCategoriesScreen';
 import BusinessInfoScreen from './BusinessInfoScreen';
 import CongratulationsScreen from './CongratulationsScreen';
 import { storage } from '../storage';
+import { saveStoreDetails, saveStoreAddress, saveBusinessDetails } from '../../utils/api';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -49,9 +50,22 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
   const handleStoreNameNext = async (storeName: string) => {
     const updatedData = { ...onboardingData, storeName };
     setOnboardingData(updatedData);
-    // Save store name immediately for easy access
+
+    const slug = storeName.toLowerCase().replace(/\s+/g, '-');
+    const storeLink = `sakhi.store/${slug}`;
+
+    // Save store name/link locally for Home screen, etc.
     await storage.setItem('storeName', storeName);
-    await storage.setItem('storeLink', `sakhi.store/${storeName.toLowerCase().replace(/\s+/g, '-')}`);
+    await storage.setItem('storeLink', storeLink);
+
+    // Persist store details to backend (creates/updates store for this seller)
+    try {
+      await saveStoreDetails(storeName, storeLink);
+    } catch (error) {
+      console.error('Failed to save store details:', error);
+      // We still allow onboarding to continue; backend can be retried later from Profile/Store settings
+    }
+
     setCurrentStep('store-location');
   };
 
@@ -64,12 +78,31 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     setCurrentStep('location-details');
   };
 
-  const handleLocationDetailsNext = (location: {
+  const handleLocationDetailsNext = async (location: {
     city: string;
     state: string;
     pincode: string;
   }) => {
     setOnboardingData((prev) => ({ ...prev, location }));
+
+    // Persist store address to backend if we have address + location
+    try {
+      const data = { ...onboardingData, location };
+      if (data.address) {
+        await saveStoreAddress({
+          addressLine1: data.address.addressLine1,
+          addressLine2: data.address.addressLine2,
+          landmark: data.address.landmark,
+          city: location.city,
+          state: location.state,
+          pincode: location.pincode,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save store address:', error);
+      // Continue onboarding even if this fails; can retry later
+    }
+
     setCurrentStep('store-policies');
   };
 
@@ -96,6 +129,14 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     if (updatedData.storeName) {
       await storage.setItem('storeName', updatedData.storeName);
       await storage.setItem('storeLink', `sakhi.store/${updatedData.storeName.toLowerCase().replace(/\s+/g, '-')}`);
+    }
+
+    // Persist business details to backend
+    try {
+      await saveBusinessDetails(businessInfo);
+    } catch (error) {
+      console.error('Failed to save business details:', error);
+      // Allow onboarding to finish; can retry later from profile/settings
     }
     setCurrentStep('congratulations');
   };

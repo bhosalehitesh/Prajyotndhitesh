@@ -9,8 +9,10 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  Image,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
+import { fetchProducts, ProductDto } from '../../../utils/api';
 
 interface ProductsScreenProps {
   navigation: any;
@@ -25,9 +27,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
   const [collections, setCollections] = useState<string[]>(['Rfgg','Vhh']);
   const [selectedCollections, setSelectedCollections] = useState<Record<string, boolean>>({});
   const [newCollectionName, setNewCollectionName] = useState('');
-  const [products, setProducts] = useState<Array<{id:string,title:string,price:number,mrp?:number,inStock:boolean}>>([
-    {id:'1', title:'soap', price:50, mrp:60, inStock:false},
-  ]);
+  const [products, setProducts] = useState<Array<{id:string,title:string,price:number,mrp?:number,inStock:boolean,imageUrl?:string}>>([]);
+  const [loading, setLoading] = useState(false);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [filterTab, setFilterTab] = useState<'Inventory' | 'Discount' | 'Price Range'>('Inventory');
   const [inventory, setInventory] = useState<'all' | 'in' | 'out'>('all');
@@ -41,6 +42,34 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
   };
 
   const activeProduct = useMemo(() => products.find(p=>p.id===activeProductId) || null, [products, activeProductId]);
+
+  const loadProducts = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const apiProducts: ProductDto[] = await fetchProducts();
+      const mapped = apiProducts.map(p => ({
+        id: String(p.productsId),
+        title: p.productName,
+        price: p.sellingPrice ?? 0,
+        mrp: p.mrp ?? undefined,
+        inStock: (p.inventoryQuantity ?? 0) > 0,
+        imageUrl: (p.productImages && p.productImages[0]) || (p.socialSharingImage ?? undefined),
+      }));
+      setProducts(mapped);
+    } catch (error) {
+      console.error('Failed to load products', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load products whenever screen gains focus
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadProducts();
+    });
+    return unsubscribe;
+  }, [navigation, loadProducts]);
 
   // Compute absolute price bounds from product data
   const absoluteMinPrice = useMemo(() => {
@@ -150,7 +179,9 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
           <IconSymbol name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>All Products</Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity style={styles.headerRight} onPress={loadProducts}>
+          <IconSymbol name="refresh" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
       {/* Search and Filter Section */}
@@ -177,9 +208,20 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
 
       {/* Main Content - Product List */}
       <ScrollView style={styles.content}>
+        {loading && products.length === 0 && (
+          <View style={{alignItems:'center', marginVertical:16}}>
+            <Text style={{color:'#6c757d'}}>Loading products...</Text>
+          </View>
+        )}
         {filteredProducts.map(item => (
           <View key={item.id} style={styles.card}>
-            <View style={styles.thumb} />
+            {item.imageUrl ? (
+              <Image source={{uri: item.imageUrl}} style={styles.thumbImage} />
+            ) : (
+              <View style={styles.thumbPlaceholder}>
+                <IconSymbol name="image-outline" size={18} color="#9CA3AF" />
+              </View>
+            )}
             <View style={{flex:1}}>
               <Text style={styles.title}>{item.title}</Text>
               <View style={{flexDirection:'row', alignItems:'center', gap:8}}>
@@ -261,19 +303,43 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
                   <View style={styles.priceHeaderRow}>
                     <View>
                       <Text style={styles.priceHeaderLabel}>Minimum</Text>
-                      <Text style={styles.priceValue}>₹{priceRange.min}</Text>
+                      <TextInput
+                        style={styles.priceInput}
+                        keyboardType="numeric"
+                        value={priceRange.min ? String(priceRange.min) : ''}
+                        placeholder={`₹${absoluteMinPrice}`}
+                        placeholderTextColor="#9CA3AF"
+                        onChangeText={(text) => {
+                          const raw = text.replace(/[^0-9]/g, '');
+                          const val = raw === '' ? absoluteMinPrice : parseInt(raw, 10);
+                          setPriceRange(prev => {
+                            const nextMin = Math.min(Math.max(val, absoluteMinPrice), prev.max || absoluteMaxPrice);
+                            return { min: nextMin, max: prev.max || absoluteMaxPrice };
+                          });
+                        }}
+                      />
                     </View>
                     <View>
                       <Text style={styles.priceHeaderLabel}>Maximum</Text>
-                      <Text style={styles.priceValue}>₹{priceRange.max}</Text>
+                      <TextInput
+                        style={styles.priceInput}
+                        keyboardType="numeric"
+                        value={priceRange.max ? String(priceRange.max) : ''}
+                        placeholder={`₹${absoluteMaxPrice}`}
+                        placeholderTextColor="#9CA3AF"
+                        onChangeText={(text) => {
+                          const raw = text.replace(/[^0-9]/g, '');
+                          const val = raw === '' ? absoluteMaxPrice : parseInt(raw, 10);
+                          setPriceRange(prev => {
+                            const baseMin = prev.min || absoluteMinPrice;
+                            const nextMax = Math.max(Math.min(val, absoluteMaxPrice), baseMin);
+                            return { min: baseMin, max: nextMax };
+                          });
+                        }}
+                      />
                     </View>
                   </View>
-                  <View style={styles.sliderRow}>
-                    <TouchableOpacity style={styles.sliderBtn} onPress={() => setPriceRange(p=>({...p,min: Math.max(absoluteMinPrice, p.min-10)}))}><Text>-</Text></TouchableOpacity>
-                    <View style={styles.sliderTrack} />
-                    <TouchableOpacity style={styles.sliderBtn} onPress={() => setPriceRange(p=>({...p,max: Math.min(absoluteMaxPrice, p.max+10)}))}><Text>+</Text></TouchableOpacity>
-                  </View>
-                  <Text style={{color:'#6c757d', marginTop:8}}>Range from ₹{absoluteMinPrice} to ₹{absoluteMaxPrice}</Text>
+                  <Text style={{color:'#6c757d', marginTop:8}}>Enter min and max price to filter products.</Text>
                 </>
               )}
             </View>
@@ -458,7 +524,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {marginHorizontal:16, marginTop:12, backgroundColor:'#FFFFFF', borderRadius:12, padding:14, flexDirection:'row', alignItems:'center', gap:12},
-  thumb: {width:60, height:60, borderRadius:8, backgroundColor:'#E5E7EB'},
+  thumbImage: {width:60, height:60, borderRadius:8, marginRight:8},
+  thumbPlaceholder: {width:60, height:60, borderRadius:8, backgroundColor:'#E5E7EB', marginRight:8, alignItems:'center', justifyContent:'center'},
   title: {fontWeight:'600', color:'#111827'},
   price: {fontWeight:'bold', color:'#111827'},
   mrp: {textDecorationLine:'line-through', color:'#9CA3AF'},
@@ -505,10 +572,7 @@ const styles = StyleSheet.create({
   checkboxChecked: {backgroundColor: '#e61580', borderColor: '#e61580'},
   priceHeaderRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16},
   priceHeaderLabel: {color: '#6c757d', marginBottom: 6},
-  priceValue: {fontWeight: 'bold', color: '#111827'},
-  sliderRow: {flexDirection: 'row', alignItems: 'center'},
-  sliderBtn: {width: 32, height: 32, borderRadius: 16, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center'},
-  sliderTrack: {flex: 1, height: 6, backgroundColor: '#E5E7EB', marginHorizontal: 10, borderRadius: 3},
+  priceInput: {borderWidth:1, borderColor:'#E5E7EB', borderRadius:8, paddingHorizontal:10, paddingVertical:8, minWidth:100, color:'#111827'},
   primaryCta: {backgroundColor: '#e61580', paddingVertical: 14, borderRadius: 12, marginTop: 12},
   primaryCtaText: {color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold'},
   deleteCard: {backgroundColor:'#FFFFFF', borderTopLeftRadius:16, borderTopRightRadius:16, padding:16},

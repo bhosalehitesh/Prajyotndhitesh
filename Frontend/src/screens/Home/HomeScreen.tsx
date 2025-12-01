@@ -110,7 +110,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
-                  {data.profile.avatarInitial || data.profile.name.charAt(0)}
+                  {(data.profile.storeName || data.profile.avatarInitial || data.profile.name || '?').charAt(0)}
                 </Text>
               </View>
             </View>
@@ -118,8 +118,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
             {/* Welcome Text */}
             <Text style={styles.welcomeText}>Welcome!</Text>
 
-            {/* User Name */}
-            <Text style={styles.userName}>{data.profile.name}</Text>
+            {/* Store / User Name */}
+            <Text style={styles.userName}>
+              {data.profile.storeName || data.profile.name}
+            </Text>
 
             {/* Store Link */}
             <View style={styles.storeLinkContainer}>
