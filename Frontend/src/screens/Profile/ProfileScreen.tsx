@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { storage, AUTH_PHONE_KEY } from '../../authentication/storage';
+import { useAuth } from '../../authentication/AuthContext';
 
 import LegalScreen from './Profile-tabs/LegalScreen';
 import StoreConfigScreen from './Profile-tabs/StoreConfigScreen';
@@ -50,7 +51,7 @@ const menuList = [
   { label: 'Payments', subtitle: 'Cash on Delivery & Online Payments' },
   { label: 'Growth & Engagement', subtitle: 'Coupons, Campaigns, SEO' },
   { label: 'Trust Markers', subtitle: 'Trust Badges & Social Media Links' },
-  { label: 'Need Help?', subtitle: 'FAQs, How Tos, Contact Us' },
+  { label: 'Need Help?', subtitle: 'FAQs, Contact Us' },
   { label: 'Legal', subtitle: 'Terms of Use, Privacy Policy' },
 ];
 
@@ -60,6 +61,7 @@ type SubPage = null | 'store' | 'shipping' | 'payments' | 'growth' | 'trust' | '
   | 'storeAppearance' | 'customDomain' | 'analytics' | 'timings' | 'policies' | 'terms' | 'privacy';
 
 const ProfileScreen = () => {
+  const { logout } = useAuth();
   const [acceptOrders, setAcceptOrders] = useState(true);
   const [pickup, setPickup] = useState(true);
   const [delivery, setDelivery] = useState(true);
@@ -111,6 +113,35 @@ const ProfileScreen = () => {
       console.error('Error sharing store:', error);
       Alert.alert('Error', 'Failed to share store. Please try again.');
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Call logout from AuthContext - this will clear auth state
+              await logout();
+              // The App.tsx will automatically show the auth screen when isAuthenticated becomes false
+              console.log('User logged out successfully');
+            } catch (error) {
+              console.error('Error during logout:', error);
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   // --- SUB SCREEN CONDITIONAL RENDER ---
@@ -301,10 +332,14 @@ const ProfileScreen = () => {
           <MaterialCommunityIcons name="share-variant" size={20} color="#1E3A8A" />
           <Text style={styles.shareText}>Share Store</Text>
           </TouchableOpacity>
-        <TouchableOpacity style={styles.logoutBtn}>
+        <TouchableOpacity 
+          style={styles.logoutBtn}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
           <MaterialCommunityIcons name="logout" size={20} color="#d73a33" />
           <Text style={styles.logoutText}>Log Out</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

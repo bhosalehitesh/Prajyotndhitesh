@@ -11,6 +11,8 @@ import {
   Platform,
   Alert,
   Dimensions,
+  ActivityIndicator,
+  PermissionsAndroid,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -29,13 +31,148 @@ const StoreLocationScreen: React.FC<StoreLocationScreenProps> = ({ onNext, onBac
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
   const [landmark, setLandmark] = useState('');
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
-  const handleUseCurrentLocation = () => {
-    Alert.alert(
-      'Location Access',
-      'Please allow location access to use your current location.',
-      [{ text: 'OK' }]
-    );
+  // Request location permissions
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'Sakhi Store needs access to your location to fill in your address.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true; // iOS handles permissions automatically
+  };
+
+  // Reverse geocode coordinates to address
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      // Using OpenStreetMap Nominatim API (free, no API key required)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'SakhiStoreApp/1.0', // Required by Nominatim
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Geocoding failed');
+      }
+
+      const data = await response.json();
+      const address = data.address || {};
+
+      // Build address line 1 (house number, building, road)
+      const address1Parts = [];
+      if (address.house_number) address1Parts.push(address.house_number);
+      if (address.road) address1Parts.push(address.road);
+      if (address.building) address1Parts.push(address.building);
+      const address1 = address1Parts.join(', ') || address.road || '';
+
+      // Build address line 2 (area, locality, suburb, village)
+      const address2Parts = [];
+      if (address.suburb) address2Parts.push(address.suburb);
+      if (address.neighbourhood) address2Parts.push(address.neighbourhood);
+      if (address.village) address2Parts.push(address.village);
+      if (address.locality) address2Parts.push(address.locality);
+      const address2 = address2Parts.join(', ') || address.locality || '';
+
+      return {
+        addressLine1: address1,
+        addressLine2: address2,
+        landmark: address.landmark || '',
+      };
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      throw error;
+    }
+  };
+
+  const handleUseCurrentLocation = async () => {
+    try {
+      setIsLoadingLocation(true);
+
+      // Request permission
+      const hasPermission = await requestLocationPermission();
+      if (!hasPermission) {
+        Alert.alert(
+          'Permission Denied',
+          'Location permission is required to use your current location. Please enable it in your device settings.',
+          [{ text: 'OK' }]
+        );
+        setIsLoadingLocation(false);
+        return;
+      }
+
+      // Get current position
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            
+            // Reverse geocode to get address
+            const addressData = await reverseGeocode(latitude, longitude);
+            
+            // Populate the fields
+            setAddressLine1(addressData.addressLine1);
+            setAddressLine2(addressData.addressLine2);
+            if (addressData.landmark) {
+              setLandmark(addressData.landmark);
+            }
+
+            setIsLoadingLocation(false);
+            Alert.alert('Success', 'Your location has been detected and address fields have been filled.');
+          } catch (error) {
+            setIsLoadingLocation(false);
+            Alert.alert(
+              'Error',
+              'Unable to get your address. Please enter it manually.',
+              [{ text: 'OK' }]
+            );
+          }
+        },
+        (error) => {
+          setIsLoadingLocation(false);
+          let errorMessage = 'Unable to get your location. Please enter it manually.';
+          
+          if (error.code === 1) {
+            errorMessage = 'Location access denied. Please enable location services in your device settings.';
+          } else if (error.code === 2) {
+            errorMessage = 'Location unavailable. Please check your GPS settings.';
+          } else if (error.code === 3) {
+            errorMessage = 'Location request timed out. Please try again.';
+          }
+
+          Alert.alert('Location Error', errorMessage, [{ text: 'OK' }]);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 10000,
+        }
+      );
+    } catch (error) {
+      setIsLoadingLocation(false);
+      Alert.alert(
+        'Error',
+        'An error occurred while accessing your location. Please enter your address manually.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const handleNext = () => {
@@ -96,12 +233,22 @@ const StoreLocationScreen: React.FC<StoreLocationScreenProps> = ({ onNext, onBac
             </Text>
 
             <TouchableOpacity
-              style={styles.locationButton}
+              style={[styles.locationButton, isLoadingLocation && styles.locationButtonDisabled]}
               onPress={handleUseCurrentLocation}
               activeOpacity={0.8}
+              disabled={isLoadingLocation}
             >
-              <MaterialCommunityIcons name="map-marker" size={20} color="#e61580" />
-              <Text style={styles.locationButtonText}>Use my current location</Text>
+              {isLoadingLocation ? (
+                <>
+                  <ActivityIndicator size="small" color="#e61580" />
+                  <Text style={styles.locationButtonText}>Getting location...</Text>
+                </>
+              ) : (
+                <>
+                  <MaterialCommunityIcons name="map-marker" size={20} color="#e61580" />
+                  <Text style={styles.locationButtonText}>Use my current location</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             <View style={styles.divider}>
@@ -271,6 +418,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#e61580',
+  },
+  locationButtonDisabled: {
+    opacity: 0.6,
   },
   divider: {
     flexDirection: 'row',

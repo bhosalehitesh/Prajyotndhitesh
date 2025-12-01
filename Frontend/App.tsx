@@ -184,22 +184,51 @@ function TabNavigator() {
 // App Content Component (wrapped with AuthProvider)
 function AppContent(): JSX.Element {
   const { isAuthenticated, isLoading } = useAuth();
-  const [showAuth, setShowAuth] = useState(!isAuthenticated);
+  const [showAuth, setShowAuth] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
-  // If user is already authenticated (e.g., returning session), decide whether to show onboarding
+  // Check authentication and onboarding status on mount and when auth changes
   useEffect(() => {
-    const checkOnboarding = async () => {
-      if (isAuthenticated && !showAuth) {
-        const completed = await storage.getItem('onboardingCompleted');
-        setShowOnboarding(completed !== 'true');
+    const checkAuthAndOnboarding = async () => {
+      if (isLoading) {
+        return; // Wait for auth check to complete
       }
-    };
-    checkOnboarding();
-  }, [isAuthenticated, showAuth]);
 
-  // Show auth screen if not authenticated
-  if (isLoading) {
+      if (!isAuthenticated) {
+        setShowAuth(true);
+        setShowOnboarding(false);
+        setCheckingOnboarding(false);
+        return;
+      }
+
+      // User is authenticated - check onboarding status
+      setShowAuth(false);
+      setCheckingOnboarding(true);
+      
+      const completed = await storage.getItem('onboardingCompleted');
+      const storeName = await storage.getItem('storeName');
+      
+      // Skip onboarding if completed OR if store name already exists
+      const shouldSkipOnboarding = completed === 'true' || (!!storeName && storeName.trim().length > 0);
+      
+      console.log('🔍 App mount onboarding check:', { 
+        completed, 
+        storeName, 
+        isAuthenticated,
+        shouldSkipOnboarding 
+      });
+      
+      // If user is already authenticated (returning user), skip onboarding
+      setShowOnboarding(!shouldSkipOnboarding);
+      setCheckingOnboarding(false);
+    };
+    
+    checkAuthAndOnboarding();
+  }, [isAuthenticated, isLoading]);
+
+  // Show loading screen while checking auth or onboarding status
+  if (isLoading || checkingOnboarding) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Loading...</Text>
@@ -211,32 +240,72 @@ function AppContent(): JSX.Element {
     return (
       <UnifiedAuthScreen
         onAuthenticated={async () => {
-          // After successful auth, decide whether to show onboarding
-          const completed = await storage.getItem('onboardingCompleted');
-          if (completed !== 'true') {
-            setShowOnboarding(true);
-          }
+          // After successful auth, check if this is sign-in or sign-up
           setShowAuth(false);
+          setCheckingOnboarding(true);
+          
+          const isSignIn = await storage.getItem('isSignIn');
+          const completed = await storage.getItem('onboardingCompleted');
+          const storeName = await storage.getItem('storeName');
+          
+          console.log('🔍 Auth check:', { 
+            isSignIn,
+            completed, 
+            storeName
+          });
+          
+          // If user is SIGNING IN (not signing up), ALWAYS skip onboarding and go to home
+          if (isSignIn === 'true') {
+            console.log('✅ User signed IN - skipping onboarding, going to home');
+            setShowOnboarding(false);
+            setCheckingOnboarding(false);
+            return;
+          }
+          
+          // For sign-ups (new users), check if onboarding is needed
+          const shouldSkipOnboarding = completed === 'true' || (!!storeName && storeName.trim().length > 0);
+          
+          console.log('🔍 Sign-up onboarding check:', { 
+            shouldSkipOnboarding,
+            completedCheck: completed === 'true',
+            storeNameCheck: !!storeName && storeName.trim().length > 0
+          });
+          
+          setShowOnboarding(!shouldSkipOnboarding);
+          setCheckingOnboarding(false);
         }}
       />
     );
   }
 
-  // Show onboarding flow if pending
-  if (showOnboarding) {
+  // Show onboarding flow ONLY if explicitly set to true AND user is authenticated
+  // This ensures that if onboarding is completed, we never show it
+  if (showOnboarding && isAuthenticated && !checkingOnboarding) {
     return (
       <OnboardingFlow
-        onComplete={() => {
+        onComplete={async () => {
+          // Ensure onboarding is marked as complete
+          await storage.setItem('onboardingCompleted', 'true');
           setShowOnboarding(false);
         }}
       />
     );
   }
 
+  // If authenticated and not showing onboarding, show main app
+  if (isAuthenticated && !showOnboarding && !checkingOnboarding) {
+    return (
+      <NavigationContainer>
+        <MainStack />
+      </NavigationContainer>
+    );
+  }
+
+  // Default: show nothing (shouldn't reach here, but safety check)
   return (
-    <NavigationContainer>
-      <MainStack />
-    </NavigationContainer>
+    <View style={styles.loadingContainer}>
+      <Text style={styles.loadingText}>Loading...</Text>
+    </View>
   );
 }
 

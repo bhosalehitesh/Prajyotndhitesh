@@ -46,8 +46,12 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('store-name');
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
 
-  const handleStoreNameNext = (storeName: string) => {
-    setOnboardingData((prev) => ({ ...prev, storeName }));
+  const handleStoreNameNext = async (storeName: string) => {
+    const updatedData = { ...onboardingData, storeName };
+    setOnboardingData(updatedData);
+    // Save store name immediately for easy access
+    await storage.setItem('storeName', storeName);
+    await storage.setItem('storeLink', `sakhi.store/${storeName.toLowerCase().replace(/\s+/g, '-')}`);
     setCurrentStep('store-location');
   };
 
@@ -79,7 +83,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     setCurrentStep('business-info');
   };
 
-  const handleBusinessInfoNext = (businessInfo: {
+  const handleBusinessInfoNext = async (businessInfo: {
     hasBusiness: string;
     businessSize: string;
     platforms: string[];
@@ -87,13 +91,29 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     const updatedData = { ...onboardingData, businessInfo };
     setOnboardingData(updatedData);
     // Save onboarding data to storage
-    storage.setItem('onboardingData', JSON.stringify(updatedData));
+    await storage.setItem('onboardingData', JSON.stringify(updatedData));
+    // Ensure store name is also saved separately
+    if (updatedData.storeName) {
+      await storage.setItem('storeName', updatedData.storeName);
+      await storage.setItem('storeLink', `sakhi.store/${updatedData.storeName.toLowerCase().replace(/\s+/g, '-')}`);
+    }
     setCurrentStep('congratulations');
   };
 
-  const handleCongratulationsContinue = () => {
-    // Mark onboarding as complete
-    storage.setItem('onboardingCompleted', 'true');
+  const handleCongratulationsContinue = async () => {
+    // Mark onboarding as complete - ensure it's saved before calling onComplete
+    await storage.setItem('onboardingCompleted', 'true');
+    // Double-check: also ensure store name is saved
+    if (onboardingData.storeName) {
+      await storage.setItem('storeName', onboardingData.storeName);
+      await storage.setItem('storeLink', `sakhi.store/${onboardingData.storeName.toLowerCase().replace(/\s+/g, '-')}`);
+    }
+    
+    // Verify it was saved
+    const saved = await storage.getItem('onboardingCompleted');
+    const savedStoreName = await storage.getItem('storeName');
+    console.log('Onboarding completed - saved:', { saved, savedStoreName });
+    
     onComplete();
   };
 

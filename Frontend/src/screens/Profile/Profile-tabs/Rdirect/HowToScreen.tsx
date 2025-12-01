@@ -170,6 +170,11 @@ export default function HowToScreen({ onBack }: { onBack: () => void }) {
   const [showFAQs, setShowFAQs] = useState(false);
   const [scrollToTop, setScrollToTop] = useState(false);
 
+  // If FAQs is selected, show HelpCenterScreen
+  if (showFAQs) {
+    return <HelpCenterScreen onBack={() => setShowFAQs(false)} />;
+  }
+
   const handleCategoryPress = (category: Category) => {
     setSelectedCategory(category);
     setSelectedArticle(null);

@@ -48,11 +48,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
+      // Clear authentication data only
+      // Keep store/onboarding data so user doesn't have to re-enter if they log back in
       await storage.removeItem(AUTH_TOKEN_KEY);
       await storage.removeItem(AUTH_PHONE_KEY);
       await storage.removeItem('userPassword');
       await storage.removeItem('userName');
+      await storage.removeItem('userId');
+      await storage.removeItem('isSignIn'); // Clear sign-in flag so next login works correctly
       setIsAuthenticated(false);
+      // Note: We keep 'onboardingCompleted', 'storeName', 'storeLink', and 'onboardingData'
+      // so the same user can log back in without re-entering store details
     } catch (error) {
       console.error('Error during logout:', error);
       throw error;

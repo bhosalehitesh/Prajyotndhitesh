@@ -141,5 +141,66 @@ public class AuthService {
         // Resend OTP
         return otpService.resendOtp(phone);
     }
+    
+    /**
+     * Send OTP for login (allows verified users)
+     * @param phone Phone number
+     * @return OTP code
+     */
+    @Transactional
+    public String sendLoginOtp(String phone) {
+        // Check if user exists
+        Optional<User> userOptional = userRepository.findByPhone(phone);
+        if (userOptional.isEmpty()) {
+            throw new RuntimeException("User not found");
+        }
+        
+        User user = userOptional.get();
+        
+        // Check if account is enabled (required for login)
+        if (!user.isEnabled()) {
+            throw new RuntimeException("Account not verified. Please verify OTP first.");
+        }
+        
+        // Generate and send OTP for login (even if user is already verified)
+        return otpService.generateAndSendOtp(phone);
+    }
+    
+    /**
+     * Login user with OTP
+     * Verifies OTP and returns JWT token
+     * @param phone Phone number
+     * @param otpCode OTP code
+     * @return JWT token if login successful
+     */
+    @Transactional
+    public String loginWithOtp(String phone, String otpCode) {
+        // Check if user exists
+        Optional<User> userOptional = userRepository.findByPhone(phone);
+        if (userOptional.isEmpty()) {
+            throw new RuntimeException("User not found");
+        }
+        
+        User user = userOptional.get();
+        
+        // Check if account is enabled
+        if (!user.isEnabled()) {
+            throw new RuntimeException("Account not verified. Please verify OTP first.");
+        }
+        
+        // Verify OTP (without enabling account since it's already enabled)
+        boolean verified = otpService.verifyOtp(phone, otpCode);
+        
+        if (!verified) {
+            throw new RuntimeException("Invalid or expired OTP");
+        }
+        
+        // Generate JWT token
+        String token = jwtService.generateToken(user);
+        
+        logger.info("User logged in with OTP: {}", phone);
+        
+        return token;
+    }
 }
 

@@ -10,10 +10,52 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Modal,
+  FlatList,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// List of Indian States and Union Territories
+const INDIAN_STATES = [
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Tamil Nadu',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+  'Andaman and Nicobar Islands',
+  'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi',
+  'Jammu and Kashmir',
+  'Ladakh',
+  'Lakshadweep',
+  'Puducherry',
+];
 
 interface LocationDetailsScreenProps {
   onNext: (location: {
@@ -28,6 +70,8 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
+  const [showStateModal, setShowStateModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleNext = () => {
     if (!city.trim() || !state.trim() || !pincode.trim()) {
@@ -38,6 +82,16 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
       state: state.trim(),
       pincode: pincode.trim(),
     });
+  };
+
+  const filteredStates = INDIAN_STATES.filter((stateName) =>
+    stateName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleStateSelect = (selectedState: string) => {
+    setState(selectedState);
+    setShowStateModal(false);
+    setSearchQuery('');
   };
 
   return (
@@ -96,17 +150,21 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>State*</Text>
-              <View style={styles.selectContainer}>
-                <TextInput
-                  style={styles.selectInput}
-                  placeholder="State*"
-                  placeholderTextColor="#9ca3af"
-                  value={state}
-                  onChangeText={setState}
-                  autoCapitalize="words"
-                />
+              <TouchableOpacity
+                style={styles.selectContainer}
+                onPress={() => setShowStateModal(true)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.selectInput,
+                    !state && styles.selectPlaceholder,
+                  ]}
+                >
+                  {state || 'Select State'}
+                </Text>
                 <MaterialCommunityIcons name="chevron-down" size={20} color="#6b7280" />
-              </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.inputContainer}>
@@ -142,6 +200,78 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* State Selection Modal */}
+      <Modal
+        visible={showStateModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowStateModal(false);
+          setSearchQuery('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select State</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowStateModal(false);
+                  setSearchQuery('');
+                }}
+              >
+                <MaterialCommunityIcons name="close" size={24} color="#1a1a1a" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <MaterialCommunityIcons name="magnify" size={20} color="#6b7280" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search state..."
+                placeholderTextColor="#9ca3af"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="words"
+              />
+            </View>
+
+            {/* States List */}
+            <FlatList
+              data={filteredStates}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.stateItem,
+                    state === item && styles.stateItemSelected,
+                  ]}
+                  onPress={() => handleStateSelect(item)}
+                >
+                  <Text
+                    style={[
+                      styles.stateItemText,
+                      state === item && styles.stateItemTextSelected,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                  {state === item && (
+                    <MaterialCommunityIcons
+                      name="check"
+                      size={20}
+                      color="#e61580"
+                    />
+                  )}
+                </TouchableOpacity>
+              )}
+              style={styles.statesList}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -257,6 +387,73 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#1a1a1a',
+  },
+  selectPlaceholder: {
+    color: '#9ca3af',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 20,
+    marginVertical: 16,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1a1a1a',
+    marginLeft: 8,
+  },
+  statesList: {
+    maxHeight: 400,
+  },
+  stateItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  stateItemSelected: {
+    backgroundColor: '#fef2f2',
+  },
+  stateItemText: {
+    fontSize: 16,
+    color: '#1a1a1a',
+  },
+  stateItemTextSelected: {
+    color: '#e61580',
+    fontWeight: '600',
   },
   nextButton: {
     backgroundColor: '#e61580',

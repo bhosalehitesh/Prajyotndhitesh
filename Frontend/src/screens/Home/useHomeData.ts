@@ -19,6 +19,7 @@
 import {useState, useEffect, useCallback} from 'react';
 import {HomeScreenData, HomeScreenApiResponse} from './types';
 import {mockHomeData} from './mockData';
+import {storage} from '../../authentication/storage';
 
 interface UseHomeDataReturn {
   data: HomeScreenData | null;
@@ -72,9 +73,26 @@ export const useHomeData = (): UseHomeDataReturn => {
       setError(null);
 
       // TODO: Replace with actual API call
-      // For now, using mock data
+      // For now, using mock data but loading store name from storage
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-      setData(mockHomeData);
+      
+      // Load store name from storage if available
+      const storedStoreName = await storage.getItem('storeName');
+      const storedStoreLink = await storage.getItem('storeLink');
+      const storedUserName = await storage.getItem('userName');
+      
+      // Create data with stored values or fallback to mock
+      const homeData: HomeScreenData = {
+        ...mockHomeData,
+        profile: {
+          ...mockHomeData.profile,
+          name: storedUserName || mockHomeData.profile.name,
+          storeName: storedStoreName || mockHomeData.profile.storeName,
+          storeLink: storedStoreLink || mockHomeData.profile.storeLink,
+        },
+      };
+      
+      setData(homeData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setData(null);

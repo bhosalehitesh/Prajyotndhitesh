@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Linking, Alert } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import HelpCenterScreen from './Rdirect/HelpCenterScreen';
-import HowToScreen from './Rdirect/HowToScreen';
 import TalkToUsScreen from './Rdirect/TalkToUsScreen';
 import ChatScreen from './Rdirect/ChatScreen';
 import WriteToUsScreen from './Rdirect/WriteToUsScreen';
@@ -13,10 +12,6 @@ const helpMenuItems = [
     icon: 'help-circle-outline',
   },
   {
-    label: 'How Tos',
-    icon: 'clipboard-text-outline',
-  },
-  {
     label: 'Contact Us',
     icon: 'phone-outline',
   },
@@ -24,7 +19,6 @@ const helpMenuItems = [
 
 export default function NeedHelpScreen({ onBack }: { onBack: () => void }) {
   const [showHelpCenter, setShowHelpCenter] = useState(false);
-  const [showHowTo, setShowHowTo] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showTalkToUs, setShowTalkToUs] = useState(false);
   const [showChat, setShowChat] = useState(false);
@@ -47,10 +41,6 @@ export default function NeedHelpScreen({ onBack }: { onBack: () => void }) {
 
   if (showHelpCenter) {
     return <HelpCenterScreen onBack={() => setShowHelpCenter(false)} />;
-  }
-
-  if (showHowTo) {
-    return <HowToScreen onBack={() => setShowHowTo(false)} />;
   }
 
   if (showTalkToUs) {
@@ -89,8 +79,6 @@ export default function NeedHelpScreen({ onBack }: { onBack: () => void }) {
             onPress={() => {
               if (item.label === 'FAQs') {
                 setShowHelpCenter(true);
-              } else if (item.label === 'How Tos') {
-                setShowHowTo(true);
               } else if (item.label === 'Contact Us') {
                 setShowContactModal(true);
               }

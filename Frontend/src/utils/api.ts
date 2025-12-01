@@ -5,6 +5,7 @@
 
 import { Platform } from 'react-native';
 import { API_BASE_URL_DEV, API_BASE_URL_DEV_IP, API_BASE_URL_PROD, USE_IP_ADDRESS } from './apiConfig';
+import { storage } from '../authentication/storage';
 
 // Determine the API base URL based on environment and configuration
 const getApiBaseUrl = (): string => {
@@ -149,6 +150,147 @@ export const verifyOtp = async (data: VerifyOtpRequest): Promise<void> => {
       throw error;
     }
     throw new Error('Network error. Please check your connection.');
+  }
+};
+
+/**
+ * Send OTP for login
+ * @param phone Phone number
+ * @returns Promise with OTP code (for testing)
+ */
+export const sendLoginOtp = async (phone: string): Promise<string> => {
+  const url = `${API_BASE_URL}/api/auth/send-login-otp`;
+  console.log('Send login OTP attempt:', { url, phone, platform: Platform.OS });
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ phone }),
+    });
+
+    console.log('Send login OTP response status:', response.status);
+
+    if (!response.ok) {
+      let errorText = '';
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorJson = await response.json();
+          errorText = errorJson.message || JSON.stringify(errorJson);
+        } else {
+          errorText = await response.text();
+        }
+      } catch (e) {
+        errorText = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      console.error('Send login OTP error response:', errorText);
+      throw new Error(errorText || 'Failed to send OTP');
+    }
+
+    // Parse JSON response
+    const contentType = response.headers.get('content-type');
+    let result: any;
+    if (contentType && contentType.includes('application/json')) {
+      result = await response.json();
+    } else {
+      const textResult = await response.text();
+      try {
+        result = JSON.parse(textResult);
+      } catch (e) {
+        // If not JSON, treat as plain text
+        result = { message: textResult };
+      }
+    }
+    
+    console.log('Send login OTP success response:', result);
+    // Extract OTP from response message for testing
+    const message = result.message || '';
+    const otpMatch = message.match(/\(for testing: (\d+)\)/);
+    return otpMatch ? otpMatch[1] : '';
+  } catch (error) {
+    console.error('Send login OTP exception:', error);
+    if (error instanceof Error) {
+      if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
+        if (USE_IP_ADDRESS) {
+          throw new Error(`Cannot connect to server at ${url}. Check backend is running and IP is correct in apiConfig.ts`);
+        } else {
+          throw new Error(`Cannot connect to server at ${url}. Run: adb reverse tcp:8080 tcp:8080`);
+        }
+      }
+      throw error;
+    }
+    throw new Error('Network error. Please check your connection.');
+  }
+};
+
+/**
+ * Login user with OTP
+ * Verifies OTP and returns JWT token directly from backend
+ * @param phone Phone number
+ * @param otpCode OTP code
+ * @returns Promise with AuthResponse containing token and user info
+ */
+export const loginWithOtp = async (phone: string, otpCode: string): Promise<AuthResponse> => {
+  const url = `${API_BASE_URL}/api/auth/login-with-otp`;
+  console.log('Login with OTP attempt:', { url, phone, platform: Platform.OS });
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ phone, code: otpCode }),
+    });
+
+    console.log('Login with OTP response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Login with OTP error response:', errorText);
+      throw new Error(errorText || 'Invalid or expired OTP');
+    }
+
+    const responseText = await response.text();
+    console.log('Login with OTP response text:', responseText);
+
+    if (!responseText || responseText.trim() === '') {
+      throw new Error('Empty response from server');
+    }
+
+    // Parse JSON response
+    let result: AuthResponse;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse login with OTP response:', parseError, 'Response:', responseText);
+      throw new Error('Invalid response format from server');
+    }
+
+    // Validate required fields
+    if (!result || !result.token) {
+      console.error('Login with OTP response missing token:', result);
+      throw new Error('Login response missing token');
+    }
+
+    console.log('Login with OTP success:', { userId: result.userId, phone: result.phone, hasToken: !!result.token });
+    return result;
+  } catch (error) {
+    console.error('Login with OTP exception:', error);
+    if (error instanceof Error) {
+      if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
+        if (USE_IP_ADDRESS) {
+          throw new Error('Cannot connect to server. Check backend is running and IP is correct in apiConfig.ts');
+        } else {
+          throw new Error('Cannot connect to server. Run: adb reverse tcp:8080 tcp:8080');
+        }
+      }
+      throw error;
+    }
+    throw new Error('Failed to login with OTP. Please try again.');
   }
 };
 

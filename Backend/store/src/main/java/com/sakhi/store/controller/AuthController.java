@@ -145,7 +145,7 @@ public class AuthController {
     }
     
     /**
-     * Resend OTP endpoint
+     * Resend OTP endpoint (for signup only)
      * POST /api/auth/resend-otp
      */
     @PostMapping(value = "/resend-otp", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -162,6 +162,81 @@ public class AuthController {
             Map<String, String> response = new HashMap<>();
             response.put("message", "OTP resent successfully to " + phone + 
                 (otpCode != null ? " (for testing: " + otpCode + ")" : ""));
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("An error occurred: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Send OTP for login endpoint
+     * POST /api/auth/send-login-otp
+     */
+    @PostMapping(value = "/send-login-otp", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> sendLoginOtp(@RequestBody Map<String, String> request) {
+        try {
+            String phone = request.get("phone");
+            
+            if (phone == null || !phone.matches("\\d{10}")) {
+                return ResponseEntity.badRequest().body("Valid 10-digit phone number is required");
+            }
+            
+            String otpCode = authService.sendLoginOtp(phone);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "OTP sent successfully to " + phone + 
+                (otpCode != null ? " (for testing: " + otpCode + ")" : ""));
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("An error occurred: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Login with OTP endpoint
+     * POST /api/auth/login-with-otp
+     */
+    @PostMapping(value = "/login-with-otp", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> loginWithOtp(@RequestBody Map<String, String> request) {
+        try {
+            String phone = request.get("phone");
+            String otpCode = request.get("code");
+            
+            if (phone == null || !phone.matches("\\d{10}")) {
+                return ResponseEntity.badRequest().body("Valid 10-digit phone number is required");
+            }
+            if (otpCode == null || !otpCode.matches("\\d{6}")) {
+                return ResponseEntity.badRequest().body("Valid 6-digit OTP code is required");
+            }
+            
+            // Login with OTP
+            String token = authService.loginWithOtp(phone, otpCode);
+            
+            // Get user details
+            Optional<User> userOptional = userRepository.findByPhone(phone);
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+            
+            User user = userOptional.get();
+            
+            // Return auth response
+            AuthResponse response = new AuthResponse(
+                token,
+                user.getId(),
+                user.getFullName(),
+                user.getPhone()
+            );
             
             return ResponseEntity.ok(response);
             
