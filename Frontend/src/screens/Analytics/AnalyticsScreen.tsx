@@ -281,7 +281,7 @@ const AnalyticsScreen: React.FC<AnalyticsScreenProps> = ({navigation}) => {
     'Rejected',
     'Shipped',
     'Pickup Ready',
-    'Cancelled',
+    'Cancelleds',
   ];
 
   const handleStatusToggle = (status: string) => {
