@@ -246,8 +246,36 @@ export interface ProductDto {
   sellingPrice: number;
   mrp?: number;
   inventoryQuantity?: number;
+  businessCategory?: string;
+  productCategory?: string;
   productImages?: string[];
   socialSharingImage?: string | null;
+}
+
+export interface CategoryDto {
+  category_id: number;
+  categoryName: string;
+  businessCategory?: string;
+  description?: string;
+  categoryImage?: string;
+  seoTitleTag?: string;
+  seoMetaDescription?: string;
+  socialSharingImage?: string | null;
+}
+
+export interface CollectionDto {
+  collectionId: number;
+  collectionName: string;
+  description?: string;
+  collectionImage?: string;
+  seoTitleTag?: string;
+  seoMetaDescription?: string;
+  socialSharingImage?: string | null;
+}
+
+export interface CollectionWithCountDto extends CollectionDto {
+  productCount: number;
+  hideFromWebsite?: boolean;
 }
 
 /**
@@ -303,6 +331,47 @@ export const saveStoreDetails = async (
     storeId: payload.storeId,
     storeName: payload.storeName ?? storeName,
     storeLink: payload.storeLink ?? storeLink,
+  };
+};
+
+/**
+ * Fetch store details for the current seller.
+ * Backend: GET /api/stores/by-seller?sellerId=...
+ */
+export const getCurrentSellerStoreDetails = async (): Promise<StoreDetailsResponse | null> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const userIdRaw = await storage.getItem('userId');
+  const sellerId = userIdRaw && !isNaN(Number(userIdRaw)) ? userIdRaw : null;
+
+  if (!sellerId) {
+    return null;
+  }
+
+  const url = `${API_BASE_URL}/api/stores/seller?sellerId=${sellerId}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    // If backend doesn't have a store yet or any other error, just return null
+    return null;
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  return {
+    storeId: payload.storeId,
+    storeName: payload.storeName ?? '',
+    storeLink: payload.storeLink ?? '',
   };
 };
 
@@ -420,13 +489,393 @@ export const saveBusinessDetails = async (params: {
 };
 
 /**
+ * =============================
+ * CATEGORY APIs
+ * Backend base path: /api/category
+ * =============================
+ */
+
+/**
+ * Fetch all categories (global).
+ * Backend: GET /api/category/allCategory
+ */
+export const fetchCategories = async (): Promise<CategoryDto[]> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const url = `${API_BASE_URL}/api/category/allCategory`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to load categories';
+    throw new Error(message);
+  }
+
+  if (!payload) {
+    return [];
+  }
+
+  if (!Array.isArray(payload)) {
+    throw new Error('Invalid categories response from server');
+  }
+
+  return payload as CategoryDto[];
+};
+
+/**
+ * Delete a category by id.
+ * Backend: DELETE /api/category/{id}
+ */
+export const deleteCategory = async (categoryId: string | number): Promise<void> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof categoryId === 'string' ? categoryId : String(categoryId);
+  const url = `${API_BASE_URL}/api/category/${id}`;
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to delete category';
+    throw new Error(message);
+  }
+};
+
+/**
+ * Create a new category with optional image.
+ * Backend: POST /api/category/upload (multipart/form-data)
+ */
+export const uploadCategoryWithImages = async (params: {
+  categoryName: string;
+  businessCategory: string;
+  description?: string;
+  seoTitleTag?: string;
+  seoMetaDescription?: string;
+  imageUri?: string | null;
+}) => {
+  const url = `${API_BASE_URL}/api/category/upload`;
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+
+  const form = new FormData();
+
+  form.append('categoryName', params.categoryName);
+  form.append('businessCategory', params.businessCategory);
+  form.append('description', params.description ?? '');
+  form.append('seoTitleTag', params.seoTitleTag ?? params.categoryName);
+  form.append(
+    'seoMetaDescription',
+    params.seoMetaDescription ?? params.description ?? '',
+  );
+
+  // Attach category image (backend accepts multiple; we send at most one)
+  if (params.imageUri) {
+    form.append('categoryImages', {
+      uri: params.imageUri,
+      name: `category_${Date.now()}.jpg`,
+      type: 'image/jpeg',
+    } as any);
+  }
+
+  // Social sharing image – use same image if provided, or send empty stub
+  if (params.imageUri) {
+    form.append('socialSharingImage', {
+      uri: params.imageUri,
+      name: `social_${Date.now()}.jpg`,
+      type: 'image/jpeg',
+    } as any);
+  } else {
+    form.append('socialSharingImage', '' as any);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: form,
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to create category';
+    throw new Error(message);
+  }
+
+  return payload as CategoryDto;
+};
+
+/**
+ * =============================
+ * COLLECTION APIs
+ * Backend base path: /api/collections
+ * =============================
+ */
+
+/**
+ * Fetch all collections.
+ * Backend: GET /api/collections/all
+ */
+export const fetchCollections = async (): Promise<CollectionDto[]> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const url = `${API_BASE_URL}/api/collections/all`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to load collections';
+    throw new Error(message);
+  }
+
+  if (!payload) {
+    return [];
+  }
+
+  if (!Array.isArray(payload)) {
+    throw new Error('Invalid collections response from server');
+  }
+
+  return payload as CollectionDto[];
+};
+
+/**
+ * Fetch all collections with product counts.
+ * Backend: GET /api/collections/with-counts
+ */
+export const fetchCollectionsWithCounts = async (): Promise<CollectionWithCountDto[]> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const url = `${API_BASE_URL}/api/collections/with-counts`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to load collections';
+    throw new Error(message);
+  }
+
+  if (!payload) {
+    return [];
+  }
+
+  if (!Array.isArray(payload)) {
+    throw new Error('Invalid collections response from server');
+  }
+
+  return payload as CollectionWithCountDto[];
+};
+
+/**
+ * Delete a collection by id.
+ * Backend: DELETE /api/collections/{id}
+ */
+export const deleteCollection = async (collectionId: string | number): Promise<void> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof collectionId === 'string' ? collectionId : String(collectionId);
+  const url = `${API_BASE_URL}/api/collections/${id}`;
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to delete collection';
+    throw new Error(message);
+  }
+};
+
+/**
+ * Create a new collection with optional image.
+ * Backend: POST /api/collections/upload (multipart/form-data)
+ */
+export const uploadCollectionWithImages = async (params: {
+  collectionName: string;
+  description?: string;
+  seoTitleTag?: string;
+  seoMetaDescription?: string;
+  imageUri?: string | null;
+}) => {
+  const url = `${API_BASE_URL}/api/collections/upload`;
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+
+  const form = new FormData();
+
+  form.append('collectionName', params.collectionName);
+  form.append('description', params.description ?? '');
+  form.append('seoTitleTag', params.seoTitleTag ?? params.collectionName);
+  form.append(
+    'seoMetaDescription',
+    params.seoMetaDescription ?? params.description ?? '',
+  );
+
+  if (params.imageUri) {
+    form.append('collectionImages', {
+      uri: params.imageUri,
+      name: `collection_${Date.now()}.jpg`,
+      type: 'image/jpeg',
+    } as any);
+  }
+
+  if (params.imageUri) {
+    form.append('socialSharingImage', {
+      uri: params.imageUri,
+      name: `collection_social_${Date.now()}.jpg`,
+      type: 'image/jpeg',
+    } as any);
+  } else {
+    form.append('socialSharingImage', '' as any);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: form,
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to create collection';
+    throw new Error(message);
+  }
+
+  return payload as CollectionDto;
+};
+
+/**
+ * Save products for a collection (many-to-many mapping).
+ * Backend: POST /api/collections/{id}/products
+ */
+export const saveCollectionProducts = async (
+  collectionId: number,
+  productIds: number[],
+) => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const url = `${API_BASE_URL}/api/collections/${collectionId}/products`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(productIds),
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to update collection products';
+    throw new Error(message);
+  }
+
+  return payload;
+};
+
+/**
+ * Toggle hide-from-website flag for a collection.
+ * Backend: PUT /api/collections/{id}/hide-from-website?hide=true|false
+ */
+export const setCollectionVisibility = async (
+  collectionId: string | number,
+  hide: boolean,
+) => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof collectionId === 'string' ? collectionId : String(collectionId);
+  const url = `${API_BASE_URL}/api/collections/${id}/hide-from-website?hide=${hide ? 'true' : 'false'}`;
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to update collection visibility';
+    throw new Error(message);
+  }
+
+  return payload as CollectionDto;
+};
+
+/**
  * Fetch all products for the current seller.
  * Backend: GET /api/products/allProduct
  */
 export const fetchProducts = async (): Promise<ProductDto[]> => {
-  const url = `${API_BASE_URL}/api/products/allProduct`;
-
   const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const userIdRaw = await storage.getItem('userId');
+  const sellerId = userIdRaw && !isNaN(Number(userIdRaw)) ? userIdRaw : null;
+
+  const url = sellerId
+    ? `${API_BASE_URL}/api/products/sellerProducts?sellerId=${sellerId}`
+    : `${API_BASE_URL}/api/products/allProduct`;
 
   const response = await fetch(url, {
     method: 'GET',
@@ -458,6 +907,68 @@ export const fetchProducts = async (): Promise<ProductDto[]> => {
 };
 
 /**
+ * Delete a product by id for the current seller.
+ * Backend: DELETE /api/products/{id}
+ */
+export const deleteProduct = async (productId: string | number): Promise<void> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof productId === 'string' ? productId : String(productId);
+  const url = `${API_BASE_URL}/api/products/${id}`;
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to delete product';
+    throw new Error(message);
+  }
+};
+
+/**
+ * Update inventory quantity (stock) for a product.
+ * Backend: PUT /api/products/{id}/stock
+ */
+export const updateProductStock = async (
+  productId: string | number,
+  inventoryQuantity: number,
+) => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof productId === 'string' ? productId : String(productId);
+  const url = `${API_BASE_URL}/api/products/${id}/stock`;
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ inventoryQuantity }),
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to update stock';
+    throw new Error(message);
+  }
+
+  return payload as ProductDto;
+};
+
+/**
  * Create a new product.
  * Backend: POST /api/products/addProduct
  */
@@ -474,8 +985,11 @@ export const createProduct = async (body: {
   size?: string;
   hsnCode?: string;
 }) => {
-  const url = `${API_BASE_URL}/api/products/addProduct`;
+  const baseUrl = `${API_BASE_URL}/api/products/addProduct`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const userId = await storage.getItem('userId');
+
+  const url = userId ? `${baseUrl}?sellerId=${userId}` : baseUrl;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -521,6 +1035,7 @@ export const uploadProductWithImages = async (params: {
 }) => {
   const url = `${API_BASE_URL}/api/products/upload`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const userId = await storage.getItem('userId');
 
   const form = new FormData();
 
@@ -538,6 +1053,10 @@ export const uploadProductWithImages = async (params: {
   form.append('hsnCode', params.hsnCode ?? '');
   form.append('seoTitleTag', params.seoTitleTag ?? params.productName);
   form.append('seoMetaDescription', params.seoMetaDescription ?? params.description ?? '');
+
+  if (userId) {
+    form.append('sellerId', userId);
+  }
 
   // Attach images
   params.imageUris.forEach((uri, index) => {

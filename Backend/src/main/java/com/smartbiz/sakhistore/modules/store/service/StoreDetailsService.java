@@ -60,8 +60,15 @@ public class StoreDetailsService {
 
 
 
-    // ✅ Delete store
+    // ✅ Find store by Seller ID (assumes one store per seller)
+    public StoreDetails findBySellerId(Long sellerId) {
+        return storeRepository.findBySeller_SellerId(sellerId)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException("Store not found for sellerId: " + sellerId));
+    }
 
+    // ✅ Delete store
     public void deleteStore(Long storeId) {
 
         StoreDetails store = storeRepository.findById(storeId)

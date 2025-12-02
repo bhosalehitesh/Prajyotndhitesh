@@ -20,6 +20,7 @@ import {useState, useEffect, useCallback} from 'react';
 import {HomeScreenData, HomeScreenApiResponse} from './types';
 import {mockHomeData} from './mockData';
 import {storage} from '../../authentication/storage';
+import { getCurrentSellerStoreDetails } from '../../utils/api';
 
 interface UseHomeDataReturn {
   data: HomeScreenData | null;
@@ -72,26 +73,33 @@ export const useHomeData = (): UseHomeDataReturn => {
       setLoading(true);
       setError(null);
 
-      // TODO: Replace with actual API call
-      // For now, using mock data but loading store name from storage
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-      
-      // Load store name from storage if available
+      // Simulate API delay slightly
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Load basic identity from storage
       const storedStoreName = await storage.getItem('storeName');
       const storedStoreLink = await storage.getItem('storeLink');
       const storedUserName = await storage.getItem('userName');
-      
-      // Create data with stored values or fallback to mock
+
+      // Try to fetch store details from backend for current seller
+      const backendStore = await getCurrentSellerStoreDetails();
+
+      const finalStoreName =
+        backendStore?.storeName || storedStoreName || mockHomeData.profile.storeName;
+      const finalStoreLink =
+        backendStore?.storeLink || storedStoreLink || mockHomeData.profile.storeLink;
+
+      // Create data with per-seller profile values or fallback to mock
       const homeData: HomeScreenData = {
         ...mockHomeData,
         profile: {
           ...mockHomeData.profile,
           name: storedUserName || mockHomeData.profile.name,
-          storeName: storedStoreName || mockHomeData.profile.storeName,
-          storeLink: storedStoreLink || mockHomeData.profile.storeLink,
+          storeName: finalStoreName,
+          storeLink: finalStoreLink,
         },
       };
-      
+
       setData(homeData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');

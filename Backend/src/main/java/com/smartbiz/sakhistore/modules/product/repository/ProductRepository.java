@@ -12,9 +12,11 @@ import com.smartbiz.sakhistore.modules.product.model.Product;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    // Optional: custom finder methods if needed later
-    // List<Product> findBySellerId(Long sellerId);
-    // List<Product> findByBusinessCategory(String category);
+    // All products for a specific seller
+    List<Product> findBySeller_SellerId(Long sellerId);
+
+    // Count products in a specific collection
+    long countByCollections_CollectionId(Long collectionId);
 
     // Get distinct product categories
     @Query("SELECT DISTINCT p.productCategory FROM Product p WHERE p.productCategory IS NOT NULL")

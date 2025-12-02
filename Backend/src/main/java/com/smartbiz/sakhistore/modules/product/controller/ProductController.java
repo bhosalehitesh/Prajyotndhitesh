@@ -46,14 +46,15 @@ public class ProductController {
             @RequestParam("seoTitleTag") String seoTitleTag,
             @RequestParam("seoMetaDescription") String seoMetaDescription,
             @RequestParam("productImages") List<MultipartFile> productImages,
-            @RequestParam("socialSharingImage") MultipartFile socialSharingImage
+            @RequestParam("socialSharingImage") MultipartFile socialSharingImage,
+            @RequestParam(value = "sellerId", required = false) Long sellerId
     ) {
         try {
             Product product = productService.uploadProductWithImages(
                     productName, description, mrp, sellingPrice, businessCategory,
                     productCategory, inventoryQuantity, customSku, color, size,
                     variant, hsnCode, seoTitleTag, seoMetaDescription,
-                    productImages, socialSharingImage
+                    productImages, socialSharingImage, sellerId
             );
             return ResponseEntity.ok(product);
         } catch (Exception e) {
@@ -62,8 +63,9 @@ public class ProductController {
     }
 
     @PostMapping("/addProduct")
-    public Product addProduct(@RequestBody Product product) {
-        return productService.addproduct(product);
+    public Product addProduct(@RequestBody Product product,
+                              @RequestParam(value = "sellerId", required = false) Long sellerId) {
+        return productService.addproduct(product, sellerId);
     }
 
     @PostMapping("/Edit Product")
@@ -81,6 +83,25 @@ public class ProductController {
     public ResponseEntity<String> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.ok("✅ Product with ID " + id + " deleted successfully.");
+    }
+
+    // ✅ Update inventory quantity (stock) for a product
+    @PutMapping("/{id}/stock")
+    public ResponseEntity<Product> updateProductStock(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Integer> body) {
+        Integer qty = body.get("inventoryQuantity");
+        if (qty == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        Product updated = productService.updateInventoryQuantity(id, qty);
+        return ResponseEntity.ok(updated);
+    }
+
+    // Get products for a specific seller
+    @GetMapping("/sellerProducts")
+    public List<Product> getProductsForSeller(@RequestParam("sellerId") Long sellerId) {
+        return productService.allProductForSeller(sellerId);
     }
 
     // Endpoint: Get all product categories

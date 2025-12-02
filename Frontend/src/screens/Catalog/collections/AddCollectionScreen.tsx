@@ -19,6 +19,7 @@ import {
   launchImageLibrary,
   ImagePickerResponse,
 } from 'react-native-image-picker';
+import {uploadCollectionWithImages, saveCollectionProducts} from '../../../utils/api';
 
 interface AddCollectionScreenProps {
   navigation: any;
@@ -153,24 +154,48 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
     setPickerOpen(false);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!canCreate) {
       Alert.alert('Validation Error', 'Please fill in all required fields');
       return;
     }
 
-    Alert.alert(
-      'Success',
-      isEditMode
-        ? 'Collection updated successfully'
-        : 'Collection created successfully',
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ],
-    );
+    try {
+      const created = await uploadCollectionWithImages({
+        collectionName,
+        description: collectionDescription,
+        seoTitleTag: collectionName,
+        seoMetaDescription: collectionDescription,
+        imageUri: collectionImage,
+      });
+
+      // Map selected products to this collection in backend
+      if (selectedProducts.length > 0 && created?.collectionId != null) {
+        await saveCollectionProducts(
+          created.collectionId,
+          selectedProducts.map(p => Number(p.id)),
+        );
+      }
+
+      Alert.alert(
+        'Success',
+        isEditMode
+          ? 'Collection updated successfully'
+          : 'Collection created successfully',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
+    } catch (error) {
+      console.error('Failed to save collection', error);
+      Alert.alert(
+        'Error',
+        'Failed to save collection. Please check your internet connection and try again.',
+      );
+    }
   };
 
   const handleRemoveImage = () => {

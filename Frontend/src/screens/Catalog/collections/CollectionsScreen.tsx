@@ -18,6 +18,7 @@ import {
   Animated,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
+import {fetchCollectionsWithCounts, deleteCollection, CollectionWithCountDto, setCollectionVisibility} from '../../../utils/api';
 
 interface CollectionsScreenProps {
   navigation: any;
@@ -34,10 +35,8 @@ interface Collection {
 
 const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [collections, setCollections] = useState<Collection[]>([
-    {id: '1', name: 'Rfgg', productCount: 0, hideFromWebsite: false},
-    {id: '2', name: 'Vhh', productCount: 0, hideFromWebsite: false},
-  ]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [loading, setLoading] = useState(false);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -46,6 +45,33 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
   const [messageOpacity] = useState(new Animated.Value(0));
 
   const activeCollection = collections.find(c => c.id === activeCollectionId);
+
+  const loadCollections = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const apiCollections: CollectionWithCountDto[] = await fetchCollectionsWithCounts();
+      const mapped: Collection[] = apiCollections.map(col => ({
+        id: String(col.collectionId),
+        name: col.collectionName,
+        image: col.collectionImage || undefined,
+        productCount: col.productCount ?? 0,
+        hideFromWebsite: !!col.hideFromWebsite,
+        description: col.description || '',
+      }));
+      setCollections(mapped);
+    } catch (error) {
+      console.error('Failed to load collections', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadCollections();
+    });
+    return unsubscribe;
+  }, [navigation, loadCollections]);
 
   const handleMenuPress = (collectionId: string) => {
     setActiveCollectionId(collectionId);
@@ -134,9 +160,17 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
 
   const handleDelete = () => {
     if (activeCollectionId) {
-      setCollections(prev => prev.filter(c => c.id !== activeCollectionId));
+      const idToDelete = activeCollectionId;
       setConfirmDeleteOpen(false);
       setActiveCollectionId(null);
+      deleteCollection(idToDelete)
+        .then(() => {
+          setCollections(prev => prev.filter(c => c.id !== idToDelete));
+        })
+        .catch(err => {
+          console.error('Failed to delete collection', err);
+          Alert.alert('Error', 'Failed to delete collection. Please try again.');
+        });
     }
   };
 
@@ -167,17 +201,22 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
     }
   };
 
-  const toggleHideFromWebsite = (collectionId: string, value: boolean) => {
-    setCollections(prev =>
-      prev.map(c => (c.id === collectionId ? {...c, hideFromWebsite: value} : c)),
-    );
-    
-    // Show success message
-    const collection = collections.find(c => c.id === collectionId);
-    if (value) {
-      showSuccessMessage(`${collection?.name} is now hidden from website`);
-    } else {
-      showSuccessMessage(`${collection?.name} is now visible on website`);
+  const toggleHideFromWebsite = async (collectionId: string, value: boolean) => {
+    try {
+      await setCollectionVisibility(collectionId, value);
+      setCollections(prev =>
+        prev.map(c => (c.id === collectionId ? {...c, hideFromWebsite: value} : c)),
+      );
+
+      const collection = collections.find(c => c.id === collectionId);
+      if (value) {
+        showSuccessMessage(`${collection?.name} is now hidden from website`);
+      } else {
+        showSuccessMessage(`${collection?.name} is now visible on website`);
+      }
+    } catch (error) {
+      console.error('Failed to update collection visibility', error);
+      Alert.alert('Error', 'Failed to update visibility. Please try again.');
     }
   };
 
@@ -210,7 +249,16 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
 
       {/* Collections List */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {filteredCollections.map(collection => (
+        {loading && collections.length === 0 ? (
+          <Text style={{textAlign: 'center', color: '#6c757d', marginTop: 24}}>
+            Loading collections...
+          </Text>
+        ) : !loading && filteredCollections.length === 0 ? (
+          <Text style={{textAlign: 'center', color: '#6c757d', marginTop: 24}}>
+            No collections found. Add your first collection.
+          </Text>
+        ) : (
+          filteredCollections.map(collection => (
           <View key={collection.id} style={styles.collectionCard}>
             <View style={styles.collectionMainRow}>
               <View style={styles.collectionImageContainer}>
@@ -249,7 +297,7 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
               />
             </View>
           </View>
-        ))}
+        )))}
       </ScrollView>
 
       {/* Success Message Toast */}

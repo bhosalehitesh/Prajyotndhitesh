@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
+import {fetchProducts, ProductDto} from '../../../utils/api';
 
 interface SelectProductsScreenProps {
   navigation: any;
@@ -32,16 +33,32 @@ const SelectProductsScreen: React.FC<SelectProductsScreenProps> = ({
   const collectionId = route?.params?.collectionId;
   const existingProductIds = route?.params?.selectedProductIds || [];
   
-  // Sample products data - in real app, this would come from API/state
-  const [allProducts, setAllProducts] = useState<Product[]>([
-    {id: '1', title: 'soap', price: 50, mrp: 60, inStock: false},
-    {id: '2', title: 'Shampoo', price: 120, mrp: 150, inStock: true},
-    {id: '3', title: 'Toothbrush', price: 30, mrp: 40, inStock: true},
-    {id: '4', title: 'Face Cream', price: 200, mrp: 250, inStock: true},
-  ]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
 
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>(existingProductIds);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const apiProducts: ProductDto[] = await fetchProducts();
+        const mapped: Product[] = apiProducts.map(p => ({
+          id: String(p.productsId),
+          title: p.productName,
+          price: p.sellingPrice ?? 0,
+          mrp: p.mrp ?? undefined,
+          inStock: (p.inventoryQuantity ?? 0) > 0,
+          image:
+            (p.productImages && p.productImages[0]) ||
+            (p.socialSharingImage ?? undefined),
+        }));
+        setAllProducts(mapped);
+      } catch (e) {
+        console.error('Failed to load products for collection selection', e);
+      }
+    };
+    load();
+  }, []);
 
   useEffect(() => {
     // If we have existing products, restore the selection

@@ -12,13 +12,14 @@ import {
   Image,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
-import { fetchProducts, ProductDto } from '../../../utils/api';
+import { fetchProducts, ProductDto, deleteProduct as deleteProductApi, updateProductStock } from '../../../utils/api';
 
 interface ProductsScreenProps {
   navigation: any;
+  route?: any;
 }
 
-const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
+const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
@@ -27,7 +28,16 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
   const [collections, setCollections] = useState<string[]>(['Rfgg','Vhh']);
   const [selectedCollections, setSelectedCollections] = useState<Record<string, boolean>>({});
   const [newCollectionName, setNewCollectionName] = useState('');
-  const [products, setProducts] = useState<Array<{id:string,title:string,price:number,mrp?:number,inStock:boolean,imageUrl?:string}>>([]);
+  const [products, setProducts] = useState<Array<{
+    id: string;
+    title: string;
+    price: number;
+    mrp?: number;
+    inStock: boolean;
+    imageUrl?: string;
+    businessCategory?: string;
+    productCategory?: string;
+  }>>([]);
   const [loading, setLoading] = useState(false);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [filterTab, setFilterTab] = useState<'Inventory' | 'Discount' | 'Price Range'>('Inventory');
@@ -35,6 +45,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
   const [discounts, setDiscounts] = useState<{[key: string]: boolean}>({});
   const [priceRange, setPriceRange] = useState<{min: number; max: number}>({min: 0, max: 0});
   const [sortBy, setSortBy] = useState<'title-az' | 'title-za' | 'price-low' | 'price-high' | 'disc-low' | 'disc-high'>('title-az');
+  const [categoryFilter] = useState<string | null>(route?.params?.categoryName ?? null);
+  const [businessFilter] = useState<string | null>(route?.params?.businessCategory ?? null);
 
   const handleAddProduct = () => {
     navigation.navigate('AddProduct');
@@ -54,6 +66,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
         mrp: p.mrp ?? undefined,
         inStock: (p.inventoryQuantity ?? 0) > 0,
         imageUrl: (p.productImages && p.productImages[0]) || (p.socialSharingImage ?? undefined),
+        businessCategory: p.businessCategory,
+        productCategory: p.productCategory,
       }));
       setProducts(mapped);
     } catch (error) {
@@ -108,6 +122,14 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
   // Build filtered list based on current filter state
   const filteredProducts = useMemo(() => {
     let items = products.slice();
+    // Category filter (when navigated from Categories screen)
+    if (businessFilter) {
+      const b = businessFilter.toLowerCase().trim();
+      items = items.filter(p => (p.businessCategory || '').toLowerCase().trim() === b);
+    } else if (categoryFilter) {
+      const cat = categoryFilter.toLowerCase().trim();
+      items = items.filter(p => (p.productCategory || '').toLowerCase().trim() === cat);
+    }
     // Inventory filter
     if (inventory === 'in') items = items.filter(p => p.inStock);
     if (inventory === 'out') items = items.filter(p => !p.inStock);
@@ -136,7 +158,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
       });
     }
     return items;
-  }, [products, inventory, priceRange, discounts]);
+  }, [products, inventory, priceRange, discounts, categoryFilter, businessFilter]);
 
   // Counts for filter UI
   const inventoryCounts = useMemo(() => ({
@@ -178,7 +200,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
           onPress={() => navigation.goBack()}>
           <IconSymbol name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>All Products</Text>
+        <Text style={styles.headerTitle}>{categoryFilter ?? 'All Products'}</Text>
         <TouchableOpacity style={styles.headerRight} onPress={loadProducts}>
           <IconSymbol name="refresh" size={22} color="#FFFFFF" />
         </TouchableOpacity>
@@ -231,7 +253,9 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
               {!item.inStock && (
                 <View style={styles.stockBadgeRow}>
                   <Text style={styles.outOfStockBadge}>Out of Stock</Text>
-                  <TouchableOpacity onPress={() => setActionSheetOpen(true)}><Text style={styles.updateInventory}>Update Inventory</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setActiveProductId(item.id); setActionSheetOpen(true); }}>
+                    <Text style={styles.updateInventory}>Update Inventory</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </View>
@@ -378,18 +402,43 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
         <Pressable style={styles.backdrop} onPress={() => setActionSheetOpen(false)} />
         <View style={styles.actionSheet}>
           {activeProduct?.inStock ? (
-            <TouchableOpacity style={styles.actionRow} onPress={() => {
-              setProducts(ps=>ps.map(p=>p.id===activeProductId?{...p,inStock:false}:p));
-              setActionSheetOpen(false);
-            }}>
+            <TouchableOpacity
+              style={styles.actionRow}
+              onPress={async () => {
+                if (!activeProductId) {
+                  setActionSheetOpen(false);
+                  return;
+                }
+                try {
+                  await updateProductStock(activeProductId, 0);
+                  await loadProducts();
+                } catch (e) {
+                  console.error('Failed to mark out of stock', e);
+                } finally {
+                  setActionSheetOpen(false);
+                }
+              }}>
               <Text style={styles.actionText}>Mark as Out of Stock</Text>
               <IconSymbol name="chevron-forward" size={18} color="#10B981" />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.actionRow} onPress={() => {
-              setProducts(ps=>ps.map(p=>p.id===activeProductId?{...p,inStock:true}:p));
-              setActionSheetOpen(false);
-            }}>
+            <TouchableOpacity
+              style={styles.actionRow}
+              onPress={async () => {
+                if (!activeProductId) {
+                  setActionSheetOpen(false);
+                  return;
+                }
+                try {
+                  // Simple rule: bring product back with stock = 1
+                  await updateProductStock(activeProductId, 1);
+                  await loadProducts();
+                } catch (e) {
+                  console.error('Failed to mark in stock', e);
+                } finally {
+                  setActionSheetOpen(false);
+                }
+              }}>
               <Text style={styles.actionText}>Mark as In Stock</Text>
               <IconSymbol name="chevron-forward" size={18} color="#10B981" />
             </TouchableOpacity>
@@ -414,10 +463,23 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
               <TouchableOpacity onPress={() => setConfirmDeleteOpen(false)}><IconSymbol name="close" size={20} color="#6c757d"/></TouchableOpacity>
             </View>
             <Text style={styles.deleteQuestion}>Are you sure you want to delete {activeProduct?.title}?</Text>
-            <TouchableOpacity style={styles.deleteBtn} onPress={() => {
-              setProducts(ps=>ps.filter(p=>p.id!==activeProductId));
-              setConfirmDeleteOpen(false);
-            }}>
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={async () => {
+                if (!activeProductId) {
+                  setConfirmDeleteOpen(false);
+                  return;
+                }
+                try {
+                  await deleteProductApi(activeProductId);
+                  // Refresh from backend to keep state consistent
+                  await loadProducts();
+                } catch (e) {
+                  console.error('Failed to delete product', e);
+                } finally {
+                  setConfirmDeleteOpen(false);
+                }
+              }}>
               <Text style={styles.deleteBtnText}>Delete Product</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setConfirmDeleteOpen(false)}>
