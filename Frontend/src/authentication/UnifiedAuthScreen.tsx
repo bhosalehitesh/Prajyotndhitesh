@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
-import { signup, verifyOtp, login as apiLogin, sendLoginOtp, loginWithOtp } from '../utils/api';
+import { signup, verifyOtp, login as apiLogin } from '../utils/api';
 import { useAuth } from './AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -118,25 +118,11 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
     const cleanMobile = mobileNumber.replace(/\D/g, '');
 
     try {
-      // Verify OTP with backend
-      await verifyOtp({
+      // Verify OTP with backend and get token + seller info
+      const authResponse = await verifyOtp({
         phone: cleanMobile,
         code: otp,
       });
-
-      // Small delay to ensure user is enabled in database
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // After OTP verification, login to get token
-      const authResponse = await apiLogin({
-        phone: cleanMobile,
-        password,
-      });
-
-      // Validate response
-      if (!authResponse || !authResponse.token) {
-        throw new Error('Login failed: Invalid response from server');
-      }
 
       // Store authentication data
       await login(authResponse.token);
@@ -195,45 +181,12 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       return;
     }
 
-    setLoading(true);
-    const cleanMobile = signInMobile.replace(/\D/g, '');
-
-    try {
-      // Send OTP using backend API
-      const otpCode = await sendLoginOtp(cleanMobile);
-      
-      if (otpCode) {
-        setSignInOtpSent(otpCode);
-        // Show OTP in alert for testing (in dev mode)
-        Alert.alert(
-          'OTP Sent',
-          `We've sent an OTP to ${signInMobile}. Use this OTP to sign in.\n\nOTP: ${otpCode}`,
-          [{ text: 'OK' }]
-        );
-      } else {
-        setSignInOtpSent(''); // OTP sent but not in dev mode
-        Alert.alert(
-          'OTP Sent',
-          `We've sent an OTP to ${signInMobile}. Please check your phone for the OTP code.`,
-          [{ text: 'OK' }]
-        );
-      }
-      
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send OTP. Please try again.';
-      
-      if (errorMessage.includes('not found') || errorMessage.includes('User not found')) {
-        Alert.alert(
-          'Account Not Found',
-          'No account found with this mobile number. Please create an account first.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        Alert.alert('Error', errorMessage);
-      }
-    }
+    // Backend does not support OTP-only login for sellers yet
+    Alert.alert(
+      'Info',
+      'OTP login is not available with the current backend. Please use password login.',
+      [{ text: 'OK' }],
+    );
   };
 
   const handleSignIn = async () => {
@@ -281,65 +234,14 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
         const errorMessage = error instanceof Error ? error.message : 'Failed to sign in. Please check your credentials.';
         Alert.alert('Error', errorMessage);
       }
-    } else {
-      // OTP-based sign-in
-      if (!isSignInOtpValid) {
-        Alert.alert('Validation', 'Please enter a valid 6-digit OTP.');
-        return;
+      } else {
+        // OTP-based sign-in is not supported with current backend
+        Alert.alert(
+          'Info',
+          'OTP login is not available with the current backend. Please use password login.',
+          [{ text: 'OK' }],
+        );
       }
-
-      if (!signInOtpSent || signInOtpSent === '') {
-        Alert.alert('Info', 'Please send OTP first.');
-        return;
-      }
-
-      setLoading(true);
-      const cleanMobile = signInMobile.replace(/\D/g, '');
-
-      try {
-        // Login with OTP using backend API
-        const authResponse = await loginWithOtp(cleanMobile, signInOtp);
-
-        // Validate response
-        if (!authResponse || !authResponse.token) {
-          throw new Error('Login failed: Invalid response from server');
-        }
-
-        // Store authentication data
-        await login(authResponse.token);
-        await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
-        await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
-        await storage.setItem('userName', authResponse.fullName || '');
-        await storage.setItem('userId', authResponse.userId?.toString() || '');
-        // Mark this as a sign-in (not sign-up) so onboarding can be skipped
-        await storage.setItem('isSignIn', 'true');
-      
-        setLoading(false);
-        onAuthenticated();
-      } catch (error) {
-        setLoading(false);
-        console.error('OTP login error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to sign in with OTP. Please try again.';
-        
-        if (errorMessage.includes('Invalid') || errorMessage.includes('expired') || errorMessage.includes('Incorrect')) {
-          Alert.alert('Error', 'Invalid or expired OTP. Please try again.');
-        } else if (errorMessage.includes('not found') || errorMessage.includes('User not found')) {
-          Alert.alert(
-            'Account Not Found',
-            'No account found with this mobile number. Please sign up first.',
-            [{ text: 'OK' }]
-          );
-        } else if (errorMessage.includes('Password not found')) {
-          Alert.alert(
-            'Login Error',
-            'Please use password login or sign in with password first to enable OTP login.',
-            [{ text: 'OK' }]
-          );
-        } else {
-          Alert.alert('Error', errorMessage);
-        }
-      }
-    }
   };
 
   const handleForgotPassword = async () => {

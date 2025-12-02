@@ -1,11 +1,17 @@
 /**
- * API Service
- * Handles all HTTP requests to the backend
+ * API Service for authentication & future backend calls.
+ *
+ * This file is now wired to the NEW backend's seller auth endpoints:
+ * - POST /api/sellers/signup-seller          → send OTP for signup
+ * - POST /api/sellers/verify-otp-seller     → verify signup OTP, return JWT + seller info
+ * - POST /api/sellers/login-seller          → login with phone + password, return JWT + seller info
+ *
+ * OTP login (without password) is not implemented on the backend, so the
+ * sendLoginOtp/loginWithOtp helpers are still stubs for now.
  */
 
-import { Platform } from 'react-native';
 import { API_BASE_URL_DEV, API_BASE_URL_DEV_IP, API_BASE_URL_PROD, USE_IP_ADDRESS } from './apiConfig';
-import { storage } from '../authentication/storage';
+import { storage, AUTH_TOKEN_KEY } from '../authentication/storage';
 
 // Determine the API base URL based on environment and configuration
 const getApiBaseUrl = (): string => {
@@ -24,6 +30,7 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+// Types kept so screens compile; adjusted to match seller auth backend
 interface SignupRequest {
   fullName: string;
   phone: string;
@@ -40,7 +47,7 @@ interface LoginRequest {
   password: string;
 }
 
-interface AuthResponse {
+export interface AuthResponse {
   token: string;
   userId: number;
   fullName: string;
@@ -48,320 +55,530 @@ interface AuthResponse {
 }
 
 /**
- * Sign up a new user
- * @param data Signup data
- * @returns Promise with OTP code (for testing)
+ * Helper to handle JSON responses and throw useful errors.
+ */
+const parseJsonOrText = async (response: Response): Promise<any> => {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Fallback to plain text
+    return text;
+  }
+};
+
+/**
+ * Sign up a new seller - sends OTP to phone.
+ * Backend: POST /api/sellers/signup-seller
+ * Body: { fullName, phone, password }
+ * Returns: OTP code (for testing / dev)
  */
 export const signup = async (data: SignupRequest): Promise<string> => {
-  const url = `${API_BASE_URL}/api/auth/signup`;
-  console.log('Signup attempt:', { url, phone: data.phone, platform: Platform.OS });
-  
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+  const url = `${API_BASE_URL}/api/sellers/signup-seller`;
 
-    console.log('Signup response status:', response.status);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      fullName: data.fullName,
+      phone: data.phone,
+      password: data.password,
+    }),
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Signup error response:', errorText);
-      throw new Error(errorText || 'Signup failed');
-    }
+  const payload = await parseJsonOrText(response);
 
-    const result = await response.text();
-    console.log('Signup success response:', result);
-    // Extract OTP from response message for testing
-    const otpMatch = result.match(/\(for testing: (\d+)\)/);
-    return otpMatch ? otpMatch[1] : '';
-  } catch (error) {
-    console.error('Signup exception:', error);
-    if (error instanceof Error) {
-      // Check if it's a network error
-      if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
-        if (USE_IP_ADDRESS) {
-          throw new Error(
-            `Cannot connect to server at ${url}.\n\n` +
-            `Troubleshooting:\n` +
-            `1. Ensure backend is running: cd Backend/store && mvn spring-boot:run\n` +
-            `2. Check your IP address is correct in src/utils/apiConfig.ts\n` +
-            `3. Ensure phone and computer are on the same WiFi network\n` +
-            `4. Check Windows Firewall allows port 8080\n` +
-            `5. Try using ADB reverse instead: adb reverse tcp:8080 tcp:8080\n`
-          );
-        } else {
-          throw new Error(
-            `Cannot connect to server at ${url}.\n\n` +
-            `Troubleshooting:\n` +
-            `1. Setup ADB reverse: adb reverse tcp:8080 tcp:8080\n` +
-            `2. Ensure backend is running: cd Backend/store && mvn spring-boot:run\n` +
-            `3. Verify device is connected: adb devices\n` +
-            `4. If ADB reverse doesn't work, use IP address in src/utils/apiConfig.ts\n`
-          );
-        }
-      }
-      throw error;
-    }
-    throw new Error('Network error. Please check your connection.');
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Signup failed';
+    throw new Error(message);
   }
+
+  // Expecting { message, otp } from backend
+  if (payload && typeof payload === 'object') {
+    return payload.otp || '';
+  }
+
+  return '';
 };
 
 /**
- * Verify OTP code
- * @param data OTP verification data
- * @returns Promise<void>
+ * Verify OTP for signup and get JWT token + seller info.
+ * Backend: POST /api/sellers/verify-otp-seller
+ * Body: { phone, code }
+ * Returns: { message, token, sellerId, fullName, phone }
  */
-export const verifyOtp = async (data: VerifyOtpRequest): Promise<void> => {
-  const url = `${API_BASE_URL}/api/auth/verify-otp`;
-  console.log('Verify OTP attempt:', { url, phone: data.phone });
-  
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+export const verifyOtp = async (data: VerifyOtpRequest): Promise<AuthResponse> => {
+  const url = `${API_BASE_URL}/api/sellers/verify-otp-seller`;
 
-    console.log('Verify OTP response status:', response.status);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      phone: data.phone,
+      code: data.code,
+    }),
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Verify OTP error response:', errorText);
-      throw new Error(errorText || 'OTP verification failed');
-    }
-    
-    console.log('OTP verified successfully');
-  } catch (error) {
-    console.error('Verify OTP exception:', error);
-    if (error instanceof Error) {
-      if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
-        if (USE_IP_ADDRESS) {
-          throw new Error(`Cannot connect to server at ${url}. Check backend is running and IP is correct in apiConfig.ts`);
-        } else {
-          throw new Error(`Cannot connect to server at ${url}. Run: adb reverse tcp:8080 tcp:8080`);
-        }
-      }
-      throw error;
-    }
-    throw new Error('Network error. Please check your connection.');
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'OTP verification failed';
+    throw new Error(message);
   }
+
+  if (!payload || typeof payload !== 'object' || !payload.token) {
+    throw new Error('Invalid OTP response from server');
+  }
+
+  const userId = typeof payload.sellerId === 'number' ? payload.sellerId : NaN;
+
+  return {
+    token: payload.token,
+    userId,
+    fullName: payload.fullName ?? '',
+    phone: payload.phone ?? data.phone,
+  };
 };
 
 /**
- * Send OTP for login
- * @param phone Phone number
- * @returns Promise with OTP code (for testing)
+ * Send OTP for login (NOT supported on backend yet).
+ * For now this is a stub that always throws.
  */
-export const sendLoginOtp = async (phone: string): Promise<string> => {
-  const url = `${API_BASE_URL}/api/auth/send-login-otp`;
-  console.log('Send login OTP attempt:', { url, phone, platform: Platform.OS });
-  
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ phone }),
-    });
-
-    console.log('Send login OTP response status:', response.status);
-
-    if (!response.ok) {
-      let errorText = '';
-      try {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const errorJson = await response.json();
-          errorText = errorJson.message || JSON.stringify(errorJson);
-        } else {
-          errorText = await response.text();
-        }
-      } catch (e) {
-        errorText = `HTTP ${response.status}: ${response.statusText}`;
-      }
-      console.error('Send login OTP error response:', errorText);
-      throw new Error(errorText || 'Failed to send OTP');
-    }
-
-    // Parse JSON response
-    const contentType = response.headers.get('content-type');
-    let result: any;
-    if (contentType && contentType.includes('application/json')) {
-      result = await response.json();
-    } else {
-      const textResult = await response.text();
-      try {
-        result = JSON.parse(textResult);
-      } catch (e) {
-        // If not JSON, treat as plain text
-        result = { message: textResult };
-      }
-    }
-    
-    console.log('Send login OTP success response:', result);
-    // Extract OTP from response message for testing
-    const message = result.message || '';
-    const otpMatch = message.match(/\(for testing: (\d+)\)/);
-    return otpMatch ? otpMatch[1] : '';
-  } catch (error) {
-    console.error('Send login OTP exception:', error);
-    if (error instanceof Error) {
-      if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
-        if (USE_IP_ADDRESS) {
-          throw new Error(`Cannot connect to server at ${url}. Check backend is running and IP is correct in apiConfig.ts`);
-        } else {
-          throw new Error(`Cannot connect to server at ${url}. Run: adb reverse tcp:8080 tcp:8080`);
-        }
-      }
-      throw error;
-    }
-    throw new Error('Network error. Please check your connection.');
-  }
+export const sendLoginOtp = async (_phone: string): Promise<string> => {
+  throw new Error('OTP login is not supported with the current backend. Please use password login.');
 };
 
 /**
- * Login user with OTP
- * Verifies OTP and returns JWT token directly from backend
- * @param phone Phone number
- * @param otpCode OTP code
- * @returns Promise with AuthResponse containing token and user info
- */
-export const loginWithOtp = async (phone: string, otpCode: string): Promise<AuthResponse> => {
-  const url = `${API_BASE_URL}/api/auth/login-with-otp`;
-  console.log('Login with OTP attempt:', { url, phone, platform: Platform.OS });
-  
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ phone, code: otpCode }),
-    });
-
-    console.log('Login with OTP response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Login with OTP error response:', errorText);
-      throw new Error(errorText || 'Invalid or expired OTP');
-    }
-
-    const responseText = await response.text();
-    console.log('Login with OTP response text:', responseText);
-
-    if (!responseText || responseText.trim() === '') {
-      throw new Error('Empty response from server');
-    }
-
-    // Parse JSON response
-    let result: AuthResponse;
-    try {
-      result = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse login with OTP response:', parseError, 'Response:', responseText);
-      throw new Error('Invalid response format from server');
-    }
-
-    // Validate required fields
-    if (!result || !result.token) {
-      console.error('Login with OTP response missing token:', result);
-      throw new Error('Login response missing token');
-    }
-
-    console.log('Login with OTP success:', { userId: result.userId, phone: result.phone, hasToken: !!result.token });
-    return result;
-  } catch (error) {
-    console.error('Login with OTP exception:', error);
-    if (error instanceof Error) {
-      if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
-        if (USE_IP_ADDRESS) {
-          throw new Error('Cannot connect to server. Check backend is running and IP is correct in apiConfig.ts');
-        } else {
-          throw new Error('Cannot connect to server. Run: adb reverse tcp:8080 tcp:8080');
-        }
-      }
-      throw error;
-    }
-    throw new Error('Failed to login with OTP. Please try again.');
-  }
-};
-
-/**
- * Login user
- * @param data Login credentials
- * @returns Promise with AuthResponse containing token and user info
+ * Login seller with phone + password.
+ * Backend: POST /api/sellers/login-seller
+ * Body: { phone, password }
+ * Returns: SellerAuthResponse or { message, token, sellerId, fullName, phone }
  */
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
-  try {
-    const url = `${API_BASE_URL}/api/auth/login`;
-    console.log('Login attempt:', { url, phone: data.phone });
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+  const url = `${API_BASE_URL}/api/sellers/login-seller`;
 
-    console.log('Login response status:', response.status);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      phone: data.phone,
+      password: data.password,
+    }),
+  });
 
-    // Get response text (can only read once)
-    const responseText = await response.text();
-    console.log('Login response text:', responseText);
+  const payload = await parseJsonOrText(response);
 
-    if (!response.ok) {
-      console.error('Login error response:', responseText);
-      throw new Error(responseText || 'Login failed');
-    }
-    
-    if (!responseText || responseText.trim() === '') {
-      throw new Error('Empty response from server');
-    }
-
-    // Parse JSON response
-    let result: AuthResponse;
-    try {
-      result = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse login response:', parseError, 'Response:', responseText);
-      throw new Error('Invalid response format from server');
-    }
-
-    // Validate required fields
-    if (!result || !result.token) {
-      console.error('Login response missing token:', result);
-      throw new Error('Login response missing token');
-    }
-
-    console.log('Login success:', { userId: result.userId, phone: result.phone, hasToken: !!result.token });
-    return result;
-  } catch (error) {
-    console.error('Login exception:', error);
-    if (error instanceof Error) {
-      // Check if it's a network error
-      if (error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
-        if (USE_IP_ADDRESS) {
-          throw new Error('Cannot connect to server. Check backend is running and IP is correct in apiConfig.ts');
-        } else {
-          throw new Error('Cannot connect to server. Run: adb reverse tcp:8080 tcp:8080');
-        }
-      }
-      throw error;
-    }
-    throw new Error('Network error. Please check your connection.');
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Login failed';
+    throw new Error(message);
   }
+
+  if (!payload || typeof payload !== 'object' || !payload.token) {
+    throw new Error('Invalid login response from server');
+  }
+
+  const userId =
+    typeof payload.userId === 'number'
+      ? payload.userId
+      : typeof payload.sellerId === 'number'
+      ? payload.sellerId
+      : NaN;
+
+  return {
+    token: payload.token,
+    userId,
+    fullName: payload.fullName ?? '',
+    phone: payload.phone ?? data.phone,
+  };
 };
 
+/**
+ * Login with OTP (NOT supported on backend yet).
+ * For now this is a stub that always throws.
+ */
+export const loginWithOtp = async (_phone: string, _otpCode: string): Promise<AuthResponse> => {
+  throw new Error('OTP login is not supported with the current backend. Please use password login.');
+};
 
+/**
+ * =============================
+ * STORE DETAILS APIs
+ * =============================
+ */
 
+export interface StoreDetailsResponse {
+  storeId: number;
+  storeName: string;
+  storeLink: string;
+}
 
+export interface StoreAddressResponse {
+  addressId: number;
+}
 
+export interface BusinessDetailsResponse {
+  businessId: number;
+}
+
+export interface ProductDto {
+  productsId: number;
+  productName: string;
+  sellingPrice: number;
+  mrp?: number;
+  inventoryQuantity?: number;
+  productImages?: string[];
+  socialSharingImage?: string | null;
+}
+
+/**
+ * Create or update store details for the logged-in seller.
+ * Backend: POST /api/stores/addStore
+ * Body: { storeName, storeLink, seller: { sellerId } }
+ */
+export const saveStoreDetails = async (
+  storeName: string,
+  storeLink: string,
+): Promise<StoreDetailsResponse> => {
+  const url = `${API_BASE_URL}/api/stores/addStore`;
+
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const userId = await storage.getItem('userId'); // sellerId from auth
+
+  const body: any = {
+    storeName,
+    storeLink,
+  };
+
+  if (userId) {
+    body.seller = { sellerId: Number(userId) };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to save store details';
+    throw new Error(message);
+  }
+
+  if (!payload || typeof payload !== 'object' || payload.storeId == null) {
+    throw new Error('Invalid store details response from server');
+  }
+
+  // Cache storeId for later use (e.g., address/business details)
+  await storage.setItem('storeId', String(payload.storeId));
+
+  return {
+    storeId: payload.storeId,
+    storeName: payload.storeName ?? storeName,
+    storeLink: payload.storeLink ?? storeLink,
+  };
+};
+
+/**
+ * Create or update store address for the current store.
+ * Backend: POST /api/store-address/addAddress
+ */
+export const saveStoreAddress = async (params: {
+  addressLine1: string;
+  addressLine2: string;
+  landmark?: string;
+  city: string;
+  state: string;
+  pincode: string;
+}): Promise<StoreAddressResponse> => {
+  const url = `${API_BASE_URL}/api/store-address/addAddress`;
+
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const storeId = await storage.getItem('storeId');
+
+  const body: any = {
+    shopNoBuildingCompanyApartment: params.addressLine1,
+    areaStreetSectorVillage: params.addressLine2,
+    landmark: params.landmark ?? '',
+    pincode: params.pincode,
+    townCity: params.city,
+    state: params.state,
+  };
+
+  if (storeId) {
+    body.storeDetails = { storeId: Number(storeId) };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to save store address';
+    throw new Error(message);
+  }
+
+  if (!payload || typeof payload !== 'object' || payload.addressId == null) {
+    throw new Error('Invalid store address response from server');
+  }
+
+  return {
+    addressId: payload.addressId,
+  };
+};
+
+/**
+ * Create or update business details for the current store.
+ * Backend: POST /api/business-details/addBusinessDetails
+ */
+export const saveBusinessDetails = async (params: {
+  hasBusiness: string;
+  businessSize: string;
+  platforms: string[];
+}): Promise<BusinessDetailsResponse> => {
+  const url = `${API_BASE_URL}/api/business-details/addBusinessDetails`;
+
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const storeId = await storage.getItem('storeId');
+
+  const platformString = params.platforms.join(', ');
+
+  const body: any = {
+    ownBusiness: params.hasBusiness,
+    businessSize: params.businessSize,
+    platform: platformString,
+    businessDescription: '', // optional for now
+  };
+
+  if (storeId) {
+    body.storeDetails = { storeId: Number(storeId) };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to save business details';
+    throw new Error(message);
+  }
+
+  if (!payload || typeof payload !== 'object' || payload.businessId == null) {
+    throw new Error('Invalid business details response from server');
+  }
+
+  return {
+    businessId: payload.businessId,
+  };
+};
+
+/**
+ * Fetch all products for the current seller.
+ * Backend: GET /api/products/allProduct
+ */
+export const fetchProducts = async (): Promise<ProductDto[]> => {
+  const url = `${API_BASE_URL}/api/products/allProduct`;
+
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to load products';
+    throw new Error(message);
+  }
+
+  if (!payload) {
+    return [];
+  }
+
+  if (!Array.isArray(payload)) {
+    throw new Error('Invalid products response from server');
+  }
+
+  return payload as ProductDto[];
+};
+
+/**
+ * Create a new product.
+ * Backend: POST /api/products/addProduct
+ */
+export const createProduct = async (body: {
+  productName: string;
+  description?: string;
+  mrp?: number;
+  sellingPrice: number;
+  businessCategory?: string;
+  productCategory?: string;
+  inventoryQuantity?: number;
+  customSku?: string;
+  color?: string;
+  size?: string;
+  hsnCode?: string;
+}) => {
+  const url = `${API_BASE_URL}/api/products/addProduct`;
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to create product';
+    throw new Error(message);
+  }
+
+  return payload;
+};
+
+/**
+ * Upload a new product with images (multipart/form-data).
+ * Backend: POST /api/products/upload
+ */
+export const uploadProductWithImages = async (params: {
+  productName: string;
+  description?: string;
+  mrp?: number;
+  sellingPrice: number;
+  businessCategory?: string;
+  productCategory?: string;
+  inventoryQuantity?: number;
+  customSku?: string;
+  color?: string;
+  size?: string;
+  hsnCode?: string;
+  seoTitleTag?: string;
+  seoMetaDescription?: string;
+  imageUris: string[];
+}) => {
+  const url = `${API_BASE_URL}/api/products/upload`;
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+
+  const form = new FormData();
+
+  form.append('productName', params.productName);
+  form.append('description', params.description ?? '');
+  form.append('mrp', String(params.mrp ?? 0));
+  form.append('sellingPrice', String(params.sellingPrice));
+  form.append('businessCategory', params.businessCategory ?? '');
+  form.append('productCategory', params.productCategory ?? '');
+  form.append('inventoryQuantity', String(params.inventoryQuantity ?? 0));
+  form.append('customSku', params.customSku ?? '');
+  form.append('color', params.color ?? '');
+  form.append('size', params.size ?? '');
+  form.append('variant', ''); // not used for now
+  form.append('hsnCode', params.hsnCode ?? '');
+  form.append('seoTitleTag', params.seoTitleTag ?? params.productName);
+  form.append('seoMetaDescription', params.seoMetaDescription ?? params.description ?? '');
+
+  // Attach images
+  params.imageUris.forEach((uri, index) => {
+    if (!uri) return;
+    form.append('productImages', {
+      uri,
+      name: `product_${Date.now()}_${index}.jpg`,
+      type: 'image/jpeg',
+    } as any);
+  });
+
+  if (params.imageUris[0]) {
+    form.append('socialSharingImage', {
+      uri: params.imageUris[0],
+      name: `social_${Date.now()}.jpg`,
+      type: 'image/jpeg',
+    } as any);
+  } else {
+    // backend expects the field; send an empty stub
+    form.append('socialSharingImage', '' as any);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: form,
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to create product with images';
+    throw new Error(message);
+  }
+
+  return payload;
+};
+
+export { API_BASE_URL };

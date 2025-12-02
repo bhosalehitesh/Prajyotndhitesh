@@ -16,6 +16,7 @@ import {
 import IconSymbol from '../../../components/IconSymbol';
 import {launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse} from 'react-native-image-picker';
 import ViewShot, {captureRef} from 'react-native-view-shot';
+import { createProduct, uploadProductWithImages } from '../../../utils/api';
 
 interface AddProductScreenProps {
   navigation: any;
@@ -76,7 +77,8 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
     setProductCategory('');
   }, [businessCategory]);
 
-  const canSubmit = name.trim().length > 0 && price.trim().length > 0;
+  // Require at least name, price, and one image (as per UI hint)
+  const canSubmit = name.trim().length > 0 && price.trim().length > 0 && images.length > 0;
 
   const requestCameraPermission = async (): Promise<boolean> => {
     try {
@@ -146,6 +148,53 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
     } catch (e) {
       console.warn('ViewShot error', e);
       Alert.alert('Error', 'Unable to capture screenshot');
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!canSubmit) {
+      return;
+    }
+
+    try {
+      const common = {
+        productName: name.trim(),
+        description: description.trim() || undefined,
+        mrp: mrp ? Number(mrp) : undefined,
+        sellingPrice: Number(price),
+        businessCategory: businessCategory || undefined,
+        productCategory: productCategory || undefined,
+        inventoryQuantity: quantity ? Number(quantity) : undefined,
+        customSku: sku || undefined,
+        color: color || undefined,
+        size: size || undefined,
+        hsnCode: hsn || undefined,
+      };
+
+      if (images.length > 0) {
+        await uploadProductWithImages({
+          ...common,
+          imageUris: images,
+        });
+      } else {
+        // Fallback (should not happen because canSubmit enforces image)
+        await createProduct(common);
+      }
+
+      Alert.alert('Success', 'Product added successfully', [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.goBack();
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error('Add product error', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to add product. Please try again.',
+      );
     }
   };
 
@@ -300,7 +349,11 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
         </TouchableOpacity>
 
         {/* Submit */}
-        <TouchableOpacity style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]} disabled={!canSubmit}>
+        <TouchableOpacity
+          style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
+          disabled={!canSubmit}
+          onPress={handleSubmit}
+        >
           <Text style={styles.submitText}>Add Product</Text>
         </TouchableOpacity>
       </ScrollView>

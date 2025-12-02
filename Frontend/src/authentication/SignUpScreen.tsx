@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
-import { signup, verifyOtp, login } from '../utils/api';
+import { signup, verifyOtp } from '../utils/api';
 import { useAuth } from './AuthContext';
 
 interface SignUpScreenProps {
@@ -90,16 +90,10 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
     const cleanMobile = mobileNumber.replace(/\D/g, '');
     
     try {
-      // Verify OTP with backend
-      await verifyOtp({
+      // Verify OTP with backend and get token + seller info
+      const authResponse = await verifyOtp({
         phone: cleanMobile,
         code: otp,
-      });
-
-      // After OTP verification, login to get JWT token
-      const authResponse = await login({
-        phone: cleanMobile,
-        password: password,
       });
 
       // Store auth token and user info
@@ -107,7 +101,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ onAuthenticated, onSwitchTo
       await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
       await storage.setItem(AUTH_PHONE_KEY, authResponse.phone);
       await storage.setItem('userName', authResponse.fullName);
-      
+
       setLoading(false);
       Alert.alert('Success', 'Account created successfully!', [
         {
