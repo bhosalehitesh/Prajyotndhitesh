@@ -205,6 +205,17 @@ function AppContent(): JSX.Element {
       // User is authenticated - check onboarding status
       setShowAuth(false);
       setCheckingOnboarding(true);
+
+      // Check how we got here (sign-in vs sign-up)
+      const isSignInFlag = await storage.getItem('isSignIn');
+
+      // If this session is an EXPLICIT SIGN-IN, always skip onboarding and go to home
+      if (isSignInFlag === 'true') {
+        console.log('🔍 App mount onboarding check: signed-in user, skipping onboarding');
+        setShowOnboarding(false);
+        setCheckingOnboarding(false);
+        return;
+      }
       
       const completed = await storage.getItem('onboardingCompleted');
       const storeName = await storage.getItem('storeName');
@@ -219,7 +230,7 @@ function AppContent(): JSX.Element {
         shouldSkipOnboarding 
       });
       
-      // If user is already authenticated (returning user), skip onboarding
+      // For auto-login or sign-up sessions, respect onboarding flags
       setShowOnboarding(!shouldSkipOnboarding);
       setCheckingOnboarding(false);
     };
@@ -245,16 +256,8 @@ function AppContent(): JSX.Element {
           setCheckingOnboarding(true);
           
           const isSignIn = await storage.getItem('isSignIn');
-          const completed = await storage.getItem('onboardingCompleted');
-          const storeName = await storage.getItem('storeName');
           
-          console.log('🔍 Auth check:', { 
-            isSignIn,
-            completed, 
-            storeName
-          });
-          
-          // If user is SIGNING IN (not signing up), ALWAYS skip onboarding and go to home
+          // If user is SIGNING IN (existing user), ALWAYS skip onboarding and go to home
           if (isSignIn === 'true') {
             console.log('✅ User signed IN - skipping onboarding, going to home');
             setShowOnboarding(false);
@@ -262,16 +265,10 @@ function AppContent(): JSX.Element {
             return;
           }
           
-          // For sign-ups (new users), check if onboarding is needed
-          const shouldSkipOnboarding = completed === 'true' || (!!storeName && storeName.trim().length > 0);
-          
-          console.log('🔍 Sign-up onboarding check:', { 
-            shouldSkipOnboarding,
-            completedCheck: completed === 'true',
-            storeNameCheck: !!storeName && storeName.trim().length > 0
-          });
-          
-          setShowOnboarding(!shouldSkipOnboarding);
+          // For SIGN-UPS (new users), ALWAYS show onboarding immediately after account creation,
+          // regardless of any previous onboarding data stored on device.
+          console.log('🆕 New sign-up detected - showing onboarding flow');
+          setShowOnboarding(true);
           setCheckingOnboarding(false);
         }}
       />

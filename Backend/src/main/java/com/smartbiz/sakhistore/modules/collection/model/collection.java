@@ -26,6 +26,9 @@ public class collection {
     private String seoMetaDescription;
     private String socialSharingImage;
 
+    // Whether this collection should be hidden on the customer website
+    private boolean hideFromWebsite = false;
+
     // =======================
     // 🔗 COLLECTION → PRODUCTS
     // =======================
@@ -100,6 +103,14 @@ public class collection {
 
     public void setSocialSharingImage(String socialSharingImage) {
         this.socialSharingImage = socialSharingImage;
+    }
+
+    public boolean isHideFromWebsite() {
+        return hideFromWebsite;
+    }
+
+    public void setHideFromWebsite(boolean hideFromWebsite) {
+        this.hideFromWebsite = hideFromWebsite;
     }
 
 

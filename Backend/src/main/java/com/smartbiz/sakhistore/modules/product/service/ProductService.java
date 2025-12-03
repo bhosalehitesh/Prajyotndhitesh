@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.smartbiz.sakhistore.config.CloudinaryHelper;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsRepo;
 import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
 
@@ -25,6 +27,9 @@ public class ProductService{
 
     @Autowired
     CloudinaryHelper cloudinaryHelper;
+
+    @Autowired
+    private SellerDetailsRepo sellerDetailsRepo;
 
 
     public Product uploadProductWithImages(
@@ -43,7 +48,8 @@ public class ProductService{
             String seoTitleTag,
             String seoMetaDescription,
             List<MultipartFile> productImages,
-            MultipartFile socialSharingImage
+            MultipartFile socialSharingImage,
+            Long sellerId
     ) {
         try {
             List<String> productImageUrls = new ArrayList<>();
@@ -83,6 +89,13 @@ public class ProductService{
             product.setProductImages(productImageUrls);
             product.setSocialSharingImage(socialImageUrl);
 
+            // Link to seller if provided
+            if (sellerId != null) {
+                SellerDetails seller = sellerDetailsRepo.findById(sellerId)
+                        .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
+                product.setSeller(seller);
+            }
+
             // ✅ Save in database
             return productRepository.save(product);
 
@@ -96,10 +109,27 @@ public class ProductService{
         return productRepository.findAll();
     }
 
+    public List<Product> allProductForSeller(Long sellerId) {
+        if (sellerId == null) {
+            return productRepository.findAll();
+        }
+        return productRepository.findBySeller_SellerId(sellerId);
+    }
 
 
 
+
+    // Backwards-compatible method used from older code paths
     public Product addproduct(Product product){
+        return addproduct(product, null);
+    }
+
+    public Product addproduct(Product product, Long sellerId){
+        if (sellerId != null) {
+            SellerDetails seller = sellerDetailsRepo.findById(sellerId)
+                    .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
+            product.setSeller(seller);
+        }
         return productRepository.save(product);
     }
 
@@ -115,6 +145,14 @@ public class ProductService{
                 .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
 
         productRepository.delete(product);
+    }
+
+    // ✅ Update only inventory quantity (stock) for a product
+    public Product updateInventoryQuantity(Long productId, Integer inventoryQuantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
+        product.setInventoryQuantity(inventoryQuantity);
+        return productRepository.save(product);
     }
 
     //  Get all unique product categories

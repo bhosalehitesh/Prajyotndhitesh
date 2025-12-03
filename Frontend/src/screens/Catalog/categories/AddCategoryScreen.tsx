@@ -19,6 +19,7 @@ import {
   launchImageLibrary,
   ImagePickerResponse,
 } from 'react-native-image-picker';
+import {uploadCategoryWithImages} from '../../../utils/api';
 
 interface AddCategoryScreenProps {
   navigation: any;
@@ -152,25 +153,41 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
     setPickerOpen(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave) {
       Alert.alert('Validation Error', 'Please fill in all required fields');
       return;
     }
 
-    // Here you would typically save the category to your backend/state
-    Alert.alert(
-      'Success',
-      isEditMode
-        ? 'Category updated successfully'
-        : 'Category created successfully',
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ],
-    );
+    try {
+      await uploadCategoryWithImages({
+        categoryName,
+        businessCategory,
+        description: categoryDescription,
+        seoTitleTag: categoryName,
+        seoMetaDescription: categoryDescription,
+        imageUri: categoryImage,
+      });
+
+      Alert.alert(
+        'Success',
+        isEditMode
+          ? 'Category updated successfully'
+          : 'Category created successfully',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ],
+      );
+    } catch (error) {
+      console.error('Failed to save category', error);
+      Alert.alert(
+        'Error',
+        'Failed to save category. Please check your internet connection and try again.',
+      );
+    }
   };
 
   const handleRemoveImage = () => {

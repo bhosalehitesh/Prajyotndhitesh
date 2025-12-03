@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useCallback, useEffect} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -16,6 +16,7 @@ import {
   Platform,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
+import {fetchCategories, deleteCategory, fetchProducts, CategoryDto, ProductDto} from '../../../utils/api';
 
 interface CategoriesScreenProps {
   navigation: any;
@@ -32,17 +33,68 @@ interface Category {
 
 const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [categories, setCategories] = useState<Category[]>([
-    {id: '1', name: 'Fruits & Vegetables', productCount: 1, image: 'placeholder'},
-    {id: '2', name: 'Hhjk', productCount: 0},
-    {id: '3', name: 'Abc', productCount: 0, image: 'placeholder'},
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(false);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
 
   const activeCategory = categories.find(c => c.id === activeCategoryId);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [apiCategories, apiProducts]: [CategoryDto[], ProductDto[]] = await Promise.all([
+        fetchCategories(),
+        fetchProducts(),
+      ]);
+
+      const mapped: Category[] = apiCategories.map(cat => {
+        const catName = (cat.categoryName || '').toLowerCase().trim();
+        const catBusiness = (cat.businessCategory || '').toLowerCase().trim();
+
+        const count = apiProducts.filter(p => {
+          const pBusiness = (p.businessCategory || '').toLowerCase().trim();
+          const pCat = (p.productCategory || '').toLowerCase().trim();
+
+          // Prefer matching by businessCategory (business details)
+          if (catBusiness) {
+            return pBusiness === catBusiness;
+          }
+
+          // Fallback: match productCategory to categoryName
+          if (catName) {
+            return pCat === catName;
+          }
+
+          return false;
+        }).length;
+
+        return {
+          id: String(cat.category_id),
+          name: cat.categoryName,
+          image: cat.categoryImage || undefined,
+          productCount: count,
+          description: cat.description || '',
+          businessCategory: cat.businessCategory || '',
+        };
+      });
+
+      setCategories(mapped);
+    } catch (error) {
+      console.error('Failed to load categories', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadCategories();
+    });
+    return unsubscribe;
+  }, [navigation, loadCategories]);
 
   const handleMenuPress = (categoryId: string) => {
     setActiveCategoryId(categoryId);
@@ -135,9 +187,16 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 
   const handleDelete = () => {
     if (activeCategoryId) {
-      setCategories(prev => prev.filter(c => c.id !== activeCategoryId));
+      const idToDelete = activeCategoryId;
       setConfirmDeleteOpen(false);
       setActiveCategoryId(null);
+      deleteCategory(idToDelete)
+        .then(() => {
+          setCategories(prev => prev.filter(c => c.id !== idToDelete));
+        })
+        .catch(err => {
+          console.error('Failed to delete category', err);
+        });
     }
   };
 
@@ -170,32 +229,47 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 
       {/* Categories List */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {filteredCategories.map(category => (
-          <View key={category.id} style={styles.categoryCard}>
-            <View style={styles.categoryImageContainer}>
-              {category.image && typeof category.image === 'string' && category.image !== 'placeholder' ? (
-                <Image source={{uri: category.image}} style={styles.categoryImage} />
-              ) : (
-                <View style={styles.categoryImagePlaceholder}>
-                  <IconSymbol name="image" size={24} color="#9CA3AF" />
-                </View>
-              )}
-            </View>
-            <View style={styles.categoryInfo}>
-              <Text style={styles.categoryName}>{category.name}</Text>
-              <Text style={styles.categoryCount}>
-                {category.productCount === 0
-                  ? 'No product listed'
-                  : `${category.productCount} product${category.productCount > 1 ? 's' : ''} listed`}
-              </Text>
-            </View>
+        {loading && categories.length === 0 ? (
+          <Text style={styles.emptyText}>Loading categories...</Text>
+        ) : !loading && filteredCategories.length === 0 ? (
+          <Text style={styles.emptyText}>No categories found. Add your first category.</Text>
+        ) : (
+          filteredCategories.map(category => (
             <TouchableOpacity
-              style={styles.menuButton}
-              onPress={() => handleMenuPress(category.id)}>
-              <IconSymbol name="ellipsis-vertical" size={20} color="#6c757d" />
+              key={category.id}
+              style={styles.categoryCard}
+              onPress={() =>
+                navigation.navigate('Products', {
+                  categoryName: category.name,
+                  businessCategory: category.businessCategory,
+                })
+              }
+            >
+              <View style={styles.categoryImageContainer}>
+                {category.image && typeof category.image === 'string' && category.image !== 'placeholder' ? (
+                  <Image source={{uri: category.image}} style={styles.categoryImage} />
+                ) : (
+                  <View style={styles.categoryImagePlaceholder}>
+                    <IconSymbol name="image" size={24} color="#9CA3AF" />
+                  </View>
+                )}
+              </View>
+              <View style={styles.categoryInfo}>
+                <Text style={styles.categoryName}>{category.name}</Text>
+                <Text style={styles.categoryCount}>
+                  {category.productCount === 0
+                    ? 'No product listed'
+                    : `${category.productCount} product${category.productCount > 1 ? 's' : ''} listed`}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.menuButton}
+                onPress={() => handleMenuPress(category.id)}>
+                <IconSymbol name="ellipsis-vertical" size={20} color="#6c757d" />
+              </TouchableOpacity>
             </TouchableOpacity>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
 
       {/* Add New Category Button */}
@@ -457,6 +531,12 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 16,
     paddingBottom: 100,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#6c757d',
+    fontSize: 14,
+    marginTop: 24,
   },
   categoryCard: {
     flexDirection: 'row',

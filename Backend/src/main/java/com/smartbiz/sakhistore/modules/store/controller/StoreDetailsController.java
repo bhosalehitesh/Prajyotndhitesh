@@ -40,6 +40,13 @@ public class StoreDetailsController {
         return storeService.findByIdDS(storeId);
     }
 
+    // Get store for a specific seller (assumes one store per seller)
+    // Use a fixed path segment to avoid conflict with "/{storeId}"
+    @GetMapping("/seller")
+    public StoreDetails getStoreBySeller(@RequestParam("sellerId") Long sellerId) {
+        return storeService.findBySellerId(sellerId);
+    }
+
     @DeleteMapping("/deleteStore/{id}")
     public ResponseEntity<String> deleteStore(@PathVariable Long id) throws ResourceNotFoundException {
         storeService.deleteStore(id);
