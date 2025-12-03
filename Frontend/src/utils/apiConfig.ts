@@ -20,7 +20,7 @@ export const API_BASE_URL_DEV = 'http://localhost:8080';
 // Option 2: Use your computer's IP address (use this if ADB reverse doesn't work)
 // Replace with your actual IP address (find it using: ipconfig on Windows)
 // Example: export const API_BASE_URL_DEV_IP = 'http://192.168.1.100:8080';
-export const API_BASE_URL_DEV_IP = 'http://192.168.1.21:8080'; // Updated with your local IP
+export const API_BASE_URL_DEV_IP = 'http://192.168.1.9:8080'; // Updated with your actual local IP
 
 // Production URL
 export const API_BASE_URL_PROD = 'https://your-production-api.com';

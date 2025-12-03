@@ -235,7 +235,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     return Math.round((1 - (p.price / p.mrp)) * 100);
   };
 
-  // Build filtered list based on current filter state
+  // Build filtered and sorted list based on current filter state
   const filteredProducts = useMemo(() => {
     let items = products.slice();
     // Category filter (when navigated from Categories screen)
@@ -277,8 +277,35 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         });
       });
     }
+    
+    // Apply sorting
+    items.sort((a, b) => {
+      switch (sortBy) {
+        case 'title-az':
+          return (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+        case 'title-za':
+          return (b.title || '').localeCompare(a.title || '', undefined, { sensitivity: 'base' });
+        case 'price-low':
+          return (a.price || 0) - (b.price || 0);
+        case 'price-high':
+          return (b.price || 0) - (a.price || 0);
+        case 'disc-low': {
+          const discA = getDiscountPercent(a);
+          const discB = getDiscountPercent(b);
+          return discA - discB;
+        }
+        case 'disc-high': {
+          const discA = getDiscountPercent(a);
+          const discB = getDiscountPercent(b);
+          return discB - discA;
+        }
+        default:
+          return 0;
+      }
+    });
+    
     return items;
-  }, [products, inventory, priceRange, discounts, categoryFilter, businessFilter]);
+  }, [products, inventory, priceRange, discounts, categoryFilter, businessFilter, sortBy]);
 
   // Counts for filter UI
   const inventoryCounts = useMemo(() => ({
@@ -535,7 +562,14 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             {key:'disc-low', label:'Discount (Low to High)'},
             {key:'disc-high', label:'Discount (High to Low)'},
           ].map(item => (
-            <TouchableOpacity key={item.key} style={styles.optionRow} onPress={() => setSortBy(item.key as any)}>
+            <TouchableOpacity 
+              key={item.key} 
+              style={styles.optionRow} 
+              onPress={() => {
+                setSortBy(item.key as any);
+                setIsSortOpen(false); // Close modal after selection
+              }}
+            >
               <View style={[styles.radioOuter, sortBy===item.key && styles.radioOuterActive]}>
                 {sortBy===item.key && <View style={styles.radioInner} />}
               </View>

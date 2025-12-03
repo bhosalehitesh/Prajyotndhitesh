@@ -87,12 +87,16 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
 
     try {
+      console.log('Starting signup process...', { fullName, phone: cleanMobile });
+      
       // Call backend API to signup and get OTP
       const otpCode = await signup({
         fullName,
         phone: cleanMobile,
         password,
       });
+
+      console.log('Signup completed, OTP received:', otpCode ? 'Yes' : 'No');
 
       // Store OTP for verification
       if (otpCode) {
@@ -103,22 +107,27 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      console.error('Signup error:', error);
+      console.error('Signup error in handleVerifyMobile:', error);
       let errorMessage = 'Failed to send OTP. Please try again.';
       
       if (error instanceof Error) {
         const msg = error.message.toLowerCase();
-        if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
-          errorMessage = 'Network error. Please check your internet connection and ensure the backend is running.';
+        console.log('Error message:', msg);
+        
+        if (msg.includes('timeout') || msg.includes('timed out')) {
+          errorMessage = 'Request timed out. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080';
+        } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
+          errorMessage = 'Network error. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080';
         } else if (msg.includes('already exists') || msg.includes('seller already exists')) {
           errorMessage = 'An account with this mobile number already exists. Please sign in instead.';
         } else if (msg.includes('required') || msg.includes('invalid')) {
           errorMessage = error.message;
         } else {
-          errorMessage = error.message;
+          errorMessage = error.message || 'Failed to send OTP. Please try again.';
         }
       }
       
+      console.log('Showing error alert:', errorMessage);
       Alert.alert('Signup Error', errorMessage);
     }
   };
@@ -220,17 +229,28 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       const cleanMobile = signInMobile.replace(/\D/g, '');
       
       try {
+        console.log('Attempting login with:', { phone: cleanMobile });
+        
         // Login with backend API
         const authResponse = await apiLogin({
           phone: cleanMobile,
           password: signInPassword,
         });
 
+        console.log('Login response received:', authResponse);
+
         // Validate response
-        if (!authResponse || !authResponse.token) {
-          throw new Error('Login failed: Invalid response from server');
+        if (!authResponse) {
+          throw new Error('Login failed: No response from server');
+        }
+        
+        if (!authResponse.token) {
+          console.error('Login failed: No token in response', authResponse);
+          throw new Error('Login failed: Invalid response from server - no token received');
         }
 
+        console.log('Storing authentication data...');
+        
         // Store authentication data
         await login(authResponse.token);
         await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
@@ -241,28 +261,36 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
         // Mark this as a sign-in (not sign-up) so onboarding can be skipped
         await storage.setItem('isSignIn', 'true');
       
+        console.log('Login successful, calling onAuthenticated...');
         setLoading(false);
         onAuthenticated();
       } catch (error) {
         setLoading(false);
-        console.error('Login error:', error);
+        console.error('Login error details:', error);
+        
         let errorMessage = 'Failed to sign in. Please check your credentials.';
         
         if (error instanceof Error) {
           const msg = error.message.toLowerCase();
-          if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
-            errorMessage = 'Network error. Please check your internet connection and ensure the backend is running.';
-          } else if (msg.includes('not found') || msg.includes('seller not found')) {
+          console.log('Error message:', msg);
+          
+          if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch') || msg.includes('network request failed')) {
+            errorMessage = 'Network error. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080';
+          } else if (msg.includes('not found') || msg.includes('seller not found') || msg.includes('account not found')) {
             errorMessage = 'No account found with this mobile number. Please sign up first.';
           } else if (msg.includes('password') || msg.includes('invalid password') || msg.includes('incorrect')) {
             errorMessage = 'Incorrect password. Please try again.';
-          } else if (msg.includes('verify') || msg.includes('otp')) {
+          } else if (msg.includes('verify') || msg.includes('otp') || msg.includes('please verify')) {
             errorMessage = 'Please verify your account with OTP first.';
           } else {
-            errorMessage = error.message;
+            errorMessage = error.message || 'Failed to sign in. Please try again.';
           }
+        } else {
+          console.error('Unknown error type:', typeof error, error);
+          errorMessage = 'An unexpected error occurred. Please try again.';
         }
         
+        console.log('Showing error alert:', errorMessage);
         Alert.alert('Login Error', errorMessage);
       }
       } else {

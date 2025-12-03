@@ -82,6 +82,12 @@ export const signup = async (data: SignupRequest): Promise<string> => {
   const url = `${API_BASE_URL}/api/sellers/signup-seller`;
 
   try {
+    console.log('Signup attempt:', { fullName: data.fullName, phone: data.phone, url });
+    
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -92,9 +98,14 @@ export const signup = async (data: SignupRequest): Promise<string> => {
         phone: data.phone,
         password: data.password,
       }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
+    console.log('Signup response received:', { status: response.status, statusText: response.statusText });
+
     const payload = await parseJsonOrText(response);
+    console.log('Signup payload:', payload);
 
     if (!response.ok) {
       // Log detailed error for debugging
@@ -114,17 +125,28 @@ export const signup = async (data: SignupRequest): Promise<string> => {
 
     // Expecting { message, otp } from backend
     if (payload && typeof payload === 'object') {
-      return payload.otp || '';
+      const otp = payload.otp || '';
+      console.log('Signup successful, OTP received:', otp ? 'Yes' : 'No');
+      return otp;
     }
 
+    console.warn('Signup response missing OTP:', payload);
     return '';
-  } catch (error) {
-    // Handle network errors
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.error('Network error during signup:', error);
-      throw new Error('Network request failed. Please check your internet connection and ensure the backend is running.');
+  } catch (error: any) {
+    // Handle abort/timeout errors
+    if (error.name === 'AbortError') {
+      console.error('Signup request timed out');
+      throw new Error('Request timed out. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080');
     }
+    
+    // Handle network errors
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      console.error('Network error during signup:', error);
+      throw new Error('Network request failed. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080');
+    }
+    
     // Re-throw other errors
+    console.error('Signup error:', error);
     throw error;
   }
 };
@@ -191,6 +213,8 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
   const url = `${API_BASE_URL}/api/sellers/login-seller`;
 
   try {
+    console.log('Login attempt:', { phone: data.phone, url });
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -203,6 +227,7 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
     });
 
     const payload = await parseJsonOrText(response);
+    console.log('Login response:', { status: response.status, payload });
 
     if (!response.ok) {
       // Log detailed error for debugging
@@ -220,9 +245,14 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
       throw new Error(message);
     }
 
-    if (!payload || typeof payload !== 'object' || !payload.token) {
-      console.error('Invalid login response:', payload);
+    if (!payload || typeof payload !== 'object') {
+      console.error('Invalid login response (not an object):', payload);
       throw new Error('Invalid login response from server');
+    }
+
+    if (!payload.token) {
+      console.error('Invalid login response (no token):', payload);
+      throw new Error('Login failed: No token received from server');
     }
 
     const userId =
@@ -230,14 +260,21 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
         ? payload.userId
         : typeof payload.sellerId === 'number'
         ? payload.sellerId
-        : NaN;
+        : null;
 
-    return {
+    if (userId === null || isNaN(userId)) {
+      console.warn('Warning: userId is missing or invalid in response:', payload);
+    }
+
+    const authResponse = {
       token: payload.token,
-      userId,
+      userId: userId || 0,
       fullName: payload.fullName ?? '',
       phone: payload.phone ?? data.phone,
     };
+    
+    console.log('Login successful:', { userId: authResponse.userId, fullName: authResponse.fullName });
+    return authResponse;
   } catch (error) {
     // Handle network errors
     if (error instanceof TypeError && error.message.includes('fetch')) {
@@ -245,6 +282,7 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
       throw new Error('Network request failed. Please check your internet connection and ensure the backend is running.');
     }
     // Re-throw other errors
+    console.error('Login error:', error);
     throw error;
   }
 };
