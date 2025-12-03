@@ -136,13 +136,17 @@ export const signup = async (data: SignupRequest): Promise<string> => {
     // Handle abort/timeout errors
     if (error.name === 'AbortError') {
       console.error('Signup request timed out');
-      throw new Error('Request timed out. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080');
+      throw new Error(
+        `Request timed out. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
+      );
     }
     
     // Handle network errors
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
       console.error('Network error during signup:', error);
-      throw new Error('Network request failed. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080');
+      throw new Error(
+        `Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
+      );
     }
     
     // Re-throw other errors
@@ -321,10 +325,15 @@ export interface ProductDto {
   sellingPrice: number;
   mrp?: number;
   inventoryQuantity?: number;
+  description?: string;
   businessCategory?: string;
   productCategory?: string;
   productImages?: string[];
   socialSharingImage?: string | null;
+  customSku?: string;
+  color?: string;
+  size?: string;
+  hsnCode?: string;
 }
 
 export interface CategoryDto {
@@ -908,6 +917,39 @@ export const saveCollectionProducts = async (
 };
 
 /**
+ * Add a single product to an existing collection.
+ * Backend: POST /api/collections/{id}/add-product?productId=...
+ */
+export const addProductToCollection = async (
+  collectionId: string | number,
+  productId: string | number,
+): Promise<CollectionDto> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof collectionId === 'string' ? collectionId : String(collectionId);
+  const pid = typeof productId === 'string' ? productId : String(productId);
+  const url = `${API_BASE_URL}/api/collections/${id}/add-product?productId=${pid}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to add product to collection';
+    throw new Error(message);
+  }
+
+  return payload as CollectionDto;
+};
+
+/**
  * Toggle hide-from-website flag for a collection.
  * Backend: PUT /api/collections/{id}/hide-from-website?hide=true|false
  */
@@ -1037,6 +1079,52 @@ export const updateProductStock = async (
       typeof payload === 'string'
         ? payload
         : payload?.message || 'Failed to update stock';
+    throw new Error(message);
+  }
+
+  return payload as ProductDto;
+};
+
+/**
+ * Update an existing product (JSON, without changing images).
+ * Backend: PUT /api/products/{id}
+ */
+export const updateProduct = async (
+  productId: string | number,
+  body: {
+    productName: string;
+    description?: string;
+    mrp?: number;
+    sellingPrice: number;
+    businessCategory?: string;
+    productCategory?: string;
+    inventoryQuantity?: number;
+    customSku?: string;
+    color?: string;
+    size?: string;
+    hsnCode?: string;
+  },
+): Promise<ProductDto> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof productId === 'string' ? productId : String(productId);
+  const url = `${API_BASE_URL}/api/products/${id}`;
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to update product';
     throw new Error(message);
   }
 

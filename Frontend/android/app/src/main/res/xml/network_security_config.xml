@@ -7,12 +7,13 @@
         <!-- Localhost for physical devices -->
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
-        <!-- Your computer's IP address for direct connection -->
+        <!-- Your computer's IP addresses for direct connection (historical + current) -->
         <domain includeSubdomains="true">192.168.1.9</domain>
         <domain includeSubdomains="true">192.168.1.21</domain>
         <domain includeSubdomains="true">192.168.1.82</domain>
         <domain includeSubdomains="true">192.168.1.25</domain>
         <domain includeSubdomains="true">192.168.1.45</domain>
+        <domain includeSubdomains="true">192.168.1.57</domain>
     </domain-config>
     
     <!-- Allow all HTTP connections in development (more permissive for any IP) -->

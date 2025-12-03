@@ -17,32 +17,48 @@ import IconSymbol from '../../../components/IconSymbol';
 import ColorPicker from '../../../components/ColorPicker';
 import {launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse} from 'react-native-image-picker';
 import ViewShot, {captureRef} from 'react-native-view-shot';
-import { createProduct, uploadProductWithImages } from '../../../utils/api';
+import { createProduct, uploadProductWithImages, updateProduct } from '../../../utils/api';
 
 interface AddProductScreenProps {
   navigation: any;
+  route?: any;
 }
 
-const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [mrp, setMrp] = useState('');
-  const [price, setPrice] = useState('');
-  const [businessCategory, setBusinessCategory] = useState('');
-  const [productCategory, setProductCategory] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [sku, setSku] = useState('');
-  const [color, setColor] = useState('');
+const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) => {
+  const isEditMode = route?.params?.mode === 'edit';
+  const existing = route?.params?.product;
+
+  const [name, setName] = useState(existing?.title || '');
+  const [description, setDescription] = useState(existing?.description || '');
+  const [mrp, setMrp] = useState(
+    existing?.mrp != null && !isNaN(existing.mrp) ? String(existing.mrp) : '',
+  );
+  const [price, setPrice] = useState(
+    existing?.price != null && !isNaN(existing.price) ? String(existing.price) : '',
+  );
+  const [businessCategory, setBusinessCategory] = useState(
+    existing?.businessCategory || '',
+  );
+  const [productCategory, setProductCategory] = useState(
+    existing?.productCategory || '',
+  );
+  const [quantity, setQuantity] = useState(
+    existing?.inventoryQuantity != null && !isNaN(existing.inventoryQuantity)
+      ? String(existing.inventoryQuantity)
+      : '',
+  );
+  const [sku, setSku] = useState(existing?.sku || '');
+  const [color, setColor] = useState(existing?.color || '');
   const [colorHex, setColorHex] = useState('#000000');
-  const [size, setSize] = useState('');
-  const [hsn, setHsn] = useState('');
+  const [size, setSize] = useState(existing?.size || '');
+  const [hsn, setHsn] = useState(existing?.hsnCode || '');
   const [bestSeller, setBestSeller] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [productCategoryOpen, setProductCategoryOpen] = useState(false);
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<string[]>(existing?.images || []);
   const [shotUri, setShotUri] = useState<string | null>(null);
   const screenShotRef = useRef<ViewShot | null>(null);
 
@@ -173,17 +189,22 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
         hsnCode: hsn || undefined,
       };
 
-      if (images.length > 0) {
-        await uploadProductWithImages({
-          ...common,
-          imageUris: images,
-        });
+      if (isEditMode && existing?.id) {
+        // For now, update textual fields / pricing / inventory; images stay as-is in backend.
+        await updateProduct(existing.id, common);
       } else {
-        // Fallback (should not happen because canSubmit enforces image)
-        await createProduct(common);
+        if (images.length > 0) {
+          await uploadProductWithImages({
+            ...common,
+            imageUris: images,
+          });
+        } else {
+          // Fallback (should not happen because canSubmit enforces image)
+          await createProduct(common);
+        }
       }
 
-      Alert.alert('Success', 'Product added successfully', [
+      Alert.alert('Success', isEditMode ? 'Product updated successfully' : 'Product added successfully', [
         {
           text: 'OK',
           onPress: () => {
@@ -192,10 +213,10 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
         },
       ]);
     } catch (error) {
-      console.error('Add product error', error);
+      console.error('Add/Update product error', error);
       Alert.alert(
         'Error',
-        error instanceof Error ? error.message : 'Failed to add product. Please try again.',
+        error instanceof Error ? error.message : 'Failed to save product. Please try again.',
       );
     }
   };
@@ -207,7 +228,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <IconSymbol name="chevron-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Product</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? 'Update Product' : 'Add Product'}</Text>
         <TouchableOpacity style={styles.headerRight} onPress={handleScreenshot}>
           <IconSymbol name="download-outline" size={22} color="#111827" />
         </TouchableOpacity>
@@ -351,7 +372,23 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
         {/* Variants / Tax */}
         <Text style={styles.sectionHeader}>Variants</Text>
         <Text style={styles.helperBody}>Add different size and color options</Text>
-        <TouchableOpacity style={styles.addSecondary}><IconSymbol name="add" size={18} color="#e61580" /><Text style={styles.addSecondaryText}>Add New Variant</Text></TouchableOpacity>
+        <TouchableOpacity
+          style={styles.addSecondary}
+          onPress={() => {
+            if (!isEditMode || !existing) {
+              Alert.alert(
+                'Save product first',
+                'Please add the product to your catalog. After it is added, open it from the Products list and use Add New Variant.',
+              );
+              return;
+            }
+            navigation.navigate('AddVariant', {
+              baseProduct: existing,
+            });
+          }}>
+          <IconSymbol name="add" size={18} color="#e61580" />
+          <Text style={styles.addSecondaryText}>Add New Variant</Text>
+        </TouchableOpacity>
 
         <Text style={styles.sectionHeader}>Tax Details <Text style={styles.optional}>(Optional)</Text></Text>
         <Text style={styles.helperBody}>Enter a valid HSN code with 2, 4, 6 or 8 digits.</Text>

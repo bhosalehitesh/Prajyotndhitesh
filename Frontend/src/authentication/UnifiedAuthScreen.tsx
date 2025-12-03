@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
-import { signup, verifyOtp, login as apiLogin } from '../utils/api';
+import { signup, verifyOtp, login as apiLogin, API_BASE_URL } from '../utils/api';
 import { useAuth } from './AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -115,9 +115,9 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
         console.log('Error message:', msg);
         
         if (msg.includes('timeout') || msg.includes('timed out')) {
-          errorMessage = 'Request timed out. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080';
+          errorMessage = `Request timed out. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`;
         } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
-          errorMessage = 'Network error. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080';
+          errorMessage = `Network error. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`;
         } else if (msg.includes('already exists') || msg.includes('seller already exists')) {
           errorMessage = 'An account with this mobile number already exists. Please sign in instead.';
         } else if (msg.includes('required') || msg.includes('invalid')) {
@@ -275,7 +275,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
           console.log('Error message:', msg);
           
           if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch') || msg.includes('network request failed')) {
-            errorMessage = 'Network error. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080';
+            errorMessage = `Network error. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`;
           } else if (msg.includes('not found') || msg.includes('seller not found') || msg.includes('account not found')) {
             errorMessage = 'No account found with this mobile number. Please sign up first.';
           } else if (msg.includes('password') || msg.includes('invalid password') || msg.includes('incorrect')) {

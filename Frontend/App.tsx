@@ -26,6 +26,8 @@ import AnalyticsScreen from './src/screens/Analytics/AnalyticsScreen';
 import ProfileScreen from './src/screens/Profile/ProfileScreen';
 import ProductsScreen from './src/screens/Catalog/products/ProductsScreen';
 import AddProductScreen from './src/screens/Catalog/products/AddProductScreen';
+import UpdateProductScreen from './src/screens/Catalog/products/UpdateProductScreen';
+import AddVariantScreen from './src/screens/Catalog/products/AddVariantScreen';
 import CategoriesScreen from './src/screens/Catalog/categories/CategoriesScreen';
 import AddCategoryScreen from './src/screens/Catalog/categories/AddCategoryScreen';
 import CollectionsScreen from './src/screens/Catalog/collections/CollectionsScreen';
@@ -43,6 +45,8 @@ function CatalogStack() {
       <Stack.Screen name="CatalogMain" component={CatalogScreen} />
       <Stack.Screen name="Products" component={ProductsScreen} />
       <Stack.Screen name="AddProduct" component={AddProductScreen} />
+      <Stack.Screen name="UpdateProduct" component={UpdateProductScreen} />
+      <Stack.Screen name="AddVariant" component={AddVariantScreen} />
       <Stack.Screen name="Categories" component={CategoriesScreen} />
       <Stack.Screen name="AddCategory" component={AddCategoryScreen} />
       <Stack.Screen name="EditCategory" component={AddCategoryScreen} />
