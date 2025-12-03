@@ -103,8 +103,23 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send OTP. Please try again.';
-      Alert.alert('Error', errorMessage);
+      console.error('Signup error:', error);
+      let errorMessage = 'Failed to send OTP. Please try again.';
+      
+      if (error instanceof Error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
+          errorMessage = 'Network error. Please check your internet connection and ensure the backend is running.';
+        } else if (msg.includes('already exists') || msg.includes('seller already exists')) {
+          errorMessage = 'An account with this mobile number already exists. Please sign in instead.';
+        } else if (msg.includes('required') || msg.includes('invalid')) {
+          errorMessage = error.message;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Signup Error', errorMessage);
     }
   };
 
@@ -231,8 +246,24 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       } catch (error) {
         setLoading(false);
         console.error('Login error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to sign in. Please check your credentials.';
-        Alert.alert('Error', errorMessage);
+        let errorMessage = 'Failed to sign in. Please check your credentials.';
+        
+        if (error instanceof Error) {
+          const msg = error.message.toLowerCase();
+          if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
+            errorMessage = 'Network error. Please check your internet connection and ensure the backend is running.';
+          } else if (msg.includes('not found') || msg.includes('seller not found')) {
+            errorMessage = 'No account found with this mobile number. Please sign up first.';
+          } else if (msg.includes('password') || msg.includes('invalid password') || msg.includes('incorrect')) {
+            errorMessage = 'Incorrect password. Please try again.';
+          } else if (msg.includes('verify') || msg.includes('otp')) {
+            errorMessage = 'Please verify your account with OTP first.';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+        
+        Alert.alert('Login Error', errorMessage);
       }
       } else {
         // OTP-based sign-in is not supported with current backend

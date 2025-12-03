@@ -42,6 +42,8 @@ const SF_TO_IONICONS_MAPPING: {[key: string]: string} = {
   // Navigation and UI icons
   'chevron-back': 'chevron-back',
   'chevron-forward': 'chevron-forward',
+  'chevron-up': 'chevron-up',
+  'chevron-down': 'chevron-down',
   'filter': 'options-outline',
   'swap-vertical': 'swap-vertical',
   'ellipsis-vertical': 'ellipsis-vertical',
@@ -55,7 +57,6 @@ const SF_TO_IONICONS_MAPPING: {[key: string]: string} = {
   'camera': 'camera-outline',
   'camera-outline': 'camera-outline',
   'image-outline': 'image-outline',
-  'chevron-down': 'chevron-down',
   'checkmark': 'checkmark',
   'logo-whatsapp': 'logo-whatsapp',
   'logo-snapchat': 'logo-snapchat',

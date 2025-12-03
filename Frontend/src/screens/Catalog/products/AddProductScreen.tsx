@@ -14,6 +14,7 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
+import ColorPicker from '../../../components/ColorPicker';
 import {launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse} from 'react-native-image-picker';
 import ViewShot, {captureRef} from 'react-native-view-shot';
 import { createProduct, uploadProductWithImages } from '../../../utils/api';
@@ -32,6 +33,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
   const [quantity, setQuantity] = useState('');
   const [sku, setSku] = useState('');
   const [color, setColor] = useState('');
+  const [colorHex, setColorHex] = useState('#000000');
   const [size, setSize] = useState('');
   const [hsn, setHsn] = useState('');
   const [bestSeller, setBestSeller] = useState(false);
@@ -166,7 +168,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
         productCategory: productCategory || undefined,
         inventoryQuantity: quantity ? Number(quantity) : undefined,
         customSku: sku || undefined,
-        color: color || undefined,
+        color: color || colorHex || undefined,
         size: size || undefined,
         hsnCode: hsn || undefined,
       };
@@ -327,8 +329,22 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation}) => {
         {/* Features */}
         <Text style={styles.sectionHeader}>Features</Text>
         <Text style={styles.helperBody}>Add color and size information about this product</Text>
-        <TextInput style={styles.input} placeholder="Select Color" placeholderTextColor="#9CA3AF" value={color} onChangeText={setColor} />
+        
+        <ColorPicker
+          colorName={color}
+          hexCode={colorHex}
+          onColorNameChange={setColor}
+          onHexCodeChange={setColorHex}
+          onColorChange={(hex) => {
+            setColorHex(hex);
+            // Optionally update color name based on hex if name is empty
+            if (!color.trim()) {
+              // You could add color name mapping here if needed
+            }
+          }}
+        />
         <Text style={styles.helper}>Maximum 50 characters</Text>
+        
         <TextInput style={styles.input} placeholder="Enter Size" placeholderTextColor="#9CA3AF" value={size} onChangeText={setSize} />
         <Text style={styles.helper}>Maximum 50 characters</Text>
 

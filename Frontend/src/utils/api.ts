@@ -81,34 +81,52 @@ const parseJsonOrText = async (response: Response): Promise<any> => {
 export const signup = async (data: SignupRequest): Promise<string> => {
   const url = `${API_BASE_URL}/api/sellers/signup-seller`;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      fullName: data.fullName,
-      phone: data.phone,
-      password: data.password,
-    }),
-  });
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fullName: data.fullName,
+        phone: data.phone,
+        password: data.password,
+      }),
+    });
 
-  const payload = await parseJsonOrText(response);
+    const payload = await parseJsonOrText(response);
 
-  if (!response.ok) {
-    const message =
-      typeof payload === 'string'
-        ? payload
-        : payload?.message || 'Signup failed';
-    throw new Error(message);
+    if (!response.ok) {
+      // Log detailed error for debugging
+      console.error('Signup API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        payload,
+        url,
+      });
+      
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || `Signup failed (${response.status}: ${response.statusText})`;
+      throw new Error(message);
+    }
+
+    // Expecting { message, otp } from backend
+    if (payload && typeof payload === 'object') {
+      return payload.otp || '';
+    }
+
+    return '';
+  } catch (error) {
+    // Handle network errors
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('Network error during signup:', error);
+      throw new Error('Network request failed. Please check your internet connection and ensure the backend is running.');
+    }
+    // Re-throw other errors
+    throw error;
   }
-
-  // Expecting { message, otp } from backend
-  if (payload && typeof payload === 'object') {
-    return payload.otp || '';
-  }
-
-  return '';
 };
 
 /**
@@ -172,44 +190,63 @@ export const sendLoginOtp = async (_phone: string): Promise<string> => {
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
   const url = `${API_BASE_URL}/api/sellers/login-seller`;
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      phone: data.phone,
-      password: data.password,
-    }),
-  });
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: data.phone,
+        password: data.password,
+      }),
+    });
 
-  const payload = await parseJsonOrText(response);
+    const payload = await parseJsonOrText(response);
 
-  if (!response.ok) {
-    const message =
-      typeof payload === 'string'
-        ? payload
-        : payload?.message || 'Login failed';
-    throw new Error(message);
+    if (!response.ok) {
+      // Log detailed error for debugging
+      console.error('Login API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        payload,
+        url,
+      });
+      
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || `Login failed (${response.status}: ${response.statusText})`;
+      throw new Error(message);
+    }
+
+    if (!payload || typeof payload !== 'object' || !payload.token) {
+      console.error('Invalid login response:', payload);
+      throw new Error('Invalid login response from server');
+    }
+
+    const userId =
+      typeof payload.userId === 'number'
+        ? payload.userId
+        : typeof payload.sellerId === 'number'
+        ? payload.sellerId
+        : NaN;
+
+    return {
+      token: payload.token,
+      userId,
+      fullName: payload.fullName ?? '',
+      phone: payload.phone ?? data.phone,
+    };
+  } catch (error) {
+    // Handle network errors
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('Network error during login:', error);
+      throw new Error('Network request failed. Please check your internet connection and ensure the backend is running.');
+    }
+    // Re-throw other errors
+    throw error;
   }
-
-  if (!payload || typeof payload !== 'object' || !payload.token) {
-    throw new Error('Invalid login response from server');
-  }
-
-  const userId =
-    typeof payload.userId === 'number'
-      ? payload.userId
-      : typeof payload.sellerId === 'number'
-      ? payload.sellerId
-      : NaN;
-
-  return {
-    token: payload.token,
-    userId,
-    fullName: payload.fullName ?? '',
-    phone: payload.phone ?? data.phone,
-  };
 };
 
 /**

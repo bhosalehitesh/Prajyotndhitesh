@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useMemo, useState, useRef} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -10,9 +10,14 @@ import {
   Modal,
   Pressable,
   Image,
+  Dimensions,
+  Animated,
 } from 'react-native';
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import IconSymbol from '../../../components/IconSymbol';
 import { fetchProducts, ProductDto } from '../../../utils/api';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface ProductsScreenProps {
   navigation: any;
@@ -35,6 +40,9 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
   const [discounts, setDiscounts] = useState<{[key: string]: boolean}>({});
   const [priceRange, setPriceRange] = useState<{min: number; max: number}>({min: 0, max: 0});
   const [sortBy, setSortBy] = useState<'title-az' | 'title-za' | 'price-low' | 'price-high' | 'disc-low' | 'disc-high'>('title-az');
+  
+  // Animation for refresh button
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   const handleAddProduct = () => {
     navigation.navigate('AddProduct');
@@ -46,6 +54,20 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
   const loadProducts = React.useCallback(async () => {
     try {
       setLoading(true);
+      
+      // Start continuous rotation animation
+      const startRotation = () => {
+        rotateAnim.setValue(0);
+        Animated.loop(
+          Animated.timing(rotateAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          })
+        ).start();
+      };
+      startRotation();
+      
       const apiProducts: ProductDto[] = await fetchProducts();
       const mapped = apiProducts.map(p => ({
         id: String(p.productsId),
@@ -60,8 +82,63 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
       console.error('Failed to load products', error);
     } finally {
       setLoading(false);
+      rotateAnim.stopAnimation();
+      rotateAnim.setValue(0);
     }
-  }, []);
+  }, [rotateAnim]);
+
+  // Comprehensive refresh function that resets everything and reloads
+  const refreshScreen = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Start continuous rotation animation
+      const startRotation = () => {
+        rotateAnim.setValue(0);
+        Animated.loop(
+          Animated.timing(rotateAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          })
+        ).start();
+      };
+      startRotation();
+      
+      // Reset all filters and state
+      setInventory('all');
+      setDiscounts({});
+      setPriceRange({min: 0, max: 0});
+      setSortBy('title-az');
+      setFilterTab('Inventory');
+      setActiveProductId(null);
+      
+      // Close all modals
+      setIsFilterOpen(false);
+      setIsSortOpen(false);
+      setActionSheetOpen(false);
+      setConfirmDeleteOpen(false);
+      setCollectionSheetOpen(false);
+      
+      // Reload products
+      const apiProducts: ProductDto[] = await fetchProducts();
+      const mapped = apiProducts.map(p => ({
+        id: String(p.productsId),
+        title: p.productName,
+        price: p.sellingPrice ?? 0,
+        mrp: p.mrp ?? undefined,
+        inStock: (p.inventoryQuantity ?? 0) > 0,
+        imageUrl: (p.productImages && p.productImages[0]) || (p.socialSharingImage ?? undefined),
+      }));
+      setProducts(mapped);
+    } catch (error) {
+      console.error('Failed to refresh products', error);
+    } finally {
+      setLoading(false);
+      rotateAnim.stopAnimation();
+      rotateAnim.setValue(0);
+    }
+  }, [rotateAnim]);
 
   // Load products whenever screen gains focus
   React.useEffect(() => {
@@ -90,14 +167,53 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
       return;
     }
     setPriceRange(prev => {
-      const nextMin = prev.min === 0 && prev.max === 0 ? absoluteMinPrice : Math.min(Math.max(prev.min || 0, absoluteMinPrice), absoluteMaxPrice);
-      const nextMax = prev.min === 0 && prev.max === 0 ? absoluteMaxPrice : Math.max(Math.min(prev.max || 0, absoluteMaxPrice), absoluteMinPrice);
+      // If range is not initialized (both are 0), set to full range
+      if (prev.min === 0 && prev.max === 0) {
+        return {
+          min: absoluteMinPrice,
+          max: absoluteMaxPrice,
+        };
+      }
+      // Otherwise, keep existing values but ensure they're in bounds
+      const nextMin = Math.min(Math.max(prev.min || absoluteMinPrice, absoluteMinPrice), prev.max || absoluteMaxPrice);
+      const nextMax = Math.max(Math.min(prev.max || absoluteMaxPrice, absoluteMaxPrice), nextMin);
       return {
-        min: isNaN(nextMin) ? 0 : nextMin,
-        max: isNaN(nextMax) ? 0 : nextMax,
+        min: isNaN(nextMin) ? absoluteMinPrice : nextMin,
+        max: isNaN(nextMax) ? absoluteMaxPrice : nextMax,
       };
     });
   }, [absoluteMinPrice, absoluteMaxPrice]);
+
+  // Initialize price range when Price Range tab is selected
+  React.useEffect(() => {
+    if (filterTab === 'Price Range') {
+      if (!isNaN(absoluteMinPrice) && !isNaN(absoluteMaxPrice) && absoluteMinPrice >= 0 && absoluteMaxPrice >= 0 && absoluteMinPrice <= absoluteMaxPrice) {
+        setPriceRange(prev => {
+          // Only initialize if both are 0
+          if (prev.min === 0 && prev.max === 0) {
+            return {
+              min: absoluteMinPrice,
+              max: absoluteMaxPrice,
+            };
+          }
+          // If one is set but the other is 0, fix the 0 one
+          if (prev.min === 0 && prev.max > 0) {
+            return {
+              min: absoluteMinPrice,
+              max: prev.max,
+            };
+          }
+          if (prev.max === 0 && prev.min > 0) {
+            return {
+              min: prev.min,
+              max: absoluteMaxPrice,
+            };
+          }
+          return prev;
+        });
+      }
+    }
+  }, [filterTab, absoluteMinPrice, absoluteMaxPrice]);
 
   // Helpers for discount calculation
   const getDiscountPercent = (p:{price:number; mrp?:number}) => {
@@ -111,8 +227,12 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
     // Inventory filter
     if (inventory === 'in') items = items.filter(p => p.inStock);
     if (inventory === 'out') items = items.filter(p => !p.inStock);
-    // Price filter
-    items = items.filter(p => p.price >= priceRange.min && p.price <= priceRange.max);
+    // Price filter - only apply if range is set (both values > 0)
+    if (priceRange.min > 0 || priceRange.max > 0) {
+      const minPrice = priceRange.min > 0 ? priceRange.min : absoluteMinPrice;
+      const maxPrice = priceRange.max > 0 ? priceRange.max : absoluteMaxPrice;
+      items = items.filter(p => p.price >= minPrice && p.price <= maxPrice);
+    }
     // Discount filter
     const selectedRanges = Object.keys(discounts).filter(k => discounts[k]);
     if (selectedRanges.length) {
@@ -179,8 +299,24 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
           <IconSymbol name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>All Products</Text>
-        <TouchableOpacity style={styles.headerRight} onPress={loadProducts}>
-          <IconSymbol name="refresh" size={22} color="#FFFFFF" />
+        <TouchableOpacity 
+          style={styles.headerRight} 
+          onPress={refreshScreen}
+          disabled={loading}
+          activeOpacity={0.7}
+        >
+          <Animated.View
+            style={{
+              transform: [{
+                rotate: rotateAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                }),
+              }],
+            }}
+          >
+            <IconSymbol name="refresh" size={22} color={loading ? "#CCCCCC" : "#FFFFFF"} />
+          </Animated.View>
         </TouchableOpacity>
       </View>
 
@@ -300,46 +436,58 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation}) => {
               )}
               {filterTab==='Price Range' && (
                 <>
-                  <View style={styles.priceHeaderRow}>
-                    <View>
-                      <Text style={styles.priceHeaderLabel}>Minimum</Text>
-                      <TextInput
-                        style={styles.priceInput}
-                        keyboardType="numeric"
-                        value={priceRange.min ? String(priceRange.min) : ''}
-                        placeholder={`₹${absoluteMinPrice}`}
-                        placeholderTextColor="#9CA3AF"
-                        onChangeText={(text) => {
-                          const raw = text.replace(/[^0-9]/g, '');
-                          const val = raw === '' ? absoluteMinPrice : parseInt(raw, 10);
-                          setPriceRange(prev => {
-                            const nextMin = Math.min(Math.max(val, absoluteMinPrice), prev.max || absoluteMaxPrice);
-                            return { min: nextMin, max: prev.max || absoluteMaxPrice };
-                          });
-                        }}
-                      />
+                  <View style={styles.priceRangeContainer}>
+                    <View style={styles.priceDisplayRow}>
+                      <View style={styles.priceDisplay}>
+                        <Text style={styles.priceLabel}>Minimum</Text>
+                        <Text style={styles.priceValue}>₹{priceRange.min > 0 ? priceRange.min : (absoluteMinPrice > 0 ? absoluteMinPrice : 0)}</Text>
+                      </View>
+                      <View style={styles.priceDisplay}>
+                        <Text style={styles.priceLabel}>Maximum</Text>
+                        <Text style={styles.priceValue}>₹{priceRange.max > 0 ? priceRange.max : (absoluteMaxPrice > 0 ? absoluteMaxPrice : 0)}</Text>
+                      </View>
                     </View>
-                    <View>
-                      <Text style={styles.priceHeaderLabel}>Maximum</Text>
-                      <TextInput
-                        style={styles.priceInput}
-                        keyboardType="numeric"
-                        value={priceRange.max ? String(priceRange.max) : ''}
-                        placeholder={`₹${absoluteMaxPrice}`}
-                        placeholderTextColor="#9CA3AF"
-                        onChangeText={(text) => {
-                          const raw = text.replace(/[^0-9]/g, '');
-                          const val = raw === '' ? absoluteMaxPrice : parseInt(raw, 10);
-                          setPriceRange(prev => {
-                            const baseMin = prev.min || absoluteMinPrice;
-                            const nextMax = Math.max(Math.min(val, absoluteMaxPrice), baseMin);
-                            return { min: baseMin, max: nextMax };
-                          });
-                        }}
-                      />
-                    </View>
+                    
+                    {/* Range Slider */}
+                    {absoluteMinPrice >= 0 && absoluteMaxPrice > absoluteMinPrice && (
+                      <View style={styles.rangeSliderWrapper}>
+                        <MultiSlider
+                          values={[
+                            Math.max(absoluteMinPrice, priceRange.min > 0 ? priceRange.min : absoluteMinPrice),
+                            Math.min(absoluteMaxPrice, priceRange.max > 0 ? priceRange.max : absoluteMaxPrice)
+                          ]}
+                          sliderLength={SCREEN_WIDTH - 180}
+                          onValuesChange={(values) => {
+                            const [minVal, maxVal] = values;
+                            const newMin = Math.round(Math.max(absoluteMinPrice, Math.min(minVal, maxVal)));
+                            const newMax = Math.round(Math.min(absoluteMaxPrice, Math.max(minVal, maxVal)));
+                            setPriceRange({
+                              min: newMin,
+                              max: newMax,
+                            });
+                          }}
+                          min={absoluteMinPrice}
+                          max={absoluteMaxPrice}
+                          step={1}
+                          allowOverlap={false}
+                          snapped
+                          selectedStyle={{
+                            backgroundColor: '#10B981',
+                          }}
+                          unselectedStyle={{
+                            backgroundColor: '#E5E7EB',
+                          }}
+                          containerStyle={styles.multiSliderContainer}
+                          trackStyle={styles.multiSliderTrack}
+                          markerStyle={styles.multiSliderMarker}
+                          pressedMarkerStyle={styles.multiSliderMarkerPressed}
+                        />
+                      </View>
+                    )}
+                    {(!absoluteMinPrice || absoluteMaxPrice <= absoluteMinPrice) && (
+                      <Text style={styles.sliderErrorText}>No products available to set price range</Text>
+                    )}
                   </View>
-                  <Text style={{color:'#6c757d', marginTop:8}}>Enter min and max price to filter products.</Text>
                 </>
               )}
             </View>
@@ -554,13 +702,13 @@ const styles = StyleSheet.create({
   actionText: {color:'#111827', fontSize:16},
   sheetHeaderRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
   sheetTitle: {fontSize: 18, fontWeight: 'bold', color: '#111827'},
-  clearAll: {color: '#9CA3AF', fontWeight: '600'},
+  clearAll: {color: '#10B981', fontWeight: '600'},
   sheetBody: {flexDirection: 'row', minHeight: 260},
   sheetTabs: {width: 120, borderRightWidth: 1, borderRightColor: '#dee2e6'},
   tabItem: {paddingVertical: 14, paddingHorizontal: 12},
-  tabItemActive: {backgroundColor: '#EEF2FF'},
+  tabItemActive: {backgroundColor: '#D1FAE5'},
   tabText: {color: '#111827'},
-  tabTextActive: {fontWeight: 'bold'},
+  tabTextActive: {color: '#10B981', fontWeight: 'bold'},
   sheetContent: {flex: 1, paddingHorizontal: 16},
   optionRow: {flexDirection: 'row', alignItems: 'center', paddingVertical: 12},
   optionLabel: {flex: 1, color: '#4B5563', fontSize: 16, marginLeft: 10},
@@ -570,9 +718,89 @@ const styles = StyleSheet.create({
   radioInner: {width: 10, height: 10, borderRadius: 5, backgroundColor: '#e61580'},
   checkbox: {width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF'},
   checkboxChecked: {backgroundColor: '#e61580', borderColor: '#e61580'},
-  priceHeaderRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16},
-  priceHeaderLabel: {color: '#6c757d', marginBottom: 6},
-  priceInput: {borderWidth:1, borderColor:'#E5E7EB', borderRadius:8, paddingHorizontal:10, paddingVertical:8, minWidth:100, color:'#111827'},
+  priceRangeContainer: {marginBottom: 16},
+  priceDisplayRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20},
+  priceDisplay: {alignItems: 'center'},
+  priceLabel: {color: '#6c757d', fontSize: 14, fontWeight: '500', marginBottom: 4},
+  priceValue: {color: '#111827', fontSize: 18, fontWeight: '600'},
+  rangeSliderWrapper: {
+    marginTop: 10,
+    marginBottom: 10,
+    marginHorizontal: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  multiSliderContainer: {
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  multiSliderTrack: {
+    height: 4,
+    borderRadius: 2,
+  },
+  multiSliderMarker: {
+    backgroundColor: '#FFFFFF',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#10B981',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  multiSliderMarkerPressed: {
+    backgroundColor: '#FFFFFF',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#10B981',
+  },
+  sliderErrorText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  sliderTrackContainer: {
+    height: 4,
+    position: 'absolute',
+    left: 10,
+    right: 10,
+    top: 23,
+    zIndex: 1,
+  },
+  sliderTrackBackground: {
+    position: 'absolute',
+    height: 4,
+    left: 0,
+    right: 0,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+  },
+  sliderTrackFilled: {
+    position: 'absolute',
+    height: 4,
+    backgroundColor: '#10B981',
+    borderRadius: 2,
+  },
+  sliderOverlayContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 50,
+    zIndex: 2,
+  },
+  rangeSlider: {
+    width: '100%',
+    height: 50,
+  },
   primaryCta: {backgroundColor: '#e61580', paddingVertical: 14, borderRadius: 12, marginTop: 12},
   primaryCtaText: {color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold'},
   deleteCard: {backgroundColor:'#FFFFFF', borderTopLeftRadius:16, borderTopRightRadius:16, padding:16},

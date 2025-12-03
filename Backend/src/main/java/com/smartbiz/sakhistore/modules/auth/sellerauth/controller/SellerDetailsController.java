@@ -59,8 +59,37 @@ public class SellerDetailsController {
     // SIGNUP -> sends OTP
     @PostMapping(value = "/signup-seller", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> signup(@RequestBody SignupRequest req) {
-        String otp = authService.signup(req.getFullName(), req.getPhone(), req.getPassword());
-        return ResponseEntity.ok(Map.of("message","OTP sent","otp",otp));
+        try {
+            if (req == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Request body is required"));
+            }
+            if (req.getFullName() == null || req.getFullName().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Full name is required"));
+            }
+            if (req.getPhone() == null || req.getPhone().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Phone number is required"));
+            }
+            if (req.getPassword() == null || req.getPassword().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Password is required"));
+            }
+            
+            String otp = authService.signup(req.getFullName(), req.getPhone(), req.getPassword());
+            return ResponseEntity.ok(Map.of("message","OTP sent","otp",otp));
+        } catch (RuntimeException ex) {
+            String message = ex.getMessage();
+            if (message == null || message.isEmpty()) {
+                message = "Signup failed";
+            }
+            // Log the exception for debugging
+            System.err.println("Signup error: " + ex.getClass().getName() + " - " + message);
+            ex.printStackTrace();
+            return ResponseEntity.status(400).body(Map.of("message", message));
+        } catch (Exception ex) {
+            // Log the exception for debugging
+            System.err.println("Signup unexpected error: " + ex.getClass().getName() + " - " + ex.getMessage());
+            ex.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("message", "Internal server error: " + ex.getMessage()));
+        }
     }
 
     // VERIFY signup OTP -> create token & return
@@ -82,9 +111,40 @@ public class SellerDetailsController {
     // LOGIN (returns token)
     @PostMapping(value = "/login-seller", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
-        String token = authService.login(req.getPhone(), req.getPassword());
-        var seller = userRepository.findByPhone(req.getPhone()).get();
-        return ResponseEntity.ok(new SellerAuthResponse(token, seller.getSellerId(), seller.getFullName(), seller.getPhone()));
+        try {
+            if (req == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Request body is required"));
+            }
+            if (req.getPhone() == null || req.getPhone().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Phone number is required"));
+            }
+            if (req.getPassword() == null || req.getPassword().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Password is required"));
+            }
+            
+            String token = authService.login(req.getPhone(), req.getPassword());
+            var sellerOpt = userRepository.findByPhone(req.getPhone());
+            if (!sellerOpt.isPresent()) {
+                return ResponseEntity.status(400).body(Map.of("message", "Seller not found"));
+            }
+            var seller = sellerOpt.get();
+            
+            return ResponseEntity.ok(new SellerAuthResponse(token, seller.getSellerId(), seller.getFullName(), seller.getPhone()));
+        } catch (RuntimeException ex) {
+            String message = ex.getMessage();
+            if (message == null || message.isEmpty()) {
+                message = "Login failed";
+            }
+            // Log the exception for debugging
+            System.err.println("Login error: " + ex.getClass().getName() + " - " + message);
+            ex.printStackTrace();
+            return ResponseEntity.status(400).body(Map.of("message", message));
+        } catch (Exception ex) {
+            // Log the exception for debugging
+            System.err.println("Login unexpected error: " + ex.getClass().getName() + " - " + ex.getMessage());
+            ex.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("message", "Internal server error: " + ex.getMessage()));
+        }
     }
 
     // RESEND signup OTP
@@ -124,35 +184,6 @@ public class SellerDetailsController {
         String token = authHeader.substring(7);
         authService.logout(token);
         return ResponseEntity.ok(Map.of("message","Logout successful"));
-    }
-    @PostMapping("/login-seller")
-    public ResponseEntity<?> loginA(@RequestBody LoginRequest request) {
-
-        try {
-            if (request.getPhone() == null || !request.getPhone().matches("\\d{10}"))
-                return ResponseEntity.badRequest().body("Valid phone is required");
-
-            if (request.getPassword() == null || request.getPassword().isEmpty())
-                return ResponseEntity.badRequest().body("Password required");
-
-            String token = authService.login(request.getPhone(), request.getPassword());
-
-            SellerDetails seller =
-                    userRepository.findByPhone(request.getPhone())
-                            .orElseThrow(() -> new RuntimeException("Seller not found"));
-
-            Map<String, Object> res = new HashMap<>();
-            res.put("message", "Login successful");
-            res.put("token", token);
-            res.put("sellerId", seller.getSellerId());
-            res.put("fullName", seller.getFullName());
-            res.put("phone", seller.getPhone());
-
-            return ResponseEntity.ok(res);
-
-        } catch (RuntimeException ex) {
-            return ResponseEntity.status(400).body(ex.getMessage());
-        }
     }
 
 }
