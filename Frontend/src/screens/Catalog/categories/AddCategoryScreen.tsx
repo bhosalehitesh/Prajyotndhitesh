@@ -183,10 +183,10 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
       );
     } catch (error) {
       console.error('Failed to save category', error);
-      Alert.alert(
-        'Error',
-        'Failed to save category. Please check your internet connection and try again.',
-      );
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to save category. Please check your internet connection and try again.';
+      Alert.alert('Error', errorMessage);
     }
   };
 

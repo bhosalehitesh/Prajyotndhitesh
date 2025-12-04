@@ -136,13 +136,13 @@ export const signup = async (data: SignupRequest): Promise<string> => {
     // Handle abort/timeout errors
     if (error.name === 'AbortError') {
       console.error('Signup request timed out');
-      throw new Error('Request timed out. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080');
+      throw new Error(`Request timed out. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`);
     }
     
     // Handle network errors
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
       console.error('Network error during signup:', error);
-      throw new Error('Network request failed. Please check your internet connection and ensure the backend is running at http://192.168.1.21:8080');
+      throw new Error(`Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`);
     }
     
     // Re-throw other errors
@@ -661,7 +661,7 @@ export const uploadCategoryWithImages = async (params: {
     params.seoMetaDescription ?? params.description ?? '',
   );
 
-  // Attach category image (backend accepts multiple; we send at most one)
+  // Attach category image (backend now accepts optional files)
   if (params.imageUri) {
     form.append('categoryImages', {
       uri: params.imageUri,
@@ -670,36 +670,47 @@ export const uploadCategoryWithImages = async (params: {
     } as any);
   }
 
-  // Social sharing image – use same image if provided, or send empty stub
+  // Social sharing image (backend now accepts optional files)
   if (params.imageUri) {
     form.append('socialSharingImage', {
       uri: params.imageUri,
       name: `social_${Date.now()}.jpg`,
       type: 'image/jpeg',
     } as any);
-  } else {
-    form.append('socialSharingImage', '' as any);
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: form,
-  });
+  try {
+    console.log('Uploading category:', { categoryName: params.categoryName, hasImage: !!params.imageUri });
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: form,
+    });
 
-  const payload = await parseJsonOrText(response);
+    const payload = await parseJsonOrText(response);
+    console.log('Category upload response:', { status: response.status, payload });
 
-  if (!response.ok) {
-    const message =
-      typeof payload === 'string'
-        ? payload
-        : payload?.message || 'Failed to create category';
-    throw new Error(message);
+    if (!response.ok) {
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || `Failed to create category (${response.status}: ${response.statusText})`;
+      console.error('Category upload failed:', { status: response.status, payload, message });
+      throw new Error(message);
+    }
+
+    return payload as CategoryDto;
+  } catch (error) {
+    console.error('Category upload error:', error);
+    // Re-throw with more context if it's not already an Error
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to create category: ${String(error)}`);
   }
-
-  return payload as CategoryDto;
 };
 
 /**

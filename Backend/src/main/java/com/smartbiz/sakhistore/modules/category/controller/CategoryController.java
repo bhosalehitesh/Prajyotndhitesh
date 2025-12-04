@@ -34,8 +34,8 @@ public class CategoryController {
             @RequestParam("description") String description,
             @RequestParam("seoTitleTag") String seoTitleTag,
             @RequestParam("seoMetaDescription") String seoMetaDescription,
-            @RequestParam("categoryImages") List<MultipartFile> categoryImages,
-            @RequestParam("socialSharingImage") MultipartFile socialSharingImage
+            @RequestParam(value = "categoryImages", required = false) List<MultipartFile> categoryImages,
+            @RequestParam(value = "socialSharingImage", required = false) MultipartFile socialSharingImage
     ) {
         try {
             Category category = categoryService.uploadCategoryWithImages(
