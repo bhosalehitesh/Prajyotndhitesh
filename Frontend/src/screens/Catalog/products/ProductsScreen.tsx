@@ -12,10 +12,15 @@ import {
   Image,
   Dimensions,
   Animated,
+  Share,
+  Alert,
+  Platform,
+  Linking,
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import IconSymbol from '../../../components/IconSymbol';
 import { fetchProducts, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto } from '../../../utils/api';
+import { storage } from '../../../authentication/storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -99,6 +104,86 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       console.error('Failed to load collections for Add to Collection', error);
     }
   }, []);
+
+  const handleShare = async () => {
+    if (!activeProduct) {
+      Alert.alert('Error', 'No product selected');
+      setActionSheetOpen(false);
+      return;
+    }
+
+    // Close action sheet first
+    setActionSheetOpen(false);
+    
+    // Small delay to ensure action sheet closes before share sheet opens
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    try {
+      // Get store link from storage
+      const storeLink = await storage.getItem('storeLink');
+      const storeName = await storage.getItem('storeName') || 'My Store';
+      
+      // Build product share message
+      let shareMessage = `🛍️ ${activeProduct.title}\n\n`;
+      
+      // Add price information
+      if (activeProduct.mrp && activeProduct.mrp > activeProduct.price) {
+        const discount = Math.round(((activeProduct.mrp - activeProduct.price) / activeProduct.mrp) * 100);
+        shareMessage += `💰 Price: ₹${activeProduct.price}\n`;
+        shareMessage += `💵 MRP: ₹${activeProduct.mrp}\n`;
+        shareMessage += `🎉 ${discount}% OFF\n\n`;
+      } else {
+        shareMessage += `💰 Price: ₹${activeProduct.price}\n\n`;
+      }
+      
+      // Add description if available
+      if (activeProduct.description) {
+        shareMessage += `${activeProduct.description}\n\n`;
+      }
+      
+      // Add stock status
+      if (activeProduct.inStock) {
+        shareMessage += `✅ In Stock\n`;
+      } else {
+        shareMessage += `❌ Out of Stock\n`;
+      }
+      
+      // Add store link
+      if (storeLink) {
+        shareMessage += `\n🏪 Shop at: ${storeLink}`;
+      } else {
+        shareMessage += `\n🏪 Shop at: ${storeName}`;
+      }
+      
+      console.log('Sharing product:', activeProduct.title);
+      console.log('Share message:', shareMessage);
+      
+      // Use native Android/iOS share sheet
+      // This will show the native share sheet with all available apps on the device
+      const result = await Share.share({
+        message: shareMessage,
+        title: activeProduct.title,
+      });
+      
+      console.log('Share result:', result);
+      
+      // Log result for debugging
+      if (result.action === Share.sharedAction) {
+        console.log('Product shared successfully via:', result.activityType || 'unknown');
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed by user');
+      }
+    } catch (error: any) {
+      console.error('Error sharing product:', error);
+      // Only show error if it's not a user cancellation
+      const errorMessage = error?.message || String(error);
+      if (!errorMessage.includes('User did not share') && 
+          !errorMessage.includes('cancelled') && 
+          !errorMessage.includes('dismissed')) {
+        Alert.alert('Error', 'Failed to share product. Please try again.');
+      }
+    }
+  };
 
   const loadProducts = React.useCallback(async () => {
     try {
@@ -753,6 +838,12 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             }}>
             <Text style={styles.actionText}>Add to Collection</Text>
             <IconSymbol name="chevron-forward" size={18} color="#10B981" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={handleShare}>
+            <Text style={styles.actionText}>Share Product</Text>
+            <IconSymbol name="share" size={18} color="#10B981" />
           </TouchableOpacity>
         </View>
       </Modal>

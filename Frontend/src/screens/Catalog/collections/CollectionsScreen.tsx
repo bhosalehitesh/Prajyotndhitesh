@@ -40,7 +40,6 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [messageOpacity] = useState(new Animated.Value(0));
 
@@ -86,71 +85,45 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
     });
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     setBottomSheetOpen(false);
-    setShareSheetOpen(true);
-  };
-
-  const shareContent = {
-    message: `Check out this collection: ${activeCollection?.name}\n\n${activeCollection?.description || 'Explore this collection on our app!'}`,
-    title: activeCollection?.name || 'Collection',
-  };
-
-  const shareViaApp = async (app: string) => {
-    const {message, title} = shareContent;
     
-    try {
-      switch (app) {
-        case 'whatsapp':
-          const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
-          const canOpenWhatsApp = await Linking.canOpenURL(whatsappUrl);
-          if (canOpenWhatsApp) {
-            await Linking.openURL(whatsappUrl);
-          } else {
-            Alert.alert('WhatsApp not installed', 'Please install WhatsApp to share');
-          }
-          break;
-        
-        case 'messages':
-          if (Platform.OS === 'ios') {
-            const smsUrl = `sms:&body=${encodeURIComponent(message)}`;
-            await Linking.openURL(smsUrl);
-          } else {
-            const smsUrl = `sms:?body=${encodeURIComponent(message)}`;
-            await Linking.openURL(smsUrl);
-          }
-          break;
-        
-        case 'chrome':
-          const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(title)}`;
-          await Linking.openURL(searchUrl);
-          break;
-        
-        case 'snapchat':
-          await Share.share({
-            message: message,
-            title: title,
-          });
-          break;
-        
-        case 'quick-share':
-        case 'system':
-        default:
-          await Share.share({
-            message: message,
-            title: title,
-          });
-          break;
-      }
-      setShareSheetOpen(false);
-    } catch (error) {
-      console.error('Error sharing:', error);
-      Alert.alert('Error', 'Unable to share. Please try again.');
+    if (!activeCollection) {
+      Alert.alert('Error', 'No collection selected');
+      return;
     }
-  };
 
-  const shareViaContact = async (contactName: string, app: string) => {
-    await shareViaApp(app);
+    // Small delay to ensure bottom sheet closes before share sheet opens
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    try {
+      const shareMessage = `Check out this collection: ${activeCollection.name}\n\n${activeCollection.description || 'Explore this collection on our app!'}`;
+      
+      console.log('Sharing collection:', activeCollection.name);
+      
+      // Use native Android/iOS share sheet - shows all available apps on the device
+      const result = await Share.share({
+        message: shareMessage,
+        title: activeCollection.name,
+      });
+      
+      console.log('Share result:', result);
+      
+      if (result.action === Share.sharedAction) {
+        console.log('Collection shared successfully via:', result.activityType || 'unknown');
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed by user');
+      }
+    } catch (error: any) {
+      console.error('Error sharing collection:', error);
+      // Only show error if it's not a user cancellation
+      const errorMessage = error?.message || String(error);
+      if (!errorMessage.includes('User did not share') && 
+          !errorMessage.includes('cancelled') && 
+          !errorMessage.includes('dismissed')) {
+        Alert.alert('Error', 'Failed to share collection. Please try again.');
+      }
+    }
   };
 
   const handleDeletePress = () => {
@@ -345,140 +318,6 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
             <TouchableOpacity style={styles.actionRow} onPress={handleDeletePress}>
               <Text style={[styles.actionRowText, styles.deleteText]}>Delete Collection</Text>
               <IconSymbol name="trash" size={20} color="#B91C1C" />
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Share Sheet Modal */}
-      <Modal
-        transparent
-        visible={shareSheetOpen}
-        animationType="slide"
-        onRequestClose={() => setShareSheetOpen(false)}>
-        <Pressable
-          style={styles.backdrop}
-          onPress={() => setShareSheetOpen(false)}>
-          <Pressable style={styles.shareSheet} onPress={e => e.stopPropagation()}>
-            <Text style={styles.shareSheetTitle}>Share</Text>
-            
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.shareRow}
-              contentContainerStyle={styles.shareRowContent}>
-              <TouchableOpacity 
-                style={styles.shareContactItem}
-                onPress={() => shareViaContact('Mandir Galli', 'whatsapp')}>
-                <View style={styles.shareContactAvatar}>
-                  <IconSymbol name="person" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.shareContactName} numberOfLines={1}>
-                  मंदिर गल्ली
-                </Text>
-                <View style={[styles.shareAppBadge, styles.whatsappBadge]}>
-                  <IconSymbol name="logo-whatsapp" size={12} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.shareContactItem}
-                onPress={() => shareViaContact('Bloodlines', 'whatsapp')}>
-                <View style={styles.shareContactAvatar}>
-                  <IconSymbol name="people" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.shareContactName} numberOfLines={1}>
-                  Bloodlines & Better...
-                </Text>
-                <View style={[styles.shareAppBadge, styles.whatsappBadge]}>
-                  <IconSymbol name="logo-whatsapp" size={12} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.shareContactItem}
-                onPress={() => shareViaContact('Kalpesh', 'whatsapp')}>
-                <View style={styles.shareContactAvatar}>
-                  <IconSymbol name="person" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.shareContactName} numberOfLines={1}>
-                  Kalpesh Trd
-                </Text>
-                <View style={[styles.shareAppBadge, styles.whatsappBadge]}>
-                  <IconSymbol name="logo-whatsapp" size={12} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.shareContactItem}
-                onPress={() => shareViaContact('Hitesh', 'snapchat')}>
-                <View style={styles.shareContactAvatar}>
-                  <IconSymbol name="person" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.shareContactName} numberOfLines={1}>
-                  Hitesh7722
-                </Text>
-                <View style={[styles.shareAppBadge, styles.snapchatBadge]}>
-                  <IconSymbol name="logo-snapchat" size={12} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-            </ScrollView>
-
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.shareRow}
-              contentContainerStyle={styles.shareRowContent}>
-              <TouchableOpacity 
-                style={styles.shareAppItem}
-                onPress={() => shareViaApp('quick-share')}>
-                <View style={[styles.shareAppIcon, styles.quickShareIcon]}>
-                  <IconSymbol name="share" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.shareAppName}>Quick Share</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.shareAppItem}
-                onPress={() => shareViaApp('whatsapp')}>
-                <View style={[styles.shareAppIcon, styles.whatsappIcon]}>
-                  <IconSymbol name="logo-whatsapp" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.shareAppName}>WhatsApp</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.shareAppItem}
-                onPress={() => shareViaApp('messages')}>
-                <View style={[styles.shareAppIcon, styles.messagesIcon]}>
-                  <IconSymbol name="chatbubble" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.shareAppName}>Messages</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.shareAppItem}
-                onPress={() => shareViaApp('chrome')}>
-                <View style={[styles.shareAppIcon, styles.chromeIcon]}>
-                  <IconSymbol name="globe" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.shareAppName}>Chrome</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.shareAppItem}
-                onPress={() => shareViaApp('snapchat')}>
-                <View style={[styles.shareAppIcon, styles.snapchatIcon]}>
-                  <IconSymbol name="logo-snapchat" size={24} color="#FFFFFF" />
-                </View>
-                <Text style={styles.shareAppName}>Snapchat</Text>
-              </TouchableOpacity>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.shareCancelButton}
-              onPress={() => setShareSheetOpen(false)}>
-              <Text style={styles.shareCancelText}>Cancel</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -730,112 +569,6 @@ const styles = StyleSheet.create({
   cancelModalButtonText: {
     color: '#111827',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  shareSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 8,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-    maxHeight: '80%',
-  },
-  shareSheetTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  shareRow: {
-    marginBottom: 20,
-  },
-  shareRowContent: {
-    paddingHorizontal: 4,
-  },
-  shareContactItem: {
-    alignItems: 'center',
-    marginRight: 16,
-    width: 80,
-  },
-  shareContactAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#6c757d',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    position: 'relative',
-  },
-  shareContactName: {
-    fontSize: 12,
-    color: '#111827',
-    textAlign: 'center',
-    maxWidth: 80,
-  },
-  shareAppBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  whatsappBadge: {
-    backgroundColor: '#25D366',
-  },
-  snapchatBadge: {
-    backgroundColor: '#FFFC00',
-  },
-  shareAppItem: {
-    alignItems: 'center',
-    marginRight: 20,
-    width: 80,
-  },
-  shareAppIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  quickShareIcon: {
-    backgroundColor: '#3B82F6',
-  },
-  whatsappIcon: {
-    backgroundColor: '#25D366',
-  },
-  messagesIcon: {
-    backgroundColor: '#F97316',
-  },
-  chromeIcon: {
-    backgroundColor: '#4285F4',
-  },
-  snapchatIcon: {
-    backgroundColor: '#FFFC00',
-  },
-  shareAppName: {
-    fontSize: 12,
-    color: '#111827',
-    textAlign: 'center',
-  },
-  shareCancelButton: {
-    backgroundColor: '#f8f9fa',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  shareCancelText: {
-    fontSize: 16,
-    color: '#111827',
     fontWeight: '600',
   },
   successMessageContainer: {
