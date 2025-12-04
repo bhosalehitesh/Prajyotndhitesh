@@ -52,7 +52,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     const updatedData = { ...onboardingData, storeName };
     setOnboardingData(updatedData);
 
-    const slug = storeName.toLowerCase().replace(/\s+/g, '-');
+    const slug = storeName.toLowerCase();
     const storeLink = `sakhi.store/${slug}`;
 
     // Save store name/link locally for Home screen, etc.
@@ -129,7 +129,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     // Ensure store name is also saved separately
     if (updatedData.storeName) {
       await storage.setItem('storeName', updatedData.storeName);
-      await storage.setItem('storeLink', `sakhi.store/${updatedData.storeName.toLowerCase().replace(/\s+/g, '-')}`);
+      await storage.setItem('storeLink', `sakhi.store/${updatedData.storeName.toLowerCase()}`);
     }
 
     // Persist business details to backend
@@ -148,7 +148,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     // Double-check: also ensure store name is saved
     if (onboardingData.storeName) {
       await storage.setItem('storeName', onboardingData.storeName);
-      await storage.setItem('storeLink', `sakhi.store/${onboardingData.storeName.toLowerCase().replace(/\s+/g, '-')}`);
+      await storage.setItem('storeLink', `sakhi.store/${onboardingData.storeName.toLowerCase()}`);
     }
     
     // Verify it was saved

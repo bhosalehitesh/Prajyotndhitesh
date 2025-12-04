@@ -101,10 +101,12 @@ const StoreNameScreen: React.FC<StoreNameScreenProps> = ({ onNext, onBack }) => 
                 placeholderTextColor="#9ca3af"
                 value={storeName}
                 onChangeText={(text) => {
-                  setStoreName(text);
+                  // Only allow alphabets, numbers, and underscores
+                  const filteredText = text.replace(/[^a-zA-Z0-9_]/g, '');
+                  setStoreName(filteredText);
                   setIsAvailable(null);
                 }}
-                autoCapitalize="words"
+                autoCapitalize="none"
                 maxLength={50}
               />
               {storeName.length >= 3 && (
@@ -134,7 +136,7 @@ const StoreNameScreen: React.FC<StoreNameScreenProps> = ({ onNext, onBack }) => 
                 style={styles.input}
                 placeholder="www.sakhi.store/your-store"
                 placeholderTextColor="#9ca3af"
-                value={storeName.trim() ? `www.sakhi.store/${storeName.trim().toLowerCase().replace(/\s+/g, '-')}` : ''}
+                value={storeName.trim() ? `www.sakhi.store/${storeName.trim().toLowerCase()}` : ''}
                 editable={false}
               />
               <Text style={styles.storeLinkHelp}>
