@@ -21,7 +21,7 @@ export const API_BASE_URL_DEV = 'http://localhost:8080';
 // Replace with your actual IP address (find it using: ipconfig on Windows)
 // Example: export const API_BASE_URL_DEV_IP = 'http://192.168.1.100:8080';
 // NOTE: This was last updated based on your current Wi‑Fi IPv4 address from `ipconfig`.
-export const API_BASE_URL_DEV_IP = 'http://192.168.1.19:8080'; // Updated with your actual local IP
+export const API_BASE_URL_DEV_IP = 'http://192.168.1.96:8080'; // Updated with your actual local IP
 
 // Production URL
 export const API_BASE_URL_PROD = 'https://your-production-api.com';
