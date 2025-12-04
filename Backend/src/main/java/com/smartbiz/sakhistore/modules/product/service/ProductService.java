@@ -155,6 +155,33 @@ public class ProductService{
         return productRepository.save(product);
     }
 
+    // ✅ Update all editable fields of a product (without changing seller or images)
+    public Product updateProduct(Long productId, Product updated) {
+        Product existing = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
+
+        // Basic fields
+        existing.setProductName(updated.getProductName());
+        existing.setDescription(updated.getDescription());
+        existing.setMrp(updated.getMrp());
+        existing.setSellingPrice(updated.getSellingPrice());
+        existing.setInventoryQuantity(updated.getInventoryQuantity());
+        existing.setBusinessCategory(updated.getBusinessCategory());
+        existing.setProductCategory(updated.getProductCategory());
+        existing.setCustomSku(updated.getCustomSku());
+        existing.setColor(updated.getColor());
+        existing.setSize(updated.getSize());
+        existing.setVariant(updated.getVariant());
+        existing.setHsnCode(updated.getHsnCode());
+        existing.setSeoTitleTag(updated.getSeoTitleTag());
+        existing.setSeoMetaDescription(updated.getSeoMetaDescription());
+
+        // NOTE: We intentionally do NOT modify productImages, socialSharingImage or seller here.
+        // Image updates are handled via the upload endpoint; seller relation stays the same.
+
+        return productRepository.save(existing);
+    }
+
     //  Get all unique product categories
     public List<String> getAllProductCategories() {
         return productRepository.findAllDistinctProductCategories();

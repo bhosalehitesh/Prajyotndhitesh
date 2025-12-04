@@ -85,6 +85,15 @@ public class ProductController {
         return ResponseEntity.ok("✅ Product with ID " + id + " deleted successfully.");
     }
 
+    // ✅ Update product details (JSON, no image upload)
+    @PutMapping("/{id}")
+    public ResponseEntity<Product> updateProduct(
+            @PathVariable Long id,
+            @RequestBody Product product) {
+        Product updated = productService.updateProduct(id, product);
+        return ResponseEntity.ok(updated);
+    }
+
     // ✅ Update inventory quantity (stock) for a product
     @PutMapping("/{id}/stock")
     public ResponseEntity<Product> updateProductStock(

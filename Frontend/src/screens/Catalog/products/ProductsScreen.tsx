@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import IconSymbol from '../../../components/IconSymbol';
-import { fetchProducts, ProductDto, deleteProduct as deleteProductApi, updateProductStock } from '../../../utils/api';
+import { fetchProducts, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto } from '../../../utils/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -30,9 +30,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [collectionSheetOpen, setCollectionSheetOpen] = useState(false);
-  const [collections, setCollections] = useState<string[]>(['Rfgg','Vhh']);
+  const [collections, setCollections] = useState<Array<{id: string; name: string}>>([]);
   const [selectedCollections, setSelectedCollections] = useState<Record<string, boolean>>({});
-  const [newCollectionName, setNewCollectionName] = useState('');
   const [products, setProducts] = useState<Array<{
     id: string;
     title: string;
@@ -40,8 +39,33 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     mrp?: number;
     inStock: boolean;
     imageUrl?: string;
+    images?: string[];
     businessCategory?: string;
     productCategory?: string;
+    description?: string;
+    inventoryQuantity?: number;
+    sku?: string;
+    color?: string;
+    size?: string;
+    hsnCode?: string;
+    variantCount?: number;
+    variants?: Array<{
+      id: string;
+      title: string;
+      price: number;
+      mrp?: number;
+      inStock: boolean;
+      imageUrl?: string;
+      images?: string[];
+      businessCategory?: string;
+      productCategory?: string;
+      description?: string;
+      inventoryQuantity?: number;
+      sku?: string;
+      color?: string;
+      size?: string;
+      hsnCode?: string;
+    }>;
   }>>([]);
   const [loading, setLoading] = useState(false);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
@@ -62,6 +86,19 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   };
 
   const activeProduct = useMemo(() => products.find(p=>p.id===activeProductId) || null, [products, activeProductId]);
+
+  const loadCollectionsForSheet = React.useCallback(async () => {
+    try {
+      const apiCollections = await fetchCollectionsWithCounts();
+      const mapped = apiCollections.map(col => ({
+        id: String(col.collectionId),
+        name: col.collectionName,
+      }));
+      setCollections(mapped);
+    } catch (error) {
+      console.error('Failed to load collections for Add to Collection', error);
+    }
+  }, []);
 
   const loadProducts = React.useCallback(async () => {
     try {
@@ -87,9 +124,18 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         price: p.sellingPrice ?? 0,
         mrp: p.mrp ?? undefined,
         inStock: (p.inventoryQuantity ?? 0) > 0,
-        imageUrl: (p.productImages && p.productImages[0]) || (p.socialSharingImage ?? undefined),
+        imageUrl:
+          (p.productImages && p.productImages[0]) ||
+          (p.socialSharingImage ?? undefined),
+        images: p.productImages ?? [],
         businessCategory: p.businessCategory,
         productCategory: p.productCategory,
+        description: p.description,
+        inventoryQuantity: p.inventoryQuantity,
+        sku: p.customSku,
+        color: p.color,
+        size: p.size,
+        hsnCode: p.hsnCode,
       }));
       setProducts(mapped);
     } catch (error) {
@@ -338,6 +384,43 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     return map;
   }, [products]);
 
+  // Group variants by base product (name + categories)
+  const groupedProducts = useMemo(() => {
+    const groups = new Map<string, {base: any; variants: any[]}>();
+
+    filteredProducts.forEach(p => {
+      const key = `${(p.title || '').toLowerCase().trim()}|${(p.businessCategory || '').toLowerCase().trim()}|${(p.productCategory || '').toLowerCase().trim()}`;
+      const existing = groups.get(key);
+      if (!existing) {
+        groups.set(key, {base: p, variants: [p]});
+      } else {
+        existing.variants.push(p);
+        // Use lowest price as representative
+        if ((p.price ?? 0) < (existing.base.price ?? 0)) {
+          existing.base = p;
+        }
+      }
+    });
+
+    return Array.from(groups.values()).map(({base, variants}) => {
+      const prices = variants
+        .map(v => v.price)
+        .filter(v => typeof v === 'number' && !isNaN(v) && v >= 0);
+      const minPrice = prices.length ? Math.min(...prices) : base.price;
+
+      // find mrp corresponding to min price variant (if available)
+      const minVariant = variants.find(v => v.price === minPrice) || base;
+
+      return {
+        ...base,
+        price: minPrice,
+        mrp: minVariant.mrp ?? base.mrp,
+        variantCount: variants.length,
+        variants,
+      };
+    });
+  }, [filteredProducts]);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -393,13 +476,22 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
 
       {/* Main Content - Product List */}
       <ScrollView style={styles.content}>
-        {loading && products.length === 0 && (
-          <View style={{alignItems:'center', marginVertical:16}}>
-            <Text style={{color:'#6c757d'}}>Loading products...</Text>
+        {loading && groupedProducts.length === 0 && (
+          <View style={{alignItems: 'center', marginVertical: 16}}>
+            <Text style={{color: '#6c757d'}}>Loading products...</Text>
           </View>
         )}
-        {filteredProducts.map(item => (
-          <View key={item.id} style={styles.card}>
+        {groupedProducts.map(item => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.card}
+            activeOpacity={0.8}
+            onPress={() =>
+              navigation.navigate('AddProduct', {
+                mode: 'edit',
+                product: item,
+              })
+            }>
             {item.imageUrl ? (
               <Image source={{uri: item.imageUrl}} style={styles.thumbImage} />
             ) : (
@@ -407,25 +499,39 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                 <IconSymbol name="image-outline" size={18} color="#9CA3AF" />
               </View>
             )}
-            <View style={{flex:1}}>
+            <View style={{flex: 1}}>
               <Text style={styles.title}>{item.title}</Text>
-              <View style={{flexDirection:'row', alignItems:'center', gap:8}}>
+              {!!item.variantCount && item.variantCount > 1 && (
+                <Text style={styles.variantCountText}>
+                  {item.variantCount} Variant{item.variantCount > 1 ? 's' : ''}
+                </Text>
+              )}
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
                 <Text style={styles.price}>₹{item.price}</Text>
                 {item.mrp ? <Text style={styles.mrp}>₹{item.mrp}</Text> : null}
               </View>
               {!item.inStock && (
                 <View style={styles.stockBadgeRow}>
                   <Text style={styles.outOfStockBadge}>Out of Stock</Text>
-                  <TouchableOpacity onPress={() => { setActiveProductId(item.id); setActionSheetOpen(true); }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setActiveProductId(item.id);
+                      setActionSheetOpen(true);
+                    }}>
                     <Text style={styles.updateInventory}>Update Inventory</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
-            <TouchableOpacity style={styles.kebab} onPress={() => { setActiveProductId(item.id); setActionSheetOpen(true); }}>
+            <TouchableOpacity
+              style={styles.kebab}
+              onPress={() => {
+                setActiveProductId(item.id);
+                setActionSheetOpen(true);
+              }}>
               <IconSymbol name="ellipsis-vertical" size={18} color="#111827" />
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         ))}
 
         {/* Add Product Button (bottom) */}
@@ -434,7 +540,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           onPress={handleAddProduct}>
           <Text style={styles.addButtonText}>Add New Product</Text>
         </TouchableOpacity>
-        {filteredProducts.length === 0 && (
+        {groupedProducts.length === 0 && (
           <View style={{alignItems:'center', marginBottom:24}}>
             <Text style={{color:'#6c757d'}}>No products match your filters</Text>
           </View>
@@ -629,7 +735,22 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             <Text style={styles.actionText}>Delete</Text>
             <IconSymbol name="chevron-forward" size={18} color="#10B981" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionRow} onPress={() => { setActionSheetOpen(false); setCollectionSheetOpen(true); }}>
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={async () => {
+              if (!activeProductId) {
+                setActionSheetOpen(false);
+                return;
+              }
+              try {
+                await loadCollectionsForSheet();
+                setCollectionSheetOpen(true);
+              } catch (e) {
+                // already logged in loader
+              } finally {
+                setActionSheetOpen(false);
+              }
+            }}>
             <Text style={styles.actionText}>Add to Collection</Text>
             <IconSymbol name="chevron-forward" size={18} color="#10B981" />
           </TouchableOpacity>
@@ -672,26 +793,76 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       </Modal>
 
       {/* Select Collection Bottom Sheet */}
-      <Modal transparent visible={collectionSheetOpen} animationType="slide" onRequestClose={() => setCollectionSheetOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setCollectionSheetOpen(false)} />
+      <Modal
+        transparent
+        visible={collectionSheetOpen}
+        animationType="slide"
+        onRequestClose={() => setCollectionSheetOpen(false)}>
+        <Pressable
+          style={styles.backdrop}
+          onPress={() => setCollectionSheetOpen(false)}
+        />
         <View style={styles.collectionSheet}>
-          <Text style={[styles.sheetTitle,{marginBottom:8}]}>Select a Collection</Text>
-          <TouchableOpacity style={styles.addCollectionRow} onPress={() => {
-            if (!newCollectionName.trim()) {
-              setNewCollectionName('New Collection');
-            }
-            const name = newCollectionName.trim();
-            if (name && !collections.includes(name)) setCollections(prev=>[name,...prev]);
-          }}>
+          <Text style={[styles.sheetTitle, {marginBottom: 8}]}>
+            Select a Collection
+          </Text>
+          <TouchableOpacity
+            style={styles.addCollectionRow}
+            onPress={() => {
+              setCollectionSheetOpen(false);
+              navigation.navigate('AddCollection');
+            }}>
             <IconSymbol name="add" size={18} color="#e61580" />
-            <Text style={{color:'#e61580', marginLeft:8, fontWeight:'600'}}>Add a Collection</Text>
+            <Text
+              style={{
+                color: '#e61580',
+                marginLeft: 8,
+                fontWeight: '600',
+              }}>
+              Add a Collection
+            </Text>
           </TouchableOpacity>
           {collections.map(c => (
-            <TouchableOpacity key={c} style={styles.collectionRow} onPress={() => setSelectedCollections(p=>({...p,[c]:!p[c]}))}>
-              <Text style={styles.collectionName}>{c}</Text>
-              <View style={[styles.checkBox, selectedCollections[c] && styles.checkBoxChecked]} />
+            <TouchableOpacity
+              key={c.id}
+              style={styles.collectionRow}
+              onPress={() =>
+                setSelectedCollections(p => ({
+                  ...p,
+                  [c.id]: !p[c.id],
+                }))
+              }>
+              <Text style={styles.collectionName}>{c.name}</Text>
+              <View
+                style={[
+                  styles.checkBox,
+                  selectedCollections[c.id] && styles.checkBoxChecked,
+                ]}
+              />
             </TouchableOpacity>
           ))}
+          <TouchableOpacity
+            style={[styles.primaryCta, {marginTop: 16}]}
+            onPress={async () => {
+              if (!activeProductId) {
+                setCollectionSheetOpen(false);
+                return;
+              }
+              const selectedIds = Object.keys(selectedCollections).filter(
+                id => selectedCollections[id],
+              );
+              try {
+                for (const collectionId of selectedIds) {
+                  await addProductToCollection(collectionId, activeProductId);
+                }
+              } catch (e) {
+                console.error('Failed to add product to collections', e);
+              } finally {
+                setCollectionSheetOpen(false);
+              }
+            }}>
+            <Text style={styles.primaryCtaText}>Add to Selected Collections</Text>
+          </TouchableOpacity>
         </View>
       </Modal>
     </SafeAreaView>
@@ -771,6 +942,7 @@ const styles = StyleSheet.create({
   thumbImage: {width:60, height:60, borderRadius:8, marginRight:8},
   thumbPlaceholder: {width:60, height:60, borderRadius:8, backgroundColor:'#E5E7EB', marginRight:8, alignItems:'center', justifyContent:'center'},
   title: {fontWeight:'600', color:'#111827'},
+  variantCountText: {marginTop: 2, fontSize: 13, color: '#6c757d'},
   price: {fontWeight:'bold', color:'#111827'},
   mrp: {textDecorationLine:'line-through', color:'#9CA3AF'},
   kebab: {padding:8},

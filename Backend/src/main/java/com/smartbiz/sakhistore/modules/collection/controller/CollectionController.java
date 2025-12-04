@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+        import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -117,6 +117,15 @@ public class CollectionController {
             @PathVariable Long id,
             @RequestParam("hide") boolean hide) {
         collection updated = collectionService.updateHideFromWebsite(id, hide);
+        return ResponseEntity.ok(updated);
+    }
+
+    // ✅ Add a single product to an existing collection (from Products screen)
+    @PostMapping("/{id}/add-product")
+    public ResponseEntity<collection> addProductToCollection(
+            @PathVariable Long id,
+            @RequestParam("productId") Long productId) {
+        collection updated = collectionService.addProductToCollection(id, productId);
         return ResponseEntity.ok(updated);
     }
 }

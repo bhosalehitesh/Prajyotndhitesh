@@ -165,4 +165,37 @@ public class CollectionService {
     public long countProductsForCollection(Long collectionId) {
         return productRepository.countByCollections_CollectionId(collectionId);
     }
+
+    /**
+     * Add a single product to an existing collection without removing other products.
+     */
+    @Transactional
+    public collection addProductToCollection(Long collectionId, Long productId) {
+        collection col = findById(collectionId);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
+
+        // Link collection -> product
+        List<Product> products = col.getProducts();
+        if (products == null) {
+            products = new ArrayList<>();
+            col.setProducts(products);
+        }
+        if (!products.contains(product)) {
+            products.add(product);
+        }
+
+        // Link product -> collection (owning side)
+        List<collection> cols = product.getCollections();
+        if (cols == null) {
+            cols = new ArrayList<>();
+            product.setCollections(cols);
+        }
+        if (!cols.contains(col)) {
+            cols.add(col);
+        }
+
+        productRepository.save(product);
+        return collectionRepository.save(col);
+    }
 }
