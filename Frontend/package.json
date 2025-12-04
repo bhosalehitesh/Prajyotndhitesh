@@ -10,7 +10,10 @@
     "test": "jest",
     "setup-adb": "adb reverse tcp:8080 tcp:8080 && echo ADB reverse port forwarding set up successfully!",
     "check-adb": "adb devices",
-    "android-with-adb": "npm run setup-adb && react-native run-android"
+    "android-with-adb": "npm run setup-adb && react-native run-android",
+    "android:build": "cd android && ./gradlew assembleDebug",
+    "android:transfer": "adb push android/app/build/outputs/apk/debug/app-debug.apk /sdcard/Download/sakhic.apk",
+    "android:build-transfer": "npm run android:build && npm run android:transfer && echo APK built and transferred! Install manually from Downloads folder."
   },
   "dependencies": {
     "@ptomasroos/react-native-multi-slider": "^2.2.2",

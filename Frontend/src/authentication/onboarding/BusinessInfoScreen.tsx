@@ -9,6 +9,8 @@ import {
   Dimensions,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useHeaderActions } from '../../utils/headerActions';
+import ChatBot from '../../components/ChatBot';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -41,6 +43,8 @@ const BusinessInfoScreen: React.FC<BusinessInfoScreenProps> = ({ onNext, onBack 
   const [hasBusiness, setHasBusiness] = useState<string>('');
   const [businessSize, setBusinessSize] = useState<string>('');
   const [platforms, setPlatforms] = useState<string[]>([]);
+  const [showChat, setShowChat] = useState(false);
+  const { handleHelp, handleLogout, HelpModal } = useHeaderActions();
 
   const togglePlatform = (platform: string) => {
     setPlatforms((prev) =>
@@ -81,11 +85,11 @@ const BusinessInfoScreen: React.FC<BusinessInfoScreenProps> = ({ onNext, onBack 
             </Text>
           </View>
           <View style={styles.headerLinks}>
-            <TouchableOpacity style={styles.headerLink}>
+            <TouchableOpacity style={styles.headerLink} onPress={handleHelp}>
               <MaterialCommunityIcons name="help-circle-outline" size={18} color="#ffffff" />
               <Text style={styles.headerLinkText}>Help</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.headerLink}>
+            <TouchableOpacity style={styles.headerLink} onPress={handleLogout}>
               <MaterialCommunityIcons name="logout" size={18} color="#ffffff" />
               <Text style={styles.headerLinkText}>Logout</Text>
             </TouchableOpacity>
@@ -193,11 +197,14 @@ const BusinessInfoScreen: React.FC<BusinessInfoScreenProps> = ({ onNext, onBack 
           </View>
         </View>
 
-        {/* Chat Support */}
-        <TouchableOpacity style={styles.chatButton}>
-          <MaterialCommunityIcons name="message-text" size={24} color="#ffffff" />
-        </TouchableOpacity>
       </ScrollView>
+      
+      {/* Chat Support - Fixed at bottom */}
+      <TouchableOpacity style={styles.chatButton} onPress={() => setShowChat(true)}>
+        <MaterialCommunityIcons name="message-text" size={24} color="#ffffff" />
+      </TouchableOpacity>
+      <HelpModal />
+      <ChatBot isModal={true} visible={showChat} onBack={() => setShowChat(false)} />
     </SafeAreaView>
   );
 };
@@ -399,6 +406,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+    zIndex: 1000,
   },
 });
 

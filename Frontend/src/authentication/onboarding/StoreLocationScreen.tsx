@@ -11,10 +11,10 @@ import {
   Platform,
   Alert,
   Dimensions,
-  ActivityIndicator,
-  PermissionsAndroid,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useHeaderActions } from '../../utils/headerActions';
+import ChatBot from '../../components/ChatBot';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -31,149 +31,8 @@ const StoreLocationScreen: React.FC<StoreLocationScreenProps> = ({ onNext, onBac
   const [addressLine1, setAddressLine1] = useState('');
   const [addressLine2, setAddressLine2] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-
-  // Request location permissions
-  const requestLocationPermission = async () => {
-    if (Platform.OS === 'android') {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          {
-            title: 'Location Permission',
-            message: 'Sakhi Store needs access to your location to fill in your address.',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'OK',
-          }
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-      } catch (err) {
-        console.warn(err);
-        return false;
-      }
-    }
-    return true; // iOS handles permissions automatically
-  };
-
-  // Reverse geocode coordinates to address
-  const reverseGeocode = async (latitude: number, longitude: number) => {
-    try {
-      // Using OpenStreetMap Nominatim API (free, no API key required)
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'SakhiStoreApp/1.0', // Required by Nominatim
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Geocoding failed');
-      }
-
-      const data = await response.json();
-      const address = data.address || {};
-
-      // Build address line 1 (house number, building, road)
-      const address1Parts = [];
-      if (address.house_number) address1Parts.push(address.house_number);
-      if (address.road) address1Parts.push(address.road);
-      if (address.building) address1Parts.push(address.building);
-      const address1 = address1Parts.join(', ') || address.road || '';
-
-      // Build address line 2 (area, locality, suburb, village)
-      const address2Parts = [];
-      if (address.suburb) address2Parts.push(address.suburb);
-      if (address.neighbourhood) address2Parts.push(address.neighbourhood);
-      if (address.village) address2Parts.push(address.village);
-      if (address.locality) address2Parts.push(address.locality);
-      const address2 = address2Parts.join(', ') || address.locality || '';
-
-      return {
-        addressLine1: address1,
-        addressLine2: address2,
-        landmark: address.landmark || '',
-      };
-    } catch (error) {
-      console.error('Reverse geocoding error:', error);
-      throw error;
-    }
-  };
-
-  const handleUseCurrentLocation = async () => {
-    try {
-      setIsLoadingLocation(true);
-
-      // Request permission
-      const hasPermission = await requestLocationPermission();
-      if (!hasPermission) {
-        Alert.alert(
-          'Permission Denied',
-          'Location permission is required to use your current location. Please enable it in your device settings.',
-          [{ text: 'OK' }]
-        );
-        setIsLoadingLocation(false);
-        return;
-      }
-
-      // Get current position
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
-            
-            // Reverse geocode to get address
-            const addressData = await reverseGeocode(latitude, longitude);
-            
-            // Populate the fields
-            setAddressLine1(addressData.addressLine1);
-            setAddressLine2(addressData.addressLine2);
-            if (addressData.landmark) {
-              setLandmark(addressData.landmark);
-            }
-
-            setIsLoadingLocation(false);
-            Alert.alert('Success', 'Your location has been detected and address fields have been filled.');
-          } catch (error) {
-            setIsLoadingLocation(false);
-            Alert.alert(
-              'Error',
-              'Unable to get your address. Please enter it manually.',
-              [{ text: 'OK' }]
-            );
-          }
-        },
-        (error) => {
-          setIsLoadingLocation(false);
-          let errorMessage = 'Unable to get your location. Please enter it manually.';
-          
-          if (error.code === 1) {
-            errorMessage = 'Location access denied. Please enable location services in your device settings.';
-          } else if (error.code === 2) {
-            errorMessage = 'Location unavailable. Please check your GPS settings.';
-          } else if (error.code === 3) {
-            errorMessage = 'Location request timed out. Please try again.';
-          }
-
-          Alert.alert('Location Error', errorMessage, [{ text: 'OK' }]);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 10000,
-        }
-      );
-    } catch (error) {
-      setIsLoadingLocation(false);
-      Alert.alert(
-        'Error',
-        'An error occurred while accessing your location. Please enter your address manually.',
-        [{ text: 'OK' }]
-      );
-    }
-  };
+  const [showChat, setShowChat] = useState(false);
+  const { handleHelp, handleLogout, HelpModal } = useHeaderActions();
 
   const handleNext = () => {
     if (addressLine1.trim().length === 0 || addressLine2.trim().length === 0) {
@@ -207,11 +66,11 @@ const StoreLocationScreen: React.FC<StoreLocationScreenProps> = ({ onNext, onBac
               </Text>
             </View>
             <View style={styles.headerLinks}>
-              <TouchableOpacity style={styles.headerLink}>
+              <TouchableOpacity style={styles.headerLink} onPress={handleHelp}>
                 <MaterialCommunityIcons name="help-circle-outline" size={18} color="#ffffff" />
                 <Text style={styles.headerLinkText}>Help</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.headerLink}>
+              <TouchableOpacity style={styles.headerLink} onPress={handleLogout}>
                 <MaterialCommunityIcons name="logout" size={18} color="#ffffff" />
                 <Text style={styles.headerLinkText}>Logout</Text>
               </TouchableOpacity>
@@ -231,31 +90,6 @@ const StoreLocationScreen: React.FC<StoreLocationScreenProps> = ({ onNext, onBac
             <Text style={styles.subtitle}>
               Feel free to change your shop location at any time from your profile.
             </Text>
-
-            <TouchableOpacity
-              style={[styles.locationButton, isLoadingLocation && styles.locationButtonDisabled]}
-              onPress={handleUseCurrentLocation}
-              activeOpacity={0.8}
-              disabled={isLoadingLocation}
-            >
-              {isLoadingLocation ? (
-                <>
-                  <ActivityIndicator size="small" color="#e61580" />
-                  <Text style={styles.locationButtonText}>Getting location...</Text>
-                </>
-              ) : (
-                <>
-                  <MaterialCommunityIcons name="map-marker" size={20} color="#e61580" />
-                  <Text style={styles.locationButtonText}>Use my current location</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>
@@ -308,13 +142,15 @@ const StoreLocationScreen: React.FC<StoreLocationScreenProps> = ({ onNext, onBac
               <Text style={styles.nextButtonText}>Next</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Chat Support */}
-          <TouchableOpacity style={styles.chatButton}>
-            <MaterialCommunityIcons name="message-text" size={24} color="#ffffff" />
-          </TouchableOpacity>
         </ScrollView>
+        
+        {/* Chat Support - Fixed at bottom */}
+        <TouchableOpacity style={styles.chatButton} onPress={() => setShowChat(true)}>
+          <MaterialCommunityIcons name="message-text" size={24} color="#ffffff" />
+        </TouchableOpacity>
       </KeyboardAvoidingView>
+      <HelpModal />
+      <ChatBot isModal={true} visible={showChat} onBack={() => setShowChat(false)} />
     </SafeAreaView>
   );
 };
@@ -403,41 +239,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     lineHeight: 20,
   },
-  locationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#e61580',
-    borderRadius: 10,
-    paddingVertical: 14,
-    marginBottom: 24,
-    gap: 8,
-  },
-  locationButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#e61580',
-  },
-  locationButtonDisabled: {
-    opacity: 0.6,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e5e7eb',
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 14,
-    color: '#6b7280',
-    fontWeight: '500',
-  },
   inputContainer: {
     marginBottom: 20,
   },
@@ -493,6 +294,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+    zIndex: 1000,
   },
 });
 

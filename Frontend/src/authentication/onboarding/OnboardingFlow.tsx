@@ -8,6 +8,7 @@ import BusinessInfoScreen from './BusinessInfoScreen';
 import CongratulationsScreen from './CongratulationsScreen';
 import { storage } from '../storage';
 import { saveStoreDetails, saveStoreAddress, saveBusinessDetails } from '../../utils/api';
+import { useHeaderActions } from '../../utils/headerActions';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
