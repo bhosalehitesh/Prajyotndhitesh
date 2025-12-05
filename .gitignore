@@ -87,6 +87,10 @@ dist/
 .env.local
 .env.*.local
 
+# Local API configuration (per-developer settings)
+**/apiConfig.local.ts
+Frontend/src/utils/apiConfig.local.ts
+
 # IDE
 *.swp
 *.swo
