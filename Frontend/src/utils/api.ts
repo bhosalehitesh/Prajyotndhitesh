@@ -200,11 +200,52 @@ export const verifyOtp = async (data: VerifyOtpRequest): Promise<AuthResponse> =
 };
 
 /**
- * Send OTP for login (NOT supported on backend yet).
- * For now this is a stub that always throws.
+ * Send OTP for login.
+ * Backend: POST /api/sellers/login-otp-seller
+ * Body: { phone }
+ * Returns: { message, otp }
  */
-export const sendLoginOtp = async (_phone: string): Promise<string> => {
-  throw new Error('OTP login is not supported with the current backend. Please use password login.');
+export const sendLoginOtp = async (phone: string): Promise<string> => {
+  const url = `${API_BASE_URL}/api/sellers/login-otp-seller`;
+  const cleanPhone = phone.replace(/\D/g, '');
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: cleanPhone,
+      }),
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || `Failed to send login OTP (${response.status}: ${response.statusText})`;
+      throw new Error(message);
+    }
+
+    // Expecting { message, otp } from backend
+    if (payload && typeof payload === 'object') {
+      const otp = payload.otp || '';
+      console.log('Login OTP sent successfully');
+      return otp;
+    }
+
+    return '';
+  } catch (error: any) {
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      throw new Error(
+        `Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
+      );
+    }
+    throw error;
+  }
 };
 
 /**
@@ -292,11 +333,57 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
 };
 
 /**
- * Login with OTP (NOT supported on backend yet).
- * For now this is a stub that always throws.
+ * Login with OTP.
+ * Backend: POST /api/sellers/verify-login-otp-seller
+ * Body: { phone, code }
+ * Returns: { token, sellerId, fullName, phone }
  */
-export const loginWithOtp = async (_phone: string, _otpCode: string): Promise<AuthResponse> => {
-  throw new Error('OTP login is not supported with the current backend. Please use password login.');
+export const loginWithOtp = async (phone: string, otpCode: string): Promise<AuthResponse> => {
+  const url = `${API_BASE_URL}/api/sellers/verify-login-otp-seller`;
+  const cleanPhone = phone.replace(/\D/g, '');
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: cleanPhone,
+        code: otpCode,
+      }),
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || 'OTP verification failed';
+      throw new Error(message);
+    }
+
+    if (!payload || typeof payload !== 'object' || !payload.token) {
+      throw new Error('Invalid OTP login response from server');
+    }
+
+    const userId = typeof payload.sellerId === 'number' ? payload.sellerId : NaN;
+
+    return {
+      token: payload.token,
+      userId: userId || 0,
+      fullName: payload.fullName ?? '',
+      phone: payload.phone ?? cleanPhone,
+    };
+  } catch (error: any) {
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      throw new Error(
+        `Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
+      );
+    }
+    throw error;
+  }
 };
 
 /**
@@ -422,6 +509,38 @@ export const saveStoreDetails = async (
  * Fetch store details for the current seller.
  * Backend: GET /api/stores/by-seller?sellerId=...
  */
+/**
+ * Get seller details by sellerId.
+ * Backend: GET /api/sellers/{sellerId}
+ * Returns: SellerDetails with fullName, phone, sellerId, etc.
+ */
+export const getSellerDetails = async (sellerId: string | number): Promise<any | null> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof sellerId === 'string' ? sellerId : String(sellerId);
+  const url = `${API_BASE_URL}/api/sellers/${id}`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return payload;
+  } catch (error) {
+    console.error('Error fetching seller details:', error);
+    return null;
+  }
+};
+
 export const getCurrentSellerStoreDetails = async (): Promise<StoreDetailsResponse | null> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userIdRaw = await storage.getItem('userId');
@@ -812,22 +931,47 @@ export const deleteCollection = async (collectionId: string | number): Promise<v
   const id = typeof collectionId === 'string' ? collectionId : String(collectionId);
   const url = `${API_BASE_URL}/api/collections/${id}`;
 
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
 
-  const payload = await parseJsonOrText(response);
+    const payload = await parseJsonOrText(response);
 
-  if (!response.ok) {
-    const message =
-      typeof payload === 'string'
-        ? payload
-        : payload?.message || 'Failed to delete collection';
-    throw new Error(message);
+    if (!response.ok) {
+      // Log detailed error for debugging
+      console.error('Delete collection API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        payload,
+        url,
+        collectionId: id,
+      });
+
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || `Failed to delete collection (${response.status}: ${response.statusText})`;
+      throw new Error(message);
+    }
+
+    // Success - log for debugging
+    console.log('Collection deleted successfully:', { collectionId: id, payload });
+  } catch (error: any) {
+    // Handle network errors
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      console.error('Network error during collection deletion:', error);
+      throw new Error(
+        `Network error. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
+      );
+    }
+    
+    // Re-throw other errors
+    throw error;
   }
 };
 

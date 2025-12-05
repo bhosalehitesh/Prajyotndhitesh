@@ -17,6 +17,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Count products in a specific collection
     long countByCollections_CollectionId(Long collectionId);
+    
+    // Find all products in a specific collection
+    @Query("SELECT p FROM Product p JOIN p.collections c WHERE c.collectionId = :collectionId")
+    List<Product> findByCollections_CollectionId(@Param("collectionId") Long collectionId);
 
     // Get distinct product categories
     @Query("SELECT DISTINCT p.productCategory FROM Product p WHERE p.productCategory IS NOT NULL")

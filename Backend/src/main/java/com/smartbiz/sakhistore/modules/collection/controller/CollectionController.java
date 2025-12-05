@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
         import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/collections")
@@ -68,9 +69,24 @@ public class CollectionController {
 
     // ✅ Delete collection
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Long id) {
-        collectionService.deleteCollection(id);
-        return ResponseEntity.ok("✅ Collection with ID " + id + " deleted successfully.");
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        try {
+            System.out.println("========== DELETE COLLECTION REQUEST ==========");
+            System.out.println("Collection ID: " + id);
+            collectionService.deleteCollection(id);
+            System.out.println("Collection deleted successfully");
+            System.out.println("================================================");
+            return ResponseEntity.ok("✅ Collection with ID " + id + " deleted successfully.");
+        } catch (NoSuchElementException e) {
+            System.err.println("Collection not found: " + id);
+            return ResponseEntity.status(404).body("Collection not found with ID: " + id);
+        } catch (Exception e) {
+            System.err.println("========== CONTROLLER ERROR ==========");
+            System.err.println("Error deleting collection " + id + ": " + e.getMessage());
+            e.printStackTrace();
+            System.err.println("======================================");
+            return ResponseEntity.status(500).body("Failed to delete collection: " + e.getMessage());
+        }
     }
 
     // ✅ Get all collection names

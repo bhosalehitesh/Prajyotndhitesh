@@ -137,6 +137,40 @@ public class SellerDetailsService {
             return newToken;
         }
 
+        // LOGIN OTP: send OTP for login
+        @Transactional
+        public String sendLoginOtp(String phone) {
+            SellerDetails seller = sellerRepo.findByPhone(phone)
+                    .orElseThrow(() -> new RuntimeException("Seller not found"));
+            if (!seller.isEnabled()) {
+                throw new RuntimeException("Account not verified. Please verify OTP first.");
+            }
+            return otpService.generateForgotOtp(phone); // Reuse forgot OTP generation
+        }
+
+        // LOGIN OTP: verify OTP and create token
+        @Transactional
+        public String verifyLoginOtpAndCreateToken(String phone, String otpCode) {
+            boolean ok = otpService.verifyForgotOtp(phone, otpCode);
+            if (!ok) return null;
+
+            SellerDetails seller = sellerRepo.findByPhone(phone)
+                    .orElseThrow(() -> new RuntimeException("Seller not found"));
+
+            if (!seller.isEnabled()) {
+                throw new RuntimeException("Account not verified");
+            }
+
+            String token = jwtService.generateToken(seller);
+            Date exp = jwtService.extractExpiration(token);
+            LocalDateTime expiresAt = exp.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+
+            Token tokenEntity = new Token(token, expiresAt, seller);
+            tokenRepo.save(tokenEntity);
+
+            return token;
+        }
+
         // LOGOUT -> mark token revoked and expired
         @Transactional
         public void logout(String tokenStr) {

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
-import { login } from '../utils/api';
+import { login, sendLoginOtp, loginWithOtp, getSellerDetails, getCurrentSellerStoreDetails } from '../utils/api';
 import { useAuth } from './AuthContext';
 
 interface SignInScreenProps {
@@ -21,9 +21,6 @@ interface SignInScreenProps {
 type SignInMethod = 'password' | 'otp';
 
 // Generate OTP utility function
-const generateOtp = (): string => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
 
 const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchToSignUp }) => {
   const auth = useAuth();
@@ -53,23 +50,31 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchTo
       return;
     }
 
-    // Check if account exists
-    const cleanMobile = mobileNumber.replace(/\D/g, '');
-    const existingPhone = await storage.getItem(AUTH_PHONE_KEY);
-    if (!existingPhone || existingPhone !== cleanMobile) {
-      Alert.alert(
-        'Account Not Found',
-        'No account found with this mobile number. Please sign up first.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
     setLoading(true);
-    const code = generateOtp();
-    setOtpSent(code);
-    setLoading(false);
-    // Don't show alert - OTP is displayed on screen
+    const cleanMobile = mobileNumber.replace(/\D/g, '');
+
+    try {
+      const otp = await sendLoginOtp(cleanMobile);
+      setOtpSent(otp || '');
+      setSignInMethod('otp');
+      // OTP will be shown in console (dev mode) or sent via SMS (production)
+      if (otp) {
+        console.log('Login OTP:', otp);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send OTP. Please try again.';
+      if (errorMessage.includes('not found')) {
+        Alert.alert(
+          'Account Not Found',
+          'No account found with this mobile number. Please sign up first.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignIn = async () => {
@@ -99,6 +104,30 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchTo
         await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
         await storage.setItem(AUTH_PHONE_KEY, authResponse.phone);
         await storage.setItem('userName', authResponse.fullName);
+        await storage.setItem('userId', authResponse.userId?.toString() || '');
+        
+        // Fetch and store seller details and store details
+        try {
+          if (authResponse.userId) {
+            // Fetch seller details
+            const sellerDetails = await getSellerDetails(authResponse.userId);
+            if (sellerDetails) {
+              await storage.setItem('userName', sellerDetails.fullName || authResponse.fullName || '');
+              await storage.setItem('sellerDetails', JSON.stringify(sellerDetails));
+            }
+            
+            // Fetch store details
+            const storeDetails = await getCurrentSellerStoreDetails();
+            if (storeDetails) {
+              await storage.setItem('storeName', storeDetails.storeName || '');
+              await storage.setItem('storeLink', storeDetails.storeLink || '');
+              await storage.setItem('storeId', storeDetails.storeId?.toString() || '');
+            }
+          }
+        } catch (error) {
+          console.warn('Could not fetch user details after login:', error);
+          // Continue with login even if details fetch fails
+        }
         
         setLoading(false);
         onAuthenticated();
@@ -125,12 +154,64 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchTo
         }
       }
     } else {
-      // OTP sign in - not available yet (backend needs to implement)
-      Alert.alert(
-        'Info',
-        'OTP login is not available yet. Please use password login. OTP login will be available soon.',
-        [{ text: 'OK' }]
-      );
+      // OTP sign in
+      if (!isOtpValid) {
+        Alert.alert('Validation', 'Please enter a valid 6-digit OTP.');
+        return;
+      }
+
+      setLoading(true);
+      const cleanMobile = mobileNumber.replace(/\D/g, '');
+
+      try {
+        const authResponse = await loginWithOtp(cleanMobile, otp);
+
+        // Store auth token and user info
+        await auth.login(authResponse.token);
+        await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
+        await storage.setItem(AUTH_PHONE_KEY, authResponse.phone);
+        await storage.setItem('userName', authResponse.fullName);
+        await storage.setItem('userId', authResponse.userId?.toString() || '');
+        
+        // Fetch and store seller details and store details
+        try {
+          if (authResponse.userId) {
+            // Fetch seller details
+            const sellerDetails = await getSellerDetails(authResponse.userId);
+            if (sellerDetails) {
+              await storage.setItem('userName', sellerDetails.fullName || authResponse.fullName || '');
+              await storage.setItem('sellerDetails', JSON.stringify(sellerDetails));
+            }
+            
+            // Fetch store details
+            const storeDetails = await getCurrentSellerStoreDetails();
+            if (storeDetails) {
+              await storage.setItem('storeName', storeDetails.storeName || '');
+              await storage.setItem('storeLink', storeDetails.storeLink || '');
+              await storage.setItem('storeId', storeDetails.storeId?.toString() || '');
+            }
+          }
+        } catch (error) {
+          console.warn('Could not fetch user details after OTP login:', error);
+          // Continue with login even if details fetch fails
+        }
+        
+        setLoading(false);
+        onAuthenticated();
+      } catch (error) {
+        setLoading(false);
+        const errorMessage = error instanceof Error ? error.message : 'OTP verification failed';
+        
+        if (errorMessage.includes('Invalid OTP') || errorMessage.includes('Incorrect')) {
+          Alert.alert('Error', 'Incorrect OTP. Please try again.');
+        } else if (errorMessage.includes('expired')) {
+          Alert.alert('Error', 'OTP expired. Please request a new one.');
+        } else if (errorMessage.includes('not found')) {
+          Alert.alert('Error', 'No account found with this mobile number. Please sign up first.');
+        } else {
+          Alert.alert('Error', errorMessage);
+        }
+      }
     }
   };
 

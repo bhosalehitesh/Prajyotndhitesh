@@ -5,6 +5,8 @@ import com.smartbiz.sakhistore.modules.collection.model.collection;
 import com.smartbiz.sakhistore.modules.collection.repository.CollectionRepository;
 import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,9 @@ public class CollectionService {
 
     @Autowired
     private ProductRepository productRepository;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     // ✅ Upload Collection with Multiple Images (collection + socialSharingImage)
     public collection uploadCollectionWithImages(
@@ -97,9 +102,45 @@ public class CollectionService {
     }
 
     // ✅ Delete collection
+    @Transactional
     public void deleteCollection(Long id) {
+        // Verify collection exists (will throw NoSuchElementException if not found)
         collection col = findById(id);
-        collectionRepository.delete(col);
+        
+        try {
+            // Get all products that have this collection
+            List<Product> productsWithCollection = productRepository.findByCollections_CollectionId(id);
+            
+            // Remove this collection from all products (owning side controls the relationship)
+            if (productsWithCollection != null && !productsWithCollection.isEmpty()) {
+                for (Product product : productsWithCollection) {
+                    List<collection> productCollections = product.getCollections();
+                    if (productCollections != null) {
+                        // Remove the collection from the product's list
+                        productCollections.removeIf(c -> c != null && c.getCollectionId() != null && c.getCollectionId().equals(id));
+                    }
+                }
+                // Save products to update the join table
+                productRepository.saveAll(productsWithCollection);
+                productRepository.flush();
+            }
+            
+            // Now delete the collection itself
+            collectionRepository.delete(col);
+            collectionRepository.flush();
+            
+        } catch (NoSuchElementException e) {
+            throw e; // Re-throw as-is
+        } catch (Exception e) {
+            System.err.println("========== ERROR DELETING COLLECTION ==========");
+            System.err.println("Collection ID: " + id);
+            System.err.println("Error Type: " + e.getClass().getName());
+            System.err.println("Error Message: " + e.getMessage());
+            System.err.println("Stack Trace:");
+            e.printStackTrace();
+            System.err.println("================================================");
+            throw new RuntimeException("Failed to delete collection with ID " + id + ": " + e.getMessage(), e);
+        }
     }
 
     // ✅ Get all collection names

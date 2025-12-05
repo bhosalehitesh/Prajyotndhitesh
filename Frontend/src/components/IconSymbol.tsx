@@ -64,6 +64,8 @@ const SF_TO_IONICONS_MAPPING: {[key: string]: string} = {
   'chatbubble': 'chatbubble-outline',
   'globe': 'globe-outline',
   'checkmark-circle': 'checkmark-circle',
+  'notifications': 'notifications-outline',
+  'alert-circle': 'alert-circle-outline',
   'calendar': 'calendar-outline',
   'logo-amazon': 'logo-amazon',
   // Home screen icons
