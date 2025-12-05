@@ -1,0 +1,20 @@
+/**
+ * Local API Configuration (Gitignored)
+ * 
+ * Copy this file to apiConfig.local.ts and customize for your local setup.
+ * This file is gitignored, so each developer can have their own settings.
+ * 
+ * To use IP address instead of localhost:
+ * 1. Copy this file: cp apiConfig.local.ts.example apiConfig.local.ts
+ *    Or run: npm run setup-local-ip (auto-detects your IP)
+ * 2. Set USE_IP_ADDRESS = true
+ * 3. Set your IP address in API_BASE_URL_DEV_IP
+ * 
+ * To use localhost (default, recommended):
+ * - Don't create this file, or set USE_IP_ADDRESS = false
+ * - Make sure to run: npm run setup-adb
+ */
+
+export const USE_IP_ADDRESS = false; // Set to true to use IP address instead of localhost
+export const API_BASE_URL_DEV_IP = 'http://YOUR_IP_HERE:8080'; // Replace YOUR_IP_HERE with your actual IP
+

@@ -9,6 +9,7 @@
     "start": "react-native start",
     "test": "jest",
     "setup-adb": "adb reverse tcp:8080 tcp:8080 && echo ADB reverse port forwarding set up successfully!",
+    "setup-local-ip": "node scripts/setup-local-ip.js",
     "check-adb": "adb devices",
     "android-with-adb": "npm run setup-adb && react-native run-android",
     "android:build": "cd android && ./gradlew assembleDebug",

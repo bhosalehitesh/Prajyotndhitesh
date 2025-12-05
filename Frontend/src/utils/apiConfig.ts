@@ -3,30 +3,24 @@
  * 
  * This file manages the API base URL configuration.
  * 
- * For development:
- * - Use ADB reverse port forwarding (recommended): adb reverse tcp:8080 tcp:8080
- *   Then use: http://localhost:8080
- * - Or use your computer's IP address: http://YOUR_IP:8080
- *   Find your IP: Windows (ipconfig), Mac/Linux (ifconfig)
+ * DEFAULT: Uses localhost:8080 (works for all team members - no IP changes needed!)
+ * - Just run: npm run setup-adb (or adb reverse tcp:8080 tcp:8080)
+ * - No need to change IP address when pulling code
  * 
- * For production:
- * - Update the production URL below
+ * If you need to use IP address instead:
+ * - Set USE_IP_ADDRESS = true below
+ * - Update API_BASE_URL_DEV_IP with your IP (find it: ipconfig on Windows)
  */
 
-// Option 1: Use ADB reverse (recommended - works for emulator and USB-connected devices)
-// Run: adb reverse tcp:8080 tcp:8080
+// Use localhost (ADB reverse) - recommended, works for everyone
 export const API_BASE_URL_DEV = 'http://localhost:8080';
 
-// Option 2: Use your computer's IP address (use this if ADB reverse doesn't work)
-// Replace with your actual IP address (find it using: ipconfig on Windows)
-// Example: export const API_BASE_URL_DEV_IP = 'http://192.168.1.100:8080';
-// NOTE: This was last updated based on your current Wi‑Fi IPv4 address from `ipconfig`.
-export const API_BASE_URL_DEV_IP = 'http://192.168.1.14:8080'; // Updated with your actual local IP
+// Use IP address (only if USE_IP_ADDRESS is true)
+export const API_BASE_URL_DEV_IP = 'http://192.168.1.24:8080'; // Change this to your IP if needed
 
 // Production URL
 export const API_BASE_URL_PROD = 'https://your-production-api.com';
 
-// Choose which dev URL to use
-// Set to true to use IP address (more reliable), false to use localhost (requires ADB reverse)
-export const USE_IP_ADDRESS = true; // Using IP address (more reliable - works even if ADB reverse disconnects)
+// Set to true to use IP address, false to use localhost (default)
+export const USE_IP_ADDRESS = false; // Default: false (uses localhost - no IP conflicts!)
 
