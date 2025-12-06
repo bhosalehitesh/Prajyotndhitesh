@@ -51,6 +51,7 @@ export interface UserProfile {
   name: string;
   avatar?: string;
   avatarInitial?: string;
+  logoUrl?: string; // Store logo URL from backend
   storeLink: string;
   storeName?: string;
 }

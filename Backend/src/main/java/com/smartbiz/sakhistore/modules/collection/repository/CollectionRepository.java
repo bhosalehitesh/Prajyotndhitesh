@@ -2,7 +2,9 @@ package com.smartbiz.sakhistore.modules.collection.repository;
 
 import com.smartbiz.sakhistore.modules.collection.model.collection;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -14,4 +16,9 @@ public interface CollectionRepository extends JpaRepository<collection, Long> {
     // Get distinct collection names
     @Query("SELECT DISTINCT c.collectionName FROM collection c")
     List<String> findAllDistinctCollectionNames();
+    
+    // Delete all entries from join table for a specific collection
+    @Modifying(clearAutomatically = true)
+    @Query(value = "DELETE FROM collection_products WHERE collection_id = :collectionId", nativeQuery = true)
+    void deleteCollectionProducts(@Param("collectionId") Long collectionId);
 }

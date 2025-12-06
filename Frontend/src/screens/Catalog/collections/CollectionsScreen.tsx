@@ -139,10 +139,12 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
       deleteCollection(idToDelete)
         .then(() => {
           setCollections(prev => prev.filter(c => c.id !== idToDelete));
+          showSuccessMessage('Collection deleted successfully');
         })
         .catch(err => {
           console.error('Failed to delete collection', err);
-          Alert.alert('Error', 'Failed to delete collection. Please try again.');
+          const errorMessage = err?.message || 'Failed to delete collection. Please try again.';
+          Alert.alert('Error', errorMessage);
         });
     }
   };

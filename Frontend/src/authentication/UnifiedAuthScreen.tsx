@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
-import { signup, verifyOtp, login as apiLogin, API_BASE_URL } from '../utils/api';
+import { signup, verifyOtp, login as apiLogin, sendLoginOtp, loginWithOtp, getSellerDetails, getCurrentSellerStoreDetails, API_BASE_URL } from '../utils/api';
 import { useAuth } from './AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -45,7 +45,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
   const [signInMobile, setSignInMobile] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
   const [signInOtp, setSignInOtp] = useState('');
-  const [signInOtpSent, setSignInOtpSent] = useState('');
+  const [signInOtpSent, setSignInOtpSent] = useState<string>('');
   const [showSignInPassword, setShowSignInPassword] = useState(false);
   
   const [loading, setLoading] = useState(false);
@@ -155,6 +155,30 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       await storage.setItem('userName', authResponse.fullName || `${firstName} ${lastName}`);
       await storage.setItem('userPassword', password);
       await storage.setItem('userId', authResponse.userId?.toString() || '');
+      
+      // Fetch and store seller details and store details
+      try {
+        if (authResponse.userId) {
+          // Fetch seller details
+          const sellerDetails = await getSellerDetails(authResponse.userId);
+          if (sellerDetails) {
+            await storage.setItem('userName', sellerDetails.fullName || authResponse.fullName || `${firstName} ${lastName}`);
+            await storage.setItem('sellerDetails', JSON.stringify(sellerDetails));
+          }
+          
+          // Fetch store details (may not exist for new users)
+          const storeDetails = await getCurrentSellerStoreDetails();
+          if (storeDetails) {
+            await storage.setItem('storeName', storeDetails.storeName || '');
+            await storage.setItem('storeLink', storeDetails.storeLink || '');
+            await storage.setItem('storeId', storeDetails.storeId?.toString() || '');
+          }
+        }
+      } catch (error) {
+        console.warn('Could not fetch user details after signup:', error);
+        // Continue with signup even if details fetch fails
+      }
+      
       // Mark this as a sign-up (new user) - they may need onboarding
       await storage.setItem('isSignIn', 'false');
       
@@ -205,12 +229,24 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       return;
     }
 
-    // Backend does not support OTP-only login for sellers yet
-    Alert.alert(
-      'Info',
-      'OTP login is not available with the current backend. Please use password login.',
-      [{ text: 'OK' }],
-    );
+    setLoading(true);
+    const cleanMobile = signInMobile.replace(/\D/g, '');
+
+    try {
+      const otp = await sendLoginOtp(cleanMobile);
+      // Store the OTP value for display and auto-fill
+      if (otp) {
+        setSignInOtpSent(otp);
+        console.log('Login OTP:', otp);
+      } else {
+        setSignInOtpSent(''); // Clear if no OTP received
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send OTP. Please try again.';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignIn = async () => {
@@ -258,6 +294,30 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
         await storage.setItem('userName', authResponse.fullName || '');
         await storage.setItem('userPassword', signInPassword);
         await storage.setItem('userId', authResponse.userId?.toString() || '');
+        
+        // Fetch and store seller details and store details
+        try {
+          if (authResponse.userId) {
+            // Fetch seller details
+            const sellerDetails = await getSellerDetails(authResponse.userId);
+            if (sellerDetails) {
+              await storage.setItem('userName', sellerDetails.fullName || authResponse.fullName || '');
+              await storage.setItem('sellerDetails', JSON.stringify(sellerDetails));
+            }
+            
+            // Fetch store details
+            const storeDetails = await getCurrentSellerStoreDetails();
+            if (storeDetails) {
+              await storage.setItem('storeName', storeDetails.storeName || '');
+              await storage.setItem('storeLink', storeDetails.storeLink || '');
+              await storage.setItem('storeId', storeDetails.storeId?.toString() || '');
+            }
+          }
+        } catch (error) {
+          console.warn('Could not fetch user details after login:', error);
+          // Continue with login even if details fetch fails
+        }
+        
         // Mark this as a sign-in (not sign-up) so onboarding can be skipped
         await storage.setItem('isSignIn', 'true');
       
@@ -294,12 +354,66 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
         Alert.alert('Login Error', errorMessage);
       }
       } else {
-        // OTP-based sign-in is not supported with current backend
-        Alert.alert(
-          'Info',
-          'OTP login is not available with the current backend. Please use password login.',
-          [{ text: 'OK' }],
-        );
+        // OTP-based sign-in
+        if (!isSignInOtpValid) {
+          Alert.alert('Validation', 'Please enter a valid 6-digit OTP.');
+          return;
+        }
+
+        setLoading(true);
+        const cleanMobile = signInMobile.replace(/\D/g, '');
+
+        try {
+          const authResponse = await loginWithOtp(cleanMobile, signInOtp);
+
+          // Store authentication data
+          await login(authResponse.token);
+          await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
+          await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
+          await storage.setItem('userName', authResponse.fullName || '');
+          await storage.setItem('userId', authResponse.userId?.toString() || '');
+          
+          // Fetch and store seller details and store details
+          try {
+            if (authResponse.userId) {
+              // Fetch seller details
+              const sellerDetails = await getSellerDetails(authResponse.userId);
+              if (sellerDetails) {
+                await storage.setItem('userName', sellerDetails.fullName || authResponse.fullName || '');
+                await storage.setItem('sellerDetails', JSON.stringify(sellerDetails));
+              }
+              
+              // Fetch store details
+              const storeDetails = await getCurrentSellerStoreDetails();
+              if (storeDetails) {
+                await storage.setItem('storeName', storeDetails.storeName || '');
+                await storage.setItem('storeLink', storeDetails.storeLink || '');
+                await storage.setItem('storeId', storeDetails.storeId?.toString() || '');
+              }
+            }
+          } catch (error) {
+            console.warn('Could not fetch user details after OTP login:', error);
+            // Continue with login even if details fetch fails
+          }
+          
+          await storage.setItem('isSignIn', 'true');
+
+          setLoading(false);
+          onAuthenticated();
+        } catch (error) {
+          setLoading(false);
+          const errorMessage = error instanceof Error ? error.message : 'OTP verification failed';
+          
+          if (errorMessage.includes('Invalid OTP') || errorMessage.includes('Incorrect')) {
+            Alert.alert('Error', 'Incorrect OTP. Please try again.');
+          } else if (errorMessage.includes('expired')) {
+            Alert.alert('Error', 'OTP expired. Please request a new one.');
+          } else if (errorMessage.includes('not found')) {
+            Alert.alert('Error', 'No account found with this mobile number. Please sign up first.');
+          } else {
+            Alert.alert('Error', errorMessage);
+          }
+        }
       }
   };
 
@@ -634,10 +748,10 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
                 ) : (
                   <>
                     {/* Demo OTP Display Box for Sign In */}
-                    {signInOtpSent && (
+                    {signInOtpSent && signInOtpSent.length > 0 && (
                       <View style={styles.demoOtpContainer}>
                         <View style={styles.demoOtpBox}>
-                          <Text style={styles.demoOtpLabel}>Demo OTP (for testing):</Text>
+                          <Text style={styles.demoOtpLabel}>DEMO OTP (FOR TESTING):</Text>
                           <Text style={styles.demoOtpCode}>{signInOtpSent}</Text>
                           <TouchableOpacity
                             style={styles.autoFillButton}

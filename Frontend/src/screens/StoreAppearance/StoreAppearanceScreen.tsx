@@ -5,7 +5,7 @@
  * upload logo, and preview their store.
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -17,6 +17,7 @@ import {
   Linking,
   Alert,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import IconSymbol from '../../components/IconSymbol';
 import {
@@ -26,6 +27,8 @@ import {
   MediaType,
 } from 'react-native-image-picker';
 import {PermissionsAndroid, Platform} from 'react-native';
+import {uploadStoreLogo, getStoreBySellerId} from '../../utils/api';
+import {storage} from '../../authentication/storage';
 
 interface StoreAppearanceScreenProps {
   navigation: any;
@@ -37,6 +40,32 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
   const [uploadLogoModalOpen, setUploadLogoModalOpen] = useState(false);
   const [logoUri, setLogoUri] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [sellerId, setSellerId] = useState<number | null>(null);
+
+  // Load seller ID and existing logo on mount
+  useEffect(() => {
+    loadSellerIdAndLogo();
+  }, []);
+
+  const loadSellerIdAndLogo = async () => {
+    try {
+      const id = await storage.getItem('userId');
+      if (id) {
+        const sellerIdNum = parseInt(id, 10);
+        if (!isNaN(sellerIdNum)) {
+          setSellerId(sellerIdNum);
+          // Load existing logo from store
+          const store = await getStoreBySellerId(sellerIdNum);
+          if (store?.logoUrl) {
+            setLogoUri(store.logoUrl);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading seller ID:', error);
+    }
+  };
 
   const handleBack = () => {
     navigation.goBack();
@@ -134,10 +163,42 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
     });
   };
 
-  const handleSave = () => {
-    // TODO: Save logo and other settings to backend
-    Alert.alert('Success', 'Settings saved successfully');
-    setHasChanges(false);
+  const handleSave = async () => {
+    if (!hasChanges) {
+      return;
+    }
+
+    // If logo was selected but not uploaded yet, upload it
+    if (logoUri && sellerId && !logoUri.startsWith('http')) {
+      setUploading(true);
+      try {
+        console.log('Uploading logo:', { sellerId, logoUri: logoUri.substring(0, 50) });
+        const result = await uploadStoreLogo(sellerId, logoUri);
+        console.log('Upload result:', result);
+        
+        if (result.success && result.logoUrl) {
+          setLogoUri(result.logoUrl);
+          Alert.alert('Success', 'Logo uploaded successfully');
+          setHasChanges(false);
+        } else {
+          const errorMsg = result.message || 'Failed to upload logo. Please try again.';
+          console.error('Upload failed:', errorMsg);
+          Alert.alert('Error', errorMsg);
+        }
+      } catch (error: any) {
+        console.error('Upload exception:', error);
+        Alert.alert('Error', error.message || 'Failed to upload logo. Please check your connection.');
+      } finally {
+        setUploading(false);
+      }
+    } else if (logoUri && logoUri.startsWith('http')) {
+      // Logo already uploaded (has http URL), just save
+      Alert.alert('Success', 'Settings saved successfully');
+      setHasChanges(false);
+    } else {
+      Alert.alert('Success', 'Settings saved successfully');
+      setHasChanges(false);
+    }
   };
 
   return (
@@ -272,17 +333,21 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
         <TouchableOpacity
           style={[
             styles.saveButton,
-            !hasChanges && styles.saveButtonDisabled,
+            (!hasChanges || uploading) && styles.saveButtonDisabled,
           ]}
           onPress={handleSave}
-          disabled={!hasChanges}>
-          <Text
-            style={[
-              styles.saveButtonText,
-              !hasChanges && styles.saveButtonTextDisabled,
-            ]}>
-            Save
-          </Text>
+          disabled={!hasChanges || uploading}>
+          {uploading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text
+              style={[
+                styles.saveButtonText,
+                (!hasChanges || uploading) && styles.saveButtonTextDisabled,
+              ]}>
+              Save
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 

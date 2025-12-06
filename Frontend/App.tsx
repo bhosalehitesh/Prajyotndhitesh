@@ -27,6 +27,7 @@ import ProfileScreen from './src/screens/Profile/ProfileScreen';
 import ProductsScreen from './src/screens/Catalog/products/ProductsScreen';
 import AddProductScreen from './src/screens/Catalog/products/AddProductScreen';
 import UpdateProductScreen from './src/screens/Catalog/products/UpdateProductScreen';
+import StockNotificationsScreen from './src/screens/Catalog/StockNotificationsScreen';
 import AddVariantScreen from './src/screens/Catalog/products/AddVariantScreen';
 import CategoriesScreen from './src/screens/Catalog/categories/CategoriesScreen';
 import AddCategoryScreen from './src/screens/Catalog/categories/AddCategoryScreen';
@@ -54,6 +55,7 @@ function CatalogStack() {
       <Stack.Screen name="AddCollection" component={AddCollectionScreen} />
       <Stack.Screen name="EditCollection" component={AddCollectionScreen} />
       <Stack.Screen name="SelectProducts" component={SelectProductsScreen} />
+      <Stack.Screen name="StockNotifications" component={StockNotificationsScreen} />
     </Stack.Navigator>
   );
 }

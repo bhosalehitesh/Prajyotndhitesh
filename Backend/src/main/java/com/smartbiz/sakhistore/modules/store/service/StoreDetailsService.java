@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import com.smartbiz.sakhistore.config.CloudinaryHelper;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
 
@@ -30,6 +33,9 @@ public class StoreDetailsService {
 
     @Autowired
     private StoreDetailsRepo storeRepository;
+
+    @Autowired
+    private CloudinaryHelper cloudinaryHelper;
 
 
 
@@ -129,4 +135,45 @@ public class StoreDetailsService {
             return storeRepository.save(store);
 
         }).orElseThrow(() -> new RuntimeException("Store not found"));
-    }}
+    }
+
+    // Check if store name is available
+    public boolean isStoreNameAvailable(String storeName) {
+        if (storeName == null || storeName.trim().isEmpty()) {
+            return false;
+        }
+        return !storeRepository.existsByStoreName(storeName.trim());
+    }
+
+    // Upload logo for a store
+    public StoreDetails uploadLogo(Long storeId, MultipartFile logoFile) {
+        StoreDetails store = findByIdDS(storeId);
+        
+        // Upload logo to Cloudinary
+        String logoUrl = cloudinaryHelper.saveImage(logoFile);
+        
+        if (logoUrl == null) {
+            throw new RuntimeException("Failed to upload logo. Please try again.");
+        }
+        
+        // Save logo URL to store
+        store.setLogoUrl(logoUrl);
+        return storeRepository.save(store);
+    }
+
+    // Upload logo for a store by seller ID
+    public StoreDetails uploadLogoBySellerId(Long sellerId, MultipartFile logoFile) {
+        StoreDetails store = findBySellerId(sellerId);
+        
+        // Upload logo to Cloudinary
+        String logoUrl = cloudinaryHelper.saveImage(logoFile);
+        
+        if (logoUrl == null) {
+            throw new RuntimeException("Failed to upload logo. Please try again.");
+        }
+        
+        // Save logo URL to store
+        store.setLogoUrl(logoUrl);
+        return storeRepository.save(store);
+    }
+}

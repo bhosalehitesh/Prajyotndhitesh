@@ -177,6 +177,40 @@ public class SellerDetailsController {
         return ResponseEntity.ok(new SellerAuthResponse(newToken, seller.getSellerId(), seller.getFullName(), seller.getPhone()));
     }
 
+    // LOGIN OTP: send OTP for login
+    @PostMapping("/login-otp-seller")
+    public ResponseEntity<?> sendLoginOtp(@RequestBody PhoneRequest req) {
+        try {
+            String otp = authService.sendLoginOtp(req.getPhone());
+            return ResponseEntity.ok(Map.of("message", "Login OTP sent", "otp", otp));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(400).body(Map.of("message", ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of("message", "Internal server error: " + ex.getMessage()));
+        }
+    }
+
+    // LOGIN OTP: verify OTP and return token
+    @PostMapping("/verify-login-otp-seller")
+    public ResponseEntity<?> verifyLoginOtp(@RequestBody VerifyOtpRequest req) {
+        try {
+            String token = authService.verifyLoginOtpAndCreateToken(req.getPhone(), req.getCode());
+            if (token == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Invalid/Expired OTP"));
+            }
+            var sellerOpt = userRepository.findByPhone(req.getPhone());
+            if (!sellerOpt.isPresent()) {
+                return ResponseEntity.status(400).body(Map.of("message", "Seller not found"));
+            }
+            var seller = sellerOpt.get();
+            return ResponseEntity.ok(new SellerAuthResponse(token, seller.getSellerId(), seller.getFullName(), seller.getPhone()));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(400).body(Map.of("message", ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of("message", "Internal server error: " + ex.getMessage()));
+        }
+    }
+
     // LOGOUT
     @PostMapping("/logout-seller")
     public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {

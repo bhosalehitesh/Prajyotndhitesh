@@ -16,6 +16,7 @@ public class StoreDetails {
 
     private String storeName;
     private String storeLink;
+    private String logoUrl; // URL to store logo image
 
     @OneToOne
     @JoinColumn(name = "seller_id")
@@ -39,6 +40,9 @@ public class StoreDetails {
 
     public String getStoreLink() { return storeLink; }
     public void setStoreLink(String storeLink) { this.storeLink = storeLink; }
+
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
 
     public SellerDetails getSeller() { return seller; }
     public void setSeller(SellerDetails seller) { this.seller = seller; }
