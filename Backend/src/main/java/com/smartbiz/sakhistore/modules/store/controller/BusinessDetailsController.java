@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.smartbiz.sakhistore.modules.store.dto.BusinessDetailsRequest;
 import com.smartbiz.sakhistore.modules.store.model.BusinessDetails;
 import com.smartbiz.sakhistore.modules.store.service.BusinessDetailsService;
 
@@ -28,14 +29,27 @@ public class BusinessDetailsController {
 
 
 
-    // ✅ Add new
-
+    // ✅ Add new (accepts DTO with storeId directly)
     @PostMapping("/addBusinessDetails")
-
-    public BusinessDetails addBusinessDetails(@RequestBody BusinessDetails details) {
-
+    public BusinessDetails addBusinessDetails(@RequestBody BusinessDetailsRequest request) {
+        // Use the DTO method which handles storeId directly
+        if (request.getStoreId() != null) {
+            return businessDetailsService.addBusinessDetailsFromRequest(request);
+        }
+        
+        // Fallback: create BusinessDetails without storeId
+        BusinessDetails details = new BusinessDetails();
+        details.setBusinessDescription(request.getBusinessDescription());
+        details.setOwnBusiness(request.getOwnBusiness());
+        details.setBusinessSize(request.getBusinessSize());
+        details.setPlatform(request.getPlatform());
         return businessDetailsService.addBusinessDetails(details);
-
+    }
+    
+    // ✅ Add new (backward compatibility - accepts BusinessDetails entity)
+    @PostMapping("/addBusinessDetailsLegacy")
+    public BusinessDetails addBusinessDetailsLegacy(@RequestBody BusinessDetails details) {
+        return businessDetailsService.addBusinessDetails(details);
     }
 
 

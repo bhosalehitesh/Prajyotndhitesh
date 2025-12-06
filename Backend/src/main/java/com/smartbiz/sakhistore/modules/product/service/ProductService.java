@@ -12,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.smartbiz.sakhistore.config.CloudinaryHelper;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsRepo;
+import com.smartbiz.sakhistore.modules.category.model.Category;
+import com.smartbiz.sakhistore.modules.category.repository.CategoryRepository;
 import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
 
@@ -31,6 +33,9 @@ public class ProductService{
     @Autowired
     private SellerDetailsRepo sellerDetailsRepo;
 
+    @Autowired
+    private CategoryRepository categoryRepository;
+
 
     public Product uploadProductWithImages(
             String productName,
@@ -49,7 +54,8 @@ public class ProductService{
             String seoMetaDescription,
             List<MultipartFile> productImages,
             MultipartFile socialSharingImage,
-            Long sellerId
+            Long sellerId,
+            Long categoryId
     ) {
         try {
             List<String> productImageUrls = new ArrayList<>();
@@ -96,6 +102,13 @@ public class ProductService{
                 product.setSeller(seller);
             }
 
+            // Link to category if provided
+            if (categoryId != null) {
+                Category category = categoryRepository.findById(categoryId)
+                        .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
+                product.setCategory(category);
+            }
+
             // ✅ Save in database
             return productRepository.save(product);
 
@@ -129,6 +142,13 @@ public class ProductService{
             SellerDetails seller = sellerDetailsRepo.findById(sellerId)
                     .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
             product.setSeller(seller);
+        }
+        // If product has a category with categoryId, fetch the actual Category entity
+        if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
+            Long categoryId = product.getCategory().getCategory_id();
+            Category category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
+            product.setCategory(category);
         }
         return productRepository.save(product);
     }

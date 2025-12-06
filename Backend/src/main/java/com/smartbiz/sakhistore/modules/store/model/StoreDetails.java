@@ -2,6 +2,8 @@ package com.smartbiz.sakhistore.modules.store.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.*;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
 
 @Entity
@@ -17,12 +19,15 @@ public class StoreDetails {
 
     @OneToOne
     @JoinColumn(name = "seller_id")
+    @JsonIgnore
     private SellerDetails seller;
 
     @OneToOne(mappedBy = "storeDetails", cascade = CascadeType.ALL)
+    @JsonIgnore
     private StoreAddress storeAddress;
 
     @OneToOne(mappedBy = "storeDetails", cascade = CascadeType.ALL)
+    @JsonIgnore
     private BusinessDetails businessDetails;
 
     // Getters and Setters

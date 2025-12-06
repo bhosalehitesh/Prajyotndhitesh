@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 
+import com.smartbiz.sakhistore.modules.store.dto.StoreAddressRequest;
 import com.smartbiz.sakhistore.modules.store.model.StoreAddress;
 import com.smartbiz.sakhistore.modules.store.service.StoreAddressService;
 
@@ -43,14 +44,29 @@ public class StoreAddressController {
 
 
 
-    // Add new store address
-
+    // Add new store address (accepts DTO with storeId directly)
     @PostMapping("/addAddress")
-
-    public StoreAddress addAddress(@RequestBody StoreAddress address) {
-
+    public StoreAddress addAddress(@RequestBody StoreAddressRequest request) {
+        // Use the DTO method which handles storeId directly
+        if (request.getStoreId() != null) {
+            return storeAddressService.addAddressFromRequest(request);
+        }
+        
+        // Fallback: create StoreAddress without storeId
+        StoreAddress address = new StoreAddress();
+        address.setShopNoBuildingCompanyApartment(request.getShopNoBuildingCompanyApartment());
+        address.setAreaStreetSectorVillage(request.getAreaStreetSectorVillage());
+        address.setLandmark(request.getLandmark());
+        address.setPincode(request.getPincode());
+        address.setTownCity(request.getTownCity());
+        address.setState(request.getState());
         return storeAddressService.addAddress(address);
-
+    }
+    
+    // Add new store address (backward compatibility - accepts StoreAddress entity)
+    @PostMapping("/addAddressLegacy")
+    public StoreAddress addAddressLegacy(@RequestBody StoreAddress address) {
+        return storeAddressService.addAddress(address);
     }
 
 

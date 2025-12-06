@@ -485,8 +485,9 @@ export const saveStoreAddress = async (params: {
     state: params.state,
   };
 
+  // Send storeId directly (backend DTO expects storeId, not nested storeDetails)
   if (storeId) {
-    body.storeDetails = { storeId: Number(storeId) };
+    body.storeId = Number(storeId);
   }
 
   const response = await fetch(url, {
@@ -540,8 +541,9 @@ export const saveBusinessDetails = async (params: {
     businessDescription: '', // optional for now
   };
 
+  // Send storeId directly (backend DTO expects storeId, not nested storeDetails)
   if (storeId) {
-    body.storeDetails = { storeId: Number(storeId) };
+    body.storeId = Number(storeId);
   }
 
   const response = await fetch(url, {
@@ -1206,6 +1208,7 @@ export const uploadProductWithImages = async (params: {
   seoTitleTag?: string;
   seoMetaDescription?: string;
   imageUris: string[];
+  categoryId?: number; // Add categoryId parameter
 }) => {
   const url = `${API_BASE_URL}/api/products/upload`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
@@ -1230,6 +1233,11 @@ export const uploadProductWithImages = async (params: {
 
   if (userId) {
     form.append('sellerId', userId);
+  }
+
+  // Add categoryId if provided
+  if (params.categoryId) {
+    form.append('categoryId', String(params.categoryId));
   }
 
   // Attach images

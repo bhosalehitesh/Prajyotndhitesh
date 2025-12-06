@@ -47,14 +47,15 @@ public class ProductController {
             @RequestParam("seoMetaDescription") String seoMetaDescription,
             @RequestParam("productImages") List<MultipartFile> productImages,
             @RequestParam("socialSharingImage") MultipartFile socialSharingImage,
-            @RequestParam(value = "sellerId", required = false) Long sellerId
+            @RequestParam(value = "sellerId", required = false) Long sellerId,
+            @RequestParam(value = "categoryId", required = false) Long categoryId
     ) {
         try {
             Product product = productService.uploadProductWithImages(
                     productName, description, mrp, sellingPrice, businessCategory,
                     productCategory, inventoryQuantity, customSku, color, size,
                     variant, hsnCode, seoTitleTag, seoMetaDescription,
-                    productImages, socialSharingImage, sellerId
+                    productImages, socialSharingImage, sellerId, categoryId
             );
             return ResponseEntity.ok(product);
         } catch (Exception e) {
