@@ -506,6 +506,48 @@ export const saveStoreDetails = async (
 };
 
 /**
+ * Check store name availability
+ * Backend: GET /api/stores/check-availability?storeName=example
+ */
+export interface StoreNameAvailabilityResponse {
+  available: boolean;
+  storeName: string;
+  message: string;
+}
+
+export const checkStoreNameAvailability = async (storeName: string): Promise<StoreNameAvailabilityResponse> => {
+  const url = `${API_BASE_URL}/api/stores/check-availability?storeName=${encodeURIComponent(storeName)}`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const payload = await parseJsonOrText(response);
+    
+    if (!response.ok) {
+      return {
+        available: false,
+        storeName,
+        message: payload?.message || 'Failed to check availability',
+      };
+    }
+    
+    return payload as StoreNameAvailabilityResponse;
+  } catch (error) {
+    console.error('Error checking store name availability:', error);
+    return {
+      available: false,
+      storeName,
+      message: 'Network error. Please check your connection.',
+    };
+  }
+};
+
+/**
  * Fetch store details for the current seller.
  * Backend: GET /api/stores/by-seller?sellerId=...
  */
@@ -575,6 +617,7 @@ export const getCurrentSellerStoreDetails = async (): Promise<StoreDetailsRespon
     storeId: payload.storeId,
     storeName: payload.storeName ?? '',
     storeLink: payload.storeLink ?? '',
+    logoUrl: payload.logoUrl ?? undefined,
   };
 };
 
@@ -1416,6 +1459,382 @@ export const uploadProductWithImages = async (params: {
   }
 
   return payload;
+};
+
+/**
+ * =============================
+ * PINCODE APIs
+ * Backend base path: /api/pincodes
+ * =============================
+ */
+
+export interface PincodeDetails {
+  valid: boolean;
+  pincode: string;
+  state: string;
+  district: string;
+  city: string;
+  taluka?: string;
+  division?: string;
+  message?: string;
+}
+
+export interface PincodeValidationResponse {
+  valid: boolean;
+  pincode: string;
+  state: string;
+  message: string;
+}
+
+/**
+ * Validate pincode and get details (state, district, city)
+ * Backend: GET /api/pincodes/validate?pincode=411103
+ */
+export const validatePincode = async (pincode: string): Promise<PincodeDetails> => {
+  const url = `${API_BASE_URL}/api/pincodes/validate?pincode=${encodeURIComponent(pincode)}`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const payload = await parseJsonOrText(response);
+    
+    if (!response.ok) {
+      return {
+        valid: false,
+        pincode,
+        state: '',
+        district: '',
+        city: '',
+        message: payload?.message || 'Failed to validate pincode',
+      };
+    }
+    
+    return payload as PincodeDetails;
+  } catch (error) {
+    console.error('Error validating pincode:', error);
+    return {
+      valid: false,
+      pincode,
+      state: '',
+      district: '',
+      city: '',
+      message: 'Network error. Please check your connection.',
+    };
+  }
+};
+
+/**
+ * Check if pincode is valid for a state
+ * Backend: GET /api/pincodes/check-state?pincode=411103&state=Maharashtra
+ */
+export const checkPincodeForState = async (
+  pincode: string,
+  state: string,
+): Promise<PincodeValidationResponse> => {
+  const url = `${API_BASE_URL}/api/pincodes/check-state?pincode=${encodeURIComponent(pincode)}&state=${encodeURIComponent(state)}`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const payload = await parseJsonOrText(response);
+    
+    if (!response.ok) {
+      return {
+        valid: false,
+        pincode,
+        state,
+        message: payload?.message || 'Failed to check pincode',
+      };
+    }
+    
+    return payload as PincodeValidationResponse;
+  } catch (error) {
+    console.error('Error checking pincode for state:', error);
+    return {
+      valid: false,
+      pincode,
+      state,
+      message: 'Network error. Please check your connection.',
+    };
+  }
+};
+
+/**
+ * Get all districts for a state
+ * Backend: GET /api/pincodes/districts?state=Maharashtra
+ */
+export const getDistrictsByState = async (state: string): Promise<string[]> => {
+  const url = `${API_BASE_URL}/api/pincodes/districts?state=${encodeURIComponent(state)}`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const payload = await parseJsonOrText(response);
+    
+    if (!response.ok || !Array.isArray(payload)) {
+      return [];
+    }
+    
+    return payload as string[];
+  } catch (error) {
+    console.error('Error fetching districts:', error);
+    return [];
+  }
+};
+
+/**
+ * Get all cities for a state (optionally filtered by district)
+ * Backend: GET /api/pincodes/cities?state=Maharashtra&district=Pune
+ */
+export const getCitiesByState = async (
+  state: string,
+  district?: string,
+): Promise<string[]> => {
+  let url = `${API_BASE_URL}/api/pincodes/cities?state=${encodeURIComponent(state)}`;
+  if (district) {
+    url += `&district=${encodeURIComponent(district)}`;
+  }
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const payload = await parseJsonOrText(response);
+    
+    if (!response.ok || !Array.isArray(payload)) {
+      return [];
+    }
+    
+    return payload as string[];
+  } catch (error) {
+    console.error('Error fetching cities:', error);
+    return [];
+  }
+};
+
+/**
+ * Get all states
+ * Backend: GET /api/pincodes/states
+ */
+export const getAllStates = async (): Promise<string[]> => {
+  const url = `${API_BASE_URL}/api/pincodes/states`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const payload = await parseJsonOrText(response);
+    
+    if (!response.ok || !Array.isArray(payload)) {
+      return [];
+    }
+    
+    return payload as string[];
+  } catch (error) {
+    console.error('Error fetching states:', error);
+    return [];
+  }
+};
+
+/**
+ * Validate if city/village exists in state and district
+ * Backend: GET /api/pincodes/validate-city?city=Pune&state=Maharashtra&district=Pune
+ */
+export interface CityValidationResponse {
+  valid: boolean;
+  city: string;
+  state: string;
+  district?: string;
+  message: string;
+}
+
+export const validateCityForStateAndDistrict = async (
+  city: string,
+  state: string,
+  district?: string,
+): Promise<CityValidationResponse> => {
+  let url = `${API_BASE_URL}/api/pincodes/validate-city?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`;
+  if (district) {
+    url += `&district=${encodeURIComponent(district)}`;
+  }
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    const payload = await parseJsonOrText(response);
+    
+    if (!response.ok) {
+      return {
+        valid: false,
+        city,
+        state,
+        district,
+        message: payload?.message || 'Failed to validate city',
+      };
+    }
+    
+    return payload as CityValidationResponse;
+  } catch (error) {
+    console.error('Error validating city:', error);
+    return {
+      valid: false,
+      city,
+      state,
+      district,
+      message: 'Network error. Please check your connection.',
+    };
+  }
+};
+
+/**
+ * Upload store logo
+ * Backend: POST /api/stores/upload-logo
+ * FormData: { sellerId, logo (file) }
+ */
+export interface LogoUploadResponse {
+  success: boolean;
+  message: string;
+  logoUrl?: string;
+  storeId?: number;
+}
+
+export const uploadStoreLogo = async (
+  sellerId: number,
+  logoUri: string,
+): Promise<LogoUploadResponse> => {
+  try {
+    console.log('Starting logo upload:', { sellerId, logoUri: logoUri.substring(0, 50) + '...' });
+    
+    const token = await storage.getItem(AUTH_TOKEN_KEY);
+    
+    // Create FormData for React Native (matching pattern from other uploads)
+    const formData = new FormData();
+    formData.append('sellerId', sellerId.toString());
+    
+    // Get file extension from URI
+    const fileExtension = logoUri.split('.').pop()?.toLowerCase() || 'jpg';
+    
+    // Determine MIME type based on extension
+    let mimeType = 'image/jpeg';
+    if (fileExtension === 'png') {
+      mimeType = 'image/png';
+    } else if (fileExtension === 'gif') {
+      mimeType = 'image/gif';
+    } else if (fileExtension === 'webp') {
+      mimeType = 'image/webp';
+    }
+    
+    // Append file to FormData (React Native format - matching other uploads)
+    formData.append('logo', {
+      uri: logoUri,
+      type: mimeType,
+      name: `logo_${Date.now()}.${fileExtension}`,
+    } as any);
+
+    console.log('FormData created, sending request to:', `${API_BASE_URL}/api/stores/upload-logo`);
+
+    const uploadResponse = await fetch(`${API_BASE_URL}/api/stores/upload-logo`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      // Don't set Content-Type header - let fetch set it with boundary automatically
+      body: formData,
+    });
+
+    console.log('Upload response status:', uploadResponse.status, uploadResponse.statusText);
+
+    const payload = await parseJsonOrText(uploadResponse);
+    console.log('Upload response payload:', payload);
+
+    if (!uploadResponse.ok) {
+      const errorMessage = payload?.message || payload?.error || `Server error: ${uploadResponse.status}`;
+      console.error('Upload failed:', errorMessage);
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      console.error('Invalid response format:', payload);
+      return {
+        success: false,
+        message: 'Invalid response from server',
+      };
+    }
+
+    return payload as LogoUploadResponse;
+  } catch (error: any) {
+    console.error('Error uploading logo:', error);
+    const errorMessage = error.message || 'Network error. Please check your connection.';
+    return {
+      success: false,
+      message: errorMessage,
+    };
+  }
+};
+
+/**
+ * Get store details by seller ID
+ * Backend: GET /api/stores/seller?sellerId={sellerId}
+ */
+export interface StoreDetailsResponse {
+  storeId: number;
+  storeName: string;
+  storeLink: string;
+  logoUrl?: string;
+}
+
+export const getStoreBySellerId = async (sellerId: number): Promise<StoreDetailsResponse | null> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/stores/seller?sellerId=${sellerId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      console.error('Error fetching store:', payload);
+      return null;
+    }
+
+    return payload as StoreDetailsResponse;
+  } catch (error) {
+    console.error('Error fetching store:', error);
+    return null;
+  }
 };
 
 export { API_BASE_URL };

@@ -88,6 +88,10 @@ export const useHomeData = (): UseHomeDataReturn => {
         backendStore?.storeName || storedStoreName || mockHomeData.profile.storeName;
       const finalStoreLink =
         backendStore?.storeLink || storedStoreLink || mockHomeData.profile.storeLink;
+      const logoUrl = backendStore?.logoUrl || null;
+
+      console.log('Home data fetch - logoUrl:', logoUrl);
+      console.log('Home data fetch - backendStore:', backendStore);
 
       // Create data with per-seller profile values or fallback to mock
       const homeData: HomeScreenData = {
@@ -97,6 +101,7 @@ export const useHomeData = (): UseHomeDataReturn => {
           name: storedUserName || mockHomeData.profile.name,
           storeName: finalStoreName,
           storeLink: finalStoreLink,
+          logoUrl: logoUrl || undefined,
         },
       };
 

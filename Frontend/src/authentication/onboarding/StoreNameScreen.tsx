@@ -10,10 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useHeaderActions } from '../../utils/headerActions';
 import ChatBot from '../../components/ChatBot';
+import { checkStoreNameAvailability } from '../../utils/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -25,26 +27,57 @@ interface StoreNameScreenProps {
 const StoreNameScreen: React.FC<StoreNameScreenProps> = ({ onNext, onBack }) => {
   const [storeName, setStoreName] = useState('');
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const [availabilityMessage, setAvailabilityMessage] = useState<string>('');
   const [showChat, setShowChat] = useState(false);
   const { handleHelp, handleLogout, HelpModal } = useHeaderActions();
 
-  const handleCheckAvailability = () => {
-    if (storeName.trim().length < 3) {
+  const handleCheckAvailability = async () => {
+    const trimmedName = storeName.trim();
+    
+    if (trimmedName.length < 3) {
       setIsAvailable(false);
+      setAvailabilityMessage('Store name must be at least 3 characters');
       return;
     }
-    // Simulate availability check
-    setIsAvailable(true);
+    
+    setIsChecking(true);
+    setIsAvailable(null);
+    setAvailabilityMessage('');
+    
+    try {
+      const result = await checkStoreNameAvailability(trimmedName);
+      setIsAvailable(result.available);
+      setAvailabilityMessage(result.message);
+    } catch (error) {
+      console.error('Error checking availability:', error);
+      setIsAvailable(false);
+      setAvailabilityMessage('Failed to check availability. Please try again.');
+    } finally {
+      setIsChecking(false);
+    }
   };
 
-  const handleNext = () => {
-    if (storeName.trim().length >= 3) {
-      // Allow proceeding even if availability not checked, but show warning
-      if (!isAvailable && storeName.trim().length >= 3) {
-        // Auto-check if not checked yet
-        setIsAvailable(true);
-      }
-      onNext(storeName.trim());
+  const handleNext = async () => {
+    const trimmedName = storeName.trim();
+    
+    if (trimmedName.length < 3) {
+      return;
+    }
+    
+    // If availability hasn't been checked, check it first
+    if (isAvailable === null) {
+      await handleCheckAvailability();
+      // Wait a moment for the check to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Only allow proceeding if name is available
+    if (isAvailable === true) {
+      onNext(trimmedName);
+    } else if (isAvailable === false) {
+      // Show error message
+      setAvailabilityMessage(availabilityMessage || 'Store name is not available');
     }
   };
 
@@ -105,27 +138,36 @@ const StoreNameScreen: React.FC<StoreNameScreenProps> = ({ onNext, onBack }) => 
                   const filteredText = text.replace(/[^a-zA-Z0-9_]/g, '');
                   setStoreName(filteredText);
                   setIsAvailable(null);
+                  setAvailabilityMessage('');
                 }}
                 autoCapitalize="none"
                 maxLength={50}
               />
               {storeName.length >= 3 && (
                 <TouchableOpacity
-                  style={styles.checkButton}
+                  style={[styles.checkButton, isChecking && styles.checkButtonDisabled]}
                   onPress={handleCheckAvailability}
                   activeOpacity={0.7}
+                  disabled={isChecking}
                 >
-                  <Text style={styles.checkButtonText}>Check Availability</Text>
+                  {isChecking ? (
+                    <View style={styles.checkButtonLoading}>
+                      <ActivityIndicator size="small" color="#e61580" />
+                      <Text style={styles.checkButtonText}>Checking...</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.checkButtonText}>Check Availability</Text>
+                  )}
                 </TouchableOpacity>
               )}
               {isAvailable === true && (
                 <Text style={styles.successText}>
-                  ✓ Congratulations! Store Name available
+                  ✓ {availabilityMessage || 'Congratulations! Store Name available'}
                 </Text>
               )}
-              {isAvailable === false && (
+              {isAvailable === false && availabilityMessage && (
                 <Text style={styles.errorText}>
-                  ✗ Store name is too short or already taken
+                  ✗ {availabilityMessage}
                 </Text>
               )}
             </View>
@@ -147,10 +189,10 @@ const StoreNameScreen: React.FC<StoreNameScreenProps> = ({ onNext, onBack }) => 
             <TouchableOpacity
               style={[
                 styles.nextButton,
-                storeName.trim().length < 3 && styles.nextButtonDisabled,
+                (storeName.trim().length < 3 || isAvailable === false || isChecking) && styles.nextButtonDisabled,
               ]}
               onPress={handleNext}
-              disabled={storeName.trim().length < 3}
+              disabled={storeName.trim().length < 3 || isAvailable === false || isChecking}
               activeOpacity={0.8}
             >
               <Text style={styles.nextButtonText}>Next</Text>
@@ -277,6 +319,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 16,
+  },
+  checkButtonDisabled: {
+    opacity: 0.6,
+  },
+  checkButtonLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   checkButtonText: {
     fontSize: 14,

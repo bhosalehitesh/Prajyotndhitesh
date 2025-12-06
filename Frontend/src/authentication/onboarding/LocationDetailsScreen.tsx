@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,19 @@ import {
   Modal,
   FlatList,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useHeaderActions } from '../../utils/headerActions';
 import ChatBot from '../../components/ChatBot';
+import {
+  validatePincode,
+  checkPincodeForState,
+  getCitiesByState,
+  getAllStates,
+  validateCityForStateAndDistrict,
+  PincodeDetails,
+} from '../../utils/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -159,13 +168,84 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
   const [citySearchQuery, setCitySearchQuery] = useState('');
   const [pincodeError, setPincodeError] = useState('');
   const [showChat, setShowChat] = useState(false);
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [validatingPincode, setValidatingPincode] = useState(false);
+  const [availableStates, setAvailableStates] = useState<string[]>(INDIAN_STATES);
+  const [cityInputMode, setCityInputMode] = useState<'dropdown' | 'manual'>('dropdown');
+  const [manualCityInput, setManualCityInput] = useState('');
+  const [cityValidationError, setCityValidationError] = useState('');
+  const [validatingCity, setValidatingCity] = useState(false);
   const { handleHelp, handleLogout, HelpModal } = useHeaderActions();
-
-  // Get cities for selected state
-  const availableCities = useMemo(() => {
-    if (!state) return [];
-    return STATE_CITIES[state] || [];
+  
+  // Load states from API on mount
+  useEffect(() => {
+    loadStatesFromAPI();
+  }, []);
+  
+  // Clear fields when state changes
+  useEffect(() => {
+    if (state) {
+      setCity('');
+      setManualCityInput('');
+      setCityValidationError('');
+      setPincode('');
+      setPincodeError('');
+    }
   }, [state]);
+  
+  const loadStatesFromAPI = async () => {
+    setLoadingStates(true);
+    try {
+      const states = await getAllStates();
+      if (states.length > 0) {
+        // Merge API states with hardcoded states to ensure completeness
+        const allStates = [...new Set([...states, ...INDIAN_STATES])].sort();
+        setAvailableStates(allStates);
+      } else {
+        // Fallback to hardcoded states if API returns empty
+        setAvailableStates(INDIAN_STATES);
+      }
+    } catch (error) {
+      console.error('Error loading states:', error);
+      // Fallback to hardcoded states
+      setAvailableStates(INDIAN_STATES);
+    } finally {
+      setLoadingStates(false);
+    }
+  };
+  
+  // Get cities for selected state (from API or fallback)
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  
+  useEffect(() => {
+    if (state) {
+      loadCitiesForState(state);
+    }
+  }, [state]);
+  
+  const loadCitiesForState = async (stateName: string) => {
+    setLoadingCities(true);
+    try {
+      const apiCities = await getCitiesByState(stateName);
+      const hardcodedCities = STATE_CITIES[stateName] || [];
+      
+      // Merge API cities with hardcoded cities to ensure completeness
+      if (apiCities.length > 0) {
+        const allCities = [...new Set([...apiCities, ...hardcodedCities])].sort();
+        setAvailableCities(allCities);
+      } else {
+        // Fallback to hardcoded cities if API returns empty
+        setAvailableCities(hardcodedCities);
+      }
+    } catch (error) {
+      console.error('Error loading cities:', error);
+      // Fallback to hardcoded cities
+      setAvailableCities(STATE_CITIES[stateName] || []);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
 
   // Filter cities based on search
   const filteredCities = useMemo(() => {
@@ -175,26 +255,158 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
     );
   }, [availableCities, citySearchQuery]);
 
-  // Validate pincode for selected state
-  const validatePincode = (pin: string, selectedState: string): boolean => {
-    if (!pin || pin.length !== 6 || !selectedState) return false;
+  // Validate pincode using API
+  const validatePincodeLocal = async (pin: string, selectedState: string) => {
+    if (!pin || pin.length !== 6 || !selectedState) {
+      return { valid: false, message: 'Please enter a 6-digit pincode and select state' };
+    }
     
-    const pinNum = parseInt(pin, 10);
-    if (isNaN(pinNum)) return false;
-
-    const ranges = STATE_PINCODE_RANGES[selectedState];
-    if (!ranges) return false;
-
-    return ranges.some(([min, max]) => pinNum >= min && pinNum <= max);
+    setValidatingPincode(true);
+    try {
+      // First check if pincode is valid for the state
+      const stateCheck = await checkPincodeForState(pin, selectedState);
+      
+      if (stateCheck.valid) {
+        // Get full pincode details
+        const details = await validatePincode(pin);
+        if (details.valid) {
+          // Auto-populate city if available
+          if (details.city && !city) {
+            setCity(details.city);
+          }
+          setPincodeError('');
+          return { valid: true, message: '', details };
+        }
+      }
+      
+      return { valid: false, message: stateCheck.message || 'Pincode does not match the selected state' };
+    } catch (error) {
+      console.error('Error validating pincode:', error);
+      // Fallback to local validation
+      const pinNum = parseInt(pin, 10);
+      if (isNaN(pinNum)) {
+        return { valid: false, message: 'Invalid pincode format' };
+      }
+      const ranges = STATE_PINCODE_RANGES[selectedState];
+      if (ranges && ranges.some(([min, max]) => pinNum >= min && pinNum <= max)) {
+        return { valid: true, message: '' };
+      }
+      return { valid: false, message: 'Pincode does not match the selected state' };
+    } finally {
+      setValidatingPincode(false);
+    }
   };
 
   const handleStateSelect = (selectedState: string) => {
     setState(selectedState);
-    setCity(''); // Clear city when state changes
-    setPincode(''); // Clear pincode when state changes
+    setCity('');
+    setPincode('');
     setPincodeError('');
     setShowStateModal(false);
     setStateSearchQuery('');
+  };
+  
+  // Validate manually entered city/village against state
+  const validateManualCity = async (cityName: string) => {
+    if (!cityName.trim() || !state) {
+      setCityValidationError('');
+      return false;
+    }
+    
+    setValidatingCity(true);
+    setCityValidationError('');
+    
+    try {
+      // First try API validation (without district)
+      const apiValidation = await validateCityForStateAndDistrict(cityName.trim(), state);
+      
+      if (apiValidation.valid) {
+        setCityValidationError('');
+        setCity(cityName.trim()); // Set the validated city
+        return true;
+      }
+      
+      // Fallback: Get cities for the selected state
+      const cities = await getCitiesByState(state);
+      const cityLower = cityName.trim().toLowerCase();
+      
+      // Check if entered city exists in the list
+      const cityExists = cities.some(c => c.toLowerCase() === cityLower);
+      
+      if (cityExists) {
+        setCityValidationError('');
+        setCity(cityName.trim()); // Set the validated city
+        return true;
+      } else {
+        // Also check hardcoded cities as fallback
+        const hardcodedCities = STATE_CITIES[state] || [];
+        const existsInHardcoded = hardcodedCities.some(c => c.toLowerCase() === cityLower);
+        
+        if (existsInHardcoded) {
+          setCityValidationError('');
+          setCity(cityName.trim());
+          return true;
+        } else {
+          setCityValidationError('Village/Town not found in selected state. Please verify or select from list.');
+          setCity('');
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error('Error validating city:', error);
+      // On error, allow the city but show warning
+      setCityValidationError('Could not verify. Please ensure the village/town is correct.');
+      setCity(cityName.trim());
+      return true; // Allow to proceed with warning
+    } finally {
+      setValidatingCity(false);
+    }
+  };
+  
+  // Debounce timer for manual city validation
+  const cityValidationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleManualCityChange = (text: string) => {
+    setManualCityInput(text);
+    setCity(''); // Clear selected city when typing manually
+    setCityValidationError(''); // Clear previous errors
+    
+    // Clear existing timer
+    if (cityValidationTimerRef.current) {
+      clearTimeout(cityValidationTimerRef.current);
+    }
+    
+    // Validate after user stops typing (debounce)
+    if (text.trim().length >= 3 && state) {
+      // Small delay to avoid too many API calls
+      cityValidationTimerRef.current = setTimeout(() => {
+        validateManualCity(text);
+      }, 800);
+    } else if (text.trim().length > 0 && text.trim().length < 3) {
+      setCityValidationError('Please enter at least 3 characters');
+    } else if (text.trim().length === 0) {
+      setCityValidationError('');
+    }
+  };
+  
+  const handleCityInputModeToggle = () => {
+    // Clear any pending validation timer
+    if (cityValidationTimerRef.current) {
+      clearTimeout(cityValidationTimerRef.current);
+      cityValidationTimerRef.current = null;
+    }
+    
+    if (cityInputMode === 'dropdown') {
+      setCityInputMode('manual');
+      setCity(''); // Clear selected city
+      setManualCityInput('');
+      setCityValidationError('');
+    } else {
+      setCityInputMode('dropdown');
+      setManualCityInput(''); // Clear manual input
+      setCityValidationError('');
+      setCity(''); // Clear city to allow fresh selection
+    }
   };
 
   const handleCitySelect = (selectedCity: string) => {
@@ -203,25 +415,31 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
     setCitySearchQuery('');
   };
 
-  const handlePincodeChange = (text: string) => {
+  const handlePincodeChange = async (text: string) => {
     const numericText = text.replace(/\D/g, '').slice(0, 6);
     setPincode(numericText);
     
-    if (numericText.length === 6 && state) {
-      if (validatePincode(numericText, state)) {
-        setPincodeError('');
+    if (numericText.length === 6) {
+      if (state) {
+        const validation = await validatePincodeLocal(numericText, state);
+        if (validation.valid) {
+          setPincodeError('');
+        } else {
+          setPincodeError(validation.message);
+        }
       } else {
-        setPincodeError('Pincode does not match the selected state');
+        setPincodeError('Please select state first');
       }
-    } else if (numericText.length === 6 && !state) {
-      setPincodeError('Please select state first');
     } else {
       setPincodeError('');
     }
   };
 
-  const handleNext = () => {
-    if (!city.trim() || !state.trim() || !pincode.trim()) {
+  const handleNext = async () => {
+    // Determine the city value based on input mode
+    const finalCity = cityInputMode === 'manual' ? manualCityInput.trim() : city.trim();
+    
+    if (!finalCity || !state.trim() || !pincode.trim()) {
       Alert.alert('Validation', 'Please fill in all required fields.');
       return;
     }
@@ -235,20 +453,37 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
       Alert.alert('Validation', pincodeError);
       return;
     }
+    
+    // If manual input mode, validate the city
+    if (cityInputMode === 'manual') {
+      if (cityValidationError) {
+        Alert.alert('Validation', cityValidationError);
+        return;
+      }
+      
+      // Final validation of manual city
+      const isValid = await validateManualCity(finalCity);
+      if (!isValid && cityValidationError) {
+        Alert.alert('Validation', cityValidationError);
+        return;
+      }
+    }
 
-    if (!validatePincode(pincode, state)) {
-      Alert.alert('Validation', 'Pincode does not match the selected state. Please enter a valid pincode.');
+    // Final pincode validation
+    const validation = await validatePincodeLocal(pincode, state);
+    if (!validation.valid) {
+      Alert.alert('Validation', validation.message || 'Pincode does not match the selected state. Please enter a valid pincode.');
       return;
     }
 
     onNext({
-      city: city.trim(),
+      city: finalCity,
       state: state.trim(),
       pincode: pincode.trim(),
     });
   };
 
-  const filteredStates = INDIAN_STATES.filter((stateName) =>
+  const filteredStates = availableStates.filter((stateName) =>
     stateName.toLowerCase().includes(stateSearchQuery.toLowerCase())
   );
 
@@ -314,39 +549,77 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
               </TouchableOpacity>
             </View>
 
-            {/* City Field - Now depends on state */}
+            {/* City Field - Dropdown or Manual Entry */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Town / City*</Text>
-              <TouchableOpacity
-                style={[
-                  styles.selectContainer,
-                  !state && styles.selectContainerDisabled,
-                ]}
-                onPress={() => {
-                  if (state) {
-                    setShowCityModal(true);
-                  } else {
-                    Alert.alert('Info', 'Please select state first');
-                  }
-                }}
-                activeOpacity={0.7}
-                disabled={!state}
-              >
-                <Text
-                  style={[
-                    styles.selectInput,
-                    (!city || !state) && styles.selectPlaceholder,
-                  ]}
-                >
-                  {city || (state ? 'Select City' : 'Select State first')}
+              <View style={styles.cityHeader}>
+                <Text style={styles.label}>
+                  Village / Town / City* {loadingCities && <ActivityIndicator size="small" />}
+                  {validatingCity && <ActivityIndicator size="small" />}
                 </Text>
-                <MaterialCommunityIcons name="chevron-down" size={20} color={state ? '#6b7280' : '#d1d5db'} />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleCityInputModeToggle}
+                  style={styles.toggleButton}
+                  disabled={!state}
+                >
+                  <Text style={styles.toggleButtonText}>
+                    {cityInputMode === 'dropdown' ? 'Enter Manually' : 'Select from List'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {cityInputMode === 'dropdown' ? (
+                <TouchableOpacity
+                  style={[
+                    styles.selectContainer,
+                    !state && styles.selectContainerDisabled,
+                  ]}
+                  onPress={() => {
+                    if (state) {
+                      setShowCityModal(true);
+                    } else {
+                      Alert.alert('Info', 'Please select state first');
+                    }
+                  }}
+                  activeOpacity={0.7}
+                  disabled={!state}
+                >
+                  <Text
+                    style={[
+                      styles.selectInput,
+                      (!city || !state) && styles.selectPlaceholder,
+                    ]}
+                  >
+                    {city || (state ? 'Select Village/Town/City' : 'Select State first')}
+                  </Text>
+                  <MaterialCommunityIcons name="chevron-down" size={20} color={state ? '#6b7280' : '#d1d5db'} />
+                </TouchableOpacity>
+              ) : (
+                <View>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      cityValidationError && styles.inputError,
+                      !state && styles.inputDisabled,
+                    ]}
+                    placeholder={state ? 'Enter Village/Town/City' : 'Select state first'}
+                    placeholderTextColor="#9ca3af"
+                    value={manualCityInput}
+                    onChangeText={handleManualCityChange}
+                    autoCapitalize="words"
+                    editable={!!state}
+                  />
+                  {cityValidationError ? (
+                    <Text style={styles.errorText}>{cityValidationError}</Text>
+                  ) : manualCityInput.trim().length >= 3 && state && !validatingCity ? (
+                    <Text style={styles.successText}>✓ Valid village/town</Text>
+                  ) : null}
+                </View>
+              )}
             </View>
 
             {/* Pincode Field */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Pincode*</Text>
+              <Text style={styles.label}>Pincode* {validatingPincode && <ActivityIndicator size="small" />}</Text>
               <TextInput
                 style={[
                   styles.input,
@@ -358,6 +631,7 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
                 onChangeText={handlePincodeChange}
                 keyboardType="number-pad"
                 maxLength={6}
+                editable={!validatingPincode}
               />
               {pincodeError ? (
                 <Text style={styles.errorText}>{pincodeError}</Text>
@@ -367,11 +641,19 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
             <TouchableOpacity
               style={[
                 styles.nextButton,
-                (!city.trim() || !state.trim() || !pincode.trim() || pincodeError) &&
+                ((cityInputMode === 'dropdown' && !city.trim()) || 
+                 (cityInputMode === 'manual' && !manualCityInput.trim()) || 
+                 !state.trim() || !pincode.trim() || pincodeError || 
+                 (cityInputMode === 'manual' && cityValidationError)) &&
                   styles.nextButtonDisabled,
               ]}
               onPress={handleNext}
-              disabled={!city.trim() || !state.trim() || !pincode.trim() || !!pincodeError}
+              disabled={
+                (cityInputMode === 'dropdown' && !city.trim()) || 
+                (cityInputMode === 'manual' && !manualCityInput.trim()) || 
+                !state.trim() || !pincode.trim() || !!pincodeError || 
+                (cityInputMode === 'manual' && !!cityValidationError)
+              }
               activeOpacity={0.8}
             >
               <Text style={styles.nextButtonText}>Next</Text>
@@ -496,7 +778,9 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
 
             {/* Cities List */}
             <FlatList
-              data={filteredCities}
+              data={availableCities.filter((cityName) =>
+                cityName.toLowerCase().includes(citySearchQuery.toLowerCase())
+              )}
               keyExtractor={(item) => item}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -621,6 +905,11 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginBottom: 8,
   },
+  optionalText: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#6b7280',
+  },
   input: {
     borderWidth: 1.5,
     borderColor: '#d1d5db',
@@ -638,6 +927,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ef4444',
     marginTop: 4,
+  },
+  successText: {
+    fontSize: 12,
+    color: '#10b981',
+    marginTop: 4,
+  },
+  helpText: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  cityHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  toggleButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  toggleButtonText: {
+    fontSize: 12,
+    color: '#e61580',
+    fontWeight: '500',
+  },
+  inputDisabled: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#e5e7eb',
   },
   selectContainer: {
     flexDirection: 'row',

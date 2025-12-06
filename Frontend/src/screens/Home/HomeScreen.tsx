@@ -19,7 +19,9 @@ import {
   ScrollView,
   Linking,
   Share,
+  Image,
 } from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
 import IconSymbol from '../../components/IconSymbol';
 import {useHomeData} from './useHomeData';
 import {OnboardingTask} from './types';
@@ -29,8 +31,16 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
-  const {data, loading} = useHomeData();
+  const {data, loading, refetch} = useHomeData();
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
+
+  // Refresh data when screen comes into focus (e.g., after uploading logo)
+  useFocusEffect(
+    React.useCallback(() => {
+      // Refetch data when screen is focused
+      refetch();
+    }, [refetch])
+  );
 
   if (loading || !data) {
     return (
@@ -108,11 +118,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           <View style={styles.profileCard}>
             {/* Avatar */}
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {(data.profile.storeName || data.profile.avatarInitial || data.profile.name || '?').charAt(0)}
-                </Text>
-              </View>
+              {data.profile.logoUrl ? (
+                <Image
+                  source={{uri: data.profile.logoUrl}}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                  onError={(error) => {
+                    console.error('Error loading logo image:', error.nativeEvent.error);
+                    console.log('Logo URL:', data.profile.logoUrl);
+                  }}
+                  onLoad={() => {
+                    console.log('Logo image loaded successfully:', data.profile.logoUrl);
+                  }}
+                />
+              ) : (
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {(data.profile.storeName || data.profile.avatarInitial || data.profile.name || '?').charAt(0)}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Welcome Text */}
@@ -362,6 +387,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#e61580',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   avatarText: {
     fontSize: 32,
