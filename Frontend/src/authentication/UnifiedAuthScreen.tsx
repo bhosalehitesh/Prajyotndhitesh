@@ -311,6 +311,10 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
               await storage.setItem('storeName', storeDetails.storeName || '');
               await storage.setItem('storeLink', storeDetails.storeLink || '');
               await storage.setItem('storeId', storeDetails.storeId?.toString() || '');
+              // Save logo URL if available
+              if (storeDetails.logoUrl) {
+                await storage.setItem('storeLogoUrl', storeDetails.logoUrl);
+              }
             }
           }
         } catch (error) {
@@ -389,6 +393,10 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
                 await storage.setItem('storeName', storeDetails.storeName || '');
                 await storage.setItem('storeLink', storeDetails.storeLink || '');
                 await storage.setItem('storeId', storeDetails.storeId?.toString() || '');
+                // Save logo URL if available
+                if (storeDetails.logoUrl) {
+                  await storage.setItem('storeLogoUrl', storeDetails.logoUrl);
+                }
               }
             }
           } catch (error) {

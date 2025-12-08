@@ -267,19 +267,25 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
       const stateCheck = await checkPincodeForState(pin, selectedState);
       
       if (stateCheck.valid) {
-        // Get full pincode details
-        const details = await validatePincode(pin);
-        if (details.valid) {
-          // Auto-populate city if available
-          if (details.city && !city) {
-            setCity(details.city);
+        // Try to get full pincode details (optional - if it fails, still allow if state check passed)
+        try {
+          const details = await validatePincode(pin);
+          if (details.valid) {
+            // Auto-populate city if available and not already set
+            if (details.city && !city && cityInputMode === 'dropdown') {
+              setCity(details.city);
+            }
           }
-          setPincodeError('');
-          return { valid: true, message: '', details };
+        } catch (detailError) {
+          // If detail validation fails, still allow since state check passed
+          console.log('Could not get full pincode details, but state check passed');
         }
+        
+        setPincodeError('');
+        return { valid: true, message: '', details: null };
       }
       
-      return { valid: false, message: stateCheck.message || 'Pincode does not match the selected state' };
+      return { valid: false, message: 'Pincode does not match the selected state' };
     } catch (error) {
       console.error('Error validating pincode:', error);
       // Fallback to local validation
@@ -330,7 +336,7 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
       const cities = await getCitiesByState(state);
       const cityLower = cityName.trim().toLowerCase();
       
-      // Check if entered city exists in the list
+      // Check if entered city exists in the list (case-insensitive)
       const cityExists = cities.some(c => c.toLowerCase() === cityLower);
       
       if (cityExists) {
@@ -347,17 +353,19 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
           setCity(cityName.trim());
           return true;
         } else {
-          setCityValidationError('Village/Town not found in selected state. Please verify or select from list.');
-          setCity('');
-          return false;
+          // More lenient: if city validation fails but pincode is valid, allow it
+          // The pincode validation already confirms the location is valid
+          setCityValidationError('');
+          setCity(cityName.trim());
+          return true; // Allow to proceed - pincode validation is the primary check
         }
       }
     } catch (error) {
       console.error('Error validating city:', error);
-      // On error, allow the city but show warning
-      setCityValidationError('Could not verify. Please ensure the village/town is correct.');
+      // On error, allow the city - pincode validation is the primary check
+      setCityValidationError('');
       setCity(cityName.trim());
-      return true; // Allow to proceed with warning
+      return true; // Allow to proceed
     } finally {
       setValidatingCity(false);
     }
@@ -486,6 +494,16 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
   const filteredStates = availableStates.filter((stateName) =>
     stateName.toLowerCase().includes(stateSearchQuery.toLowerCase())
   );
+
+  // Calculate if Next button should be enabled
+  const isNextButtonEnabled = useMemo(() => {
+    const hasCity = cityInputMode === 'dropdown' 
+      ? city.trim().length > 0 
+      : manualCityInput.trim().length >= 3;
+    const hasState = state.trim().length > 0;
+    const hasValidPincode = pincode.trim().length === 6 && !pincodeError;
+    return hasCity && hasState && hasValidPincode && !validatingPincode && !validatingCity;
+  }, [cityInputMode, city, manualCityInput, state, pincode, pincodeError, validatingPincode, validatingCity]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -635,25 +653,18 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
               />
               {pincodeError ? (
                 <Text style={styles.errorText}>{pincodeError}</Text>
+              ) : pincode.length === 6 && !pincodeError && !validatingPincode && state ? (
+                <Text style={styles.successText}>✓ Pincode is valid for the selected state</Text>
               ) : null}
             </View>
 
             <TouchableOpacity
               style={[
                 styles.nextButton,
-                ((cityInputMode === 'dropdown' && !city.trim()) || 
-                 (cityInputMode === 'manual' && !manualCityInput.trim()) || 
-                 !state.trim() || !pincode.trim() || pincodeError || 
-                 (cityInputMode === 'manual' && cityValidationError)) &&
-                  styles.nextButtonDisabled,
+                !isNextButtonEnabled && styles.nextButtonDisabled,
               ]}
               onPress={handleNext}
-              disabled={
-                (cityInputMode === 'dropdown' && !city.trim()) || 
-                (cityInputMode === 'manual' && !manualCityInput.trim()) || 
-                !state.trim() || !pincode.trim() || !!pincodeError || 
-                (cityInputMode === 'manual' && !!cityValidationError)
-              }
+              disabled={!isNextButtonEnabled}
               activeOpacity={0.8}
             >
               <Text style={styles.nextButtonText}>Next</Text>

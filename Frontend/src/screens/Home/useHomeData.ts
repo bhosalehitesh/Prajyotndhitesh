@@ -16,7 +16,7 @@
  * - refetch: Function to refetch data
  */
 
-import {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {HomeScreenData, HomeScreenApiResponse} from './types';
 import {mockHomeData} from './mockData';
 import {storage} from '../../authentication/storage';
@@ -80,6 +80,7 @@ export const useHomeData = (): UseHomeDataReturn => {
       const storedStoreName = await storage.getItem('storeName');
       const storedStoreLink = await storage.getItem('storeLink');
       const storedUserName = await storage.getItem('userName');
+      const storedLogoUrl = await storage.getItem('storeLogoUrl');
 
       // Try to fetch store details from backend for current seller
       const backendStore = await getCurrentSellerStoreDetails();
@@ -88,10 +89,37 @@ export const useHomeData = (): UseHomeDataReturn => {
         backendStore?.storeName || storedStoreName || mockHomeData.profile.storeName;
       const finalStoreLink =
         backendStore?.storeLink || storedStoreLink || mockHomeData.profile.storeLink;
-      const logoUrl = backendStore?.logoUrl || null;
+      // Use backend logoUrl first, then stored, then null
+      // IMPORTANT: Even if backend store is not found, use stored logoUrl if available
+      const logoUrl = backendStore?.logoUrl || storedLogoUrl || null;
+      
+      // Update stored logoUrl if backend has a newer one
+      if (backendStore?.logoUrl && backendStore.logoUrl !== storedLogoUrl) {
+        await storage.setItem('storeLogoUrl', backendStore.logoUrl);
+      }
+      
+      // If we have a stored logoUrl but backend doesn't have store, log it
+      if (!backendStore && storedLogoUrl) {
+        console.log('Using stored logoUrl (backend store not found):', storedLogoUrl);
+      }
 
-      console.log('Home data fetch - logoUrl:', logoUrl);
-      console.log('Home data fetch - backendStore:', backendStore);
+      // Log store status for debugging (only in dev mode)
+      if (__DEV__) {
+        if (!backendStore) {
+          console.log('Home data fetch - No store found in backend. Using stored/mock data.');
+          console.log('Stored logoUrl:', storedLogoUrl || 'None');
+          console.log('Final logoUrl for display:', logoUrl || 'None');
+        } else {
+          console.log('Home data fetch - Store found:', {
+            storeName: backendStore.storeName,
+            storeId: backendStore.storeId,
+            backendLogoUrl: backendStore.logoUrl || 'None',
+            storedLogoUrl: storedLogoUrl || 'None',
+            finalLogoUrl: logoUrl || 'None',
+            hasLogo: !!logoUrl,
+          });
+        }
+      }
 
       // Create data with per-seller profile values or fallback to mock
       const homeData: HomeScreenData = {

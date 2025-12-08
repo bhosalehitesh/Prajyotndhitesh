@@ -396,6 +396,7 @@ export interface StoreDetailsResponse {
   storeId: number;
   storeName: string;
   storeLink: string;
+  logoUrl?: string;
 }
 
 export interface StoreAddressResponse {
@@ -458,19 +459,20 @@ export const saveStoreDetails = async (
   storeName: string,
   storeLink: string,
 ): Promise<StoreDetailsResponse> => {
-  const url = `${API_BASE_URL}/api/stores/addStore`;
-
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userId = await storage.getItem('userId'); // sellerId from auth
 
-  const body: any = {
+  if (!userId) {
+    throw new Error('User ID not found. Please login again.');
+  }
+
+  // Backend expects sellerId as query parameter, not in body
+  const url = `${API_BASE_URL}/api/stores/addStore?sellerId=${userId}`;
+
+  const body = {
     storeName,
     storeLink,
   };
-
-  if (userId) {
-    body.seller = { sellerId: Number(userId) };
-  }
 
   const response = await fetch(url, {
     method: 'POST',
@@ -609,16 +611,34 @@ export const getCurrentSellerStoreDetails = async (): Promise<StoreDetailsRespon
     return null;
   }
 
-  if (!payload || typeof payload !== 'object') {
+  // Backend returns null when store doesn't exist (HTTP 200 with null body)
+  if (payload === null || payload === undefined || typeof payload !== 'object') {
     return null;
   }
 
-  return {
+  // Validate that payload has required fields (storeId is essential)
+  if (!payload.storeId) {
+    return null;
+  }
+
+  const result = {
     storeId: payload.storeId,
     storeName: payload.storeName ?? '',
     storeLink: payload.storeLink ?? '',
     logoUrl: payload.logoUrl ?? undefined,
   };
+  
+  // Log for debugging
+  if (__DEV__) {
+    console.log('getCurrentSellerStoreDetails response:', {
+      storeId: result.storeId,
+      storeName: result.storeName,
+      hasLogoUrl: !!result.logoUrl,
+      logoUrl: result.logoUrl || 'None',
+    });
+  }
+  
+  return result;
 };
 
 /**
@@ -1785,7 +1805,12 @@ export const uploadStoreLogo = async (
 
     if (!uploadResponse.ok) {
       const errorMessage = payload?.message || payload?.error || `Server error: ${uploadResponse.status}`;
-      console.error('Upload failed:', errorMessage);
+      // Use console.warn for expected errors (like store not found) to avoid React Native error overlay
+      if (errorMessage.includes('Store not found') || errorMessage.includes('store not found')) {
+        console.warn('Upload failed (expected):', errorMessage);
+      } else {
+        console.error('Upload failed:', errorMessage);
+      }
       return {
         success: false,
         message: errorMessage,
@@ -1802,8 +1827,13 @@ export const uploadStoreLogo = async (
 
     return payload as LogoUploadResponse;
   } catch (error: any) {
-    console.error('Error uploading logo:', error);
     const errorMessage = error.message || 'Network error. Please check your connection.';
+    // Use console.warn for expected errors to avoid React Native error overlay
+    if (errorMessage.includes('Store not found') || errorMessage.includes('store not found')) {
+      console.warn('Logo upload error (expected):', errorMessage);
+    } else {
+      console.error('Error uploading logo:', error);
+    }
     return {
       success: false,
       message: errorMessage,
@@ -1835,6 +1865,17 @@ export const getStoreBySellerId = async (sellerId: number): Promise<StoreDetails
 
     if (!response.ok) {
       console.error('Error fetching store:', payload);
+      return null;
+    }
+
+    // Backend returns null when store doesn't exist (HTTP 200 with null body)
+    if (payload === null || payload === undefined) {
+      return null;
+    }
+
+    // Validate that payload has required fields (storeId is essential)
+    if (typeof payload !== 'object' || !payload.storeId) {
+      console.warn('Invalid store response - missing storeId:', payload);
       return null;
     }
 

@@ -118,17 +118,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           <View style={styles.profileCard}>
             {/* Avatar */}
             <View style={styles.avatarContainer}>
-              {data.profile.logoUrl ? (
+              {data.profile.logoUrl && data.profile.logoUrl.trim() !== '' ? (
                 <Image
                   source={{uri: data.profile.logoUrl}}
                   style={styles.avatarImage}
                   resizeMode="cover"
                   onError={(error) => {
-                    console.error('Error loading logo image:', error.nativeEvent.error);
-                    console.log('Logo URL:', data.profile.logoUrl);
+                    console.error('❌ Error loading logo image:', error.nativeEvent.error);
+                    console.log('Failed Logo URL:', data.profile.logoUrl);
                   }}
                   onLoad={() => {
-                    console.log('Logo image loaded successfully:', data.profile.logoUrl);
+                    console.log('✅ Logo image loaded successfully:', data.profile.logoUrl);
                   }}
                 />
               ) : (
