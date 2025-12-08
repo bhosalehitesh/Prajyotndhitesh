@@ -13,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.smartbiz.sakhistore.config.CloudinaryHelper;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsRepo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,6 +38,9 @@ public class StoreDetailsService {
 
     @Autowired
     private CloudinaryHelper cloudinaryHelper;
+
+    @Autowired
+    private SellerDetailsRepo sellerRepository;
 
 
 
@@ -88,7 +93,23 @@ public class StoreDetailsService {
     //for link this logic
 
     // ---------------------- CREATE ----------------------
-    public StoreDetails addStore(StoreDetails store) {
+    public StoreDetails addStore(StoreDetails store, Long sellerId) {
+        // ✅ VALIDATION: Seller ID is required
+        if (sellerId == null) {
+            throw new RuntimeException("Seller ID is required! Cannot create store without linking to a seller.");
+        }
+
+        // ✅ VALIDATION: Check if seller exists
+        SellerDetails seller = sellerRepository.findById(sellerId)
+                .orElseThrow(() -> new RuntimeException("Seller not found with ID: " + sellerId + ". Please create seller first."));
+
+        // ✅ VALIDATION: Check if seller already has a store
+        try {
+            findBySellerId(sellerId);
+            throw new RuntimeException("Seller already has a store! One seller can only have one store.");
+        } catch (NoSuchElementException e) {
+            // Seller doesn't have a store yet - this is good, continue
+        }
 
         // Check unique store name
         if (storeRepository.existsByStoreName(store.getStoreName())) {
@@ -104,6 +125,9 @@ public class StoreDetailsService {
 
         // Set the unique store link
         store.setStoreLink(domain + "/" + slug);
+
+        // ✅ CRITICAL: Link store to seller (prevents null seller_id)
+        store.setSeller(seller);
 
         return storeRepository.save(store);
     }

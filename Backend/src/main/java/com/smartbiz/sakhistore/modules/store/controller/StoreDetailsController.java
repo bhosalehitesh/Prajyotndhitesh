@@ -27,13 +27,27 @@ public class StoreDetailsController {
     }
 
     @PostMapping("/addStore")
-    public StoreDetails addStore(@RequestBody StoreDetails store) {
-        return storeService.addStore(store);
+    public StoreDetails addStore(
+            @RequestBody StoreDetails store,
+            @RequestParam(value = "sellerId", required = true) Long sellerId) {
+        return storeService.addStore(store, sellerId);
     }
 
     @PostMapping("/editStore")
-    public StoreDetails editStore(@RequestBody StoreDetails store) {
-        return storeService.addStore(store);
+    public StoreDetails editStore(
+            @RequestBody StoreDetails store,
+            @RequestParam(value = "sellerId", required = false) Long sellerId) {
+        // For edit, sellerId is optional (only needed if creating new store)
+        if (store.getStoreId() != null) {
+            // Updating existing store - use updateStore method
+            return storeService.updateStore(store.getStoreId(), store);
+        } else {
+            // Creating new store - sellerId is required
+            if (sellerId == null) {
+                throw new RuntimeException("Seller ID is required when creating a new store.");
+            }
+            return storeService.addStore(store, sellerId);
+        }
     }
 
     // Check store name availability

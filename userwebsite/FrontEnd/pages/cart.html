@@ -1,0 +1,2280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>V Store — Shop & Cart</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html {
+      background-color: var(--bg-color, #ffffff);
+      transition: background-color 0.3s;
+    }
+    
+    html.dark-mode {
+      background-color: var(--bg-color, #0e0e0e);
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color, #f5f5f5);
+      color: var(--text-color, #333);
+      transition: background-color 0.3s, color 0.3s;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    body.dark-mode {
+      background-color: var(--bg-color, #0e0e0e);
+    }
+    
+    .page-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    /* Ensure footer appears after all content */
+    .page-wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    .page-wrapper > main {
+      flex: 1 0 auto;
+    }
+    
+    .page-wrapper > #footer-placeholder {
+      margin-top: auto;
+      flex-shrink: 0;
+      order: 999;
+      width: 100%;
+    }
+    
+    #footer-placeholder {
+      display: block !important;
+      width: 100% !important;
+      margin-top: auto !important;
+      flex-shrink: 0 !important;
+      order: 999 !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    
+    #footer-placeholder .site-footer {
+      margin-top: 0;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    
+    /* Ensure footer is visible and at bottom */
+    .site-footer {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      position: relative !important;
+    }
+    .container {
+      width: 95%;
+      max-width: 1200px;
+      margin: 12px auto;
+      background: var(--card-bg, #fff);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: background-color 0.3s;
+    }
+    
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      padding: 0;
+      flex: 1 1 auto;
+      flex-grow: 1;
+      min-height: 0;
+    }
+    
+    #cart-page {
+      margin-bottom: 12px;
+    }
+    
+    #shop-page {
+      margin-bottom: 12px;
+      padding: 20px 16px;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        width: 95%;
+        padding: 20px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        width: 100%;
+        margin: 10px 0;
+        padding: 16px;
+        border-radius: 0;
+      }
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      text-align: center;
+      color: var(--text-color, #333);
+      font-size: 2rem;
+      font-weight: 700;
+      transition: color 0.3s;
+    }
+
+    .product-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    
+    @media (max-width: 768px) {
+      .product-list {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 18px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .product-list {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+    }
+
+    .product-card {
+      background: var(--card-bg, #fff);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background-color 0.3s, border-color 0.3s, transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .product-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+      border-color: rgba(0,0,0,0.15);
+    }
+    
+    body.dark-mode .product-card {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .product-card img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      object-fit: cover;
+    }
+    
+    /* Flipkart-style Cart Item */
+    .cart-item {
+      background: var(--card-bg, #fff);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 4px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      gap: 16px;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    
+    body.dark-mode .cart-item {
+      border-color: rgba(255,255,255,0.1);
+    }
+    
+    .cart-item-image {
+      width: 112px;
+      height: 112px;
+      flex-shrink: 0;
+      border-radius: 4px;
+      object-fit: cover;
+      background: #f5f5f5;
+    }
+    
+    .cart-item-details {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .cart-item-title {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-color, #333);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    
+    .cart-item-specs {
+      font-size: 0.85rem;
+      color: var(--text-color, #666);
+      margin-bottom: 8px;
+    }
+    
+    .cart-item-seller {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+    }
+    
+    .seller-name {
+      color: var(--text-color, #333);
+      font-weight: 500;
+    }
+    
+    .assured-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      background: #2874f0;
+      color: white;
+      border-radius: 2px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    
+    .cart-item-pricing {
+      margin-bottom: 12px;
+    }
+    
+    .price-row-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    
+    .original-price {
+      text-decoration: line-through;
+      color: var(--text-color, #878787);
+      font-size: 0.9rem;
+    }
+    
+    .current-price {
+      color: #e53935;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    
+    .discount-badge {
+      color: #388e3c;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    
+    .cart-item-delivery {
+      font-size: 0.85rem;
+      color: var(--text-color, #666);
+      margin-bottom: 12px;
+    }
+    
+    .delivery-date {
+      color: #388e3c;
+      font-weight: 500;
+    }
+    
+    .cart-item-actions {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+    
+    .action-link {
+      background: none;
+      border: none;
+      color: #2874f0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0;
+      text-decoration: none;
+    }
+    
+    .action-link:hover {
+      text-decoration: underline;
+    }
+    
+    .action-link.remove {
+      color: #e53935;
+    }
+    
+    /* Quantity Selector - Flipkart Style */
+    .quantity-selector-cart {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(0,0,0,0.2);
+      border-radius: 2px;
+      margin-bottom: 12px;
+    }
+    
+    .quantity-btn-cart {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: var(--card-bg, #fff);
+      color: var(--text-color, #333);
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+    }
+    
+    .quantity-btn-cart:hover:not(:disabled) {
+      background: var(--muted-white, #f5f5f5);
+    }
+    
+    .quantity-btn-cart:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    
+    .quantity-input-cart {
+      width: 48px;
+      height: 32px;
+      border: none;
+      border-left: 1px solid rgba(0,0,0,0.2);
+      border-right: 1px solid rgba(0,0,0,0.2);
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 500;
+      background: var(--card-bg, #fff);
+      color: var(--text-color, #333);
+    }
+    
+    @media (max-width: 968px) {
+      .cart-layout {
+        flex-direction: column !important;
+        max-width: 100% !important;
+      }
+      
+      .price-details-column {
+        width: 100% !important;
+      }
+      
+      .checkout-box {
+        position: static !important;
+      }
+    }
+    
+    /* Ensure main content is centered */
+    #cart-page {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    #cart-page > * {
+      width: 100%;
+      max-width: 1400px;
+    }
+    
+    /* Lock footer at bottom */
+    .site-footer,
+    #footer-placeholder {
+      margin-top: auto;
+      flex-shrink: 0;
+      width: 100%;
+    }
+    
+    .page-wrapper > .site-footer,
+    .page-wrapper > #footer-placeholder {
+      margin-top: auto;
+    }
+    
+    #footer-placeholder > .site-footer {
+      margin-top: 0;
+    }
+
+    .product-card h3, .cart-item h3 {
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
+    .product-card p.price, .cart-item p.price {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e53935;
+      margin-bottom: 8px;
+    }
+
+    .btn {
+      cursor: pointer;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      background-color: #007bff;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .quantity-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .quantity-control button {
+      width: 28px;
+      height: 28px;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .checkout-box {
+      padding: 16px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: var(--card-bg, #fff);
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+    }
+    
+    body.dark-mode .checkout-box {
+      border-color: rgba(255,255,255,0.1);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    
+    body.dark-mode .savings-message {
+      background: rgba(56, 142, 60, 0.1) !important;
+    }
+    
+    body.dark-mode .security-message {
+      background: rgba(255,255,255,0.05) !important;
+    }
+
+    .hidden {
+      display: none;
+    }
+    
+    /* Notification animations */
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 500px) {
+      .quantity-control {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+  <header class="topbar">
+    <div class="topbar-inner container">
+      <div class="left-group">
+        <div class="avatar" aria-hidden="true">
+          <a href="../index.html" style="text-decoration:none;color:inherit;display:flex;align-items:center;justify-content:center;width:100%;height:100%;"><span>V</span></a>
+        </div>
+        <div class="divider" aria-hidden="true"></div>
+
+        <!-- Updated Navigation Links -->
+        <nav class="main-nav" aria-label="Main">
+          <a href="categories.html" class="nav-item">Categories</a>
+          <a href="featured.html" class="nav-item">Featured</a>
+          <a href="products.html" class="nav-item">Products</a>
+        </nav>
+        
+        <!-- Mobile Menu Button -->
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Menu">☰</button>
+      </div>
+
+      <div class="right-group">
+        <!-- Dark Mode Toggle Switch -->
+        <div class="dark-mode-toggle-container">
+          <label class="dark-mode-toggle" for="dark-mode-switch" title="Toggle Dark Mode">
+            <input type="checkbox" id="dark-mode-switch" class="toggle-input">
+            <span class="toggle-track">
+              <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="4"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+              <span class="toggle-indicator"></span>
+            </span>
+          </label>
+        </div>
+
+        <button class="icon-btn" id="searchBtn" title="Search Products">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="6" stroke-width="1.6"></circle>
+            <path d="M21 21l-4.35-4.35" stroke-width="1.6" stroke-linecap="round"></path>
+          </svg>
+        </button>
+
+        <button class="icon-btn" id="wishlistBtn" title="Wishlist" onclick="window.location.href='wishlist.html'">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke-width="1.5" stroke-linejoin="round"></path>
+          </svg>
+          <span class="wishlist-count" id="wishlistCount">0</span>
+        </button>
+        <button class="icon-btn" id="cartBtn" title="Cart" onclick="window.location.href='cart.html'">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+            <path d="M6 6h15l-1.5 9h-12z" stroke-width="1.5" stroke-linejoin="round"></path>
+            <circle cx="10" cy="20" r="1.4" stroke-width="1.5"></circle>
+            <circle cx="18" cy="20" r="1.4" stroke-width="1.5"></circle>
+          </svg>
+          <span class="cart-count" id="cartCount">0</span>
+        </button>
+
+        <!-- Profile Button -->
+        <button class="icon-btn" id="profileBtn" title="Profile" onclick="openProfileSidebar()">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Profile Sidebar Menu -->
+  <div class="profile-sidebar-overlay" id="profileSidebarOverlay"></div>
+  <div class="profile-sidebar" id="profileSidebar">
+    <div class="profile-sidebar-header">
+      <button class="profile-sidebar-close" id="profileSidebarClose" aria-label="Close Menu">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="profile-sidebar-content">
+      <div class="profile-sidebar-user">
+        <div class="profile-sidebar-avatar">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="profile-sidebar-info">
+          <div class="profile-sidebar-name">Hello User</div>
+          <div class="profile-sidebar-phone">+1234567890</div>
+        </div>
+      </div>
+      <div class="profile-sidebar-menu">
+        <a href="orders.html" class="profile-sidebar-item" id="sidebarMyOrders">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <span>My Orders</span>
+        </a>
+        <a href="wishlist.html" class="profile-sidebar-item" id="sidebarWishlist">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
+          <span>My Wishlist</span>
+        </a>
+        <a href="cart.html" class="profile-sidebar-item" id="sidebarCart">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <span>Shopping Cart</span>
+        </a>
+        <a href="order-tracking.html" class="profile-sidebar-item" id="sidebarTrackOrder">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <span>Track Order</span>
+        </a>
+        <div class="profile-sidebar-divider"></div>
+        <div class="profile-sidebar-item" id="sidebarLightMode">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="1" y="5" width="22" height="14" rx="7" ry="7"></rect>
+            <circle cx="8" cy="12" r="3"></circle>
+          </svg>
+          <span id="sidebarLightModeText">Light Mode</span>
+        </div>
+        <a href="faq.html" class="profile-sidebar-item" id="sidebarFAQ">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Help & FAQ</span>
+        </a>
+        <div class="profile-sidebar-item" id="sidebarSignOut" onclick="handleSignOut()" style="cursor: pointer;">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Sign Out</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Navigation -->
+  <nav class="mobile-nav" id="mobileNav">
+    <a href="categories.html" class="nav-item">Categories</a>
+    <a href="featured.html" class="nav-item">Featured</a>
+    <a href="products.html" class="nav-item">Products</a>
+    <a href="cart.html" class="nav-item">Cart</a>
+    <a href="login.html" class="nav-item">Login</a>
+  </nav>
+
+  <!-- Profile Sidebar Menu -->
+  <div class="profile-sidebar-overlay" id="profileSidebarOverlay"></div>
+  <div class="profile-sidebar" id="profileSidebar">
+    <div class="profile-sidebar-header">
+      <button class="profile-sidebar-close" id="profileSidebarClose" aria-label="Close Menu">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="profile-sidebar-content">
+      <div class="profile-sidebar-user">
+        <div class="profile-sidebar-avatar">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="profile-sidebar-info">
+          <div class="profile-sidebar-name">Hello User</div>
+          <div class="profile-sidebar-phone">+1234567890</div>
+        </div>
+      </div>
+      <div class="profile-sidebar-menu">
+        <a href="orders.html" class="profile-sidebar-item" id="sidebarMyOrders">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <span>My Orders</span>
+        </a>
+        <a href="wishlist.html" class="profile-sidebar-item" id="sidebarWishlist">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
+          <span>My Wishlist</span>
+        </a>
+        <a href="cart.html" class="profile-sidebar-item" id="sidebarCart">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <span>Shopping Cart</span>
+        </a>
+        <a href="order-tracking.html" class="profile-sidebar-item" id="sidebarTrackOrder">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <span>Track Order</span>
+        </a>
+        <div class="profile-sidebar-divider"></div>
+        <div class="profile-sidebar-item" id="sidebarLightMode">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="1" y="5" width="22" height="14" rx="7" ry="7"></rect>
+            <circle cx="8" cy="12" r="3"></circle>
+          </svg>
+          <span id="sidebarLightModeText">Light Mode</span>
+        </div>
+        <a href="faq.html" class="profile-sidebar-item" id="sidebarFAQ">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Help & FAQ</span>
+        </a>
+        <div class="profile-sidebar-item" id="sidebarSignOut" onclick="handleSignOut()" style="cursor: pointer;">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Sign Out</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main style="flex: 1; display: flex; flex-direction: column; align-items: center; width: 100%;">
+  <div class="container" id="shop-page" style="width: 100%; max-width: 1200px; margin: 0 auto;">
+    <h1>Shop Items</h1>
+    <div class="product-list" id="product-list">
+      <!-- JS will populate products -->
+    </div>
+    <hr style="margin: 24px 0 20px 0; border: none; border-top: 1px solid rgba(0,0,0,0.08);">
+    <div style="text-align: center;">
+      <button class="btn" id="go-to-cart" style="max-width: 220px; margin: 0 auto; padding: 12px 24px; font-size: 1rem; font-weight: 600;">Checkout</button>
+    </div>
+  </div>
+
+  <div class="container" id="cart-page" style="max-width: 1400px; width: 100%; margin: 0 auto; padding: 0;">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" style="padding: 16px 24px 0;" aria-label="Breadcrumb">
+      <ol class="breadcrumb-list">
+        <li class="breadcrumb-item">
+          <a href="../index.html" class="breadcrumb-link">Home</a>
+        </li>
+        <li class="breadcrumb-item">
+          <span class="breadcrumb-separator">›</span>
+        </li>
+        <li class="breadcrumb-item">
+          <span class="breadcrumb-link active">Shopping Cart</span>
+        </li>
+      </ol>
+    </nav>
+    
+    <h1 style="text-align: left; padding: 20px 24px 16px; margin: 0; font-size: 1.5rem; border-bottom: 1px solid rgba(0,0,0,0.08);">Shopping Cart</h1>
+    
+    <!-- Delivery Address Section -->
+    <div class="delivery-address-section" style="padding: 16px 24px; border-bottom: 1px solid rgba(0,0,0,0.08); background: var(--card-bg, #fff);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h3 style="font-size: 0.9rem; font-weight: 600; color: var(--text-color, #333); margin-bottom: 4px;">From Saved Addresses</h3>
+          <p style="font-size: 0.85rem; color: var(--text-color, #666);">Select a saved address or enter pincode</p>
+        </div>
+        <button class="btn-pincode" id="enterPincodeBtn" style="padding: 8px 16px; background: #2874f0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; font-weight: 500;">Enter Delivery Pincode</button>
+      </div>
+    </div>
+
+    <!-- Main Cart Layout: Two Columns -->
+    <div class="cart-layout" style="display: flex; gap: 20px; padding: 20px 24px; align-items: flex-start; max-width: 1400px; margin: 0 auto;">
+      <!-- Left Column: Cart Items -->
+      <div class="cart-items-column" style="flex: 1; min-width: 0;">
+        <div id="cart-list">
+          <!-- JS will populate cart items -->
+        </div>
+        
+        <!-- Cart Sharing -->
+        <div class="cart-sharing">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-weight: 600; color: var(--text-color, #333);">Share Cart</span>
+            <button class="cart-share-button" onclick="shareCart()">Share</button>
+          </div>
+        </div>
+
+        <!-- Free Shipping Progress -->
+        <div class="free-shipping-progress" id="freeShippingProgress" style="display: none;">
+          <div style="font-size: 0.9rem; color: var(--text-color, #333); margin-bottom: 8px;">
+            <strong>Free Shipping</strong> on orders above ₹999
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-color, #666); margin-bottom: 4px;">
+            Add ₹<span id="shippingRemaining">0</span> more to get free shipping!
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="shippingProgressFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Place Order Button -->
+        <div style="margin-top: 20px; text-align: right;">
+          <button class="btn-place-order" id="placeOrderBtn" style="background: #fb641b; color: white; border: none; padding: 14px 48px; font-size: 1rem; font-weight: 600; border-radius: 2px; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.2);">PLACE ORDER</button>
+        </div>
+      </div>
+
+      <!-- Save for Later Section -->
+      <div class="save-for-later-section" id="saveForLaterSection" style="display: none;">
+        <h3 class="save-for-later-title">Save for Later</h3>
+        <div class="save-for-later-list" id="saveForLaterList">
+          <!-- Save for later items will appear here -->
+        </div>
+      </div>
+
+      <!-- Right Column: Price Details -->
+      <div class="price-details-column" style="width: 350px; flex-shrink: 0;">
+        <!-- Coupon Code Section -->
+        <div class="coupon-section" style="margin-bottom: 20px; padding: 20px; background: var(--card-bg, #fff); border-radius: 12px; border: 1px solid rgba(0,0,0,0.08);">
+          <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: var(--text-color, #333);">Have a Coupon Code?</h3>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="couponCode" placeholder="Enter coupon code" style="flex: 1; padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 0.95rem; background: var(--bg-color, #fff); color: var(--text-color, #333);">
+            <button id="applyCouponBtn" style="padding: 10px 20px; background: #ff6d2e; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.3s;">Apply</button>
+          </div>
+          <div id="couponMessage" style="margin-top: 8px; font-size: 0.85rem;"></div>
+          <div id="appliedCoupon" style="display: none; margin-top: 12px; padding: 12px; background: #e8f5e9; border-radius: 8px; color: #2e7d32; font-size: 0.9rem; font-weight: 600;">
+            <span id="appliedCouponText"></span>
+            <button id="removeCouponBtn" style="margin-left: 12px; background: none; border: none; color: #2e7d32; cursor: pointer; text-decoration: underline;">Remove</button>
+          </div>
+        </div>
+
+        <!-- Address Book Section -->
+        <div class="address-section" style="margin-bottom: 20px; padding: 20px; background: var(--card-bg, #fff); border-radius: 12px; border: 1px solid rgba(0,0,0,0.08);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--text-color, #333);">Delivery Address</h3>
+            <button id="manageAddressesBtn" style="padding: 6px 12px; background: transparent; border: 2px solid rgba(0,0,0,0.1); border-radius: 6px; color: var(--text-color, #333); font-size: 0.85rem; font-weight: 600; cursor: pointer;">Manage</button>
+          </div>
+          <div id="selectedAddress" style="padding: 12px; background: var(--muted-white, #f5f5f5); border-radius: 8px; font-size: 0.9rem; color: var(--text-color, #333);">
+            <div id="addressDisplay">No address selected</div>
+          </div>
+        </div>
+
+        <div class="checkout-box" style="position: sticky; top: 20px;">
+          <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-color, #333);">PRICE DETAILS</h2>
+          <div class="price-breakdown">
+            <div class="price-row" style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.9rem; color: var(--text-color, #666);">
+              <span>Price (<span id="itemCount">0</span> items)</span>
+              <span id="subtotal">₹0</span>
+            </div>
+            <div class="price-row discount-row" style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.9rem; color: #388e3c;">
+              <span>Discount</span>
+              <span id="discount">- ₹0</span>
+            </div>
+            <div class="price-row discount-row" style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.9rem; color: #388e3c;">
+              <span>Buy more & save more</span>
+              <span id="extraDiscount">- ₹0</span>
+            </div>
+            <div class="price-row" style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.9rem; color: var(--text-color, #666);">
+              <span>Platform Fee</span>
+              <span id="platformFee">₹0</span>
+            </div>
+            <div class="price-row total-row" style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 1rem; font-weight: 600; color: var(--text-color, #333);">
+              <span>Total Amount</span>
+              <span id="total">₹0</span>
+            </div>
+          </div>
+          <div class="savings-message" style="margin-top: 16px; padding: 12px; background: #f0fdf4; border-radius: 4px; color: #388e3c; font-size: 0.9rem; font-weight: 500;">
+            You will save <span id="totalSavings">₹0</span> on this order
+          </div>
+          <div class="security-message" style="margin-top: 16px; padding: 12px; background: var(--muted-white, #f5f5f5); border-radius: 4px; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-color, #666);">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span>Safe and Secure Payments. Easy returns. 100% Authentic products.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back to Shop Button -->
+    <div style="padding: 16px 24px; border-top: 1px solid rgba(0,0,0,0.08);">
+      <button class="btn" id="back-to-shop" style="background: transparent; color: var(--text-color, #333); border: 1px solid rgba(0,0,0,0.2); padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Back to Shop</button>
+    </div>
+  </div>
+
+  <div class="container hidden" id="bill-page" style="width: 100%; max-width: 1200px; margin: 0 auto;">
+    <h1>Order Bill</h1>
+    <div id="bill-details">
+      <!-- JS shows bill details -->
+    </div>
+    <button class="btn" id="back-shop-from-bill">Continue Shopping</button>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script>
+    // Use unified cart system
+    let cart = [];
+
+    // Load cart from localStorage on start
+    function loadCart() {
+      if (window.CartUtils) {
+        cart = window.CartUtils.getCart();
+      } else {
+        const stored = localStorage.getItem('cart');
+        if (stored) {
+          try {
+            cart = JSON.parse(stored);
+          } catch (e) {
+            console.error('Error parsing cart:', e);
+            cart = [];
+          }
+        } else {
+          cart = [];
+        }
+      }
+    }
+
+    function saveCart() {
+      if (window.CartUtils) {
+        window.CartUtils.saveCart(cart);
+      } else {
+        localStorage.setItem('cart', JSON.stringify(cart));
+      }
+      updateCartCount();
+    }
+
+    // Helper function to update wishlist button icon
+    function updateWishlistButtonIcon(button, isWishlisted) {
+      if (isWishlisted) {
+        // Replace with GIF
+        button.innerHTML = `<img src="../assets/gifs/wishlist.gif" alt="Wishlisted" style="width: 18px; height: 18px; object-fit: contain;" />`;
+        button.title = 'Remove from Wishlist';
+      } else {
+        // Replace with SVG
+        button.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>`;
+        button.title = 'Add to Wishlist';
+      }
+    }
+
+    // Add to wishlist from cart page
+    function addToWishlistFromCart(button) {
+      const name = button.getAttribute('data-name');
+      const price = parseInt(button.getAttribute('data-price'));
+      const brand = button.getAttribute('data-brand') || 'V Store';
+      const img = button.getAttribute('data-img') || '';
+      
+      // Check if product is already in wishlist
+      const isCurrentlyWishlisted = (() => {
+        if (window.WishlistUtils) {
+          const wishlist = window.WishlistUtils.getWishlist();
+          return wishlist.some(item => item.name === name);
+        } else {
+          const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+          return wishlist.some(item => item.name === name);
+        }
+      })();
+      
+      if (window.WishlistUtils) {
+        if (isCurrentlyWishlisted) {
+          // Remove from wishlist
+          window.WishlistUtils.removeItemFromWishlist(name);
+          updateWishlistButtonIcon(button, false);
+          if (window.showToast) {
+            showToast(`${name} removed from wishlist`, 'success', 'Wishlist');
+          }
+        } else {
+          // Add to wishlist
+          const added = window.WishlistUtils.addItemToWishlist({
+            name: name,
+            price: price,
+            originalPrice: price,
+            image: img,
+            brand: brand,
+            size: 'Default',
+            color: 'Default'
+          });
+          
+          if (added) {
+            updateWishlistButtonIcon(button, true);
+            if (window.showToast) {
+              showToast(`${name} added to wishlist!`, 'success', 'Wishlist');
+            }
+          }
+        }
+        
+        window.WishlistUtils.updateWishlistCount();
+      } else {
+        // Fallback to localStorage
+        let wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        const existingItemIndex = wishlist.findIndex(item => item.name === name);
+        
+        if (existingItemIndex !== -1) {
+          // Remove from wishlist
+          wishlist.splice(existingItemIndex, 1);
+          localStorage.setItem('wishlist', JSON.stringify(wishlist));
+          updateWishlistButtonIcon(button, false);
+          if (window.showToast) {
+            showToast(`${name} removed from wishlist`, 'success', 'Wishlist');
+          }
+        } else {
+          // Add to wishlist
+          wishlist.push({
+            name: name,
+            price: price,
+            originalPrice: price,
+            image: img,
+            brand: brand
+          });
+          localStorage.setItem('wishlist', JSON.stringify(wishlist));
+          updateWishlistButtonIcon(button, true);
+          if (window.showToast) {
+            showToast(`${name} added to wishlist!`, 'success', 'Wishlist');
+          }
+        }
+        
+        // Update wishlist count
+        const wishlistCountElements = document.querySelectorAll('#wishlistCount, .wishlist-count');
+        wishlistCountElements.forEach(el => {
+          if (el) {
+            el.textContent = wishlist.length;
+            if (wishlist.length > 0) {
+              el.style.display = 'inline-block';
+            } else {
+              el.style.display = 'none';
+            }
+          }
+        });
+      }
+    }
+
+    // Make function globally available
+    window.addToWishlistFromCart = addToWishlistFromCart;
+
+    function addToCart(productId) {
+      // Get products from window.products or use empty array
+      const productsArray = window.products ? 
+        Object.values(window.products).flat().map(p => ({
+          ...p,
+          id: p.id || `${p.name}_${p.color || ''}_${p.size || ''}`.replace(/\s+/g, '_')
+        })) : 
+        [];
+      
+      // Try to find by ID first, then by name if ID doesn't match
+      let prod = productsArray.find(p => p.id === productId);
+      if (!prod) {
+        // Fallback: try to find by name (in case ID format differs)
+        const productName = productId.replace(/_/g, ' ').split('_')[0];
+        prod = productsArray.find(p => p.name === productName);
+      }
+      
+      if (!prod) {
+        console.warn('Product not found:', productId);
+        return;
+      }
+
+      const productIdToUse = prod.id || productId;
+      const exists = cart.find(item => item.id === productIdToUse || item.name === prod.name);
+      if (exists) {
+        exists.quantity += 1;
+      } else {
+        cart.push({ 
+          id: productIdToUse, 
+          name: prod.name, 
+          price: prod.price, 
+          img: prod.image || prod.img, 
+          quantity: 1 
+        });
+      }
+      saveCart();
+      alert(`${prod.name} added to cart.`);
+    }
+
+    function removeFromCart(productId) {
+      if (window.CartUtils) {
+        window.CartUtils.removeItemFromCart(productId);
+        cart = window.CartUtils.getCart();
+      } else {
+        cart = cart.filter(item => item.id !== productId);
+        saveCart();
+      }
+      renderCartPage();
+      updateCartCount();
+    }
+
+    function changeQuantity(productId, delta) {
+      const item = cart.find(i => i.id === productId);
+      if (!item) return;
+      
+      let newQuantity = (item.quantity || 1) + delta;
+      
+      // Enforce min and max
+      if (newQuantity <= 0) {
+        removeFromCart(productId);
+        return;
+      }
+      if (newQuantity > 10) {
+        newQuantity = 10;
+        alert('Maximum quantity is 10');
+      }
+      
+      if (window.CartUtils) {
+        window.CartUtils.updateItemQuantity(productId, newQuantity);
+        cart = window.CartUtils.getCart();
+      } else {
+        item.quantity = newQuantity;
+        saveCart();
+      }
+      renderCartPage();
+      updateCartCount();
+    }
+    
+    function updateCartCount() {
+      if (window.CartUtils) {
+        window.CartUtils.updateCartCount();
+      } else {
+        const cartCount = document.getElementById('cartCount');
+        if (cartCount) {
+          const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+          cartCount.textContent = totalItems;
+        }
+      }
+    }
+
+    function renderProducts() {
+      const container = document.getElementById('product-list');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      
+      // Get products from window.products or use empty array
+      // Flatten and add IDs if missing
+      const productsArray = window.products ? 
+        Object.values(window.products).flat().map(p => ({
+          ...p,
+          id: p.id || `${p.name}_${p.color || ''}_${p.size || ''}`.replace(/\s+/g, '_').replace(/__+/g, '_')
+        })) : 
+        [];
+      
+      if (productsArray.length === 0) {
+        container.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-color, #666);">No products available.</p>';
+        return;
+      }
+      
+      // Helper function to check if product is in wishlist
+      function isProductInWishlist(productName) {
+        if (window.WishlistUtils) {
+          const wishlist = window.WishlistUtils.getWishlist();
+          return wishlist.some(item => item.name === productName);
+        } else {
+          const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+          return wishlist.some(item => item.name === productName);
+        }
+      }
+
+      // Helper function to get wishlist button HTML
+      function getWishlistButtonHTML(product) {
+        const isWishlisted = isProductInWishlist(product.name);
+        const wishlistIcon = isWishlisted 
+          ? `<img src="../assets/gifs/wishlist.gif" alt="Wishlisted" style="width: 18px; height: 18px; object-fit: contain;" />`
+          : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>`;
+        
+        const title = isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist';
+        
+        return `<button class="wishlist-btn" data-name="${product.name}" data-price="${product.price || 0}" data-brand="${product.brand || 'V Store'}" data-img="${product.image || product.img || '../assets/products/p1.jpg'}" onclick="event.stopPropagation(); addToWishlistFromCart(this)" title="${title}" style="padding: 8px; min-width: 40px; height: 40px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+          ${wishlistIcon}
+        </button>`;
+      }
+
+      for (const p of productsArray) {
+        // Use the generated or existing ID
+        const productId = p.id;
+        const imgSrc = p.image || p.img || '../assets/products/p1.jpg';
+        
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.innerHTML = `
+          <img src="${imgSrc}" alt="${p.name}" />
+          <h3>${p.name}</h3>
+          <p class="price">₹${p.price || 0}</p>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button class="btn add-btn" data-id="${productId}" style="flex: 1;">Add to Cart</button>
+            ${getWishlistButtonHTML(p)}
+          </div>
+        `;
+        container.appendChild(card);
+      }
+      
+      document.querySelectorAll('.add-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          addToCart(btn.dataset.id);
+        });
+      });
+    }
+
+    function renderCartPage() {
+      const listEl = document.getElementById('cart-list');
+      if (!listEl) return;
+      
+      listEl.innerHTML = '';
+
+      if (cart.length === 0) {
+        listEl.innerHTML = `
+          <div style="text-align: center; padding: 60px 20px; color: var(--text-color, #666);">
+            <svg viewBox="0 0 24 24" width="80" height="80" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 20px; opacity: 0.5;">
+              <path d="M6 6h15l-1.5 9h-12z"></path>
+              <circle cx="10" cy="20" r="1.4"></circle>
+              <circle cx="18" cy="20" r="1.4"></circle>
+            </svg>
+            <h3 style="margin-bottom: 10px; font-size: 1.2rem; color: var(--text-color, #333);">Your cart is empty</h3>
+            <p style="margin-bottom: 20px; font-size: 0.9rem;">Add some products to get started!</p>
+            <a href="products.html" class="btn" style="display: inline-block; text-decoration: none; padding: 12px 24px; background: #2874f0; color: white; border-radius: 4px;">Browse Products</a>
+          </div>
+        `;
+        updateSummary();
+        return;
+      }
+
+      for (const item of cart) {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'cart-item';
+        
+        // Handle different image path formats
+        let imgSrc = item.image || item.img || '../assets/products/p1.jpg';
+        if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('../') && !imgSrc.startsWith('/')) {
+          imgSrc = '../' + imgSrc;
+        }
+        
+        // Calculate pricing
+        const originalPrice = item.originalPrice || item.price || 0;
+        const currentPrice = item.price || 0;
+        const discount = originalPrice > currentPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0;
+        const quantity = item.quantity || 1;
+        
+        // Build item specs
+        let specs = [];
+        if (item.size) specs.push(`Size: ${item.size}`);
+        if (item.color && item.color !== 'Default') specs.push(`Color: ${item.color}`);
+        const specsText = specs.length > 0 ? specs.join(', ') : '';
+        
+        // Seller info
+        const seller = item.brand || 'V Store';
+        
+        // Delivery date (simulated)
+        const deliveryDate = new Date();
+        deliveryDate.setDate(deliveryDate.getDate() + 2);
+        const deliveryText = `Delivery by ${deliveryDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
+        
+        itemEl.innerHTML = `
+          <img src="${imgSrc}" alt="${item.name}" class="cart-item-image" onerror="this.src='../assets/products/p1.jpg'" />
+          <div class="cart-item-details">
+            <div class="cart-item-title">${item.name}</div>
+            ${specsText ? `<div class="cart-item-specs">${specsText}</div>` : ''}
+            <div class="cart-item-seller">
+              <span class="seller-name">${seller}</span>
+              <span class="assured-badge">Assured</span>
+            </div>
+            <div class="cart-item-pricing">
+              <div class="price-row-inline">
+                ${originalPrice > currentPrice ? `<span class="original-price">₹${originalPrice.toLocaleString()}</span>` : ''}
+                <span class="current-price">₹${currentPrice.toLocaleString()}</span>
+                ${discount > 0 ? `<span class="discount-badge">${discount}% Off</span>` : ''}
+              </div>
+            </div>
+            <div class="cart-item-delivery">
+              <span class="delivery-date">${deliveryText}</span>
+            </div>
+            <div class="quantity-selector-cart">
+              <button class="quantity-btn-cart" data-id="${item.id}" data-action="decrease" ${quantity <= 1 ? 'disabled' : ''}>−</button>
+              <input type="number" class="quantity-input-cart" value="${quantity}" min="1" max="10" data-id="${item.id}" readonly>
+              <button class="quantity-btn-cart" data-id="${item.id}" data-action="increase" ${quantity >= 10 ? 'disabled' : ''}>+</button>
+            </div>
+            <div class="cart-item-actions">
+              <button class="action-link save-later" data-id="${item.id}">SAVE FOR LATER</button>
+              <button class="action-link remove" data-id="${item.id}">REMOVE</button>
+            </div>
+          </div>
+        `;
+        listEl.appendChild(itemEl);
+      }
+
+      // Add event listeners for quantity buttons
+      document.querySelectorAll('.quantity-btn-cart').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const itemId = btn.dataset.id;
+          const action = btn.dataset.action;
+          if (action === 'increase') {
+            changeQuantity(itemId, 1);
+          } else if (action === 'decrease') {
+            changeQuantity(itemId, -1);
+          }
+        });
+      });
+      
+      // Add event listeners for remove buttons
+      document.querySelectorAll('.action-link.remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+          removeFromCart(btn.dataset.id);
+        });
+      });
+      
+      // Add event listeners for save for later
+      document.querySelectorAll('.action-link.save-later').forEach(btn => {
+        btn.addEventListener('click', () => {
+          saveForLaterFromCart(btn.dataset.id);
+        });
+      });
+
+      updateSummary();
+    }
+    
+    function saveForLaterFromCart(itemId) {
+      // Find the item in cart
+      const itemIndex = cart.findIndex(item => item.id === itemId);
+      if (itemIndex === -1) {
+        console.error('Item not found in cart');
+        return;
+      }
+      
+      const item = cart[itemIndex];
+      
+      // Load saved items from localStorage
+      let savedItems = [];
+      const savedItemsStr = localStorage.getItem('savedForLater');
+      if (savedItemsStr) {
+        try {
+          savedItems = JSON.parse(savedItemsStr);
+        } catch (e) {
+          console.error('Error parsing saved items:', e);
+          savedItems = [];
+        }
+      }
+      
+      // Check if item already exists in saved items
+      const existingSavedIndex = savedItems.findIndex(savedItem => 
+        savedItem.id === item.id && 
+        savedItem.name === item.name &&
+        (savedItem.size || '') === (item.size || '') &&
+        (savedItem.color || 'Default') === (item.color || 'Default')
+      );
+      
+      if (existingSavedIndex !== -1) {
+        // Update quantity if already saved
+        savedItems[existingSavedIndex].quantity = (savedItems[existingSavedIndex].quantity || 1) + (item.quantity || 1);
+      } else {
+        // Add new item to saved items
+        savedItems.push({
+          ...item,
+          savedAt: new Date().toISOString()
+        });
+      }
+      
+      // Save to localStorage
+      localStorage.setItem('savedForLater', JSON.stringify(savedItems));
+      
+      // Remove from cart (like remove function does)
+      if (window.CartUtils) {
+        window.CartUtils.removeItemFromCart(itemId);
+        cart = window.CartUtils.getCart();
+      } else {
+        cart = cart.filter(item => item.id !== itemId);
+        saveCart();
+      }
+      
+      // Update display
+      renderCartPage();
+      updateCartCount();
+      
+      // Show confirmation message
+      const itemName = item.name || 'Item';
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #388e3c;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 10000;
+        font-size: 0.9rem;
+        font-weight: 500;
+        animation: slideIn 0.3s ease;
+      `;
+      notification.textContent = `${itemName} saved for later`;
+      document.body.appendChild(notification);
+      
+      // Remove notification after 3 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, 3000);
+    }
+
+    function updateSummary() {
+      let totalOriginalPrice = 0;
+      let totalCurrentPrice = 0;
+      let totalItems = 0;
+      
+      for (const item of cart) {
+        const originalPrice = item.originalPrice || item.price || 0;
+        const currentPrice = item.price || 0;
+        const quantity = item.quantity || 1;
+        totalOriginalPrice += originalPrice * quantity;
+        totalCurrentPrice += currentPrice * quantity;
+        totalItems += quantity;
+      }
+      
+      const totalDiscount = totalOriginalPrice - totalCurrentPrice;
+      const extraDiscount = totalItems > 1 ? Math.min(20, Math.floor(totalCurrentPrice * 0.01)) : 0;
+      const platformFee = totalCurrentPrice > 0 ? 7 : 0;
+      const finalTotal = totalCurrentPrice - extraDiscount + platformFee;
+      const totalSavings = totalDiscount + extraDiscount;
+      
+      // Update item count
+      const itemCountEl = document.getElementById('itemCount');
+      if (itemCountEl) itemCountEl.textContent = totalItems;
+      
+      // Update price breakdown
+      const subtotalEl = document.getElementById('subtotal');
+      const discountEl = document.getElementById('discount');
+      const extraDiscountEl = document.getElementById('extraDiscount');
+      const platformFeeEl = document.getElementById('platformFee');
+      const totalEl = document.getElementById('total');
+      const totalSavingsEl = document.getElementById('totalSavings');
+      
+      if (subtotalEl) subtotalEl.textContent = `₹${totalOriginalPrice.toLocaleString()}`;
+      if (discountEl) discountEl.textContent = `- ₹${totalDiscount.toLocaleString()}`;
+      if (extraDiscountEl) {
+        extraDiscountEl.textContent = `- ₹${extraDiscount.toLocaleString()}`;
+        extraDiscountEl.parentElement.style.display = extraDiscount > 0 ? 'flex' : 'none';
+      }
+      if (platformFeeEl) platformFeeEl.textContent = `₹${platformFee.toLocaleString()}`;
+      if (totalEl) totalEl.textContent = `₹${finalTotal.toLocaleString()}`;
+      if (totalSavingsEl) totalSavingsEl.textContent = `₹${totalSavings.toLocaleString()}`;
+      
+      // Hide savings message if no savings
+      const savingsMsg = document.querySelector('.savings-message');
+      if (savingsMsg) {
+        savingsMsg.style.display = totalSavings > 0 ? 'block' : 'none';
+      }
+    }
+
+    function showBill() {
+      const billDiv = document.getElementById('bill-details');
+      if (!billDiv) return;
+      
+      billDiv.innerHTML = '';
+
+      if (cart.length === 0) {
+        billDiv.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--text-color, #666);">Your cart is empty.</p>';
+        return;
+      }
+
+      let html = '<div style="overflow-x: auto;"><table width="100%" border="1" cellpadding="12" style="border-collapse: collapse; margin: 0 auto; background: var(--card-bg, #fff);">';
+      html += '<thead><tr style="background: var(--muted-white, #f5f5f5);"><th style="text-align: left; padding: 12px;">Item</th><th style="text-align: center; padding: 12px;">Qty</th><th style="text-align: right; padding: 12px;">Price</th><th style="text-align: right; padding: 12px;">Amount</th></tr></thead><tbody>';
+      let subtotal = 0;
+      for (const item of cart) {
+        const price = item.price || 0;
+        const quantity = item.quantity || 1;
+        const amount = price * quantity;
+        subtotal += amount;
+        const sizeInfo = item.size ? ` (Size: ${item.size})` : '';
+        html += `<tr>
+          <td style="padding: 12px;">${item.name}${sizeInfo}</td>
+          <td style="text-align: center; padding: 12px;">${quantity}</td>
+          <td style="text-align: right; padding: 12px;">₹${price}</td>
+          <td style="text-align: right; padding: 12px;">₹${amount}</td>
+        </tr>`;
+      }
+      const taxRate = 0.05;
+      const tax = parseFloat((subtotal * taxRate).toFixed(2));
+      const total = subtotal + tax;
+
+      html += `<tr>
+        <td colspan="3" style="text-align: right;"><strong>Subtotal</strong></td>
+        <td style="text-align: right;">₹${subtotal}</td>
+      </tr>`;
+      html += `<tr>
+        <td colspan="3" style="text-align: right;">Tax (5%)</td>
+        <td style="text-align: right;">₹${tax}</td>
+      </tr>`;
+      html += `<tr>
+        <td colspan="3" style="text-align: right;"><strong>Total</strong></td>
+        <td style="text-align: right;"><strong>₹${total}</strong></td>
+      </tr>`;
+
+      html += '</tbody></table></div>';
+
+      billDiv.innerHTML = html;
+      
+      // Show order confirmation message
+      setTimeout(() => {
+        const confirmMsg = document.createElement('div');
+        confirmMsg.innerHTML = `
+          <div style="background: #4caf50; color: white; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);">
+            <h3 style="margin-bottom: 10px; font-size: 1.5rem;">✓ Order Placed Successfully!</h3>
+            <p style="margin-bottom: 10px;">Thank you for your purchase. Your order will be delivered soon.</p>
+            <p style="margin-top: 10px; font-size: 1.1rem; font-weight: 600;">Order Total: ₹${total.toFixed(2)}</p>
+            <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.9;">Order ID: #${Date.now().toString().slice(-8)}</p>
+          </div>
+        `;
+        billDiv.appendChild(confirmMsg);
+      }, 100);
+
+      // Optionally clear the cart after checkout (commented out to keep items for demo)
+      // cart = [];
+      // saveCart();
+      // updateCartCount();
+    }
+
+    // Navigation between "pages" (sections)
+    const goToCartBtn = document.getElementById('go-to-cart');
+    const backToShopBtn = document.getElementById('back-to-shop');
+    const placeOrderBtn = document.getElementById('placeOrderBtn');
+    const enterPincodeBtn = document.getElementById('enterPincodeBtn');
+    const backShopFromBillBtn = document.getElementById('back-shop-from-bill');
+    
+    if (goToCartBtn) {
+      goToCartBtn.addEventListener('click', () => {
+        loadCart();
+        renderCartPage();
+        document.getElementById('shop-page').classList.add('hidden');
+        document.getElementById('cart-page').classList.remove('hidden');
+        document.getElementById('bill-page').classList.add('hidden');
+      });
+    }
+
+    if (backToShopBtn) {
+      backToShopBtn.addEventListener('click', () => {
+        document.getElementById('shop-page').classList.remove('hidden');
+        document.getElementById('cart-page').classList.add('hidden');
+        document.getElementById('bill-page').classList.add('hidden');
+      });
+    }
+
+    if (placeOrderBtn) {
+      placeOrderBtn.addEventListener('click', () => {
+        if (cart.length === 0) {
+          alert('Your cart is empty. Please add items to cart first.');
+          return;
+        }
+        // Navigate to checkout page
+        window.location.href = 'checkout.html';
+      });
+    }
+    
+    if (enterPincodeBtn) {
+      enterPincodeBtn.addEventListener('click', () => {
+        const pincode = prompt('Enter your delivery pincode:');
+        if (pincode && /^\d{6}$/.test(pincode)) {
+          alert(`Delivery available for pincode: ${pincode}`);
+        } else if (pincode) {
+          alert('Please enter a valid 6-digit pincode');
+        }
+      });
+    }
+    
+    // Keep old checkout button for compatibility
+    const checkoutBtn = document.getElementById('checkout-btn');
+    if (checkoutBtn) {
+      checkoutBtn.addEventListener('click', () => {
+        if (placeOrderBtn) {
+          placeOrderBtn.click();
+        }
+      });
+    }
+
+    if (backShopFromBillBtn) {
+      backShopFromBillBtn.addEventListener('click', () => {
+        document.getElementById('shop-page').classList.remove('hidden');
+        document.getElementById('cart-page').classList.add('hidden');
+        document.getElementById('bill-page').classList.add('hidden');
+        // Reload cart after checkout
+        loadCart();
+        renderCartPage();
+      });
+    }
+
+    // ====== COUPON CODE SYSTEM ======
+    const validCoupons = {
+      'SAVE10': { discount: 10, type: 'percent', minAmount: 500 },
+      'SAVE20': { discount: 20, type: 'percent', minAmount: 1000 },
+      'FLAT50': { discount: 50, type: 'fixed', minAmount: 500 },
+      'WELCOME': { discount: 15, type: 'percent', minAmount: 0 }
+    };
+
+    let appliedCoupon = null;
+
+    function applyCoupon() {
+      const couponCode = document.getElementById('couponCode')?.value.trim().toUpperCase();
+      const messageEl = document.getElementById('couponMessage');
+      const appliedEl = document.getElementById('appliedCoupon');
+      const appliedText = document.getElementById('appliedCouponText');
+      
+      if (!couponCode) {
+        if (messageEl) messageEl.textContent = 'Please enter a coupon code';
+        if (messageEl) messageEl.style.color = '#e53935';
+        return;
+      }
+
+      const coupon = validCoupons[couponCode];
+      if (!coupon) {
+        if (messageEl) {
+          messageEl.textContent = 'Invalid coupon code';
+          messageEl.style.color = '#e53935';
+        }
+        if (window.showToast) {
+          showToast('Invalid coupon code', 'error', 'Coupon Error');
+        }
+        return;
+      }
+
+      const cartTotal = getCartTotal();
+      if (cartTotal < coupon.minAmount) {
+        if (messageEl) {
+          messageEl.textContent = `Minimum order amount of ₹${coupon.minAmount} required`;
+          messageEl.style.color = '#e53935';
+        }
+        if (window.showToast) {
+          showToast(`Minimum order amount of ₹${coupon.minAmount} required`, 'error', 'Coupon Error');
+        }
+        return;
+      }
+
+      appliedCoupon = { code: couponCode, ...coupon };
+      if (messageEl) messageEl.textContent = '';
+      if (appliedEl) appliedEl.style.display = 'block';
+      if (appliedText) {
+        appliedText.textContent = `Applied: ${couponCode} - ${coupon.type === 'percent' ? coupon.discount + '%' : '₹' + coupon.discount} OFF`;
+      }
+      if (window.showToast) {
+        showToast('Coupon applied successfully!', 'success', 'Coupon Applied');
+      }
+      updateSummary();
+    }
+
+    function removeCoupon() {
+      appliedCoupon = null;
+      const appliedEl = document.getElementById('appliedCoupon');
+      const couponInput = document.getElementById('couponCode');
+      if (appliedEl) appliedEl.style.display = 'none';
+      if (couponInput) couponInput.value = '';
+      updateSummary();
+      if (window.showToast) {
+        showToast('Coupon removed', 'info', 'Coupon');
+      }
+    }
+
+    function getCouponDiscount(subtotal) {
+      if (!appliedCoupon) return 0;
+      if (appliedCoupon.type === 'percent') {
+        return Math.round(subtotal * appliedCoupon.discount / 100);
+      } else {
+        return Math.min(appliedCoupon.discount, subtotal);
+      }
+    }
+
+    // ====== ADDRESS BOOK SYSTEM ======
+    function getAddresses() {
+      return JSON.parse(localStorage.getItem('addresses') || '[]');
+    }
+
+    function saveAddresses(addresses) {
+      localStorage.setItem('addresses', JSON.stringify(addresses));
+    }
+
+    function getSelectedAddress() {
+      return localStorage.getItem('selectedAddressId');
+    }
+
+    function setSelectedAddress(addressId) {
+      localStorage.setItem('selectedAddressId', addressId);
+    }
+
+    function renderSelectedAddress() {
+      const addresses = getAddresses();
+      const selectedId = getSelectedAddress();
+      const addressDisplay = document.getElementById('addressDisplay');
+      
+      if (!addressDisplay) return;
+      
+      if (addresses.length === 0) {
+        addressDisplay.textContent = 'No address saved. Click Manage to add one.';
+        return;
+      }
+
+      const selected = addresses.find(a => a.id === selectedId) || addresses[0];
+      if (selected) {
+        addressDisplay.innerHTML = `
+          <strong>${selected.name}</strong><br>
+          ${selected.address}<br>
+          ${selected.city}, ${selected.state} ${selected.pincode}<br>
+          Phone: ${selected.phone}
+        `;
+        setSelectedAddress(selected.id);
+      }
+    }
+
+    function showAddressManager() {
+      const addresses = getAddresses();
+      const addressList = addresses.map(addr => `
+        <div style="padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 12px;">
+          <div style="font-weight: 600; margin-bottom: 8px;">${addr.name}</div>
+          <div style="font-size: 0.9rem; color: var(--text-color, #666); margin-bottom: 8px;">
+            ${addr.address}, ${addr.city}, ${addr.state} ${addr.pincode}<br>
+            Phone: ${addr.phone}
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button onclick="selectAddress('${addr.id}')" style="padding: 6px 12px; background: #ff6d2e; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">Select</button>
+            <button onclick="deleteAddress('${addr.id}')" style="padding: 6px 12px; background: transparent; border: 1px solid rgba(0,0,0,0.2); border-radius: 6px; cursor: pointer; font-size: 0.85rem; color: #e53935;">Delete</button>
+          </div>
+        </div>
+      `).join('');
+
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+      modal.innerHTML = `
+        <div style="background: var(--card-bg, #fff); padding: 24px; border-radius: 12px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--text-color, #333);">Manage Addresses</h3>
+            <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-color, #666);">&times;</button>
+          </div>
+          <div id="addressListContainer">
+            ${addressList || '<p style="text-align: center; color: var(--text-color, #666);">No addresses saved</p>'}
+          </div>
+          <button onclick="showAddAddressForm()" style="width: 100%; padding: 12px; background: #ff6d2e; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 16px;">+ Add New Address</button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      window.currentAddressModal = modal;
+    }
+
+    function showAddAddressForm() {
+      const container = document.getElementById('addressListContainer');
+      if (!container) return;
+      
+      container.innerHTML = `
+        <form id="addAddressForm" style="display: flex; flex-direction: column; gap: 12px;">
+          <input type="text" name="name" placeholder="Full Name" required style="padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg-color, #fff); color: var(--text-color, #333);">
+          <input type="tel" name="phone" placeholder="Phone Number" required style="padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg-color, #fff); color: var(--text-color, #333);">
+          <textarea name="address" placeholder="Street Address" required rows="3" style="padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg-color, #fff); color: var(--text-color, #333); resize: vertical;"></textarea>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <input type="text" name="city" placeholder="City" required style="padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg-color, #fff); color: var(--text-color, #333);">
+            <input type="text" name="state" placeholder="State" required style="padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg-color, #fff); color: var(--text-color, #333);">
+          </div>
+          <input type="text" name="pincode" placeholder="Pincode" required pattern="[0-9]{6}" style="padding: 10px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; background: var(--bg-color, #fff); color: var(--text-color, #333);">
+          <div style="display: flex; gap: 8px;">
+            <button type="submit" style="flex: 1; padding: 12px; background: #4caf50; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Save Address</button>
+            <button type="button" onclick="showAddressManager()" style="flex: 1; padding: 12px; background: transparent; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; font-weight: 600; cursor: pointer; color: var(--text-color, #333);">Cancel</button>
+          </div>
+        </form>
+      `;
+      
+      document.getElementById('addAddressForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const address = {
+          id: Date.now().toString(),
+          name: formData.get('name'),
+          phone: formData.get('phone'),
+          address: formData.get('address'),
+          city: formData.get('city'),
+          state: formData.get('state'),
+          pincode: formData.get('pincode')
+        };
+        const addresses = getAddresses();
+        addresses.push(address);
+        saveAddresses(addresses);
+        setSelectedAddress(address.id);
+        renderSelectedAddress();
+        if (window.currentAddressModal) {
+          window.currentAddressModal.remove();
+        }
+        if (window.showToast) {
+          showToast('Address saved successfully!', 'success', 'Address Saved');
+        }
+      });
+    }
+
+    window.selectAddress = function(addressId) {
+      setSelectedAddress(addressId);
+      renderSelectedAddress();
+      if (window.currentAddressModal) {
+        window.currentAddressModal.remove();
+      }
+      if (window.showToast) {
+        showToast('Address selected', 'success', 'Address');
+      }
+    };
+
+    window.deleteAddress = function(addressId) {
+      if (window.showConfirmDialog) {
+        window.showConfirmDialog('Are you sure you want to delete this address?', 'Delete Address').then((confirmed) => {
+          if (confirmed) {
+            const addresses = getAddresses().filter(a => a.id !== addressId);
+            saveAddresses(addresses);
+            if (getSelectedAddress() === addressId) {
+              localStorage.removeItem('selectedAddressId');
+            }
+            showAddressManager();
+            if (window.showToast) {
+              showToast('Address deleted', 'info', 'Address');
+            }
+          }
+        });
+      } else if (confirm('Are you sure you want to delete this address?')) {
+        const addresses = getAddresses().filter(a => a.id !== addressId);
+        saveAddresses(addresses);
+        if (getSelectedAddress() === addressId) {
+          localStorage.removeItem('selectedAddressId');
+        }
+        showAddressManager();
+        if (window.showToast) {
+          showToast('Address deleted', 'info', 'Address');
+        }
+      }
+    };
+
+    // Update summary to include coupon discount
+    const originalUpdateSummary = updateSummary;
+    updateSummary = function() {
+      originalUpdateSummary();
+      const subtotalEl = document.getElementById('subtotal');
+      const totalEl = document.getElementById('total');
+      if (subtotalEl && totalEl && appliedCoupon) {
+        const subtotal = parseFloat(subtotalEl.textContent.replace(/[₹,]/g, ''));
+        const couponDiscount = getCouponDiscount(subtotal);
+        const currentTotal = parseFloat(totalEl.textContent.replace(/[₹,]/g, ''));
+        const newTotal = currentTotal - couponDiscount;
+        totalEl.textContent = `₹${newTotal.toLocaleString()}`;
+        
+        // Add coupon discount row if not exists
+        let couponRow = document.getElementById('couponDiscountRow');
+        if (!couponRow) {
+          const discountRow = document.createElement('div');
+          discountRow.id = 'couponDiscountRow';
+          discountRow.style.cssText = 'display: flex; justify-content: space-between; padding: 8px 0; color: #4caf50; font-weight: 600;';
+          totalEl.parentElement.insertBefore(discountRow, totalEl.parentElement.lastElementChild);
+          couponRow = discountRow;
+        }
+        couponRow.innerHTML = `<span>Coupon Discount (${appliedCoupon.code})</span><span>- ₹${couponDiscount.toLocaleString()}</span>`;
+      } else {
+        const couponRow = document.getElementById('couponDiscountRow');
+        if (couponRow) couponRow.remove();
+      }
+    };
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      const applyCouponBtn = document.getElementById('applyCouponBtn');
+      const removeCouponBtn = document.getElementById('removeCouponBtn');
+      const manageAddressesBtn = document.getElementById('manageAddressesBtn');
+      const couponInput = document.getElementById('couponCode');
+      
+      if (applyCouponBtn) {
+        applyCouponBtn.addEventListener('click', applyCoupon);
+      }
+      
+      if (couponInput) {
+        couponInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            applyCoupon();
+          }
+        });
+      }
+      
+      if (removeCouponBtn) {
+        removeCouponBtn.addEventListener('click', removeCoupon);
+      }
+      
+      if (manageAddressesBtn) {
+        manageAddressesBtn.addEventListener('click', showAddressManager);
+      }
+      
+      renderSelectedAddress();
+    });
+
+    // ====== SAVE FOR LATER SYSTEM ======
+    function getSaveForLater() {
+      return JSON.parse(localStorage.getItem('saveForLater') || '[]');
+    }
+
+    function saveSaveForLater(items) {
+      localStorage.setItem('saveForLater', JSON.stringify(items));
+    }
+
+    function saveForLaterUnified(itemId) {
+      const item = cart.find(i => i.id === itemId);
+      if (!item) return;
+      
+      let savedItems = getSaveForLater();
+      
+      // Check if already saved
+      if (savedItems.find(i => i.id === itemId)) {
+        if (window.showToast) {
+          showToast('Item already saved for later', 'info', 'Save for Later');
+        }
+        return;
+      }
+      
+      savedItems.push({ ...item, savedAt: new Date().toISOString() });
+      saveSaveForLater(savedItems);
+      
+      // Remove from cart
+      removeFromCart(itemId);
+      
+      if (window.showToast) {
+        showToast('Item saved for later', 'success', 'Save for Later');
+      }
+    }
+
+    function moveToCartFromSaved(itemId) {
+      const savedItems = getSaveForLater();
+      const item = savedItems.find(i => i.id === itemId);
+      if (!item) return;
+      
+      // Add to cart
+      if (window.CartUtils) {
+        window.CartUtils.addItemToCart(item);
+      } else {
+        cart.push(item);
+        saveCart();
+      }
+      
+      // Remove from saved
+      const updated = savedItems.filter(i => i.id !== itemId);
+      saveSaveForLater(updated);
+      
+      renderCartPage();
+      renderSaveForLater();
+      updateCartCount();
+      
+      if (window.showToast) {
+        showToast('Item moved to cart', 'success', 'Cart');
+      }
+    }
+
+    function removeFromSaveForLater(itemId) {
+      const savedItems = getSaveForLater();
+      const updated = savedItems.filter(i => i.id !== itemId);
+      saveSaveForLater(updated);
+      renderSaveForLater();
+      
+      if (window.showToast) {
+        showToast('Item removed from saved', 'info', 'Save for Later');
+      }
+    }
+
+    function renderSaveForLater() {
+      const savedItems = getSaveForLater();
+      const section = document.getElementById('saveForLaterSection');
+      const list = document.getElementById('saveForLaterList');
+      
+      if (!section || !list) return;
+      
+      if (savedItems.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      
+      section.style.display = 'block';
+      list.innerHTML = savedItems.map(item => {
+        const imgSrc = item.image || item.img || '../assets/products/p1.jpg';
+        return `
+          <div class="save-for-later-item">
+            <img src="${imgSrc}" alt="${item.name}" class="save-for-later-image" onerror="this.src='../assets/products/p1.jpg'">
+            <div class="save-for-later-details">
+              <div class="save-for-later-name">${item.name}</div>
+              <div class="save-for-later-price">₹${item.price} × ${item.quantity || 1}</div>
+            </div>
+            <div class="save-for-later-actions">
+              <button class="save-for-later-btn move-to-cart" onclick="moveToCartFromSaved('${item.id}')">Move to Cart</button>
+              <button class="save-for-later-btn remove" onclick="removeFromSaveForLater('${item.id}')">Remove</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.saveForLater = saveForLaterUnified;
+    window.moveToCartFromSaved = moveToCartFromSaved;
+    window.removeFromSaveForLater = removeFromSaveForLater;
+
+    // ====== CART ENHANCEMENTS ======
+    function shareCart() {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (cart.length === 0) {
+        if (window.showToast) {
+          showToast('Cart is empty', 'error', 'Cannot Share');
+        }
+        return;
+      }
+      
+      const cartData = btoa(JSON.stringify(cart));
+      const shareUrl = `${window.location.origin}${window.location.pathname}?sharedCart=${cartData}`;
+      
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        if (window.showToast) {
+          showToast('Cart link copied to clipboard!', 'success', 'Cart Shared');
+        }
+      }).catch(() => {
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (window.showToast) {
+          showToast('Cart link copied!', 'success', 'Cart Shared');
+        }
+      });
+    }
+    
+    function updateFreeShippingProgress() {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const total = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+      const freeShippingThreshold = 999;
+      const remaining = Math.max(0, freeShippingThreshold - total);
+      
+      const progressEl = document.getElementById('freeShippingProgress');
+      const remainingEl = document.getElementById('shippingRemaining');
+      const progressFillEl = document.getElementById('shippingProgressFill');
+      
+      if (total >= freeShippingThreshold) {
+        if (progressEl) progressEl.style.display = 'none';
+      } else {
+        if (progressEl) progressEl.style.display = 'block';
+        if (remainingEl) remainingEl.textContent = remaining;
+        if (progressFillEl) {
+          const percentage = (total / freeShippingThreshold) * 100;
+          progressFillEl.style.width = `${Math.min(100, percentage)}%`;
+        }
+      }
+    }
+    
+    window.shareCart = shareCart;
+    
+    // Update shipping progress
+    updateFreeShippingProgress();
+    
+    // Override renderCartPage to update shipping progress
+    const originalRenderCartPage = renderCartPage;
+    renderCartPage = function() {
+      originalRenderCartPage();
+      updateFreeShippingProgress();
+    };
+
+    // Initial setup - show cart page by default
+    loadCart();
+    
+    // Show cart page on load (not shop page)
+    document.getElementById('shop-page').classList.add('hidden');
+    document.getElementById('cart-page').classList.remove('hidden');
+    document.getElementById('bill-page').classList.add('hidden');
+    
+    renderCartPage();
+    
+    // Update cart count
+    updateCartCount();
+    
+    // Also render products for the shop section
+    renderProducts();
+
+  </script>
+  </main>
+  
+  <!-- Footer Component (loaded from components/footer.html) -->
+  <div id="footer-placeholder" style="width: 100%; margin-top: auto; flex-shrink: 0;"></div>
+  </div>
+  
+  <!-- Load components first, then app.js -->
+  <script src="../js/load-components.js"></script>
+  <script>
+    // Mobile Menu Toggle
+    const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+    const mobileNav = document.getElementById("mobileNav");
+    if (mobileMenuBtn && mobileNav) {
+      mobileMenuBtn.addEventListener("click", () => {
+        mobileNav.classList.toggle("active");
+      });
+      document.addEventListener("click", (e) => {
+        if (!mobileMenuBtn.contains(e.target) && !mobileNav.contains(e.target)) {
+          mobileNav.classList.remove("active");
+        }
+      });
+      mobileNav.querySelectorAll(".nav-item").forEach(item => {
+        item.addEventListener("click", () => {
+          mobileNav.classList.remove("active");
+        });
+      });
+    }
+
+    // Profile Sidebar Toggle
+    const profileSidebar = document.getElementById('profileSidebar');
+    const profileSidebarOverlay = document.getElementById('profileSidebarOverlay');
+    const profileSidebarClose = document.getElementById('profileSidebarClose');
+    const sidebarLightModeBtn = document.getElementById('sidebarLightMode');
+
+    function openProfileSidebar() {
+      if (profileSidebar) {
+        profileSidebar.classList.add('active');
+        if (profileSidebarOverlay) {
+          profileSidebarOverlay.classList.add('active');
+        }
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeProfileSidebar() {
+      if (profileSidebar) {
+        profileSidebar.classList.remove('active');
+        if (profileSidebarOverlay) {
+          profileSidebarOverlay.classList.remove('active');
+        }
+        document.body.style.overflow = '';
+      }
+    }
+
+    // Open sidebar when clicking profile button
+
+    // Close sidebar
+    if (profileSidebarClose) {
+      profileSidebarClose.addEventListener('click', () => {
+        closeProfileSidebar();
+      });
+    }
+
+    // Close sidebar when clicking overlay
+    if (profileSidebarOverlay) {
+      profileSidebarOverlay.addEventListener('click', () => {
+        closeProfileSidebar();
+      });
+    }
+
+    // Close sidebar on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && profileSidebar && profileSidebar.classList.contains('active')) {
+        closeProfileSidebar();
+      }
+    });
+
+    // Light Mode toggle from sidebar
+    if (sidebarLightModeBtn) {
+      sidebarLightModeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const darkModeSwitch = document.getElementById('dark-mode-switch');
+        if (darkModeSwitch) {
+          darkModeSwitch.checked = !darkModeSwitch.checked;
+          darkModeSwitch.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
+    // Light Mode toggle from dropdown (if exists)
+    if (lightModeBtn) {
+      lightModeBtn.addEventListener('click', () => {
+        const darkModeSwitch = document.getElementById('dark-mode-switch');
+        if (darkModeSwitch) {
+          darkModeSwitch.checked = !darkModeSwitch.checked;
+          darkModeSwitch.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
+    // Update Light Mode text based on current theme
+    function updateLightModeText() {
+      const lightModeText = document.getElementById('lightModeText');
+      const sidebarLightModeText = document.getElementById('sidebarLightModeText');
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      
+      if (lightModeText) {
+        lightModeText.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+      }
+      if (sidebarLightModeText) {
+        sidebarLightModeText.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+      }
+    }
+
+    // Theme initialization is handled by app.js
+    // We just need to update the light mode text when theme changes
+    let cartTextUpdateHandler = null;
+    
+    function setupLightModeTextUpdate() {
+      const darkModeSwitch = document.getElementById('dark-mode-switch');
+      if (!darkModeSwitch) {
+        // Retry if element not found yet (app.js might still be loading)
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setupLightModeTextUpdate);
+        } else {
+          setTimeout(setupLightModeTextUpdate, 50);
+        }
+        return;
+      }
+      
+      // Remove previous handler if exists
+      if (cartTextUpdateHandler) {
+        darkModeSwitch.removeEventListener('change', cartTextUpdateHandler);
+      }
+      
+      // Add lightweight handler to update text on theme change
+      cartTextUpdateHandler = function() {
+        requestAnimationFrame(updateLightModeText);
+      };
+      
+      darkModeSwitch.addEventListener('change', cartTextUpdateHandler);
+      
+      // Initial update
+      updateLightModeText();
+    }
+
+    // Setup after app.js initializes (it runs on DOMContentLoaded)
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(setupLightModeTextUpdate, 150);
+      });
+    } else {
+      setTimeout(setupLightModeTextUpdate, 150);
+    }
+
+    // Close sidebar when clicking menu items (except light mode toggle)
+    const sidebarMenuItems = document.querySelectorAll('.profile-sidebar-item');
+    sidebarMenuItems.forEach(item => {
+      if (item.id !== 'sidebarLightMode') {
+        item.addEventListener('click', () => {
+          setTimeout(() => {
+            closeProfileSidebar();
+          }, 100);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

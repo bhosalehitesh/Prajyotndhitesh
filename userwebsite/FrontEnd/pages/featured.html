@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Featured | V Store - Men's Fashion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color, #f9f9f9);
+      color: var(--text-color, #333);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Hide floating login button on featured page */
+    .floating-login-btn {
+      display: none !important;
+    }
+
+    .page-header {
+      padding: 40px 0 20px;
+      text-align: center;
+    }
+    
+    .page-header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text-color, #333);
+      transition: color 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .page-header p {
+      font-size: 1.1rem;
+      color: var(--text-color, #666);
+      opacity: 0.8;
+    }
+    
+    @media (max-width: 768px) {
+      .page-header h1 {
+        font-size: 2rem;
+      }
+      .page-header p {
+        font-size: 1rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .page-header {
+        padding: 30px 0 15px;
+      }
+      .page-header h1 {
+        font-size: 1.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <!-- Header Component (loaded from components/header.html) -->
+    <div id="header-placeholder"></div>
+
+    <main style="flex: 1;">
+      <div class="container">
+        <div class="page-header">
+          <h1>🔥 Featured Collection</h1>
+        </div>
+        <p style="text-align: center; font-size: 1.1rem; color: var(--text-color, #666); opacity: 0.8; margin-top: -10px; margin-bottom: 40px;">
+          Handpicked styles that define modern men — from urban streetwear to classic fits.
+        </p>
+
+        <div class="ecommerce-grid">
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Oversized%20Graphic%20Tee&price=499&originalPrice=1099&image=../assets/genz/ts.webp&brand=V%20Store'">
+            <img src="../assets/genz/ts.webp" alt="Oversized Tee" />
+            <div class="product-info">
+              <div class="product-brand">V Store</div>
+              <div class="product-name">Oversized Graphic Tee</div>
+              <div class="product-price">
+                <span class="current-price">₹499</span>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button class="add-to-cart-btn" data-name="Oversized Graphic Tee" data-price="499" data-brand="V Store" data-img="../assets/genz/ts.webp" data-original-price="1099" onclick="event.stopPropagation(); addToCartFromButton(this)" style="flex: 1;">Add to Cart</button>
+                <button class="wishlist-btn" data-name="Oversized Graphic Tee" data-price="499" data-original-price="1099" data-brand="V Store" data-img="../assets/genz/ts.webp" onclick="event.stopPropagation(); addToWishlistFromProduct(this)" title="Add to Wishlist" style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Minimalist%20Hoodie&price=799&originalPrice=1499&image=../assets/genz/hd.webp&brand=V%20Store'">
+            <img src="../assets/genz/hd.webp" alt="Hoodie" />
+            <div class="product-info">
+              <div class="product-brand">V Store</div>
+              <div class="product-name">Minimalist Hoodie</div>
+              <div class="product-price">
+                <span class="current-price">₹799</span>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button class="add-to-cart-btn" data-name="Minimalist Hoodie" data-price="799" data-brand="V Store" data-img="../assets/genz/hd.webp" data-original-price="1499" onclick="event.stopPropagation(); addToCartFromButton(this)" style="flex: 1;">Add to Cart</button>
+                <button class="wishlist-btn" data-name="Minimalist Hoodie" data-price="799" data-original-price="1499" data-brand="V Store" data-img="../assets/genz/hd.webp" onclick="event.stopPropagation(); addToWishlistFromProduct(this)" title="Add to Wishlist" style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Baggy%20Fit%20Jeans&price=999&originalPrice=1799&image=../assets/genz/Bg.jpg&brand=V%20Store'">
+            <img src="../assets/genz/Bg.jpg" alt="Baggy Jeans" />
+            <div class="product-info">
+              <div class="product-brand">V Store</div>
+              <div class="product-name">Baggy Fit Jeans</div>
+              <div class="product-price">
+                <span class="current-price">₹999</span>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button class="add-to-cart-btn" data-name="Baggy Fit Jeans" data-price="999" data-brand="V Store" data-img="../assets/genz/Bg.jpg" data-original-price="1799" onclick="event.stopPropagation(); addToCartFromButton(this)" style="flex: 1;">Add to Cart</button>
+                <button class="wishlist-btn" data-name="Baggy Fit Jeans" data-price="999" data-original-price="1799" data-brand="V Store" data-img="../assets/genz/Bg.jpg" onclick="event.stopPropagation(); addToWishlistFromProduct(this)" title="Add to Wishlist" style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Co-ord%20Set%20(Black%20Edition)&price=1199&originalPrice=1999&image=../assets/genz/cd.webp&brand=V%20Store'">
+            <img src="../assets/genz/cd.webp" alt="Co-ord Set" />
+            <div class="product-info">
+              <div class="product-brand">V Store</div>
+              <div class="product-name">Co-ord Set (Black Edition)</div>
+              <div class="product-price">
+                <span class="current-price">₹1,199</span>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button class="add-to-cart-btn" data-name="Co-ord Set (Black Edition)" data-price="1199" data-brand="V Store" data-img="../assets/genz/cd.webp" data-original-price="1999" onclick="event.stopPropagation(); addToCartFromButton(this)" style="flex: 1;">Add to Cart</button>
+                <button class="wishlist-btn" data-name="Co-ord Set (Black Edition)" data-price="1199" data-original-price="1999" data-brand="V Store" data-img="../assets/genz/cd.webp" onclick="event.stopPropagation(); addToWishlistFromProduct(this)" title="Add to Wishlist" style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer Component (loaded from components/footer.html) -->
+    <div id="footer-placeholder" style="width: 100%; margin-top: auto; flex-shrink: 0;"></div>
+        </div>
+
+  <!-- Load components first, then app.js -->
+  <script src="../js/load-components.js"></script>
+  <!-- API Configuration and Integration -->
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    // Helper function to check if product is in wishlist
+    function isProductInWishlist(productName) {
+      if (window.WishlistUtils) {
+        const wishlist = window.WishlistUtils.getWishlist();
+        return wishlist.some(item => item.name === productName);
+      } else {
+        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        return wishlist.some(item => item.name === productName);
+      }
+    }
+
+    // Helper function to update wishlist button icon
+    function updateWishlistButtonIcon(button, isWishlisted) {
+      if (isWishlisted) {
+        // Replace with GIF
+        button.innerHTML = `<img src="../assets/gifs/wishlist.gif" alt="Wishlisted" style="width: 20px; height: 20px; object-fit: contain;" />`;
+        button.title = 'Remove from Wishlist';
+      } else {
+        // Replace with SVG
+        button.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>`;
+        button.title = 'Add to Wishlist';
+      }
+    }
+
+    // Add to wishlist from product card
+    function addToWishlistFromProduct(button) {
+      const name = button.getAttribute('data-name');
+      const price = parseInt(button.getAttribute('data-price'));
+      const brand = button.getAttribute('data-brand') || 'V Store';
+      const img = button.getAttribute('data-img') || '';
+      const originalPrice = parseInt(button.getAttribute('data-original-price')) || price;
+      
+      // Check if product is already in wishlist
+      const isCurrentlyWishlisted = isProductInWishlist(name);
+      
+      if (window.WishlistUtils) {
+        if (isCurrentlyWishlisted) {
+          // Remove from wishlist
+          window.WishlistUtils.removeItemFromWishlist(name);
+          updateWishlistButtonIcon(button, false);
+          if (window.showToast) {
+            showToast(`${name} removed from wishlist`, 'success', 'Wishlist');
+          }
+        } else {
+          // Add to wishlist
+          const added = window.WishlistUtils.addItemToWishlist({
+            name: name,
+            price: price,
+            originalPrice: originalPrice,
+            image: img,
+            brand: brand,
+            size: 'Default',
+            color: 'Default'
+          });
+          
+          if (added) {
+            updateWishlistButtonIcon(button, true);
+            if (window.showToast) {
+              showToast(`${name} added to wishlist!`, 'success', 'Wishlist');
+            }
+          }
+        }
+        
+        window.WishlistUtils.updateWishlistCount();
+      } else {
+        // Fallback to localStorage
+        let wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        const existingItemIndex = wishlist.findIndex(item => item.name === name);
+        
+        if (existingItemIndex !== -1) {
+          // Remove from wishlist
+          wishlist.splice(existingItemIndex, 1);
+          localStorage.setItem('wishlist', JSON.stringify(wishlist));
+          updateWishlistButtonIcon(button, false);
+          if (window.showToast) {
+            showToast(`${name} removed from wishlist`, 'success', 'Wishlist');
+          }
+        } else {
+          // Add to wishlist
+          wishlist.push({
+            name: name,
+            price: price,
+            originalPrice: originalPrice,
+            image: img,
+            brand: brand
+          });
+          localStorage.setItem('wishlist', JSON.stringify(wishlist));
+          updateWishlistButtonIcon(button, true);
+          if (window.showToast) {
+            showToast(`${name} added to wishlist!`, 'success', 'Wishlist');
+          }
+        }
+        
+        // Update wishlist count
+        const wishlistCountElements = document.querySelectorAll('#wishlistCount, .wishlist-count');
+        wishlistCountElements.forEach(el => {
+          if (el) {
+            el.textContent = wishlist.length;
+            if (wishlist.length > 0) {
+              el.style.display = 'inline-block';
+            } else {
+              el.style.display = 'none';
+            }
+          }
+        });
+      }
+    }
+
+    // Initialize wishlist button states
+    function initializeWishlistButtons() {
+      const wishlistButtons = document.querySelectorAll('.wishlist-btn');
+      wishlistButtons.forEach(button => {
+        const productName = button.getAttribute('data-name');
+        if (productName && isProductInWishlist(productName)) {
+          updateWishlistButtonIcon(button, true);
+        }
+      });
+    }
+
+    // Make functions globally available
+    window.addToWishlistFromProduct = addToWishlistFromProduct;
+    window.isProductInWishlist = isProductInWishlist;
+    window.updateWishlistButtonIcon = updateWishlistButtonIcon;
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeWishlistButtons();
+    });
+
+    // Add to cart from button (prevents navigation)
+    function addToCartFromButton(button) {
+      const name = button.getAttribute('data-name');
+      const price = parseInt(button.getAttribute('data-price'));
+      const brand = button.getAttribute('data-brand') || 'V Store';
+      const img = button.getAttribute('data-img') || '';
+      
+      // Use unified cart system if available
+      if (window.CartUtils) {
+        window.CartUtils.addItemToCart({
+          name: name,
+          price: price,
+          image: img,
+          brand: brand,
+          size: 'Default',
+          color: 'Default'
+        });
+      } else {
+        // Fallback to localStorage
+        let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const existingItem = cart.find(item => item.name === name);
+        
+        if (existingItem) {
+          existingItem.quantity += 1;
+        } else {
+          cart.push({
+            name: name,
+            price: price,
+            image: img,
+            brand: brand,
+            quantity: 1
+          });
+        }
+        
+        localStorage.setItem('cart', JSON.stringify(cart));
+      }
+      
+      // Update cart count
+      if (window.CartUtils) {
+        window.CartUtils.updateCartCount();
+      } else {
+        const cartCount = document.getElementById('cartCount');
+        if (cartCount) {
+          const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+          const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+          cartCount.textContent = totalItems;
+        }
+      }
+      
+      // Show feedback
+      const originalText = button.textContent;
+      button.textContent = '✓ Added!';
+      button.style.background = '#4caf50';
+      button.style.color = '#fff';
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.style.background = '';
+        button.style.color = '';
+      }, 1500);
+    }
+
+    // Make function globally available
+    window.addToCartFromButton = addToCartFromButton;
+
+    // Update Light Mode text based on current theme (optimized)
+    function updateLightModeText() {
+      const sidebarLightModeText = document.getElementById('sidebarLightModeText');
+      if (sidebarLightModeText) {
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        sidebarLightModeText.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+      }
+    }
+
+    // Update on theme change (wait for app.js to initialize first)
+    function setupLightModeTextUpdate() {
+      const darkModeSwitch = document.getElementById('dark-mode-switch');
+      if (!darkModeSwitch) {
+        setTimeout(setupLightModeTextUpdate, 50);
+        return;
+      }
+      darkModeSwitch.addEventListener('change', function() {
+        requestAnimationFrame(updateLightModeText);
+      });
+      updateLightModeText();
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(setupLightModeTextUpdate, 150);
+      });
+    } else {
+      setTimeout(setupLightModeTextUpdate, 150);
+    }
+  </script>
+</body>
+</html>
+

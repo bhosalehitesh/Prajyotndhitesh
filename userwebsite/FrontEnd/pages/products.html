@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>All Products | V Store - Men's Fashion</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-color, #f5f5f5);
+      color: var(--text-color, #333);
+      transition: background-color 0.3s, color 0.3s;
+    }
+    
+    main {
+      background: var(--bg-color);
+    }
+    
+    .container {
+      background: transparent;
+    }
+    
+    .page-header {
+      padding: 40px 0 20px;
+      text-align: center;
+    }
+    
+    .page-header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text-color, #333);
+      transition: color 0.3s;
+    }
+    
+    .page-header p {
+      font-size: 1.1rem;
+      color: var(--text-color, #666);
+      opacity: 0.8;
+    }
+    
+    @media (max-width: 768px) {
+      .page-header h1 {
+        font-size: 2rem;
+      }
+      .page-header p {
+        font-size: 1rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .page-header {
+        padding: 30px 0 15px;
+      }
+      .page-header h1 {
+        font-size: 1.75rem;
+      }
+    }
+
+    /* Filters & Sort Styles */
+    .filters-sort-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 0;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .filters-sort-bar {
+      border-bottom-color: rgba(255,255,255,0.1);
+    }
+
+    .filter-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--card-bg, #fff);
+      border: 2px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text-color, #333);
+      transition: all 0.3s;
+    }
+
+    body.dark-mode .filter-toggle-btn {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .filter-toggle-btn:hover {
+      background: var(--muted-white, #f5f5f5);
+      border-color: #ff6d2e;
+    }
+
+    .sort-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .sort-container label {
+      font-weight: 600;
+      color: var(--text-color, #333);
+    }
+
+    .sort-select {
+      padding: 8px 12px;
+      border: 2px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      background: var(--card-bg, #fff);
+      color: var(--text-color, #333);
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+
+    body.dark-mode .sort-select {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .sort-select:focus {
+      outline: none;
+      border-color: #ff6d2e;
+    }
+
+    .results-count {
+      color: var(--text-color, #666);
+      font-size: 0.9rem;
+      margin-left: auto;
+    }
+
+    .products-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+    }
+
+    .filters-sidebar {
+      background: var(--card-bg, #fff);
+      border-radius: 16px;
+      position: sticky;
+      top: 100px;
+      border: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 120px);
+      height: fit-content;
+    }
+
+    body.dark-mode .filters-sidebar {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .filters-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 24px 16px 24px;
+      border-bottom: 2px solid rgba(0,0,0,0.08);
+      flex-shrink: 0;
+      background: var(--card-bg, #fff);
+      border-radius: 16px 16px 0 0;
+    }
+
+    .filters-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0 24px;
+      min-height: 0;
+    }
+
+    .filters-footer {
+      padding: 16px 24px 24px 24px;
+      border-top: 2px solid rgba(0,0,0,0.08);
+      flex-shrink: 0;
+      background: var(--card-bg, #fff);
+      border-radius: 0 0 16px 16px;
+    }
+
+    body.dark-mode .filters-header,
+    body.dark-mode .filters-footer {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    body.dark-mode .filters-header {
+      border-bottom-color: rgba(255,255,255,0.1);
+    }
+
+    .filters-header h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-color, #333);
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .close-filters-btn {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: var(--text-color, #333);
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+    }
+
+    .filter-section {
+      margin-bottom: 28px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+
+    .filter-section:last-of-type {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    body.dark-mode .filter-section {
+      border-bottom-color: rgba(255,255,255,0.08);
+    }
+
+    .filter-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-color, #333);
+      margin-bottom: 18px;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-title::before {
+      content: '';
+      width: 4px;
+      height: 18px;
+      background: #ff6d2e;
+      border-radius: 2px;
+    }
+
+    .price-range-inputs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .price-range-inputs input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 2px solid rgba(0,0,0,0.1);
+      border-radius: 10px;
+      background: var(--bg-color, #fff);
+      color: var(--text-color, #333);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .price-range-inputs input:focus {
+      outline: none;
+      border-color: #ff6d2e;
+      box-shadow: 0 0 0 3px rgba(255, 109, 46, 0.1);
+    }
+
+    body.dark-mode .price-range-inputs input {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .price-range-inputs span {
+      color: var(--text-color, #666);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .price-slider-container {
+      margin-top: 12px;
+    }
+
+    .price-slider-container input[type="range"] {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--muted-white, #f5f5f5);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: all 0.3s;
+      margin-bottom: 16px;
+    }
+
+    body.dark-mode .price-slider-container input[type="range"] {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .price-slider-container input[type="range"]:hover {
+      background: rgba(255, 109, 46, 0.2);
+    }
+
+    .price-slider-container input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ff6d2e;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(255, 109, 46, 0.4);
+      transition: all 0.3s;
+    }
+
+    .price-slider-container input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 3px 8px rgba(255, 109, 46, 0.5);
+    }
+
+    .price-slider-container input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ff6d2e;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 6px rgba(255, 109, 46, 0.4);
+      transition: all 0.3s;
+    }
+
+    .price-slider-container input[type="range"]::-moz-range-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 3px 8px rgba(255, 109, 46, 0.5);
+    }
+
+    .price-display {
+      text-align: center;
+      font-weight: 700;
+      color: var(--text-color, #333);
+      font-size: 1rem;
+      padding: 10px;
+      background: rgba(255, 109, 46, 0.08);
+      border-radius: 8px;
+    }
+
+    body.dark-mode .price-display {
+      background: rgba(255, 109, 46, 0.15);
+    }
+
+    .filter-checkboxes {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .filter-checkboxes label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      color: var(--text-color, #333);
+      user-select: none;
+      padding: 12px 14px;
+      border-radius: 10px;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+      font-weight: 500;
+    }
+
+    .filter-checkboxes label:hover {
+      background: rgba(255, 109, 46, 0.08);
+      border-color: rgba(255, 109, 46, 0.2);
+      transform: translateX(4px);
+    }
+
+    body.dark-mode .filter-checkboxes label:hover {
+      background: rgba(255, 109, 46, 0.12);
+      border-color: rgba(255, 109, 46, 0.3);
+    }
+
+    .filter-checkboxes input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #ff6d2e;
+      flex-shrink: 0;
+      border-radius: 4px;
+    }
+
+    .active-filters {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    body.dark-mode .active-filters {
+      border-bottom-color: rgba(255,255,255,0.1);
+    }
+
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .filter-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--muted-white, #f5f5f5);
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: var(--text-color, #333);
+    }
+
+    body.dark-mode .filter-chip {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .filter-chip-remove {
+      background: none;
+      border: none;
+      color: var(--text-color, #666);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .clear-filters-btn {
+      width: 100%;
+      padding: 8px;
+      background: transparent;
+      border: 2px solid rgba(0,0,0,0.1);
+      border-radius: 6px;
+      color: var(--text-color, #333);
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    body.dark-mode .clear-filters-btn {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .clear-filters-btn:hover {
+      background: var(--muted-white, #f5f5f5);
+      border-color: #e53935;
+      color: #e53935;
+    }
+
+    .apply-filters-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #ff6d2e 0%, #ff8533 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 24px;
+      box-shadow: 0 4px 12px rgba(255, 109, 46, 0.3);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      font-size: 0.95rem;
+    }
+
+    .apply-filters-btn:hover {
+      background: linear-gradient(135deg, #e55a1f 0%, #ff6d2e 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 109, 46, 0.4);
+    }
+
+    .apply-filters-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(255, 109, 46, 0.3);
+    }
+
+    .products-content {
+      min-width: 0;
+    }
+
+    @media (max-width: 992px) {
+      .products-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .filters-sidebar {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 340px;
+        max-width: 90vw;
+        height: 100vh;
+        z-index: 1000;
+        border-radius: 0;
+        border-top-right-radius: 20px;
+        border-bottom-right-radius: 20px;
+        transition: left 0.3s ease;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+      }
+
+      body.dark-mode .filters-sidebar {
+        box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+      }
+
+      .filters-sidebar.active {
+        left: 0;
+      }
+
+      /* Hide scrollbar but keep functionality */
+      .filters-content::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .filters-content::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .filters-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 109, 46, 0.3);
+        border-radius: 3px;
+      }
+
+      .filters-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 109, 46, 0.5);
+      }
+    }
+
+    /* Desktop scrollbar styling */
+    @media (min-width: 993px) {
+      .filters-content::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .filters-content::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .filters-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 109, 46, 0.2);
+        border-radius: 3px;
+      }
+
+      .filters-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 109, 46, 0.4);
+      }
+
+      .close-filters-btn {
+        display: block;
+      }
+
+      .filter-toggle-btn {
+        display: flex;
+      }
+    }
+
+    @media (min-width: 993px) {
+      .filter-toggle-btn {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="topbar">
+      <div class="topbar-inner container">
+        <div class="left-group">
+          <div class="avatar" aria-hidden="true">
+            <a href="../index.html" style="text-decoration:none;color:inherit;display:flex;align-items:center;justify-content:center;width:100%;height:100%;"><span>V</span></a>
+          </div>
+          <div class="divider"></div>
+          <nav class="main-nav" aria-label="Main">
+            <a href="categories.html" class="nav-item">Categories</a>
+            <a href="featured.html" class="nav-item">Featured</a>
+            <a href="products.html" class="nav-item active">Products</a>
+          </nav>
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Menu">☰</button>
+        </div>
+        <div class="right-group">
+          <!-- Dark Mode Toggle Switch -->
+          <div class="dark-mode-toggle-container">
+            <label class="dark-mode-toggle" for="dark-mode-switch" title="Toggle Dark Mode">
+              <input type="checkbox" id="dark-mode-switch" class="toggle-input">
+              <span class="toggle-track">
+                <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span class="toggle-indicator"></span>
+              </span>
+            </label>
+          </div>
+
+          <button class="icon-btn" id="searchBtn" title="Search Products">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
+              <circle cx="11" cy="11" r="6" stroke-width="1.6"></circle>
+              <path d="M21 21l-4.35-4.35" stroke-width="1.6" stroke-linecap="round"></path>
+            </svg>
+          </button>
+
+          <button class="icon-btn" id="wishlistBtn" title="Wishlist" onclick="window.location.href='wishlist.html'">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke-width="1.5" stroke-linejoin="round"></path>
+            </svg>
+            <span class="wishlist-count" id="wishlistCount">0</span>
+          </button>
+          <button class="icon-btn" id="cartBtn" title="Cart" onclick="window.location.href='cart.html'">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+              <path d="M6 6h15l-1.5 9h-12z" stroke-width="1.5" stroke-linejoin="round"></path>
+              <circle cx="10" cy="20" r="1.4" stroke-width="1.5"></circle>
+              <circle cx="18" cy="20" r="1.4" stroke-width="1.5"></circle>
+            </svg>
+            <span class="cart-count" id="cartCount">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+  <!-- Profile Sidebar Menu -->
+  <div class="profile-sidebar-overlay" id="profileSidebarOverlay"></div>
+  <div class="profile-sidebar" id="profileSidebar">
+    <div class="profile-sidebar-header">
+      <button class="profile-sidebar-close" id="profileSidebarClose" aria-label="Close Menu">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="profile-sidebar-content">
+      <div class="profile-sidebar-user">
+        <div class="profile-sidebar-avatar">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="profile-sidebar-info">
+          <div class="profile-sidebar-name">Hello User</div>
+          <div class="profile-sidebar-phone">+1234567890</div>
+        </div>
+      </div>
+      <div class="profile-sidebar-menu">
+        <a href="orders.html" class="profile-sidebar-item" id="sidebarMyOrders">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <span>My Orders</span>
+        </a>
+        <a href="wishlist.html" class="profile-sidebar-item" id="sidebarWishlist">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>
+          <span>My Wishlist</span>
+        </a>
+        <a href="cart.html" class="profile-sidebar-item" id="sidebarCart">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+          <span>Shopping Cart</span>
+        </a>
+        <a href="order-tracking.html" class="profile-sidebar-item" id="sidebarTrackOrder">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <span>Track Order</span>
+        </a>
+        <div class="profile-sidebar-divider"></div>
+        <div class="profile-sidebar-item" id="sidebarLightMode">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="1" y="5" width="22" height="14" rx="7" ry="7"></rect>
+            <circle cx="8" cy="12" r="3"></circle>
+          </svg>
+          <span id="sidebarLightModeText">Light Mode</span>
+        </div>
+        <a href="faq.html" class="profile-sidebar-item" id="sidebarFAQ">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Help & FAQ</span>
+        </a>
+        <div class="profile-sidebar-item" id="sidebarSignOut" onclick="handleSignOut()" style="cursor: pointer;">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Sign Out</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- Search Modal -->
+    <div class="search-modal" id="searchModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+      <div class="search-modal-content" style="background: var(--card-bg, #fff); padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); position: relative;">
+        <h3 style="margin-bottom: 20px; color: var(--text-color, #333); font-size: 1.5rem;">Search Products</h3>
+        <div style="position: relative; margin-bottom: 20px;">
+          <input type="text" class="search-input" id="searchInput" placeholder="Search for products..." autocomplete="off" style="width: 100%; padding: 12px 40px 12px 16px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 1rem; background: var(--bg-color, #fff); color: var(--text-color, #333); transition: border-color 0.3s;">
+          <button class="search-close" id="searchClose" style="position: absolute; top: 50%; right: 12px; transform: translateY(-50%); background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-color, #666); padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+        <div class="search-results" id="searchResults" style="max-height: 400px; overflow-y: auto;">
+          <!-- Search results will appear here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+      <a href="categories.html" class="nav-item">Categories</a>
+      <a href="featured.html" class="nav-item">Featured</a>
+      <a href="products.html" class="nav-item active">Products</a>
+      <a href="cart.html" class="nav-item">Cart</a>
+      <a href="login.html" class="nav-item">Login</a>
+    </nav>
+
+    <main style="flex: 1; background: var(--bg-color);">
+      <div class="container" style="background: transparent;">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <ol class="breadcrumb-list">
+            <li class="breadcrumb-item">
+              <a href="../index.html" class="breadcrumb-link">Home</a>
+            </li>
+            <li class="breadcrumb-item">
+              <span class="breadcrumb-separator">›</span>
+            </li>
+            <li class="breadcrumb-item">
+              <span class="breadcrumb-link active">Products</span>
+            </li>
+          </ol>
+        </nav>
+
+        <div class="page-header">
+          <h1>All Products</h1>
+          <p>Discover our complete collection of men's fashion</p>
+        </div>
+
+        <!-- Filters and Sort Bar -->
+        <div class="filters-sort-bar">
+          <button class="filter-toggle-btn" id="filterToggleBtn">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            Filters
+          </button>
+          <div class="sort-container">
+            <label for="sortSelect">Sort by:</label>
+            <select id="sortSelect" class="sort-select">
+              <option value="default">Default</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="discount-high">Discount: High to Low</option>
+              <option value="name-asc">Name: A to Z</option>
+              <option value="name-desc">Name: Z to A</option>
+            </select>
+          </div>
+          <div class="results-count" id="resultsCount"></div>
+        </div>
+
+        <div class="products-layout">
+          <!-- Filters Sidebar -->
+          <aside class="filters-sidebar" id="filtersSidebar">
+            <div class="filters-header">
+              <h3>Filters</h3>
+              <button class="close-filters-btn" id="closeFiltersBtn">×</button>
+            </div>
+            
+            <div class="filters-content">
+            <!-- Price Range Filter -->
+            <div class="filter-section">
+              <h4 class="filter-title">Price Range</h4>
+              <div class="price-range-inputs">
+                <input type="number" id="minPrice" placeholder="Min" min="0" value="0">
+                <span>to</span>
+                <input type="number" id="maxPrice" placeholder="Max" min="0" value="5000">
+              </div>
+              <div class="price-slider-container">
+                <input type="range" id="priceRange" min="0" max="5000" value="5000" step="100">
+                <div class="price-display">
+                  <span>₹<span id="minPriceDisplay">0</span> - ₹<span id="priceRangeValue">5000</span></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Brand Filter -->
+            <div class="filter-section">
+              <h4 class="filter-title">Brand</h4>
+              <div class="filter-checkboxes">
+                <label><input type="checkbox" name="brand" value="Allen Solly" checked> Allen Solly</label>
+                <label><input type="checkbox" name="brand" value="Louis Philippe Jeans" checked> Louis Philippe Jeans</label>
+                <label><input type="checkbox" name="brand" value="V Store" checked> V Store</label>
+              </div>
+            </div>
+
+            <!-- Discount Filter -->
+            <div class="filter-section">
+              <h4 class="filter-title">Discount</h4>
+              <div class="filter-checkboxes">
+                <label><input type="checkbox" name="discount" value="50+"> 50% or more</label>
+                <label><input type="checkbox" name="discount" value="40-50"> 40% - 50%</label>
+                <label><input type="checkbox" name="discount" value="30-40"> 30% - 40%</label>
+                <label><input type="checkbox" name="discount" value="20-30"> 20% - 30%</label>
+                <label><input type="checkbox" name="discount" value="10-20"> 10% - 20%</label>
+              </div>
+            </div>
+
+            <!-- Active Filters -->
+            <div class="active-filters" id="activeFilters" style="display: none;">
+              <h4 class="filter-title">Active Filters</h4>
+              <div class="filter-chips" id="filterChips"></div>
+              <button class="clear-filters-btn" id="clearFiltersBtn">Clear All</button>
+            </div>
+            </div>
+
+            <div class="filters-footer">
+              <button class="apply-filters-btn" id="applyFiltersBtn">Apply Filters</button>
+            </div>
+          </aside>
+
+          <!-- Products Grid -->
+          <div class="products-content">
+            <div class="ecommerce-grid" id="products-grid" style="padding-bottom: 0;">
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Colourblocked%20Polo%20T-shirt&price=593&originalPrice=1099&image=../assets/all_products/q1.jpg&brand=Allen%20Solly'">
+            <img src="../assets/all_products/q1.jpg" alt="Colourblocked Polo T-shirt" />
+            <div class="product-info">
+              <div class="product-brand">Allen Solly</div>
+              <div class="product-name">Colourblocked Polo T-shirt</div>
+              <div class="product-price">
+                <span class="current-price">₹593</span>
+                <span class="original-price">₹1099</span>
+                <span class="discount">(46% OFF)</span>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button class="add-to-cart-btn" data-name="Colourblocked Polo T-shirt" data-price="593" data-brand="Allen Solly" data-img="../assets/all_products/q1.jpg" data-original-price="1099" onclick="event.stopPropagation(); addToCartFromButton(this)" style="flex: 1;">
+                  Add to Cart
+                </button>
+                <button class="wishlist-btn" data-name="Colourblocked Polo T-shirt" data-price="593" data-original-price="1099" data-brand="Allen Solly" data-img="../assets/all_products/q1.jpg" onclick="event.stopPropagation(); addToWishlistFromProduct(this)" title="Add to Wishlist" style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+    </div>
+
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Pure%20Cotton%20Custom%20Fit%20Shirt&price=917&originalPrice=1799&image=../assets/all_products/q3.jpg&brand=Allen%20Solly'">
+      <img src="../assets/all_products/q3.jpg" alt="Custom Fit Shirt" />
+            <div class="product-info">
+              <div class="product-brand">Allen Solly</div>
+              <div class="product-name">Pure Cotton Custom Fit Shirt</div>
+              <div class="product-price">
+                <span class="current-price">₹917</span>
+                <span class="original-price">₹1799</span>
+                <span class="discount">(49% OFF)</span>
+              </div>
+      <button class="add-to-cart-btn" data-name="Custom Fit Shirt" data-price="917" data-brand="Allen Solly" data-img="../assets/all_products/q3.jpg" onclick="event.stopPropagation(); addToCartFromButton(this)">
+        Add to Cart
+      </button>
+            </div>
+    </div>
+
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Polo%20Collar%20Slim%20Fit%20T-shirt&price=929&originalPrice=1499&image=../assets/all_products/q4.jpg&brand=Louis%20Philippe%20Jeans'">
+      <img src="../assets/all_products/q4.jpg" alt="Slim Fit T-shirt" />
+            <div class="product-info">
+              <div class="product-brand">Louis Philippe Jeans</div>
+              <div class="product-name">Polo Collar Slim Fit T-shirt</div>
+              <div class="product-price">
+                <span class="current-price">₹929</span>
+                <span class="original-price">₹1499</span>
+                <span class="discount">(38% OFF)</span>
+              </div>
+      <button class="add-to-cart-btn" data-name="Slim Fit T-shirt" data-price="929" data-brand="Louis Philippe Jeans" data-img="../assets/all_products/q4.jpg" onclick="event.stopPropagation(); addToCartFromButton(this)">
+        Add to Cart
+      </button>
+            </div>
+    </div>
+
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Pure%20Cotton%20Casual%20Shirt&price=993&originalPrice=1949&image=../assets/all_products/q5.jpg&brand=Allen%20Solly'">
+      <img src="../assets/all_products/q5.jpg" alt="Casual Shirt" />
+            <div class="product-info">
+              <div class="product-brand">Allen Solly</div>
+              <div class="product-name">Pure Cotton Casual Shirt</div>
+              <div class="product-price">
+                <span class="current-price">₹993</span>
+                <span class="original-price">₹1949</span>
+                <span class="discount">(49% OFF)</span>
+              </div>
+      <button class="add-to-cart-btn" data-name="Pure Cotton Casual Shirt" data-price="993" data-brand="Allen Solly" data-img="../assets/all_products/q5.jpg" onclick="event.stopPropagation(); addToCartFromButton(this)">
+        Add to Cart
+      </button>
+            </div>
+          </div>
+
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Colourblocked%20Polo%20T-shirt&price=593&originalPrice=1099&image=../assets/all_products/q2.jpg&brand=Allen%20Solly'">
+            <img src="../assets/all_products/q2.jpg" alt="Colourblocked Polo T-shirt" />
+            <div class="product-info">
+              <div class="product-brand">Allen Solly</div>
+              <div class="product-name">Colourblocked Polo T-shirt</div>
+              <div class="product-price">
+                <span class="current-price">₹593</span>
+                <span class="original-price">₹1099</span>
+                <span class="discount">(46% OFF)</span>
+              </div>
+              <button class="add-to-cart-btn" data-name="Colourblocked Polo T-shirt" data-price="593" data-brand="Allen Solly" data-img="../assets/all_products/q2.jpg" onclick="event.stopPropagation(); addToCartFromButton(this)">
+                Add to Cart
+              </button>
+            </div>
+          </div>
+
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Classic%20Fit%20Formal%20Shirt&price=849&originalPrice=1599&image=../assets/all_products/q1.jpg&brand=Louis%20Philippe%20Jeans'">
+            <img src="../assets/all_products/q1.jpg" alt="Classic Fit Shirt" />
+            <div class="product-info">
+              <div class="product-brand">Louis Philippe Jeans</div>
+              <div class="product-name">Classic Fit Formal Shirt</div>
+              <div class="product-price">
+                <span class="current-price">₹849</span>
+                <span class="original-price">₹1599</span>
+                <span class="discount">(47% OFF)</span>
+              </div>
+              <button class="add-to-cart-btn" data-name="Classic Fit Formal Shirt" data-price="849" data-brand="Louis Philippe Jeans" data-img="../assets/all_products/q1.jpg" onclick="event.stopPropagation(); addToCartFromButton(this)">
+                Add to Cart
+              </button>
+            </div>
+          </div>
+
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Regular%20Fit%20Cotton%20T-shirt&price=699&originalPrice=1299&image=../assets/all_products/q4.jpg&brand=Allen%20Solly'">
+            <img src="../assets/all_products/q4.jpg" alt="Regular Fit T-shirt" />
+            <div class="product-info">
+              <div class="product-brand">Allen Solly</div>
+              <div class="product-name">Regular Fit Cotton T-shirt</div>
+              <div class="product-price">
+                <span class="current-price">₹699</span>
+                <span class="original-price">₹1299</span>
+                <span class="discount">(46% OFF)</span>
+              </div>
+              <button class="add-to-cart-btn" data-name="Regular Fit Cotton T-shirt" data-price="699" data-brand="Allen Solly" data-img="../assets/all_products/q4.jpg" onclick="event.stopPropagation(); addToCartFromButton(this)">
+                Add to Cart
+              </button>
+            </div>
+          </div>
+
+          <div class="ecommerce-product-card" onclick="window.location.href='product-detail.html?name=Slim%20Fit%20Cotton%20Shirt&price=799&originalPrice=1499&image=../assets/all_products/q3.jpg&brand=Louis%20Philippe%20Jeans'">
+            <img src="../assets/all_products/q3.jpg" alt="Slim Fit Shirt" />
+            <div class="product-info">
+              <div class="product-brand">Louis Philippe Jeans</div>
+              <div class="product-name">Slim Fit Cotton Shirt</div>
+              <div class="product-price">
+                <span class="current-price">₹799</span>
+                <span class="original-price">₹1499</span>
+                <span class="discount">(47% OFF)</span>
+              </div>
+              <button class="add-to-cart-btn" data-name="Slim Fit Cotton Shirt" data-price="799" data-brand="Louis Philippe Jeans" data-img="../assets/all_products/q3.jpg" onclick="event.stopPropagation(); addToCartFromButton(this)">
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  
+  <!-- Footer Component (loaded from components/footer.html) -->
+  <div id="footer-placeholder" style="width: 100%; margin-top: auto; flex-shrink: 0;"></div>
+  </div>
+  
+  <!-- Load components first, then app.js -->
+  <script src="../js/load-components.js"></script>
+  <script>
+    // Add to cart functionality
+    document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const product = {
+          name: button.dataset.name,
+          price: parseFloat(button.dataset.price),
+          brand: button.dataset.brand,
+          img: button.dataset.img,
+          quantity: 1,
+        };
+
+        // Get current cart or create new
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+        // Check if product already in cart
+        const existingProduct = cart.find(item => item.name === product.name);
+        if (existingProduct) {
+          existingProduct.quantity += 1;
+        } else {
+          cart.push(product);
+        }
+
+        // Save cart back to localStorage
+        localStorage.setItem('cart', JSON.stringify(cart));
+
+        if (window.showToast) {
+          showToast(`${product.name} added to cart!`, 'success', 'Added to Cart');
+        } else {
+          alert(`${product.name} added to cart!`);
+        }
+      });
+    });
+  </script>
+  <!-- API Configuration and Integration -->
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    // ====== ADVANCED FILTERS & SORTING ======
+    const allProductsData = [
+      { name: 'Colourblocked Polo T-shirt', price: 593, originalPrice: 1099, brand: 'Allen Solly', image: '../assets/all_products/q1.jpg', discount: 46 },
+      { name: 'Pure Cotton Custom Fit Shirt', price: 917, originalPrice: 1799, brand: 'Allen Solly', image: '../assets/all_products/q3.jpg', discount: 49 },
+      { name: 'Polo Collar Slim Fit T-shirt', price: 929, originalPrice: 1499, brand: 'Louis Philippe Jeans', image: '../assets/all_products/q4.jpg', discount: 38 },
+      { name: 'Pure Cotton Casual Shirt', price: 993, originalPrice: 1949, brand: 'Allen Solly', image: '../assets/all_products/q5.jpg', discount: 49 },
+      { name: 'Classic Fit Formal Shirt', price: 849, originalPrice: 1599, brand: 'Louis Philippe Jeans', image: '../assets/all_products/q1.jpg', discount: 47 },
+      { name: 'Regular Fit Cotton T-shirt', price: 699, originalPrice: 1299, brand: 'Allen Solly', image: '../assets/all_products/q4.jpg', discount: 46 },
+      { name: 'Slim Fit Cotton Shirt', price: 799, originalPrice: 1499, brand: 'Louis Philippe Jeans', image: '../assets/all_products/q3.jpg', discount: 47 },
+      { name: 'Oversized Graphic Tee', price: 499, originalPrice: 1099, brand: 'V Store', image: '../assets/genz/ts.webp', discount: 55 },
+      { name: 'Minimalist Hoodie', price: 799, originalPrice: 1499, brand: 'V Store', image: '../assets/genz/hd.webp', discount: 47 },
+      { name: 'Baggy Fit Jeans', price: 999, originalPrice: 1799, brand: 'V Store', image: '../assets/genz/Bg.jpg', discount: 44 },
+      { name: 'Co-ord Set', price: 1199, originalPrice: 1999, brand: 'V Store', image: '../assets/genz/cd.webp', discount: 40 }
+    ];
+
+    let currentProducts = [...allProductsData];
+    let activeFilters = {
+      minPrice: 0,
+      maxPrice: 5000,
+      brands: [],
+      discounts: []
+    };
+
+    function extractProductData() {
+      const products = [];
+      document.querySelectorAll('.ecommerce-product-card').forEach(card => {
+        const name = card.querySelector('.product-name')?.textContent || '';
+        const brand = card.querySelector('.product-brand')?.textContent || '';
+        const priceText = card.querySelector('.current-price')?.textContent || '0';
+        const originalPriceText = card.querySelector('.original-price')?.textContent || '0';
+        const discountText = card.querySelector('.discount')?.textContent || '';
+        const image = card.querySelector('img')?.src || '';
+        
+        const price = parseInt(priceText.replace(/[₹,]/g, '')) || 0;
+        const originalPrice = parseInt(originalPriceText.replace(/[₹,]/g, '')) || price;
+        const discount = parseInt(discountText.match(/\d+/)?.[0]) || 0;
+        
+        if (name) {
+          products.push({ name, price, originalPrice, brand, image, discount });
+        }
+      });
+      return products.length > 0 ? products : allProductsData;
+    }
+
+    function applyFilters() {
+      const minPriceInput = document.getElementById('minPrice');
+      const maxPriceInput = document.getElementById('maxPrice');
+      const priceRangeSlider = document.getElementById('priceRange');
+      
+      // Get price from slider if inputs are empty, otherwise use inputs
+      let minPrice = 0;
+      let maxPrice = 5000;
+      
+      if (minPriceInput && minPriceInput.value) {
+        minPrice = parseInt(minPriceInput.value) || 0;
+      }
+      if (maxPriceInput && maxPriceInput.value) {
+        maxPrice = parseInt(maxPriceInput.value) || 5000;
+      } else if (priceRangeSlider) {
+        maxPrice = parseInt(priceRangeSlider.value) || 5000;
+        if (maxPriceInput) maxPriceInput.value = maxPrice;
+      }
+      
+      // Ensure min is less than max
+      if (minPrice > maxPrice) {
+        const temp = minPrice;
+        minPrice = maxPrice;
+        maxPrice = temp;
+        if (minPriceInput) minPriceInput.value = minPrice;
+        if (maxPriceInput) maxPriceInput.value = maxPrice;
+      }
+      
+      const selectedBrands = Array.from(document.querySelectorAll('input[name="brand"]:checked')).map(cb => cb.value);
+      const selectedDiscounts = Array.from(document.querySelectorAll('input[name="discount"]:checked')).map(cb => cb.value);
+      
+      activeFilters = { minPrice, maxPrice, brands: selectedBrands, discounts: selectedDiscounts };
+      
+      let filtered = allProductsData.filter(product => {
+        // Price filter
+        if (product.price < minPrice || product.price > maxPrice) return false;
+        
+        // Brand filter
+        if (selectedBrands.length > 0 && !selectedBrands.includes(product.brand)) return false;
+        
+        // Discount filter
+        if (selectedDiscounts.length > 0) {
+          // Calculate discount if not already present
+          const discount = product.discount || (product.originalPrice && product.originalPrice > product.price 
+            ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
+            : 0);
+          
+          const matchesDiscount = selectedDiscounts.some(range => {
+            if (range === '50+') return discount >= 50;
+            if (range === '40-50') return discount >= 40 && discount < 50;
+            if (range === '30-40') return discount >= 30 && discount < 40;
+            if (range === '20-30') return discount >= 20 && discount < 30;
+            if (range === '10-20') return discount >= 10 && discount < 20;
+            return false;
+          });
+          if (!matchesDiscount) return false;
+        }
+        
+        return true;
+      });
+      
+      // Apply sorting
+      const sortValue = document.getElementById('sortSelect')?.value || 'default';
+      applySorting(filtered, sortValue);
+      
+      currentProducts = filtered;
+      renderProducts(filtered);
+      updateResultsCount(filtered.length);
+      updateActiveFilters();
+    }
+
+    function applySorting(products, sortValue) {
+      switch(sortValue) {
+        case 'price-low':
+          products.sort((a, b) => a.price - b.price);
+          break;
+        case 'price-high':
+          products.sort((a, b) => b.price - a.price);
+          break;
+        case 'discount-high':
+          products.sort((a, b) => b.discount - a.discount);
+          break;
+        case 'name-asc':
+          products.sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        case 'name-desc':
+          products.sort((a, b) => b.name.localeCompare(a.name));
+          break;
+        default:
+          // Keep original order
+          break;
+      }
+    }
+
+    // Helper function to check if product is in wishlist
+    function isProductInWishlist(productName) {
+      if (window.WishlistUtils) {
+        const wishlist = window.WishlistUtils.getWishlist();
+        return wishlist.some(item => item.name === productName);
+      } else {
+        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        return wishlist.some(item => item.name === productName);
+      }
+    }
+
+    // Helper function to get wishlist button HTML
+    function getWishlistButtonHTML(product, isWishlisted) {
+      const wishlistIcon = isWishlisted 
+        ? `<img src="../assets/gifs/wishlist.gif" alt="Wishlisted" style="width: 20px; height: 20px; object-fit: contain;" />`
+        : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>`;
+      
+      const title = isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist';
+      
+      return `<button class="wishlist-btn" data-name="${product.name}" data-price="${product.price}" data-original-price="${product.originalPrice}" data-brand="${product.brand}" data-img="${product.image}" onclick="event.stopPropagation(); addToWishlistFromProduct(this)" title="${title}" style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+        ${wishlistIcon}
+      </button>`;
+    }
+
+    function renderProducts(products) {
+      const grid = document.getElementById('products-grid');
+      if (!grid) return;
+      
+      grid.innerHTML = products.map(product => {
+        const discountPercent = product.discount || Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+        const productUrl = `product-detail.html?name=${encodeURIComponent(product.name)}&price=${product.price}&originalPrice=${product.originalPrice}&image=${encodeURIComponent(product.image)}&brand=${encodeURIComponent(product.brand)}`;
+        // Determine badge
+        let badgeHtml = '';
+        if (discountPercent >= 50) {
+          badgeHtml = '<div class="product-badge sale">Sale</div>';
+        } else if (product.isNew) {
+          badgeHtml = '<div class="product-badge new">New</div>';
+        } else if (product.isBestseller) {
+          badgeHtml = '<div class="product-badge bestseller">Bestseller</div>';
+        }
+        
+        // Check if product is in wishlist
+        const isWishlisted = isProductInWishlist(product.name);
+        const wishlistButtonHTML = getWishlistButtonHTML(product, isWishlisted);
+        
+        return `
+          <div class="ecommerce-product-card" onclick="window.location.href='${productUrl}'">
+            ${badgeHtml}
+            <img src="${product.image}" alt="${product.name}" loading="lazy" />
+            <div class="product-info">
+              <div class="product-brand">${product.brand}</div>
+              <div class="product-name">${product.name}</div>
+              <div class="product-price">
+                <span class="current-price">₹${product.price}</span>
+                <span class="original-price">₹${product.originalPrice}</span>
+                <span class="discount">(${discountPercent}% OFF)</span>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 12px;">
+                <button class="add-to-cart-btn" data-name="${product.name}" data-price="${product.price}" data-brand="${product.brand}" data-img="${product.image}" data-original-price="${product.originalPrice}" onclick="event.stopPropagation(); addToCartFromButton(this)" style="flex: 1;">
+                  Add to Cart
+                </button>
+                ${wishlistButtonHTML}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      // Re-attach event listeners for new buttons
+      attachProductButtons();
+    }
+
+    function updateResultsCount(count) {
+      const countEl = document.getElementById('resultsCount');
+      if (countEl) {
+        countEl.textContent = `${count} product${count !== 1 ? 's' : ''} found`;
+      }
+    }
+
+    function updateActiveFilters() {
+      const activeFiltersEl = document.getElementById('activeFilters');
+      const filterChipsEl = document.getElementById('filterChips');
+      
+      if (!activeFiltersEl || !filterChipsEl) return;
+      
+      const chips = [];
+      
+      if (activeFilters.minPrice > 0 || activeFilters.maxPrice < 5000) {
+        chips.push(`Price: ₹${activeFilters.minPrice} - ₹${activeFilters.maxPrice}`);
+      }
+      
+      if (activeFilters.brands.length > 0 && activeFilters.brands.length < 3) {
+        chips.push(`Brand: ${activeFilters.brands.join(', ')}`);
+      }
+      
+      if (activeFilters.discounts.length > 0) {
+        chips.push(`Discount: ${activeFilters.discounts.length} selected`);
+      }
+      
+      if (chips.length > 0) {
+        activeFiltersEl.style.display = 'block';
+        filterChipsEl.innerHTML = chips.map(chip => `
+          <div class="filter-chip">
+            ${chip}
+            <button class="filter-chip-remove" onclick="removeFilter('${chip}')">×</button>
+          </div>
+        `).join('');
+      } else {
+        activeFiltersEl.style.display = 'none';
+      }
+    }
+
+    function removeFilter(chipText) {
+      if (chipText.includes('Price')) {
+        document.getElementById('minPrice').value = 0;
+        document.getElementById('maxPrice').value = 5000;
+        document.getElementById('priceRange').value = 5000;
+        document.getElementById('priceRangeValue').textContent = '5000';
+      } else if (chipText.includes('Brand')) {
+        document.querySelectorAll('input[name="brand"]').forEach(cb => cb.checked = true);
+      } else if (chipText.includes('Discount')) {
+        document.querySelectorAll('input[name="discount"]').forEach(cb => cb.checked = false);
+      }
+      applyFilters();
+    }
+
+    // Initialize filters
+    // Initialize wishlist button states for static product cards
+    function initializeWishlistButtons() {
+      const wishlistButtons = document.querySelectorAll('.wishlist-btn');
+      wishlistButtons.forEach(button => {
+        const productName = button.getAttribute('data-name');
+        if (productName && isProductInWishlist(productName)) {
+          updateWishlistButtonIcon(button, true);
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize wishlist button states
+      initializeWishlistButtons();
+      
+      // Filter toggle for mobile
+      const filterToggle = document.getElementById('filterToggleBtn');
+      const filtersSidebar = document.getElementById('filtersSidebar');
+      const closeFilters = document.getElementById('closeFiltersBtn');
+      
+      if (filterToggle && filtersSidebar) {
+        filterToggle.addEventListener('click', () => {
+          filtersSidebar.classList.add('active');
+        });
+      }
+      
+      if (closeFilters && filtersSidebar) {
+        closeFilters.addEventListener('click', () => {
+          filtersSidebar.classList.remove('active');
+        });
+      }
+
+      // Price range slider
+      const priceRange = document.getElementById('priceRange');
+      const priceRangeValue = document.getElementById('priceRangeValue');
+      const maxPriceInput = document.getElementById('maxPrice');
+      
+      if (priceRange && priceRangeValue && maxPriceInput) {
+        priceRange.addEventListener('input', (e) => {
+          const value = e.target.value;
+          priceRangeValue.textContent = value;
+          maxPriceInput.value = value;
+        });
+        
+        maxPriceInput.addEventListener('input', (e) => {
+          const value = Math.min(5000, Math.max(0, parseInt(e.target.value) || 5000));
+          priceRange.value = value;
+          priceRangeValue.textContent = value;
+        });
+      }
+
+      // Apply filters button
+      const applyBtn = document.getElementById('applyFiltersBtn');
+      if (applyBtn) {
+        applyBtn.addEventListener('click', applyFilters);
+      }
+
+      // Sort select
+      const sortSelect = document.getElementById('sortSelect');
+      if (sortSelect) {
+        sortSelect.addEventListener('change', () => {
+          applySorting(currentProducts, sortSelect.value);
+          renderProducts(currentProducts);
+        });
+      }
+
+      // Clear filters
+      const clearBtn = document.getElementById('clearFiltersBtn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          document.getElementById('minPrice').value = 0;
+          document.getElementById('maxPrice').value = 5000;
+          document.getElementById('priceRange').value = 5000;
+          document.getElementById('priceRangeValue').textContent = '5000';
+          document.querySelectorAll('input[name="brand"]').forEach(cb => cb.checked = true);
+          document.querySelectorAll('input[name="discount"]').forEach(cb => cb.checked = false);
+          applyFilters();
+        });
+      }
+
+      // Check for search parameter in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchQuery = urlParams.get('search');
+      
+      // Calculate discounts
+      allProductsData.forEach(p => {
+        if (!p.discount && p.originalPrice) {
+          p.discount = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
+        }
+      });
+      
+      if (searchQuery) {
+        // Filter products by search query
+        const filtered = allProductsData.filter(p => 
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.name.toLowerCase().split(' ').some(word => word.startsWith(searchQuery.toLowerCase())))
+        );
+        currentProducts = filtered;
+        renderProducts(filtered);
+        updateResultsCount(filtered.length);
+        
+        // Update page title
+        document.title = `Search: ${searchQuery} | V Store`;
+      } else {
+        // Initial render
+        applyFilters();
+        updateResultsCount(allProductsData.length);
+      }
+    });
+
+    // Loading state simulation (for demo purposes)
+    window.addEventListener('load', () => {
+      const productsGrid = document.getElementById('products-grid');
+      const productsLoading = document.getElementById('products-loading');
+      
+      // Simulate loading delay (remove in production)
+      if (productsLoading) {
+        productsLoading.style.display = 'grid';
+        productsLoading.style.gridTemplateColumns = 'repeat(auto-fill, minmax(250px, 1fr))';
+        productsLoading.style.gap = '24px';
+        
+        setTimeout(() => {
+          if (productsLoading) {
+            productsLoading.style.display = 'none';
+          }
+        }, 800);
+      }
+    });
+
+    // Search functionality
+    const searchBtn = document.getElementById('searchBtn');
+    const searchModal = document.getElementById('searchModal');
+    const searchInput = document.getElementById('searchInput');
+    const searchClose = document.getElementById('searchClose');
+    const searchResults = document.getElementById('searchResults');
+
+    // Product data for search
+    const allProducts = [
+      { name: 'Colourblocked Polo T-shirt', price: 593, img: 'products.html', brand: 'Allen Solly' },
+      { name: 'Pure Cotton Custom Fit Shirt', price: 917, img: 'products.html', brand: 'Allen Solly' },
+      { name: 'Polo Collar Slim Fit T-shirt', price: 929, img: 'products.html', brand: 'Louis Philippe Jeans' },
+      { name: 'Pure Cotton Casual Shirt', price: 993, img: 'products.html', brand: 'Allen Solly' },
+      { name: 'Classic Fit Formal Shirt', price: 849, img: 'products.html', brand: 'Louis Philippe Jeans' },
+      { name: 'Regular Fit Cotton T-shirt', price: 699, img: 'products.html', brand: 'Allen Solly' },
+      { name: 'Slim Fit Cotton Shirt', price: 799, img: 'products.html', brand: 'Louis Philippe Jeans' },
+      { name: 'Oversized Graphic Tee', price: 499, img: 'featured.html', brand: 'V Store' },
+      { name: 'Minimalist Hoodie', price: 799, img: 'featured.html', brand: 'V Store' },
+      { name: 'Baggy Fit Jeans', price: 999, img: 'featured.html', brand: 'V Store' },
+      { name: 'Co-ord Set', price: 1199, img: 'featured.html', brand: 'V Store' }
+    ];
+
+    function performSearch(query) {
+      const lowerQuery = query.toLowerCase().trim();
+      if (lowerQuery === '') {
+        searchResults.innerHTML = '';
+        return;
+      }
+
+      const filtered = allProducts.filter(p => 
+        p.name.toLowerCase().includes(lowerQuery) ||
+        p.brand.toLowerCase().includes(lowerQuery)
+      );
+
+      searchResults.innerHTML = '';
+      
+      if (filtered.length === 0) {
+        searchResults.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-color, #666);">No products found</div>';
+        return;
+      }
+
+      filtered.forEach(product => {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.1); cursor: pointer; transition: background-color 0.2s; display: flex; align-items: center; gap: 12px;';
+        item.innerHTML = `
+          <div style="flex: 1;">
+            <h4 style="margin: 0 0 4px 0; color: var(--text-color, #333); font-size: 1rem;">${product.name}</h4>
+            <p style="margin: 0; color: #e53935; font-weight: 600; font-size: 0.9rem;">₹${product.price}</p>
+            <p style="margin: 4px 0 0 0; color: var(--text-color, #666); font-size: 0.85rem;">${product.brand}</p>
+          </div>
+        `;
+        item.addEventListener('mouseenter', () => {
+          item.style.background = 'var(--muted-white, #f5f5f5)';
+        });
+        item.addEventListener('mouseleave', () => {
+          item.style.background = 'transparent';
+        });
+        item.addEventListener('click', () => {
+          window.location.href = product.img;
+          searchModal.style.display = 'none';
+          searchInput.value = '';
+          searchResults.innerHTML = '';
+        });
+        searchResults.appendChild(item);
+      });
+    }
+
+    if (searchBtn) {
+      searchBtn.addEventListener('click', () => {
+        searchModal.style.display = 'flex';
+        setTimeout(() => searchInput.focus(), 100);
+      });
+    }
+
+    if (searchClose) {
+      searchClose.addEventListener('click', () => {
+        searchModal.style.display = 'none';
+        searchInput.value = '';
+        searchResults.innerHTML = '';
+      });
+    }
+
+    if (searchModal) {
+      searchModal.addEventListener('click', (e) => {
+        if (e.target === searchModal) {
+          searchModal.style.display = 'none';
+          searchInput.value = '';
+          searchResults.innerHTML = '';
+        }
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        performSearch(e.target.value);
+      });
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchModal.style.display = 'none';
+          searchInput.value = '';
+          searchResults.innerHTML = '';
+        }
+      });
+    }
+
+    // Mobile Menu Toggle
+    const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+    const mobileNav = document.getElementById("mobileNav");
+    if (mobileMenuBtn && mobileNav) {
+      mobileMenuBtn.addEventListener("click", () => {
+        mobileNav.classList.toggle("active");
+      });
+      document.addEventListener("click", (e) => {
+        if (!mobileMenuBtn.contains(e.target) && !mobileNav.contains(e.target)) {
+          mobileNav.classList.remove("active");
+        }
+      });
+      mobileNav.querySelectorAll(".nav-item").forEach(item => {
+        item.addEventListener("click", () => {
+          mobileNav.classList.remove("active");
+        });
+      });
+    }
+
+    // ====== PROFILE SIDEBAR SYSTEM ======
+    const profileSidebar = document.getElementById('profileSidebar');
+    const profileSidebarOverlay = document.getElementById('profileSidebarOverlay');
+    const profileSidebarClose = document.getElementById('profileSidebarClose');
+    const sidebarLightModeBtn = document.getElementById('sidebarLightMode');
+
+    function getCurrentUser() {
+      return JSON.parse(localStorage.getItem('currentUser') || 'null');
+    }
+
+    function updateProfileSidebar() {
+      const user = getCurrentUser();
+      const sidebarName = document.querySelector('.profile-sidebar-name');
+      const sidebarPhone = document.querySelector('.profile-sidebar-phone');
+      const sidebarAvatar = document.querySelector('.profile-sidebar-avatar');
+      
+      if (user) {
+        if (sidebarName) sidebarName.textContent = `Hello ${user.name || 'User'}`;
+        if (sidebarPhone) sidebarPhone.textContent = user.phone || user.email || 'Not provided';
+        if (sidebarAvatar) {
+          sidebarAvatar.innerHTML = `<span style="font-size: 1.5rem; font-weight: 700; color: #ff6d2e;">${(user.name || 'U')[0].toUpperCase()}</span>`;
+        }
+        
+        // Show sign out option
+        const signOutBtn = document.getElementById('sidebarSignOut');
+        if (signOutBtn) signOutBtn.style.display = 'flex';
+      } else {
+        if (sidebarName) sidebarName.textContent = 'Hello Guest';
+        if (sidebarPhone) sidebarPhone.textContent = 'Sign in to continue';
+        if (sidebarAvatar) {
+          sidebarAvatar.innerHTML = `
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          `;
+        }
+        
+        // Hide sign out, show login
+        const signOutBtn = document.getElementById('sidebarSignOut');
+        if (signOutBtn) signOutBtn.style.display = 'none';
+      }
+    }
+
+    function handleSignOut() {
+      if (window.showConfirmDialog) {
+        window.showConfirmDialog('Are you sure you want to sign out?', 'Sign Out').then((confirmed) => {
+          if (confirmed) {
+            localStorage.removeItem('currentUser');
+            updateProfileSidebar();
+            if (window.showToast) {
+              showToast('Signed out successfully', 'success', 'Sign Out');
+            }
+            closeProfileSidebar();
+            setTimeout(() => {
+              window.location.href = 'login.html';
+            }, 500);
+          }
+        });
+      } else if (confirm('Are you sure you want to sign out?')) {
+        localStorage.removeItem('currentUser');
+        updateProfileSidebar();
+        if (window.showToast) {
+          showToast('Signed out successfully', 'success', 'Sign Out');
+        }
+        closeProfileSidebar();
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 500);
+      }
+    }
+
+    function openProfileSidebar() {
+      if (profileSidebar) {
+        updateProfileSidebar();
+        profileSidebar.classList.add('active');
+        if (profileSidebarOverlay) {
+          profileSidebarOverlay.classList.add('active');
+        }
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeProfileSidebar() {
+      if (profileSidebar) {
+        profileSidebar.classList.remove('active');
+        if (profileSidebarOverlay) {
+          profileSidebarOverlay.classList.remove('active');
+        }
+        document.body.style.overflow = '';
+      }
+    }
+
+    window.openProfileSidebar = openProfileSidebar;
+    window.closeProfileSidebar = closeProfileSidebar;
+    window.handleSignOut = handleSignOut;
+
+    // Open sidebar when clicking profile button
+
+    // Close sidebar
+    if (profileSidebarClose) {
+      profileSidebarClose.addEventListener('click', () => {
+        closeProfileSidebar();
+      });
+    }
+
+    // Close sidebar when clicking overlay
+    if (profileSidebarOverlay) {
+      profileSidebarOverlay.addEventListener('click', () => {
+        closeProfileSidebar();
+      });
+    }
+
+    // Close sidebar on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && profileSidebar && profileSidebar.classList.contains('active')) {
+        closeProfileSidebar();
+      }
+    });
+
+    // Light Mode toggle from sidebar
+    if (sidebarLightModeBtn) {
+      sidebarLightModeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const darkModeSwitch = document.getElementById('dark-mode-switch');
+        if (darkModeSwitch) {
+          darkModeSwitch.checked = !darkModeSwitch.checked;
+          darkModeSwitch.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
+    // Light Mode toggle from dropdown (if exists)
+    if (lightModeBtn) {
+      lightModeBtn.addEventListener('click', () => {
+        const darkModeSwitch = document.getElementById('dark-mode-switch');
+        if (darkModeSwitch) {
+          darkModeSwitch.checked = !darkModeSwitch.checked;
+          darkModeSwitch.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
+    // Update Light Mode text based on current theme
+    function updateLightModeText() {
+      const lightModeText = document.getElementById('lightModeText');
+      const sidebarLightModeText = document.getElementById('sidebarLightModeText');
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      
+      if (lightModeText) {
+        lightModeText.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+      }
+      if (sidebarLightModeText) {
+        sidebarLightModeText.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+      }
+    }
+
+    // Update on theme change (wait for app.js to initialize first)
+    function setupLightModeTextUpdate() {
+      const darkModeSwitch = document.getElementById('dark-mode-switch');
+      if (!darkModeSwitch) {
+        setTimeout(setupLightModeTextUpdate, 50);
+        return;
+      }
+      darkModeSwitch.addEventListener('change', function() {
+        requestAnimationFrame(updateLightModeText);
+      });
+      updateLightModeText();
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(setupLightModeTextUpdate, 150);
+      });
+    } else {
+      setTimeout(setupLightModeTextUpdate, 150);
+    }
+
+    // Add to cart from button (prevents navigation)
+    // Add to wishlist from product card
+    // Helper function to update wishlist button icon
+    function updateWishlistButtonIcon(button, isWishlisted) {
+      if (isWishlisted) {
+        // Replace with GIF
+        button.innerHTML = `<img src="../assets/gifs/wishlist.gif" alt="Wishlisted" style="width: 20px; height: 20px; object-fit: contain;" />`;
+        button.title = 'Remove from Wishlist';
+      } else {
+        // Replace with SVG
+        button.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>`;
+        button.title = 'Add to Wishlist';
+      }
+    }
+
+    function addToWishlistFromProduct(button) {
+      const name = button.getAttribute('data-name');
+      const price = parseInt(button.getAttribute('data-price'));
+      const brand = button.getAttribute('data-brand') || 'V Store';
+      const img = button.getAttribute('data-img') || '';
+      const originalPrice = parseInt(button.getAttribute('data-original-price')) || price;
+      
+      // Check if product is already in wishlist
+      const isCurrentlyWishlisted = isProductInWishlist(name);
+      
+      if (window.WishlistUtils) {
+        if (isCurrentlyWishlisted) {
+          // Remove from wishlist
+          window.WishlistUtils.removeItemFromWishlist(name);
+          updateWishlistButtonIcon(button, false);
+          if (window.showToast) {
+            showToast(`${name} removed from wishlist`, 'success', 'Wishlist');
+          }
+        } else {
+          // Add to wishlist
+          const added = window.WishlistUtils.addItemToWishlist({
+            name: name,
+            price: price,
+            originalPrice: originalPrice,
+            image: img,
+            brand: brand,
+            size: 'Default',
+            color: 'Default'
+          });
+          
+          if (added) {
+            updateWishlistButtonIcon(button, true);
+            if (window.showToast) {
+              showToast(`${name} added to wishlist!`, 'success', 'Wishlist');
+            }
+          }
+        }
+        
+        window.WishlistUtils.updateWishlistCount();
+      } else {
+        // Fallback to localStorage
+        let wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        const existingItemIndex = wishlist.findIndex(item => item.name === name);
+        
+        if (existingItemIndex !== -1) {
+          // Remove from wishlist
+          wishlist.splice(existingItemIndex, 1);
+          localStorage.setItem('wishlist', JSON.stringify(wishlist));
+          updateWishlistButtonIcon(button, false);
+          if (window.showToast) {
+            showToast(`${name} removed from wishlist`, 'success', 'Wishlist');
+          }
+        } else {
+          // Add to wishlist
+          wishlist.push({
+            name: name,
+            price: price,
+            originalPrice: originalPrice,
+            image: img,
+            brand: brand
+          });
+          localStorage.setItem('wishlist', JSON.stringify(wishlist));
+          updateWishlistButtonIcon(button, true);
+          if (window.showToast) {
+            showToast(`${name} added to wishlist!`, 'success', 'Wishlist');
+          }
+        }
+        
+        // Update wishlist count
+        const wishlistCountElements = document.querySelectorAll('#wishlistCount, .wishlist-count');
+        wishlistCountElements.forEach(el => {
+          if (el) {
+            el.textContent = wishlist.length;
+            if (wishlist.length > 0) {
+              el.style.display = 'inline-block';
+            } else {
+              el.style.display = 'none';
+            }
+          }
+        });
+      }
+    }
+
+    // Make functions globally available
+    window.addToWishlistFromProduct = addToWishlistFromProduct;
+    window.isProductInWishlist = isProductInWishlist;
+    window.updateWishlistButtonIcon = updateWishlistButtonIcon;
+
+    function addToCartFromButton(button) {
+      // Show loading state
+      const originalText = button.textContent;
+      button.textContent = 'Adding...';
+      button.disabled = true;
+      
+      setTimeout(() => {
+        const name = button.getAttribute('data-name');
+        const price = parseInt(button.getAttribute('data-price'));
+        const brand = button.getAttribute('data-brand') || 'V Store';
+        const img = button.getAttribute('data-img') || '';
+        
+        // Use unified cart system if available
+        if (window.CartUtils) {
+          window.CartUtils.addItemToCart({
+            name: name,
+            price: price,
+            image: img,
+            brand: brand,
+            size: 'Default',
+            color: 'Default'
+          });
+        } else {
+          // Fallback to localStorage
+          let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+          const existingItem = cart.find(item => item.name === name);
+          
+          if (existingItem) {
+            existingItem.quantity += 1;
+          } else {
+            cart.push({
+              name: name,
+              price: price,
+              image: img,
+              brand: brand,
+            quantity: 1
+          });
+        }
+        
+          localStorage.setItem('cart', JSON.stringify(cart));
+        }
+        
+        // Update cart count
+        if (window.CartUtils) {
+          window.CartUtils.updateCartCount();
+        } else {
+          const cartCount = document.getElementById('cartCount');
+          if (cartCount) {
+            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            cartCount.textContent = totalItems;
+          }
+        }
+        
+        // Show success message with toast
+        if (window.showToast) {
+          showToast(`${name} added to cart!`, 'success', 'Added to Cart');
+        } else {
+          alert(`${name} added to cart!`);
+        }
+        
+        // Restore button state
+        button.textContent = originalText;
+        button.disabled = false;
+      }, 500);
+    }
+    
+    // Initial update
+    updateLightModeText();
+
+    // Close sidebar when clicking menu items (except light mode toggle)
+    const sidebarMenuItems = document.querySelectorAll('.profile-sidebar-item');
+    sidebarMenuItems.forEach(item => {
+      if (item.id !== 'sidebarLightMode') {
+        item.addEventListener('click', () => {
+          setTimeout(() => {
+            closeProfileSidebar();
+          }, 100);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Orders | V Store - Men's Fashion</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-color, #f5f5f5);
+      color: var(--text-color, #333);
+    }
+
+    .orders-page {
+      padding: 40px 0;
+      min-height: calc(100vh - 200px);
+    }
+
+    .orders-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .orders-header {
+      margin-bottom: 32px;
+    }
+
+    .orders-header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-color, #333);
+      margin-bottom: 8px;
+    }
+
+    .orders-header p {
+      color: var(--text-color, #666);
+      font-size: 0.95rem;
+    }
+
+    .orders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .order-card {
+      background: var(--card-bg, #fff);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.3s;
+    }
+
+    body.dark-mode .order-card {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .order-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .order-info {
+      flex: 1;
+    }
+
+    .order-id {
+      font-size: 0.9rem;
+      color: var(--text-color, #666);
+      margin-bottom: 4px;
+    }
+
+    .order-date {
+      font-size: 0.85rem;
+      color: var(--text-color, #999);
+    }
+
+    .order-status {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .order-status.delivered {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .order-status.shipped {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+
+    .order-status.processing {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    .order-status.cancelled {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .order-items {
+      margin-bottom: 16px;
+    }
+
+    .order-item {
+      display: flex;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    body.dark-mode .order-item {
+      border-bottom-color: rgba(255,255,255,0.05);
+    }
+
+    .order-item:last-child {
+      border-bottom: none;
+    }
+
+    .order-item-image {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .order-item-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .order-item-name {
+      font-weight: 600;
+      color: var(--text-color, #333);
+      margin-bottom: 4px;
+      font-size: 0.95rem;
+    }
+
+    .order-item-meta {
+      font-size: 0.85rem;
+      color: var(--text-color, #666);
+      margin-bottom: 8px;
+    }
+
+    .order-item-price {
+      font-weight: 700;
+      color: #e53935;
+      font-size: 1rem;
+    }
+
+    .order-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    body.dark-mode .order-footer {
+      border-top-color: rgba(255,255,255,0.1);
+    }
+
+    .order-total {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-color, #333);
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .order-action-btn {
+      padding: 8px 16px;
+      border: 2px solid rgba(0,0,0,0.1);
+      border-radius: 6px;
+      background: var(--card-bg, #fff);
+      color: var(--text-color, #333);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+    }
+
+    body.dark-mode .order-action-btn {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .order-action-btn:hover {
+      background: var(--muted-white, #f5f5f5);
+      border-color: #ff6d2e;
+    }
+
+    .order-action-btn.primary {
+      background: #ff6d2e;
+      color: #fff;
+      border-color: #ff6d2e;
+    }
+
+    .order-action-btn.primary:hover {
+      background: #e55a1f;
+    }
+
+    .no-orders {
+      text-align: center;
+      padding: 60px 20px;
+      background: var(--card-bg, #fff);
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+
+    body.dark-mode .no-orders {
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    .no-orders-icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
+
+    .no-orders-text {
+      font-size: 1.1rem;
+      color: var(--text-color, #666);
+      margin-bottom: 24px;
+    }
+
+    .no-orders-btn {
+      padding: 12px 24px;
+      background: #ff6d2e;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.3s;
+    }
+
+    .no-orders-btn:hover {
+      background: #e55a1f;
+    }
+
+    @media (max-width: 768px) {
+      .orders-page {
+        padding: 20px 0;
+      }
+
+      .order-header {
+        flex-direction: column;
+      }
+
+      .order-footer {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .order-actions {
+        flex-direction: column;
+      }
+
+      .order-action-btn {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="topbar">
+      <div class="topbar-inner container">
+        <div class="left-group">
+          <div class="avatar" aria-hidden="true">
+            <a href="../index.html" style="text-decoration:none;color:inherit;display:flex;align-items:center;justify-content:center;width:100%;height:100%;"><span>V</span></a>
+          </div>
+          <div class="divider"></div>
+          <nav class="main-nav" aria-label="Main">
+            <a href="categories.html" class="nav-item">Categories</a>
+            <a href="featured.html" class="nav-item">Featured</a>
+            <a href="products.html" class="nav-item">Products</a>
+          </nav>
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Menu">☰</button>
+        </div>
+        <div class="right-group">
+          <div class="dark-mode-toggle-container">
+            <label class="dark-mode-toggle" for="dark-mode-switch" title="Toggle Dark Mode">
+              <input type="checkbox" id="dark-mode-switch" class="toggle-input">
+              <span class="toggle-track">
+                <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span class="toggle-indicator"></span>
+              </span>
+            </label>
+          </div>
+          <button class="icon-btn" id="searchBtn" title="Search Products" onclick="window.location.href='search.html'">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
+              <circle cx="11" cy="11" r="6" stroke-width="1.6"></circle>
+              <path d="M21 21l-4.35-4.35" stroke-width="1.6" stroke-linecap="round"></path>
+            </svg>
+          </button>
+
+          <button class="icon-btn" id="wishlistBtn" title="Wishlist" onclick="window.location.href='wishlist.html'">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke-width="1.5" stroke-linejoin="round"></path>
+            </svg>
+            <span class="wishlist-count" id="wishlistCount">0</span>
+          </button>
+          <button class="icon-btn" id="cartBtn" title="Cart" onclick="window.location.href='cart.html'">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+              <path d="M6 6h15l-1.5 9h-12z" stroke-width="1.5" stroke-linejoin="round"></path>
+              <circle cx="10" cy="20" r="1.4" stroke-width="1.5"></circle>
+              <circle cx="18" cy="20" r="1.4" stroke-width="1.5"></circle>
+            </svg>
+            <span class="cart-count" id="cartCount">0</span>
+          </button>
+
+          <!-- Profile Button -->
+          <button class="icon-btn" id="profileBtn" title="Profile" onclick="openProfileSidebar()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Profile Sidebar Menu -->
+    <div class="profile-sidebar-overlay" id="profileSidebarOverlay"></div>
+    <div class="profile-sidebar" id="profileSidebar">
+      <div class="profile-sidebar-header">
+        <button class="profile-sidebar-close" id="profileSidebarClose" aria-label="Close Menu">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="profile-sidebar-content">
+        <div class="profile-sidebar-user">
+          <div class="profile-sidebar-avatar">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="profile-sidebar-info">
+            <div class="profile-sidebar-name">Hello User</div>
+            <div class="profile-sidebar-phone">+1234567890</div>
+          </div>
+        </div>
+        <div class="profile-sidebar-menu">
+          <a href="orders.html" class="profile-sidebar-item" id="sidebarMyOrders">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <span>My Orders</span>
+          </a>
+          <a href="wishlist.html" class="profile-sidebar-item" id="sidebarWishlist">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            <span>My Wishlist</span>
+          </a>
+          <a href="cart.html" class="profile-sidebar-item" id="sidebarCart">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <span>Shopping Cart</span>
+          </a>
+          <a href="order-tracking.html" class="profile-sidebar-item" id="sidebarTrackOrder">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span>Track Order</span>
+          </a>
+          <div class="profile-sidebar-divider"></div>
+          <div class="profile-sidebar-item" id="sidebarLightMode">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="1" y="5" width="22" height="14" rx="7" ry="7"></rect>
+              <circle cx="8" cy="12" r="3"></circle>
+            </svg>
+            <span id="sidebarLightModeText">Light Mode</span>
+          </div>
+          <a href="faq.html" class="profile-sidebar-item" id="sidebarFAQ">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>Help & FAQ</span>
+          </a>
+          <div class="profile-sidebar-item" id="sidebarSignOut" onclick="handleSignOut()" style="cursor: pointer;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Sign Out</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="mobile-nav" id="mobileNav">
+      <a href="categories.html" class="nav-item">Categories</a>
+      <a href="featured.html" class="nav-item">Featured</a>
+      <a href="products.html" class="nav-item">Products</a>
+      <a href="cart.html" class="nav-item">Cart</a>
+      <a href="orders.html" class="nav-item active">Orders</a>
+    </nav>
+
+    <main class="orders-page">
+      <div class="orders-container">
+        <div class="orders-header">
+          <h1>My Orders</h1>
+          <p>Track and manage your orders</p>
+        </div>
+
+        <div class="orders-list" id="ordersList">
+          <!-- Orders will be inserted here -->
+        </div>
+      </div>
+    </main>
+  
+  <!-- Footer Component (loaded from components/footer.html) -->
+  <div id="footer-placeholder" style="width: 100%; margin-top: auto; flex-shrink: 0;"></div>
+  </div>
+  
+  <!-- Load components first, then app.js -->
+  <script src="../js/load-components.js"></script>
+  <!-- API Configuration and Integration -->
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    // Mock order data
+    function getOrders() {
+      const savedOrders = localStorage.getItem('orders');
+      if (savedOrders) {
+        return JSON.parse(savedOrders);
+      }
+      
+      // Generate mock orders from cart history
+      const mockOrders = [
+        {
+          id: 'ORD' + Date.now().toString().slice(-8),
+          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'delivered',
+          items: [
+            { name: "Men's Pure Cotton T-Shirt", price: 476, quantity: 2, image: '../assets/products/p1.jpg', size: 'M', color: 'Blue' },
+            { name: "Men's Casual T-Shirt", price: 499, quantity: 1, image: '../assets/products/p2.jpg', size: 'L', color: 'White' }
+          ],
+          total: 1451,
+          shippingAddress: '123 Main St, City, State 12345'
+        },
+        {
+          id: 'ORD' + (Date.now() - 86400000).toString().slice(-8),
+          date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'shipped',
+          items: [
+            { name: "Men's Formal Shirt", price: 699, quantity: 1, image: '../assets/products/p3.jpg', size: 'L', color: 'White' }
+          ],
+          total: 699,
+          shippingAddress: '123 Main St, City, State 12345'
+        },
+        {
+          id: 'ORD' + (Date.now() - 172800000).toString().slice(-8),
+          date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'processing',
+          items: [
+            { name: "Men's Polo T-Shirt", price: 479, quantity: 1, image: '../assets/products/p4.jpg', size: 'M', color: 'Navy' },
+            { name: "Men's Cotton Shirt", price: 619, quantity: 1, image: '../assets/products/p5.jpg', size: 'L', color: 'Blue' }
+          ],
+          total: 1098,
+          shippingAddress: '123 Main St, City, State 12345'
+        }
+      ];
+      
+      localStorage.setItem('orders', JSON.stringify(mockOrders));
+      return mockOrders;
+    }
+
+    function renderOrders() {
+      const orders = getOrders();
+      const ordersList = document.getElementById('ordersList');
+      
+      if (!ordersList) return;
+      
+      if (orders.length === 0) {
+        ordersList.innerHTML = `
+          <div class="no-orders">
+            <div class="no-orders-icon">📦</div>
+            <div class="no-orders-text">You haven't placed any orders yet</div>
+            <a href="products.html" class="no-orders-btn">Start Shopping</a>
+          </div>
+        `;
+        return;
+      }
+      
+      ordersList.innerHTML = orders.map(order => {
+        const orderDate = new Date(order.date);
+        const statusClass = order.status;
+        const statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+        
+        return `
+          <div class="order-card">
+            <div class="order-header">
+              <div class="order-info">
+                <div class="order-id">Order ID: ${order.id}</div>
+                <div class="order-date">Placed on ${orderDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              </div>
+              <div class="order-status ${statusClass}">${statusText}</div>
+            </div>
+            <div class="order-items">
+              ${order.items.map(item => `
+                <div class="order-item">
+                  <img src="${item.image}" alt="${item.name}" class="order-item-image">
+                  <div class="order-item-details">
+                    <div class="order-item-name">${item.name}</div>
+                    <div class="order-item-meta">Size: ${item.size || 'N/A'} | Color: ${item.color || 'N/A'} | Qty: ${item.quantity}</div>
+                    <div class="order-item-price">₹${item.price} × ${item.quantity} = ₹${item.price * item.quantity}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <div class="order-footer">
+              <div class="order-total">Total: ₹${order.total}</div>
+              <div class="order-actions">
+                ${order.status === 'delivered' ? '<button class="order-action-btn primary" onclick="reorder(\'' + order.id + '\')">Reorder</button>' : ''}
+                ${order.status === 'processing' ? '<button class="order-action-btn" onclick="cancelOrder(\'' + order.id + '\')">Cancel Order</button>' : ''}
+                <button class="order-action-btn" onclick="viewOrderDetails('${order.id}')">View Details</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function reorder(orderId) {
+      const orders = getOrders();
+      const order = orders.find(o => o.id === orderId);
+      if (order && window.showToast) {
+        showToast('Items added to cart!', 'success', 'Reorder');
+        // Add items to cart
+        order.items.forEach(item => {
+          if (window.CartUtils) {
+            for (let i = 0; i < item.quantity; i++) {
+              window.CartUtils.addItemToCart({
+                name: item.name,
+                price: item.price,
+                image: item.image,
+                size: item.size,
+                color: item.color
+              });
+            }
+          }
+        });
+      }
+    }
+
+    function cancelOrder(orderId) {
+      if (window.showConfirmDialog) {
+        window.showConfirmDialog('Are you sure you want to cancel this order?', 'Cancel Order').then((confirmed) => {
+          if (confirmed) {
+            const orders = getOrders();
+            const order = orders.find(o => o.id === orderId);
+            if (order) {
+              order.status = 'cancelled';
+              localStorage.setItem('orders', JSON.stringify(orders));
+              renderOrders();
+              if (window.showToast) {
+                showToast('Order cancelled successfully', 'info', 'Order Cancelled');
+              }
+            }
+          }
+        });
+      } else if (confirm('Are you sure you want to cancel this order?')) {
+        const orders = getOrders();
+        const order = orders.find(o => o.id === orderId);
+        if (order) {
+          order.status = 'cancelled';
+          localStorage.setItem('orders', JSON.stringify(orders));
+          renderOrders();
+          if (window.showToast) {
+            showToast('Order cancelled successfully', 'info', 'Order Cancelled');
+          }
+        }
+      }
+    }
+
+    function viewOrderDetails(orderId) {
+      const orders = getOrders();
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        alert(`Order Details:\n\nOrder ID: ${order.id}\nStatus: ${order.status}\nDate: ${new Date(order.date).toLocaleString()}\nTotal: ₹${order.total}\n\nShipping Address:\n${order.shippingAddress}`);
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      renderOrders();
+    });
+  </script>
+</body>
+</html>

@@ -322,9 +322,9 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
     return authResponse;
   } catch (error) {
     // Handle network errors
-    if (error instanceof TypeError && error.message.includes('fetch')) {
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
       console.error('Network error during login:', error);
-      throw new Error('Network request failed. Please check your internet connection and ensure the backend is running.');
+      throw new Error(`Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`);
     }
     // Re-throw other errors
     console.error('Login error:', error);

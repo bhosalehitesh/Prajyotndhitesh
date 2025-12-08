@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FAQ | V Store - Men's Fashion</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page-wrapper">
+    <header class="topbar">
+      <div class="topbar-inner container">
+        <div class="left-group">
+          <div class="avatar" aria-hidden="true">
+            <a href="../index.html" style="text-decoration:none;color:inherit;display:flex;align-items:center;justify-content:center;width:100%;height:100%;"><span>V</span></a>
+          </div>
+          <div class="divider"></div>
+          <nav class="main-nav" aria-label="Main">
+            <a href="categories.html" class="nav-item">Categories</a>
+            <a href="featured.html" class="nav-item">Featured</a>
+            <a href="products.html" class="nav-item">Products</a>
+          </nav>
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Menu">☰</button>
+        </div>
+        <div class="right-group">
+          <!-- Dark Mode Toggle Switch -->
+          <div class="dark-mode-toggle-container">
+            <label class="dark-mode-toggle" for="dark-mode-switch" title="Toggle Dark Mode">
+              <input type="checkbox" id="dark-mode-switch" class="toggle-input">
+              <span class="toggle-track">
+                <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span class="toggle-indicator"></span>
+              </span>
+            </label>
+          </div>
+
+          <button class="icon-btn" id="searchBtn" title="Search Products">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
+              <circle cx="11" cy="11" r="6" stroke-width="1.6"></circle>
+              <path d="M21 21l-4.35-4.35" stroke-width="1.6" stroke-linecap="round"></path>
+            </svg>
+          </button>
+
+          <button class="icon-btn" id="wishlistBtn" title="Wishlist" onclick="window.location.href='wishlist.html'">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke-width="1.5" stroke-linejoin="round"></path>
+            </svg>
+            <span class="wishlist-count" id="wishlistCount">0</span>
+          </button>
+          <button class="icon-btn" id="cartBtn" title="Cart" onclick="window.location.href='cart.html'">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
+              <path d="M6 6h15l-1.5 9h-12z" stroke-width="1.5" stroke-linejoin="round"></path>
+              <circle cx="10" cy="20" r="1.4" stroke-width="1.5"></circle>
+              <circle cx="18" cy="20" r="1.4" stroke-width="1.5"></circle>
+            </svg>
+            <span class="cart-count" id="cartCount">0</span>
+          </button>
+
+          <!-- Profile Button -->
+          <button class="icon-btn" id="profileBtn" title="Profile" onclick="openProfileSidebar()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Profile Sidebar Menu -->
+    <div class="profile-sidebar-overlay" id="profileSidebarOverlay"></div>
+    <div class="profile-sidebar" id="profileSidebar">
+      <div class="profile-sidebar-header">
+        <button class="profile-sidebar-close" id="profileSidebarClose" aria-label="Close Menu">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="profile-sidebar-content">
+        <div class="profile-sidebar-user">
+          <div class="profile-sidebar-avatar">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="profile-sidebar-info">
+            <div class="profile-sidebar-name">Hello User</div>
+            <div class="profile-sidebar-phone">+1234567890</div>
+          </div>
+        </div>
+        <div class="profile-sidebar-menu">
+          <a href="orders.html" class="profile-sidebar-item" id="sidebarMyOrders">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <span>My Orders</span>
+          </a>
+          <a href="wishlist.html" class="profile-sidebar-item" id="sidebarWishlist">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            <span>My Wishlist</span>
+          </a>
+          <a href="cart.html" class="profile-sidebar-item" id="sidebarCart">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <span>Shopping Cart</span>
+          </a>
+          <a href="order-tracking.html" class="profile-sidebar-item" id="sidebarTrackOrder">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span>Track Order</span>
+          </a>
+          <div class="profile-sidebar-divider"></div>
+          <div class="profile-sidebar-item" id="sidebarLightMode">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="1" y="5" width="22" height="14" rx="7" ry="7"></rect>
+              <circle cx="8" cy="12" r="3"></circle>
+            </svg>
+            <span id="sidebarLightModeText">Light Mode</span>
+          </div>
+          <a href="faq.html" class="profile-sidebar-item" id="sidebarFAQ">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>Help & FAQ</span>
+          </a>
+          <div class="profile-sidebar-item" id="sidebarSignOut" onclick="handleSignOut()" style="cursor: pointer;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Sign Out</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+      <a href="categories.html" class="nav-item">Categories</a>
+      <a href="featured.html" class="nav-item">Featured</a>
+      <a href="products.html" class="nav-item">Products</a>
+      <a href="cart.html" class="nav-item">Cart</a>
+      <a href="login.html" class="nav-item">Login</a>
+    </nav>
+
+    <main class="faq-page">
+      <div class="faq-container">
+        <div class="faq-header">
+          <h1 class="faq-title">Frequently Asked Questions</h1>
+          <p class="faq-subtitle">Find answers to common questions about shopping with V Store</p>
+        </div>
+
+        <div class="faq-search">
+          <input type="text" class="faq-search-input" id="faqSearch" placeholder="Search for questions...">
+        </div>
+
+        <div class="faq-categories">
+          <button class="faq-category-btn active" data-category="all">All</button>
+          <button class="faq-category-btn" data-category="shipping">Shipping</button>
+          <button class="faq-category-btn" data-category="returns">Returns</button>
+          <button class="faq-category-btn" data-category="payments">Payments</button>
+          <button class="faq-category-btn" data-category="products">Products</button>
+          <button class="faq-category-btn" data-category="account">Account</button>
+        </div>
+
+        <div class="faq-list" id="faqList">
+          <!-- FAQ items will be inserted here -->
+        </div>
+
+        <div class="faq-no-results" id="faqNoResults" style="display: none;">
+          <div class="faq-no-results-icon">🔍</div>
+          <div class="faq-no-results-text">No questions found. Try a different search term.</div>
+        </div>
+      </div>
+    </main>
+  
+  <!-- Footer Component (loaded from components/footer.html) -->
+  <div id="footer-placeholder" style="width: 100%; margin-top: auto; flex-shrink: 0;"></div>
+  </div>
+  
+  <!-- Load components first, then app.js -->
+  <script src="../js/load-components.js"></script>
+  <!-- API Configuration and Integration -->
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    // FAQ Data
+    const faqData = [
+      {
+        category: 'shipping',
+        question: 'What are the delivery charges?',
+        answer: 'We offer free delivery on orders above ₹999. For orders below ₹999, a delivery charge of ₹50 applies. Delivery charges may vary for remote locations.'
+      },
+      {
+        category: 'shipping',
+        question: 'How long does delivery take?',
+        answer: 'Standard delivery takes 3-7 business days. Express delivery (available in select cities) takes 1-2 business days. Delivery time may vary based on your location and product availability.'
+      },
+      {
+        category: 'shipping',
+        question: 'Do you deliver to my area?',
+        answer: 'We deliver to most locations across India. You can check delivery availability by entering your pincode on the product page. If your area is not serviceable, we will notify you during checkout.'
+      },
+      {
+        category: 'shipping',
+        question: 'How can I track my order?',
+        answer: 'Once your order is shipped, you will receive a tracking number via email and SMS. You can track your order status in the "My Orders" section of your account or by clicking the tracking link in the email.'
+      },
+      {
+        category: 'returns',
+        question: 'What is your return policy?',
+        answer: 'We offer a 7-day return policy. Items must be unused, unwashed, and in their original packaging with tags attached. Items marked as "Final Sale" cannot be returned.'
+      },
+      {
+        category: 'returns',
+        question: 'How do I return an item?',
+        answer: 'To return an item, go to "My Orders" in your account, select the order you want to return, and click "Return Item". Follow the instructions to generate a return label. We will arrange a pickup from your address.'
+      },
+      {
+        category: 'returns',
+        question: 'How long does it take to process a refund?',
+        answer: 'Once we receive your returned item and verify its condition, we will process your refund within 5-7 business days. The refund will be credited to your original payment method.'
+      },
+      {
+        category: 'payments',
+        question: 'What payment methods do you accept?',
+        answer: 'We accept Cash on Delivery (COD), Credit/Debit Cards, UPI, Net Banking, and Digital Wallets. All online payments are secured through our payment gateway partners.'
+      },
+      {
+        category: 'payments',
+        question: 'Is it safe to use my credit card?',
+        answer: 'Yes, absolutely! We use industry-standard SSL encryption to protect your payment information. We do not store your complete card details on our servers. All transactions are processed through secure payment gateways.'
+      },
+      {
+        category: 'payments',
+        question: 'Can I pay cash on delivery?',
+        answer: 'Yes, we offer Cash on Delivery (COD) for orders above ₹299. COD charges may apply for orders below ₹999. Please have the exact amount ready when the delivery person arrives.'
+      },
+      {
+        category: 'products',
+        question: 'How do I know what size to order?',
+        answer: 'Each product page includes a size guide with detailed measurements. You can also refer to our size chart which shows measurements for S, M, L, XL, and XXL sizes. If you need help, contact our customer service team.'
+      },
+      {
+        category: 'products',
+        question: 'Are the product colors accurate?',
+        answer: 'We strive to display product colors as accurately as possible. However, colors may vary slightly due to monitor settings and lighting conditions. If you receive a product that looks significantly different, please contact us for a return or exchange.'
+      },
+      {
+        category: 'products',
+        question: 'What if the product I ordered is out of stock?',
+        answer: 'If a product becomes out of stock after you place an order, we will notify you immediately. You can choose to wait for restocking, select an alternative product, or receive a full refund.'
+      },
+      {
+        category: 'account',
+        question: 'How do I create an account?',
+        answer: 'You can create an account by clicking "Login" in the header and then "Create an account". You can also create an account during checkout. Registration is quick and free.'
+      },
+      {
+        category: 'account',
+        question: 'How do I reset my password?',
+        answer: 'Click on "Login" and then "Forgot Password". Enter your registered email address, and we will send you a password reset link. Follow the instructions in the email to create a new password.'
+      },
+      {
+        category: 'account',
+        question: 'Can I change my delivery address?',
+        answer: 'Yes, you can update your delivery address in your account settings. For orders that have already been placed, you can change the address within 2 hours of placing the order by contacting customer service.'
+      }
+    ];
+
+    let currentCategory = 'all';
+    let searchQuery = '';
+
+    function renderFAQs() {
+      const faqList = document.getElementById('faqList');
+      const faqNoResults = document.getElementById('faqNoResults');
+      
+      let filtered = faqData;
+
+      // Filter by category
+      if (currentCategory !== 'all') {
+        filtered = filtered.filter(faq => faq.category === currentCategory);
+      }
+
+      // Filter by search query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(faq => 
+          faq.question.toLowerCase().includes(query) ||
+          faq.answer.toLowerCase().includes(query)
+        );
+      }
+
+      if (filtered.length === 0) {
+        faqList.style.display = 'none';
+        faqNoResults.style.display = 'block';
+        return;
+      }
+
+      faqList.style.display = 'flex';
+      faqNoResults.style.display = 'none';
+
+      faqList.innerHTML = filtered.map((faq, index) => `
+        <div class="faq-item" data-index="${index}">
+          <div class="faq-question" onclick="toggleFAQ(${index})">
+            <span class="faq-question-text">${faq.question}</span>
+            <svg class="faq-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+          <div class="faq-answer">
+            <div class="faq-answer-text">${faq.answer}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleFAQ(index) {
+      const faqItem = document.querySelector(`.faq-item[data-index="${index}"]`);
+      const isActive = faqItem.classList.contains('active');
+      
+      // Close all FAQs
+      document.querySelectorAll('.faq-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      
+      // Open clicked FAQ if it wasn't active
+      if (!isActive) {
+        faqItem.classList.add('active');
+      }
+    }
+
+    // Category filter
+    document.querySelectorAll('.faq-category-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.faq-category-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCategory = btn.dataset.category;
+        renderFAQs();
+      });
+    });
+
+    // Search functionality
+    const faqSearch = document.getElementById('faqSearch');
+    if (faqSearch) {
+      faqSearch.addEventListener('input', (e) => {
+        searchQuery = e.target.value.trim();
+        renderFAQs();
+      });
+    }
+
+    // Initialize
+    renderFAQs();
+
+    // Mobile menu toggle
+    const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+    const mobileNav = document.getElementById("mobileNav");
+    if (mobileMenuBtn && mobileNav) {
+      mobileMenuBtn.addEventListener("click", () => {
+        mobileNav.classList.toggle("active");
+      });
+      document.addEventListener("click", (e) => {
+        if (!mobileMenuBtn.contains(e.target) && !mobileNav.contains(e.target)) {
+          mobileNav.classList.remove("active");
+        }
+      });
+    }
+  </script>
+</body>
+</html>
