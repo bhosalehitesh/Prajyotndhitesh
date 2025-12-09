@@ -98,4 +98,12 @@ public class OrdersService {
     public List<Orders> getAllOrders() {
         return ordersRepository.findAll();
     }
+
+    // ===============================
+    // Fetch Orders by Seller ID
+    // Returns all orders containing products from this seller
+    // ===============================
+    public List<Orders> getOrdersBySellerId(Long sellerId) {
+        return ordersRepository.findBySellerId(sellerId);
+    }
 }

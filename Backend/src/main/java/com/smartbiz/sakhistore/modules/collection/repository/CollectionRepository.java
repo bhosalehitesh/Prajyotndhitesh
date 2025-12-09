@@ -12,8 +12,16 @@ public interface CollectionRepository extends JpaRepository<collection, Long> {
 
     // Find by collection name (for search)
     List<collection> findByCollectionNameContainingIgnoreCase(String name);
+    
+    // Filter by seller
+    List<collection> findBySeller_SellerId(Long sellerId);
+    List<collection> findBySeller_SellerIdAndCollectionNameContainingIgnoreCase(Long sellerId, String name);
 
-    // Get distinct collection names
+    // Get distinct collection names for a seller
+    @Query("SELECT DISTINCT c.collectionName FROM collection c WHERE c.seller.sellerId = :sellerId")
+    List<String> findAllDistinctCollectionNamesBySeller(@Param("sellerId") Long sellerId);
+    
+    // Get distinct collection names (all - for backward compatibility, but should be filtered)
     @Query("SELECT DISTINCT c.collectionName FROM collection c")
     List<String> findAllDistinctCollectionNames();
     

@@ -10,7 +10,7 @@
  * sendLoginOtp/loginWithOtp helpers are still stubs for now.
  */
 
-import { API_BASE_URL_DEV, API_BASE_URL_DEV_IP, API_BASE_URL_PROD, USE_IP_ADDRESS } from './apiConfig';
+import { API_BASE_URL_DEV, API_BASE_URL_DEV_IP_FINAL, API_BASE_URL_PROD, USE_IP_ADDRESS } from './apiConfig';
 import { storage, AUTH_TOKEN_KEY } from '../authentication/storage';
 
 // Determine the API base URL based on environment and configuration
@@ -21,7 +21,7 @@ const getApiBaseUrl = (): string => {
 
   // In development, use the configured URL
   if (USE_IP_ADDRESS) {
-    return API_BASE_URL_DEV_IP;
+    return API_BASE_URL_DEV_IP_FINAL;
   }
 
   // Default to localhost (requires ADB reverse port forwarding)
@@ -488,14 +488,14 @@ export const saveStoreDetails = async (
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userId = await storage.getItem('userId'); // sellerId from auth
 
+  // Backend expects sellerId as query parameter, not in body
   if (!userId) {
-    throw new Error('User ID not found. Please login again.');
+    throw new Error('User ID (sellerId) is required to create a store. Please login again.');
   }
 
-  // Backend expects sellerId as query parameter, not in body
   const url = `${API_BASE_URL}/api/stores/addStore?sellerId=${userId}`;
 
-  const body = {
+  const body: any = {
     storeName,
     storeLink,
   };

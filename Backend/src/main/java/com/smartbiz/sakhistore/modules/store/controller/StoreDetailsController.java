@@ -11,6 +11,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.smartbiz.sakhistore.common.exceptions.ResourceNotFoundException;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.service.StoreDetailsService;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,10 +24,28 @@ public class StoreDetailsController {
 
     @Autowired
     StoreDetailsService storeService;
+    
+    @Autowired
+    private JwtService jwtService;
+    
+    // Helper method to extract sellerId from JWT token
+    private Long extractSellerIdFromToken(HttpServletRequest httpRequest) {
+        try {
+            String authHeader = httpRequest.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                return jwtService.extractUserId(token);
+            }
+        } catch (Exception e) {
+            // If token extraction fails, return null (will return all stores for backward compatibility)
+        }
+        return null;
+    }
 
     @GetMapping("/allStores")
-    public List<StoreDetails> allStores() {
-        return storeService.allStores();
+    public List<StoreDetails> allStores(HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        return storeService.allStores(sellerId);
     }
 
     @PostMapping("/addStore")
@@ -144,8 +165,25 @@ public class StoreDetailsController {
     }
 
     @DeleteMapping("/deleteStore/{id}")
-    public ResponseEntity<String> deleteStore(@PathVariable Long id) throws ResourceNotFoundException {
+    public ResponseEntity<String> deleteStore(@PathVariable Long id, HttpServletRequest httpRequest) throws ResourceNotFoundException {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        if (sellerId == null) {
+            return ResponseEntity.status(401).body("Authentication required. Please provide a valid JWT token.");
+        }
+        
+        // Verify store belongs to seller
+        StoreDetails store = storeService.findByIdDS(id);
+        if (store.getSeller() == null || !store.getSeller().getSellerId().equals(sellerId)) {
+            return ResponseEntity.status(403).body("You can only delete your own stores.");
+        }
+        
         storeService.deleteStore(id);
         return ResponseEntity.ok("✅ Store with ID " + id + " deleted successfully.");
+    }
+    
+    // Get store by slug (for public access)
+    @GetMapping("/slug/{slug}")
+    public StoreDetails getStoreBySlug(@PathVariable String slug) {
+        return storeService.findBySlug(slug);
     }
 }

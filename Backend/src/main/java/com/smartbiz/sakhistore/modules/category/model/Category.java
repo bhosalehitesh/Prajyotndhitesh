@@ -5,11 +5,15 @@ import java.util.List;
 
 
 import com.smartbiz.sakhistore.modules.product.model.Product;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
@@ -30,6 +34,14 @@ public class Category {
     private String seoTitleTag;
     private String seoMetaDescription;
     private String socialSharingImage;
+
+    // ============================
+    // 🔗 CATEGORY → SELLER
+    // ============================
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seller_id")
+    @JsonIgnore
+    private SellerDetails seller;
 
     // ============================
     // ✅ CORRECT MAPPING
@@ -111,6 +123,14 @@ public class Category {
 
     public void setProducts(List<Product> products) {
         this.products = products;
+    }
+
+    public SellerDetails getSeller() {
+        return seller;
+    }
+
+    public void setSeller(SellerDetails seller) {
+        this.seller = seller;
     }
 
     public Category() {}

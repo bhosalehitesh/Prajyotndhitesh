@@ -43,12 +43,17 @@ public class BusinessDetailsService {
 
 
 
-    // ✅ Get all business details
-
-    public List<BusinessDetails> allBusinessDetails() {
-
+    // ✅ Get all business details (filtered by seller)
+    public List<BusinessDetails> allBusinessDetails(Long sellerId) {
+        if (sellerId != null) {
+            return businessDetailsRepository.findByStoreDetails_Seller_SellerId(sellerId);
+        }
         return businessDetailsRepository.findAll();
-
+    }
+    
+    // ✅ Get all business details (backward compatibility - returns all, should be avoided)
+    public List<BusinessDetails> allBusinessDetails() {
+        return businessDetailsRepository.findAll();
     }
 
 
@@ -98,13 +103,22 @@ public class BusinessDetailsService {
 
 
     // ✅ Delete business details
-
     public void deleteBusinessDetails(Long businessId) {
-
         BusinessDetails details = findById(businessId);
-
         businessDetailsRepository.delete(details);
-
+    }
+    
+    // ✅ Update store_id for existing business details (fix null store_id issue)
+    public BusinessDetails updateStoreId(Long businessId, Long storeId) {
+        BusinessDetails details = findById(businessId);
+        
+        // Validate store exists
+        StoreDetails storeDetails = storeDetailsRepository.findById(storeId)
+                .orElseThrow(() -> new NoSuchElementException("Store not found with ID: " + storeId));
+        
+        // Update store_id
+        details.setStoreDetails(storeDetails);
+        return businessDetailsRepository.save(details);
     }
 }
 

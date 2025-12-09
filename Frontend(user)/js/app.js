@@ -471,7 +471,13 @@
   // ====== CATEGORY PAGE FUNCTIONALITY ======
   function getCategoryFromURL() {
     const params = new URLSearchParams(window.location.search);
-    return params.get("name");
+    const raw = params.get("name");
+    return raw ? raw.trim() : "";
+  }
+
+  function getCategoryIdFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("categoryId");
   }
 
   function getFilters() {
@@ -488,6 +494,7 @@
 
   async function filterAndDisplayProducts() {
     const category = decodeURIComponent(getCategoryFromURL() || "");
+    const categoryId = getCategoryIdFromURL();
     const title = document.getElementById("category-title");
     const grid = document.getElementById("product-grid");
     const cartContainer = document.getElementById('cart-container');
@@ -499,11 +506,54 @@
 
     if (title) title.textContent = category;
 
+    // Get store slug from URL for filtering
+    const params = new URLSearchParams(window.location.search);
+    const storeSlug = params.get('store');
+    if (storeSlug) {
+      window.currentStoreSlug = storeSlug;
+    }
+
     // Try fetching from backend API. If backend fails, fallback to local products object.
     let fetched = [];
     try {
-      if (typeof fetchProductsByCategory === 'function') {
+      // If store slug is present, use store-specific product endpoint
+      if (storeSlug && window.API && window.API.getStoreProductsBySlug) {
+        try {
+          fetched = await window.API.getStoreProductsBySlug(storeSlug, category);
+          if (Array.isArray(fetched) && fetched.length > 0) {
+            // If categoryId is provided, filter by id first
+            if (categoryId) {
+              fetched = fetched.filter(p => {
+                const pid = p.categoryId || p.category_id || p.category?.category_id || p.category?.id;
+                return pid && String(pid) === String(categoryId);
+              });
+            } else if (category) {
+              // Otherwise filter by category name
+              const categoryLower = category.toLowerCase();
+              fetched = fetched.filter(p => {
+                const productCategory = (p.productCategory || '').toLowerCase();
+                const businessCategory = (p.businessCategory || '').toLowerCase();
+                const catName = (p.category?.categoryName || '').toLowerCase();
+                return productCategory.includes(categoryLower) || 
+                       businessCategory.includes(categoryLower) ||
+                       catName.includes(categoryLower);
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Store products fetch failed, trying category API:', e);
+        }
+      }
+      
+      // Fallback to category API
+      if ((!fetched || fetched.length === 0) && typeof fetchProductsByCategory === 'function') {
         fetched = await fetchProductsByCategory(category);
+        if (categoryId && fetched && fetched.length > 0) {
+          fetched = fetched.filter(p => {
+            const pid = p.categoryId || p.category_id || p.category?.category_id || p.category?.id;
+            return pid && String(pid) === String(categoryId);
+          });
+        }
       }
     } catch (e) {
       console.warn('Error fetching products by category, falling back to local:', e);
@@ -521,6 +571,7 @@
       price: p.sellingPrice ?? p.price ?? p.amount ?? 0,
       color: p.color || p.colour || p.variantColor || 'N/A',
       size: p.size || p.availableSize || 'N/A',
+      categoryId: p.categoryId || p.category_id || p.category?.category_id || p.category?.id,
       raw: p
     }));
 
@@ -528,6 +579,9 @@
     let filtered = fetched;
 
     if (color && color !== "all") filtered = filtered.filter(p => String(p.color).toLowerCase() === String(color).toLowerCase());
+    if (categoryId) {
+      filtered = filtered.filter(p => p.categoryId && String(p.categoryId) === String(categoryId));
+    }
     if (size && size !== "all") filtered = filtered.filter(p => String(p.size).toLowerCase() === String(size).toLowerCase());
 
     if (sort === "lowToHigh") filtered.sort((a,b) => a.price - b.price);
@@ -629,8 +683,21 @@
   // Try several common backend endpoints to fetch products for a category
   async function fetchProductsByCategory(category) {
     if (!category) return [];
+    
+    // Use API integration if available
+    if (window.API && window.API.getProductsByCategory) {
+      try {
+        const result = await window.API.getProductsByCategory(category);
+        if (Array.isArray(result) && result.length > 0) {
+          return result;
+        }
+      } catch (e) {
+        console.warn('API.getProductsByCategory failed, trying fallback:', e);
+      }
+    }
+    
+    // Fallback: Try direct API calls
     const encoded = encodeURIComponent(category);
-    // Try common API patterns
     const candidates = [
       `/api/products?category=${encoded}`,
       `/api/categories/${encoded}/products`,
@@ -649,29 +716,20 @@
       }
     }
 
-    // Fallback to local `products` object
+    // Final fallback to local `products` object
     return products[category] ? [...products[category]] : [];
   }
 
   // Load store page: fetch store metadata and the seller's products
   async function loadStorePage() {
-    // Check for store page by looking for the products grid or container
-    const grid = document.getElementById('store-products-grid');
     const container = document.getElementById('store-page');
-    
-    if (!grid && !container) {
-      return; // not a store page
-    }
+    if (!container) return; // not a store page
 
     const nameEl = document.getElementById('store-name');
     const descEl = document.getElementById('store-description');
     const linkEl = document.getElementById('store-link');
     const logoEl = document.getElementById('store-logo');
-    
-    if (!grid) {
-      console.warn('Store products grid not found');
-      return;
-    }
+    const grid = document.getElementById('store-products-grid');
 
     const params = new URLSearchParams(window.location.search);
     const sellerId = params.get('sellerId');
@@ -680,40 +738,35 @@
 
     let store = null;
     try {
-      // Use API functions if available, otherwise fallback to fetchJson
+      // Use API integration if available
       if (window.API) {
-        if (storeId) {
+        if (storeId && window.API.getStoreById) {
           try { store = await window.API.getStoreById(storeId); } catch(e) { store = null; }
         }
-        if (!store && slug) {
+        if (!store && slug && window.API.getStoreBySlug) {
           try { store = await window.API.getStoreBySlug(slug); } catch(e) { store = null; }
         }
-        if (!store && sellerId) {
+        if (!store && sellerId && window.API.getStoreBySellerId) {
           try { store = await window.API.getStoreBySellerId(sellerId); } catch(e) { store = null; }
         }
-      } else {
-        // Fallback to old method
-        if (storeId) {
-          try { store = await fetchJson(`/api/stores/${encodeURIComponent(storeId)}`); } catch(e) { store = null; }
-        }
-        if (!store && slug) {
-          try { store = await fetchJson(`/api/stores/slug/${encodeURIComponent(slug)}`); } catch(e) { store = null; }
-        }
-        if (!store && sellerId) {
-          try { store = await fetchJson(`/api/stores?sellerId=${encodeURIComponent(sellerId)}`); } catch(e) { store = null; }
-          if (!store) {
-            try { store = await fetchJson(`/api/stores/seller?sellerId=${encodeURIComponent(sellerId)}`); } catch(e) { store = null; }
-          }
+      }
+      
+      // Fallback to direct API calls
+      if (!store && storeId) {
+        try { store = await fetchJson(`/api/stores/${encodeURIComponent(storeId)}`); } catch(e) { store = null; }
+      }
+      if (!store && slug) {
+        try { store = await fetchJson(`/api/stores/slug/${encodeURIComponent(slug)}`); } catch(e) { store = null; }
+      }
+      if (!store && sellerId) {
+        try { store = await fetchJson(`/api/stores?sellerId=${encodeURIComponent(sellerId)}`); } catch(e) { store = null; }
+        if (!store) {
+          try { store = await fetchJson(`/api/stores/seller?sellerId=${encodeURIComponent(sellerId)}`); } catch(e) { store = null; }
         }
       }
 
-      // Store variables for later use
-      let storeName = 'Store';
-      let storeNameForBrand = 'Store';
-      
       if (store) {
-        storeName = store.storeName || store.name || store.shopName || 'Store';
-        storeNameForBrand = storeName;
+        const storeName = store.storeName || store.name || store.shopName || 'Store';
         const desc = store.businessDetails?.businessDescription || store.description || '';
         const link = store.storeLink || store.website || (store.slug ? `${window.location.origin}/${store.slug}` : '');
         const logo = store.logoUrl || store.logo || '';
@@ -721,59 +774,32 @@
         if (nameEl) nameEl.textContent = storeName;
         if (descEl) descEl.textContent = desc;
         if (linkEl && link) { linkEl.href = link; linkEl.textContent = link.replace(/^https?:\/\//,''); linkEl.style.display = 'inline-block'; }
-        if (logoEl) {
-          if (logo) {
-            logoEl.src = logo;
-            logoEl.alt = storeName;
-            logoEl.style.display = 'block';
-          } else {
-            logoEl.style.display = 'none';
-          }
-        }
-        
-        // Update page title
-        const pageTitle = document.getElementById('store-page-title');
-        if (pageTitle) {
-          pageTitle.textContent = `${storeName} | V Store`;
-        } else {
-          document.title = `${storeName} | V Store`;
-        }
+        if (logoEl && logo) { logoEl.src = logo; logoEl.alt = storeName; }
       } else {
         if (nameEl) nameEl.textContent = 'Store';
         if (descEl) descEl.textContent = '';
       }
 
-      // Get sellerId - convert to number if it's a string
-      let finalSellerId = store?.sellerId || store?.seller?.id || sellerId || store?.id;
-      if (finalSellerId) {
-        finalSellerId = typeof finalSellerId === 'string' ? parseInt(finalSellerId, 10) : finalSellerId;
-      }
+      const finalSellerId = store?.sellerId || store?.seller?.id || sellerId || store?.id;
 
-      // Pagination settings
-      const PRODUCTS_PER_PAGE = 20;
-      let allProductsData = [];
-      let currentPage = 0;
-      let displayedCount = 0;
-      
+      let productsData = [];
       if (finalSellerId) {
-        // Use API function if available
-        if (window.API) {
+        // Use API integration if available
+        if (window.API && window.API.getAllProductsBySeller) {
           try {
-            console.log('Fetching products for sellerId:', finalSellerId);
-            // Try paginated API first, fallback to all products
-            try {
-              allProductsData = await window.API.getAllProductsBySeller(finalSellerId);
-            } catch (e) {
-              // If paginated fails, try regular API
-              allProductsData = await window.API.getProductsBySeller(finalSellerId);
+            const result = await window.API.getAllProductsBySeller(finalSellerId);
+            if (Array.isArray(result)) {
+              productsData = result;
+            } else if (result && Array.isArray(result.products)) {
+              productsData = result.products;
             }
-            console.log('Products fetched:', allProductsData?.length || 0, 'products');
           } catch (e) {
-            console.warn('Failed to fetch products via API:', e);
-            allProductsData = [];
+            console.warn('API.getAllProductsBySeller failed, trying fallback:', e);
           }
-        } else {
-          // Fallback to old method
+        }
+        
+        // Fallback: Try direct API calls
+        if (productsData.length === 0) {
           const candidates = [
             `/api/products?sellerId=${encodeURIComponent(finalSellerId)}`,
             `/api/products/sellerProducts?sellerId=${encodeURIComponent(finalSellerId)}`,
@@ -784,9 +810,9 @@
             try {
               const resp = await fetchJson(c);
               if (!resp) continue;
-              if (Array.isArray(resp)) { allProductsData = resp; break; }
-              if (resp.products) { allProductsData = resp.products; break; }
-              if (resp.data) { allProductsData = resp.data; break; }
+              if (Array.isArray(resp)) { productsData = resp; break; }
+              if (resp.products) { productsData = resp.products; break; }
+              if (resp.data) { productsData = resp.data; break; }
             } catch (e) {
               // ignore
             }
@@ -794,223 +820,46 @@
         }
       }
       
-      allProductsData = (allProductsData || []).map(p => ({
-        productId: p.productId || p.productsId || p.id,
+      // Also try to get products by store slug if we have a slug
+      if (productsData.length === 0 && slug && window.API && window.API.getStoreProductsBySlug) {
+        try {
+          const result = await window.API.getStoreProductsBySlug(slug);
+          if (Array.isArray(result) && result.length > 0) {
+            productsData = result;
+          }
+        } catch (e) {
+          console.warn('API.getStoreProductsBySlug failed:', e);
+        }
+      }
+
+      productsData = (productsData || []).map(p => ({
         productName: p.productName || p.title || p.name,
         image: p.productImages?.[0] || p.image || p.imageUrl || '../assets/products/p1.jpg',
         price: p.sellingPrice ?? p.price ?? 0,
-        mrp: p.mrp || p.originalPrice || p.sellingPrice || p.price || 0,
-        brand: p.brand || storeNameForBrand,
         raw: p
       }));
 
-      // Store all products in window for pagination
-      window.storeAllProducts = allProductsData;
-      window.storeCurrentPage = 0;
-      window.storeProductsPerPage = PRODUCTS_PER_PAGE;
-
-      // Function to render products
-      const renderProducts = (productsToRender, append = false) => {
-        if (!grid) return;
-        
-        if (!productsToRender || productsToRender.length === 0) {
-          if (!append) {
-            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">No products found for this store.</p></div>';
-          }
-          return;
-        }
-
-        // Calculate discount percentage
-        const calculateDiscount = (mrp, price) => {
-          if (mrp > price && mrp > 0) {
-            const discount = Math.round(((mrp - price) / mrp) * 100);
-            return discount > 0 ? discount : 0;
-          }
-          return 0;
-        };
-
-        const productsHTML = productsToRender.map(p => {
-          const discount = calculateDiscount(p.mrp, p.price);
-          const productUrl = `product-detail.html?name=${encodeURIComponent(p.productName)}&price=${p.price}&originalPrice=${p.mrp}&image=${encodeURIComponent(p.image)}&brand=${encodeURIComponent(p.brand)}&id=${p.productId || ''}`;
-          
-          return `
-          <div class="ecommerce-product-card" onclick="window.location.href='${productUrl}'">
-            <img src="${p.image}" alt="${p.productName}" onerror="this.src='../assets/products/p1.jpg'" />
-            <div class="product-info">
-              <div class="product-brand">${p.brand}</div>
-              <div class="product-name">${p.productName}</div>
-              <div class="product-price">
-                <span class="current-price">₹${Math.round(p.price)}</span>
-                ${discount > 0 ? `<span class="original-price">₹${Math.round(p.mrp)}</span>` : ''}
-                ${discount > 0 ? `<span class="discount">(${discount}% OFF)</span>` : ''}
-              </div>
-              <div style="display: flex; gap: 8px; margin-top: 12px;">
-                <button class="add-to-cart-btn" 
-                  data-name="${p.productName}" 
-                  data-price="${p.price}" 
-                  data-brand="${p.brand}" 
-                  data-img="${p.image}" 
-                  data-original-price="${p.mrp}"
-                  data-id="${p.productId || ''}"
-                  onclick="event.stopPropagation(); addToCartFromButton(this)" 
-                  style="flex: 1;">
-                  Add to Cart
-                </button>
-                <button class="wishlist-btn" 
-                  data-name="${p.productName}" 
-                  data-price="${p.price}" 
-                  data-original-price="${p.mrp}" 
-                  data-brand="${p.brand}" 
-                  data-img="${p.image}"
-                  data-id="${p.productId || ''}"
-                  onclick="event.stopPropagation(); addToWishlistFromProduct(this)" 
-                  title="Add to Wishlist" 
-                  style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-        }).join('');
-
-        if (append) {
-          grid.insertAdjacentHTML('beforeend', productsHTML);
-        } else {
-          grid.innerHTML = productsHTML;
-        }
-
-        // Setup add to cart buttons for new products
-        grid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
-          if (!btn.hasAttribute('data-listener-attached')) {
-            btn.setAttribute('data-listener-attached', 'true');
-            btn.addEventListener('click', function(e) {
-              e.stopPropagation();
-              const name = this.getAttribute('data-name');
-              const price = parseFloat(this.getAttribute('data-price')) || 0;
-              const img = this.getAttribute('data-img') || '';
-              const brand = this.getAttribute('data-brand') || '';
-              const id = this.getAttribute('data-id') || '';
-              
-              if (typeof addToCartFromButton === 'function') {
-                addToCartFromButton(this);
-              } else if (typeof addItemToCart === 'function') {
-                addItemToCart({ 
-                  name, 
-                  price, 
-                  quantity: 1, 
-                  image: img,
-                  brand: brand,
-                  id: id
-                });
-                if (window.showToast) showToast(`${name} added to cart`, 'success');
-              }
-            });
-          }
-        });
-
-        // Setup wishlist buttons for new products
-        grid.querySelectorAll('.wishlist-btn').forEach(btn => {
-          if (!btn.hasAttribute('data-listener-attached')) {
-            btn.setAttribute('data-listener-attached', 'true');
-            btn.addEventListener('click', function(e) {
-              e.stopPropagation();
-              if (typeof addToWishlistFromProduct === 'function') {
-                addToWishlistFromProduct(this);
-              }
-            });
-          }
-        });
-      };
-
-      // Function to load more products
-      const loadMoreProducts = () => {
-        const allProducts = window.storeAllProducts || [];
-        const currentPage = window.storeCurrentPage || 0;
-        const perPage = window.storeProductsPerPage || PRODUCTS_PER_PAGE;
-        
-        const startIndex = currentPage * perPage;
-        const endIndex = startIndex + perPage;
-        const nextBatch = allProducts.slice(startIndex, endIndex);
-        
-        if (nextBatch.length > 0) {
-          renderProducts(nextBatch, true);
-          window.storeCurrentPage = currentPage + 1;
-          
-          // Update or create load more button
-          updateLoadMoreButton();
-        } else {
-          // No more products
-          const loadMoreBtn = document.getElementById('load-more-products');
-          if (loadMoreBtn) {
-            loadMoreBtn.style.display = 'none';
-          }
-        }
-      };
-
-      // Function to update load more button
-      const updateLoadMoreButton = () => {
-        const allProducts = window.storeAllProducts || [];
-        const currentPage = window.storeCurrentPage || 0;
-        const perPage = window.storeProductsPerPage || PRODUCTS_PER_PAGE;
-        const totalDisplayed = currentPage * perPage;
-        const remaining = allProducts.length - totalDisplayed;
-        
-        let loadMoreBtn = document.getElementById('load-more-products');
-        if (!loadMoreBtn && remaining > 0) {
-          // Create load more button
-          const buttonContainer = document.createElement('div');
-          buttonContainer.style.cssText = 'grid-column: 1/-1; text-align: center; padding: 40px 20px;';
-          buttonContainer.innerHTML = `
-            <button id="load-more-products" style="
-              padding: 16px 48px;
-              background: linear-gradient(135deg, #ff6d2e 0%, #ff8533 100%);
-              color: #fff;
-              border: none;
-              border-radius: 12px;
-              font-weight: 700;
-              font-size: 1rem;
-              cursor: pointer;
-              transition: all 0.3s;
-              box-shadow: 0 4px 12px rgba(255, 109, 46, 0.3);
-              letter-spacing: 0.02em;
-            ">
-              Load More Products (${remaining} remaining)
-            </button>
-          `;
-          grid.parentElement.appendChild(buttonContainer);
-          loadMoreBtn = document.getElementById('load-more-products');
-          
-          loadMoreBtn.addEventListener('click', loadMoreProducts);
-          loadMoreBtn.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px)';
-            this.style.boxShadow = '0 6px 16px rgba(255, 109, 46, 0.4)';
-          });
-          loadMoreBtn.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '0 4px 12px rgba(255, 109, 46, 0.3)';
-          });
-        } else if (loadMoreBtn) {
-          if (remaining > 0) {
-            loadMoreBtn.textContent = `Load More Products (${remaining} remaining)`;
-            loadMoreBtn.style.display = 'block';
-          } else {
-            loadMoreBtn.style.display = 'none';
-          }
-        }
-      };
-
-      // Initial render - show first batch
       if (grid) {
-        if (!allProductsData || allProductsData.length === 0) {
-          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">No products found for this store.</p></div>';
+        if (!productsData || productsData.length === 0) {
+          grid.innerHTML = '<p>No products found for this store.</p>';
         } else {
-          const firstBatch = allProductsData.slice(0, PRODUCTS_PER_PAGE);
-          renderProducts(firstBatch, false);
-          window.storeCurrentPage = 1;
-          updateLoadMoreButton();
+          grid.innerHTML = productsData.map(p => `
+            <div class="product-card">
+              <img src="${p.image}" alt="${p.productName}" />
+              <h4>${p.productName}</h4>
+              <p>₹${Number(p.price).toFixed(2)}</p>
+              <button class="add-to-cart-btn" data-name="${p.productName}" data-price="${p.price}">Add to Cart</button>
+            </div>
+          `).join('');
+
+          grid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const name = btn.getAttribute('data-name');
+              const price = parseFloat(btn.getAttribute('data-price')) || 0;
+              addItemToCart({ name, price, quantity: 1 });
+              if (window.showToast) showToast(`${name} added to cart`, 'success');
+            });
+          });
         }
       }
     } catch (err) {
@@ -1899,13 +1748,5 @@
   } else {
     startBannerCarousel();
   }
-
-  // Expose functions globally for external access (e.g., store.html debug buttons)
-  window.loadStorePage = loadStorePage;
-  window.getCart = getCart;
-  window.saveCart = saveCart;
-  window.updateCartCount = updateCartCount;
-  window.getWishlist = getWishlist;
-  window.saveWishlist = saveWishlist;
 })();
 

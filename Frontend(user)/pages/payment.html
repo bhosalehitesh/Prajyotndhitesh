@@ -351,9 +351,6 @@
   
   <!-- Load components first, then app.js -->
   <script src="../js/load-components.js"></script>
-  <!-- API Configuration and Integration -->
-  <script src="../js/config.js"></script>
-  <script src="../js/api.js"></script>
   <script src="../js/app.js"></script>
   <script>
     let selectedPaymentMethod = 'card';
@@ -420,7 +417,7 @@
       input.value = value;
     }
 
-    async function processPayment() {
+    function processPayment() {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       if (cart.length === 0) {
         if (window.showToast) {
@@ -429,110 +426,36 @@
         return;
       }
 
-      // Get address and user info from localStorage (set in checkout page)
-      const selectedAddress = JSON.parse(localStorage.getItem('selectedAddress') || '{}');
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      
-      // Get address string
-      const addressParts = [
-        selectedAddress.houseNumber,
-        selectedAddress.areaStreet,
-        selectedAddress.landmark,
-        selectedAddress.city,
-        selectedAddress.state,
-        selectedAddress.pincode
-      ].filter(Boolean);
-      const address = addressParts.join(', ') || 'Address not provided';
-      
-      // Get mobile number
-      const mobile = selectedAddress.mobileNumber || currentUser.phone || '0000000000';
-      
-      // Get or create userId (for now, use phone as identifier or create a temp user)
-      // Note: Backend expects userId - you may need to create/register user first
-      let userId = currentUser.id || currentUser.userId;
-      
-      // If no userId, use placeholder (in production, register user first)
-      if (!userId) {
-        userId = 1; // TODO: Replace with actual user registration
-      }
-
       // Calculate total
       const total = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
       
-      // Try to place order via backend API
-      let orderPlaced = false;
-      if (window.API && userId) {
-        try {
-          const orderData = {
-            userId: userId,
-            address: address,
-            mobile: mobile
-          };
-          
-          const order = await window.API.placeOrder(orderData);
-          orderPlaced = true;
-          
-          // Save order locally for reference
-          const localOrder = {
-            id: order.id || 'ORD' + Date.now(),
-            backendId: order.id,
-            date: new Date().toLocaleDateString(),
-            items: cart,
-            total: total,
-            status: order.status || 'processing',
-            paymentMethod: selectedPaymentMethod,
-            phone: mobile,
-            address: address
-          };
-          
-          const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-          orders.unshift(localOrder);
-          localStorage.setItem('orders', JSON.stringify(orders));
-          
-          // Clear cart
-          localStorage.removeItem('cart');
-          
-          if (window.showToast) {
-            showToast('Order placed successfully!', 'success', 'Order Placed');
-          }
-          
-          setTimeout(() => {
-            window.location.href = 'orders.html';
-          }, 1000);
-          
-        } catch (error) {
-          console.error('Error placing order:', error);
-          // Fallback to local storage if API fails
-        }
+      // Create order
+      const order = {
+        id: 'ORD' + Date.now(),
+        date: new Date().toLocaleDateString(),
+        items: cart,
+        total: total,
+        status: 'processing',
+        paymentMethod: selectedPaymentMethod,
+        phone: JSON.parse(localStorage.getItem('currentUser') || '{}').phone || 'N/A'
+      };
+
+      // Save order
+      const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+      orders.unshift(order);
+      localStorage.setItem('orders', JSON.stringify(orders));
+
+      // Clear cart
+      localStorage.removeItem('cart');
+
+      // Show success
+      if (window.showToast) {
+        showToast('Payment successful!', 'success', 'Order Placed');
       }
-      
-      // Fallback: Save to localStorage if API not available or failed
-      if (!orderPlaced) {
-        const order = {
-          id: 'ORD' + Date.now(),
-          date: new Date().toLocaleDateString(),
-          items: cart,
-          total: total,
-          status: 'pending',
-          paymentMethod: selectedPaymentMethod,
-          phone: mobile,
-          address: address
-        };
 
-        const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-        orders.unshift(order);
-        localStorage.setItem('orders', JSON.stringify(orders));
-
-        localStorage.removeItem('cart');
-
-        if (window.showToast) {
-          showToast('Order saved locally. Please contact support to complete.', 'info', 'Order Saved');
-        }
-
-        setTimeout(() => {
-          window.location.href = 'orders.html';
-        }, 1000);
-      }
+      setTimeout(() => {
+        window.location.href = 'orders.html';
+      }, 1000);
     }
 
     window.selectPaymentMethod = selectPaymentMethod;
