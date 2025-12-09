@@ -31,6 +31,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
   route,
 }) => {
   const isEditMode = route?.params?.collectionId;
+  const productIdToAdd = route?.params?.productIdToAdd; // Product ID to add when creating collection
   const [collectionImage, setCollectionImage] = useState<string | null>(
     route?.params?.image || null,
   );
@@ -170,18 +171,36 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
       });
 
       // Map selected products to this collection in backend
-      if (selectedProducts.length > 0 && created?.collectionId != null) {
+      const productIdsToAdd: number[] = [];
+      
+      // Add products from selectedProducts (if any)
+      if (selectedProducts.length > 0) {
+        productIdsToAdd.push(...selectedProducts.map(p => Number(p.id)));
+      }
+      
+      // Add productIdToAdd if provided (when coming from ProductsScreen)
+      if (productIdToAdd && !productIdsToAdd.includes(Number(productIdToAdd))) {
+        productIdsToAdd.push(Number(productIdToAdd));
+      }
+      
+      if (productIdsToAdd.length > 0 && created?.collectionId != null) {
+        console.log(`Adding ${productIdsToAdd.length} product(s) to new collection ${created.collectionId}`);
         await saveCollectionProducts(
           created.collectionId,
-          selectedProducts.map(p => Number(p.id)),
+          productIdsToAdd,
         );
+        console.log(`Products added successfully. Note: Products remain in their existing collections.`);
       }
+
+      const successMessage = isEditMode
+        ? 'Collection updated successfully'
+        : productIdsToAdd.length > 0
+        ? `Collection created successfully with ${productIdsToAdd.length} product(s). Products remain in their existing collections.`
+        : 'Collection created successfully';
 
       Alert.alert(
         'Success',
-        isEditMode
-          ? 'Collection updated successfully'
-          : 'Collection created successfully',
+        successMessage,
         [
           {
             text: 'OK',
@@ -203,11 +222,28 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
   };
 
   const handleAddProducts = () => {
-    navigation.navigate('SelectProducts', {
-      collectionId: route?.params?.collectionId,
-      selectedProductIds: route?.params?.selectedProductIds || [],
-      returnScreen: 'AddCollection',
-    });
+    // Navigate to ProductsScreen to add products directly to collection
+    if (isEditMode && route?.params?.collectionId) {
+      // For editing existing collection, navigate to ProductsScreen with collectionId
+      // Products will be added directly to this collection
+      navigation.push('Products', {
+        collectionId: route.params.collectionId,
+        addToCollection: true,
+        returnScreen: 'EditCollection',
+        returnParams: {
+          collectionId: route.params.collectionId,
+          collectionName: collectionName || route?.params?.collectionName,
+          viewCollectionProducts: true,
+        },
+      });
+    } else {
+      // For new collection, navigate to ProductsScreen to select products
+      // Selected products will be stored and added when collection is created
+      navigation.navigate('SelectProducts', {
+        selectedProductIds: selectedProducts.map(p => p.id),
+        returnScreen: 'AddCollection',
+      });
+    }
   };
 
   return (

@@ -19,6 +19,8 @@ const config = {
       /.*\/\.\.\/package\.json$/,
       // Exclude Backend directory
       /.*\/Backend\/.*/,
+      // Exclude problematic gradle-plugin bin directory (Windows file watcher fix)
+      /.*\/node_modules\/@react-native\/gradle-plugin\/bin\/.*/,
     ],
     // Only resolve modules from Frontend directory
     nodeModulesPaths: [

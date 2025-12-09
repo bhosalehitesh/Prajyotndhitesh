@@ -15,7 +15,9 @@
     "android:build": "cd android && ./gradlew assembleDebug",
     "android:transfer": "adb push android/app/build/outputs/apk/debug/app-debug.apk /sdcard/Download/sakhic.apk",
     "android:build-transfer": "npm run android:build && npm run android:transfer && echo APK built and transferred! Install manually from Downloads folder.",
-    "setup-icon": "node setup-app-icon.js"
+    "setup-icon": "node setup-app-icon.js",
+    "clear-cache": "powershell -ExecutionPolicy Bypass -File fix-metro-watcher.ps1",
+    "start:reset": "react-native start --reset-cache"
   },
   "dependencies": {
     "@ptomasroos/react-native-multi-slider": "^2.2.2",

@@ -16,7 +16,8 @@ import {
 import IconSymbol from '../../../components/IconSymbol';
 import {launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse} from 'react-native-image-picker';
 import ViewShot, {captureRef} from 'react-native-view-shot';
-import { createProduct, uploadProductWithImages, updateProduct } from '../../../utils/api';
+import { createProduct, uploadProductWithImages, updateProduct, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto } from '../../../utils/api';
+import { storage } from '../../../authentication/storage';
 
 interface AddProductScreenProps {
   navigation: any;
@@ -64,6 +65,9 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   const [images, setImages] = useState<string[]>(existing?.images || []);
   const [shotUri, setShotUri] = useState<string | null>(null);
   const screenShotRef = useRef<ViewShot | null>(null);
+  const [collectionPickerOpen, setCollectionPickerOpen] = useState(false);
+  const [collections, setCollections] = useState<Array<{id: string; name: string}>>([]);
+  const [selectedCollections, setSelectedCollections] = useState<Record<string, boolean>>({});
 
   const categoryList = [
     'Appliances','Baby','Beauty and Personal Care','Books and Stationery','Clothing','Electronics','Food and Grocery','Footwear','Furniture','General','Health Supplements','Home and Kitchen','Home Care','Jewelry','Lawn and Garden','Luggage and Bags','Multipurpose','Pet Products','Sports and Fitness','Toys and games','Watches',
@@ -98,8 +102,35 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
     setProductCategory('');
   }, [businessCategory]);
 
-  // Require at least name, price, and one image (as per UI hint)
-  const canSubmit = name.trim().length > 0 && price.trim().length > 0 && images.length > 0;
+  // Load collections when screen mounts
+  useEffect(() => {
+    const loadCollections = async () => {
+      try {
+        const apiCollections: CollectionWithCountDto[] = await fetchCollectionsWithCounts();
+        const mapped: Array<{id: string; name: string}> = apiCollections.map(col => ({
+          id: String(col.collectionId),
+          name: col.collectionName,
+        }));
+        setCollections(mapped);
+        
+        // Auto-select the first collection if only one exists
+        if (mapped.length === 1 && !isEditMode) {
+          setSelectedCollections({ [mapped[0].id]: true });
+          console.log('Auto-selected single collection:', mapped[0].name);
+        }
+      } catch (error) {
+        console.error('Failed to load collections', error);
+      }
+    };
+    if (!isEditMode) {
+      loadCollections();
+    }
+  }, [isEditMode]);
+
+  // Require at least name, price, one image. Collections are optional.
+  const canSubmit = name.trim().length > 0 && 
+                    price.trim().length > 0 && 
+                    images.length > 0;
 
   const requestCameraPermission = async (): Promise<boolean> => {
     try {
@@ -187,6 +218,39 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       return;
     }
 
+    // Check userId before submitting
+    try {
+      const userIdRaw = await storage.getItem('userId');
+      console.log('AddProductScreen - userId check:', userIdRaw, 'type:', typeof userIdRaw);
+      
+      if (!userIdRaw || isNaN(Number(userIdRaw)) || Number(userIdRaw) <= 0) {
+        Alert.alert(
+          'Authentication Error',
+          'Your session has expired. Please logout and login again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Profile'),
+            },
+          ],
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking userId:', error);
+      Alert.alert(
+        'Authentication Error',
+        'Unable to verify your session. Please logout and login again.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Profile'),
+          },
+        ],
+      );
+      return;
+    }
+
     try {
       const common = {
         productName: name.trim(),
@@ -202,29 +266,76 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         hsnCode: hsn || undefined,
       };
 
+      let productId: string | null = null;
+      let addedToCollectionsCount = 0;
+
       if (isEditMode && existing?.id) {
         // For now, update textual fields / pricing / inventory; images stay as-is in backend.
         await updateProduct(existing.id, common);
+        productId = existing.id;
       } else {
+        let createdProduct;
         if (images.length > 0) {
-          await uploadProductWithImages({
+          createdProduct = await uploadProductWithImages({
             ...common,
             imageUris: images,
           });
         } else {
           // Fallback (should not happen because canSubmit enforces image)
-          await createProduct(common);
+          createdProduct = await createProduct(common);
+        }
+        
+        // Extract product ID from response
+        // Backend returns ProductDto with productsId field
+        if (createdProduct && typeof createdProduct === 'object') {
+          productId = String(
+            createdProduct.productsId || 
+            createdProduct.id || 
+            createdProduct.productId ||
+            (createdProduct as any).products_id
+          );
+        }
+
+        // Add product to selected collections automatically
+        if (productId) {
+          const selectedCollectionIds = Object.keys(selectedCollections).filter(
+            id => selectedCollections[id],
+          );
+          
+          if (selectedCollectionIds.length > 0) {
+            try {
+              for (const collectionId of selectedCollectionIds) {
+                await addProductToCollection(collectionId, productId);
+              }
+              addedToCollectionsCount = selectedCollectionIds.length;
+              console.log(`Product automatically added to ${addedToCollectionsCount} collection(s)`);
+            } catch (collectionError) {
+              console.error('Failed to add product to collections', collectionError);
+              // Don't fail the whole operation if collection assignment fails
+            }
+          }
         }
       }
-
-      Alert.alert('Success', isEditMode ? 'Product updated successfully' : 'Product added successfully', [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.goBack();
+      
+      // Show success message with collection info
+      const collectionMessage = addedToCollectionsCount > 0
+        ? ` and automatically added to ${addedToCollectionsCount} collection(s)`
+        : '';
+      
+      Alert.alert(
+        'Success', 
+        isEditMode 
+          ? 'Product updated successfully' 
+          : `Product added successfully${collectionMessage}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.goBack();
+            },
           },
-        },
-      ]);
+        ],
+      );
     } catch (error) {
       console.error('Add/Update product error', error);
       Alert.alert(
@@ -483,6 +594,49 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           <View style={[styles.checkbox, bestSeller && styles.checkboxChecked]} />
           <Text style={styles.checkLabel}>Mark as Best Seller</Text>
         </TouchableOpacity>
+
+        {/* Collection Selection (only for new products, optional) */}
+        {!isEditMode && (
+          <>
+            <Text style={styles.sectionHeader}>Collections <Text style={styles.optional}>(Optional)</Text></Text>
+            <Text style={styles.helperBody}>
+              {collections.length === 0 
+                ? 'Create a collection first to add products to it'
+                : 'Select collection(s) to add this product to (optional)'}
+            </Text>
+            <TouchableOpacity style={styles.dropdown} onPress={() => setCollectionPickerOpen(true)}>
+              <Text style={{color: Object.keys(selectedCollections).filter(id => selectedCollections[id]).length > 0 ? '#111827' : '#6c757d'}}>
+                {Object.keys(selectedCollections).filter(id => selectedCollections[id]).length > 0
+                  ? `${Object.keys(selectedCollections).filter(id => selectedCollections[id]).length} collection(s) selected`
+                  : 'Select Collections'}
+              </Text>
+            </TouchableOpacity>
+            {Object.keys(selectedCollections).filter(id => selectedCollections[id]).length > 0 && (
+              <View style={styles.selectedCollectionsContainer}>
+                {Object.keys(selectedCollections)
+                  .filter(id => selectedCollections[id])
+                  .map(collectionId => {
+                    const collection = collections.find(c => c.id === collectionId);
+                    return collection ? (
+                      <View key={collectionId} style={styles.collectionChip}>
+                        <Text style={styles.collectionChipText}>{collection.name}</Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedCollections(prev => ({
+                              ...prev,
+                              [collectionId]: false,
+                            }));
+                          }}
+                          style={styles.collectionChipRemove}>
+                          <IconSymbol name="close" size={14} color="#ef4444" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : null;
+                  })}
+              </View>
+            )}
+          </>
+        )}
 
         {/* Submit */}
         <TouchableOpacity
@@ -745,6 +899,65 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         </View>
       </Modal>
 
+      {/* Collection Picker Modal */}
+      <Modal transparent visible={collectionPickerOpen} animationType="slide" onRequestClose={() => setCollectionPickerOpen(false)}>
+        <View style={styles.centerOverlay}>
+          <View style={styles.listCard}>
+            <View style={styles.listHeader}>
+              <Text style={styles.listTitle}>Select Collections</Text>
+              <TouchableOpacity onPress={() => setCollectionPickerOpen(false)}>
+                <Text style={{fontSize: 28, fontWeight: 'bold'}}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              {collections.length === 0 ? (
+                <View style={styles.emptyCollectionsContainer}>
+                  <Text style={styles.emptyCollectionsText}>No collections available</Text>
+                  <TouchableOpacity
+                    style={styles.addCollectionButton}
+                    onPress={() => {
+                      setCollectionPickerOpen(false);
+                      navigation.navigate('AddCollection');
+                    }}>
+                    <IconSymbol name="add" size={18} color="#e61580" />
+                    <Text style={styles.addCollectionButtonText}>Create Collection</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                collections.map(collection => {
+                  const isSelected = selectedCollections[collection.id] || false;
+                  return (
+                    <TouchableOpacity
+                      key={collection.id}
+                      style={[styles.listItem, isSelected && styles.listItemSelected]}
+                      onPress={() => {
+                        setSelectedCollections(prev => ({
+                          ...prev,
+                          [collection.id]: !prev[collection.id],
+                        }));
+                      }}>
+                      <Text style={[styles.listItemText, isSelected && styles.listItemTextSelected]}>
+                        {collection.name}
+                      </Text>
+                      {isSelected && <IconSymbol name="checkmark" size={20} color="#e61580" />}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+            {collections.length > 0 && (
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={styles.doneButton}
+                  onPress={() => setCollectionPickerOpen(false)}>
+                  <Text style={styles.doneButtonText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* Color Chart Image Picker Modal */}
       <Modal transparent visible={colorChartPickerOpen} animationType="fade" onRequestClose={() => setColorChartPickerOpen(false)}>
         <View style={styles.centerOverlay}>
@@ -938,6 +1151,18 @@ const styles = StyleSheet.create({
   modalFooter: {padding: 16, borderTopWidth: 1, borderTopColor: '#dee2e6'},
   doneButton: {backgroundColor: '#e61580', padding: 14, borderRadius: 8, alignItems: 'center'},
   doneButtonText: {color: '#FFFFFF', fontWeight: 'bold', fontSize: 16},
+
+  // Selected Collections
+  selectedCollectionsContainer: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 8},
+  collectionChip: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFEFF', borderWidth: 1, borderColor: '#C7F2F9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6},
+  collectionChipText: {color: '#e61580', fontWeight: '600', fontSize: 14},
+  collectionChipRemove: {marginLeft: 4},
+  
+  // Empty Collections
+  emptyCollectionsContainer: {padding: 32, alignItems: 'center'},
+  emptyCollectionsText: {color: '#6c757d', marginBottom: 16, fontSize: 16},
+  addCollectionButton: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFEFF', borderWidth: 1, borderColor: '#C7F2F9', borderRadius: 8, padding: 12, gap: 8},
+  addCollectionButtonText: {color: '#e61580', fontWeight: '600'},
 });
 
 export default AddProductScreen;

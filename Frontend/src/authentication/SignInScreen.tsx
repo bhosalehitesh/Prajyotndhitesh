@@ -104,7 +104,14 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchTo
         await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
         await storage.setItem(AUTH_PHONE_KEY, authResponse.phone);
         await storage.setItem('userName', authResponse.fullName);
-        await storage.setItem('userId', authResponse.userId?.toString() || '');
+        
+        // Validate and store userId - must be a valid number > 0
+        if (authResponse.userId && typeof authResponse.userId === 'number' && authResponse.userId > 0) {
+          await storage.setItem('userId', authResponse.userId.toString());
+        } else {
+          console.error('Invalid userId in login response:', authResponse.userId);
+          throw new Error('Login failed: Invalid user ID received');
+        }
         
         // Fetch and store seller details and store details
         try {
@@ -175,7 +182,14 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ onAuthenticated, onSwitchTo
         await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
         await storage.setItem(AUTH_PHONE_KEY, authResponse.phone);
         await storage.setItem('userName', authResponse.fullName);
-        await storage.setItem('userId', authResponse.userId?.toString() || '');
+        
+        // Validate and store userId - must be a valid number > 0
+        if (authResponse.userId && typeof authResponse.userId === 'number' && authResponse.userId > 0) {
+          await storage.setItem('userId', authResponse.userId.toString());
+        } else {
+          console.error('Invalid userId in loginWithOtp response:', authResponse.userId);
+          throw new Error('Login failed: Invalid user ID received');
+        }
         
         // Fetch and store seller details and store details
         try {
