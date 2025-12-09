@@ -14,6 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.service.ProductService;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,12 +28,30 @@ public class ProductController {
     @Autowired
     public ProductService productService;
 
+    @Autowired
+    private JwtService jwtService;
+    
+    // Helper method to extract sellerId from JWT token
+    private Long extractSellerIdFromToken(HttpServletRequest httpRequest) {
+        try {
+            String authHeader = httpRequest.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                return jwtService.extractUserId(token);
+            }
+        } catch (Exception e) {
+            // If token extraction fails, return null (will return all products for backward compatibility)
+        }
+        return null;
+    }
 
     @GetMapping("/allProduct")
-    public List<Product> allP(){
+    public List<Product> allP(HttpServletRequest httpRequest){
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        if (sellerId != null) {
+            return productService.allProductForSeller(sellerId);
+        }
         return productService.allProduct();
-
-
     }
 
 

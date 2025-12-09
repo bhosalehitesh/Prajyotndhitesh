@@ -12,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.smartbiz.sakhistore.config.CloudinaryHelper;
 import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.category.repository.CategoryRepository;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsRepo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,7 +28,10 @@ public class CategoryService {
     @Autowired
     CloudinaryHelper cloudinaryHelper;
 
-    // ✅ Upload and save Category with images
+    @Autowired
+    private SellerDetailsRepo sellerDetailsRepo;
+
+    // ✅ Upload and save Category with images (with seller linking)
     public Category uploadCategoryWithImages(
             String categoryName,
             String businessCategory,
@@ -34,7 +39,8 @@ public class CategoryService {
             String seoTitleTag,
             String seoMetaDescription,
             List<MultipartFile> categoryImages,
-            MultipartFile socialSharingImage
+            MultipartFile socialSharingImage,
+            Long sellerId
     ) {
         try {
             List<String> categoryImageUrls = new ArrayList<>();
@@ -69,6 +75,13 @@ public class CategoryService {
             if (socialImageUrl != null) {
                 category.setSocialSharingImage(socialImageUrl);
             }
+            
+            // ✅ Link category to seller (prevent cross-seller visibility)
+            if (sellerId != null) {
+                SellerDetails seller = sellerDetailsRepo.findById(sellerId)
+                        .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
+                category.setSeller(seller);
+            }
 
             return categoryRepository.save(category);
 
@@ -78,12 +91,30 @@ public class CategoryService {
         }
     }
 
-    // ✅ Get all categories
+    // ✅ Get all categories (filtered by seller)
+    public List<Category> allCategories(Long sellerId) {
+        if (sellerId != null) {
+            return categoryRepository.findBySeller_SellerId(sellerId);
+        }
+        return categoryRepository.findAll();
+    }
+    
+    // ✅ Get all categories (backward compatibility - returns all, should be avoided)
     public List<Category> allCategories() {
         return categoryRepository.findAll();
     }
 
-    // ✅ Add category
+    // ✅ Add category (with seller linking if sellerId provided)
+    public Category addCategory(Category category, Long sellerId) {
+        if (sellerId != null) {
+            SellerDetails seller = sellerDetailsRepo.findById(sellerId)
+                    .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
+            category.setSeller(seller);
+        }
+        return categoryRepository.save(category);
+    }
+    
+    // ✅ Add category (backward compatibility)
     public Category addCategory(Category category) {
         return categoryRepository.save(category);
     }
@@ -101,7 +132,15 @@ public class CategoryService {
         categoryRepository.delete(category);
     }
 
-    // ✅ Search by business category
+    // ✅ Search by business category (filtered by seller)
+    public List<Category> searchCategoriesByBusiness(String businessCategory, Long sellerId) {
+        if (sellerId != null) {
+            return categoryRepository.findBySeller_SellerIdAndBusinessCategoryContainingIgnoreCase(sellerId, businessCategory);
+        }
+        return categoryRepository.findByBusinessCategoryContainingIgnoreCase(businessCategory);
+    }
+    
+    // ✅ Search by business category (backward compatibility)
     public List<Category> searchCategoriesByBusiness(String businessCategory) {
         return categoryRepository.findByBusinessCategoryContainingIgnoreCase(businessCategory);
     }

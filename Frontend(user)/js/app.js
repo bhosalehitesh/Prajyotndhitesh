@@ -471,7 +471,13 @@
   // ====== CATEGORY PAGE FUNCTIONALITY ======
   function getCategoryFromURL() {
     const params = new URLSearchParams(window.location.search);
-    return params.get("name");
+    const raw = params.get("name");
+    return raw ? raw.trim() : "";
+  }
+
+  function getCategoryIdFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("categoryId");
   }
 
   function getFilters() {
@@ -488,6 +494,7 @@
 
   async function filterAndDisplayProducts() {
     const category = decodeURIComponent(getCategoryFromURL() || "");
+    const categoryId = getCategoryIdFromURL();
     const title = document.getElementById("category-title");
     const grid = document.getElementById("product-grid");
     const cartContainer = document.getElementById('cart-container');
@@ -499,11 +506,54 @@
 
     if (title) title.textContent = category;
 
+    // Get store slug from URL for filtering
+    const params = new URLSearchParams(window.location.search);
+    const storeSlug = params.get('store');
+    if (storeSlug) {
+      window.currentStoreSlug = storeSlug;
+    }
+
     // Try fetching from backend API. If backend fails, fallback to local products object.
     let fetched = [];
     try {
-      if (typeof fetchProductsByCategory === 'function') {
+      // If store slug is present, use store-specific product endpoint
+      if (storeSlug && window.API && window.API.getStoreProductsBySlug) {
+        try {
+          fetched = await window.API.getStoreProductsBySlug(storeSlug, category);
+          if (Array.isArray(fetched) && fetched.length > 0) {
+            // If categoryId is provided, filter by id first
+            if (categoryId) {
+              fetched = fetched.filter(p => {
+                const pid = p.categoryId || p.category_id || p.category?.category_id || p.category?.id;
+                return pid && String(pid) === String(categoryId);
+              });
+            } else if (category) {
+              // Otherwise filter by category name
+              const categoryLower = category.toLowerCase();
+              fetched = fetched.filter(p => {
+                const productCategory = (p.productCategory || '').toLowerCase();
+                const businessCategory = (p.businessCategory || '').toLowerCase();
+                const catName = (p.category?.categoryName || '').toLowerCase();
+                return productCategory.includes(categoryLower) || 
+                       businessCategory.includes(categoryLower) ||
+                       catName.includes(categoryLower);
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Store products fetch failed, trying category API:', e);
+        }
+      }
+      
+      // Fallback to category API
+      if ((!fetched || fetched.length === 0) && typeof fetchProductsByCategory === 'function') {
         fetched = await fetchProductsByCategory(category);
+        if (categoryId && fetched && fetched.length > 0) {
+          fetched = fetched.filter(p => {
+            const pid = p.categoryId || p.category_id || p.category?.category_id || p.category?.id;
+            return pid && String(pid) === String(categoryId);
+          });
+        }
       }
     } catch (e) {
       console.warn('Error fetching products by category, falling back to local:', e);
@@ -521,6 +571,7 @@
       price: p.sellingPrice ?? p.price ?? p.amount ?? 0,
       color: p.color || p.colour || p.variantColor || 'N/A',
       size: p.size || p.availableSize || 'N/A',
+      categoryId: p.categoryId || p.category_id || p.category?.category_id || p.category?.id,
       raw: p
     }));
 
@@ -528,6 +579,9 @@
     let filtered = fetched;
 
     if (color && color !== "all") filtered = filtered.filter(p => String(p.color).toLowerCase() === String(color).toLowerCase());
+    if (categoryId) {
+      filtered = filtered.filter(p => p.categoryId && String(p.categoryId) === String(categoryId));
+    }
     if (size && size !== "all") filtered = filtered.filter(p => String(p.size).toLowerCase() === String(size).toLowerCase());
 
     if (sort === "lowToHigh") filtered.sort((a,b) => a.price - b.price);
@@ -630,20 +684,20 @@
   async function fetchProductsByCategory(category) {
     if (!category) return [];
     
-    // First try the API function if available
-    if (window.API && typeof window.API.getProductsByCategory === 'function') {
+    // Use API integration if available
+    if (window.API && window.API.getProductsByCategory) {
       try {
-        const products = await window.API.getProductsByCategory(category);
-        if (products && Array.isArray(products) && products.length > 0) {
-          return products;
+        const result = await window.API.getProductsByCategory(category);
+        if (Array.isArray(result) && result.length > 0) {
+          return result;
         }
       } catch (e) {
-        console.warn('Error fetching products by category from API:', e);
+        console.warn('API.getProductsByCategory failed, trying fallback:', e);
       }
     }
     
+    // Fallback: Try direct API calls
     const encoded = encodeURIComponent(category);
-    // Try common API patterns
     const candidates = [
       `/api/products?category=${encoded}`,
       `/api/categories/${encoded}/products`,
@@ -662,29 +716,20 @@
       }
     }
 
-    // Fallback to local `products` object
+    // Final fallback to local `products` object
     return products[category] ? [...products[category]] : [];
   }
 
   // Load store page: fetch store metadata and the seller's products
   async function loadStorePage() {
-    // Check for store page by looking for the products grid or container
-    const grid = document.getElementById('store-products-grid');
     const container = document.getElementById('store-page');
-    
-    if (!grid && !container) {
-      return; // not a store page
-    }
+    if (!container) return; // not a store page
 
     const nameEl = document.getElementById('store-name');
     const descEl = document.getElementById('store-description');
     const linkEl = document.getElementById('store-link');
     const logoEl = document.getElementById('store-logo');
-    
-    if (!grid) {
-      console.warn('Store products grid not found');
-      return;
-    }
+    const grid = document.getElementById('store-products-grid');
 
     const params = new URLSearchParams(window.location.search);
     const sellerId = params.get('sellerId');
@@ -693,40 +738,35 @@
 
     let store = null;
     try {
-      // Use API functions if available, otherwise fallback to fetchJson
+      // Use API integration if available
       if (window.API) {
-        if (storeId) {
+        if (storeId && window.API.getStoreById) {
           try { store = await window.API.getStoreById(storeId); } catch(e) { store = null; }
         }
-        if (!store && slug) {
+        if (!store && slug && window.API.getStoreBySlug) {
           try { store = await window.API.getStoreBySlug(slug); } catch(e) { store = null; }
         }
-        if (!store && sellerId) {
+        if (!store && sellerId && window.API.getStoreBySellerId) {
           try { store = await window.API.getStoreBySellerId(sellerId); } catch(e) { store = null; }
         }
-      } else {
-        // Fallback to old method
-        if (storeId) {
-          try { store = await fetchJson(`/api/stores/${encodeURIComponent(storeId)}`); } catch(e) { store = null; }
-        }
-        if (!store && slug) {
-          try { store = await fetchJson(`/api/stores/slug/${encodeURIComponent(slug)}`); } catch(e) { store = null; }
-        }
-        if (!store && sellerId) {
-          try { store = await fetchJson(`/api/stores?sellerId=${encodeURIComponent(sellerId)}`); } catch(e) { store = null; }
-          if (!store) {
-            try { store = await fetchJson(`/api/stores/seller?sellerId=${encodeURIComponent(sellerId)}`); } catch(e) { store = null; }
-          }
+      }
+      
+      // Fallback to direct API calls
+      if (!store && storeId) {
+        try { store = await fetchJson(`/api/stores/${encodeURIComponent(storeId)}`); } catch(e) { store = null; }
+      }
+      if (!store && slug) {
+        try { store = await fetchJson(`/api/stores/slug/${encodeURIComponent(slug)}`); } catch(e) { store = null; }
+      }
+      if (!store && sellerId) {
+        try { store = await fetchJson(`/api/stores?sellerId=${encodeURIComponent(sellerId)}`); } catch(e) { store = null; }
+        if (!store) {
+          try { store = await fetchJson(`/api/stores/seller?sellerId=${encodeURIComponent(sellerId)}`); } catch(e) { store = null; }
         }
       }
 
-      // Store variables for later use
-      let storeName = 'Store';
-      let storeNameForBrand = 'Store';
-      
       if (store) {
-        storeName = store.storeName || store.name || store.shopName || 'Store';
-        storeNameForBrand = storeName;
+        const storeName = store.storeName || store.name || store.shopName || 'Store';
         const desc = store.businessDetails?.businessDescription || store.description || '';
         const link = store.storeLink || store.website || (store.slug ? `${window.location.origin}/${store.slug}` : '');
         const logo = store.logoUrl || store.logo || '';
@@ -734,414 +774,92 @@
         if (nameEl) nameEl.textContent = storeName;
         if (descEl) descEl.textContent = desc;
         if (linkEl && link) { linkEl.href = link; linkEl.textContent = link.replace(/^https?:\/\//,''); linkEl.style.display = 'inline-block'; }
-        if (logoEl) {
-          if (logo) {
-            logoEl.src = logo;
-            logoEl.alt = storeName;
-            logoEl.style.display = 'block';
-          } else {
-            logoEl.style.display = 'none';
-          }
-        }
-        
-        // Update page title
-        const pageTitle = document.getElementById('store-page-title');
-        if (pageTitle) {
-          pageTitle.textContent = `${storeName} | V Store`;
-        } else {
-          document.title = `${storeName} | V Store`;
-        }
+        if (logoEl && logo) { logoEl.src = logo; logoEl.alt = storeName; }
       } else {
         if (nameEl) nameEl.textContent = 'Store';
         if (descEl) descEl.textContent = '';
       }
 
-      // Get sellerId - convert to number if it's a string
-      let finalSellerId = store?.sellerId || store?.seller?.id || sellerId || store?.id;
-      if (finalSellerId) {
-        finalSellerId = typeof finalSellerId === 'string' ? parseInt(finalSellerId, 10) : finalSellerId;
-      }
+      const finalSellerId = store?.sellerId || store?.seller?.id || sellerId || store?.id;
 
-      // ====== CLEAN PAGINATION IMPLEMENTATION ======
-      const PRODUCTS_PER_PAGE = 8;
-      
-      // Pagination state - stored in window for persistence
-      if (!window.storePaginationState) {
-        window.storePaginationState = {
-          currentPage: 0,           // Current page (0-indexed)
-          displayedProducts: [],     // Products currently displayed in DOM
-          hasMore: true,            // Whether more products are available
-          totalProducts: 0,         // Total products from backend
-          isLoading: false          // Prevent multiple simultaneous loads
-        };
-      }
-      
-      const paginationState = window.storePaginationState;
-      
-      // Function to fetch a specific page from backend
-      const fetchProductsPage = async (page = 0) => {
-        if (!finalSellerId || !window.API) {
-          return { content: [], hasNext: false, totalElements: 0 };
+      let productsData = [];
+      if (finalSellerId) {
+        // Use API integration if available
+        if (window.API && window.API.getAllProductsBySeller) {
+          try {
+            const result = await window.API.getAllProductsBySeller(finalSellerId);
+            if (Array.isArray(result)) {
+              productsData = result;
+            } else if (result && Array.isArray(result.products)) {
+              productsData = result.products;
+            }
+          } catch (e) {
+            console.warn('API.getAllProductsBySeller failed, trying fallback:', e);
+          }
         }
         
-        try {
-          console.log(`📥 Fetching page ${page} for sellerId: ${finalSellerId}`);
-          const response = await window.API.getProductsBySeller(finalSellerId, page, PRODUCTS_PER_PAGE);
-          
-          // Handle paginated response (new format with content array)
-          if (response && response.content && Array.isArray(response.content)) {
-            return {
-              content: response.content,
-              hasNext: response.hasNext || false,
-              totalElements: response.totalElements || 0,
-              totalPages: response.totalPages || 0
-            };
+        // Fallback: Try direct API calls
+        if (productsData.length === 0) {
+          const candidates = [
+            `/api/products?sellerId=${encodeURIComponent(finalSellerId)}`,
+            `/api/products/sellerProducts?sellerId=${encodeURIComponent(finalSellerId)}`,
+            `/api/stores/${encodeURIComponent(finalSellerId)}/products`,
+            `/api/sellers/${encodeURIComponent(finalSellerId)}/products`
+          ];
+          for (const c of candidates) {
+            try {
+              const resp = await fetchJson(c);
+              if (!resp) continue;
+              if (Array.isArray(resp)) { productsData = resp; break; }
+              if (resp.products) { productsData = resp.products; break; }
+              if (resp.data) { productsData = resp.data; break; }
+            } catch (e) {
+              // ignore
+            }
           }
-          // Handle non-paginated response (backward compatibility - array of products)
-          else if (Array.isArray(response)) {
-            // If it's an array, it's all products - calculate pagination manually
-            const startIndex = page * PRODUCTS_PER_PAGE;
-            const endIndex = startIndex + PRODUCTS_PER_PAGE;
-            const pageContent = response.slice(startIndex, endIndex);
-            const hasNext = endIndex < response.length;
-            
-            return {
-              content: pageContent,
-              hasNext: hasNext,
-              totalElements: response.length,
-              totalPages: Math.ceil(response.length / PRODUCTS_PER_PAGE)
-            };
-          }
-          
-          return { content: [], hasNext: false, totalElements: 0 };
-        } catch (e) {
-          console.error('❌ Failed to fetch products page:', e);
-          return { content: [], hasNext: false, totalElements: 0 };
         }
-      };
+      }
       
-      // Function to normalize product data format
-      const normalizeProduct = (p) => ({
-        productId: String(p.productId || p.productsId || p.id || ''),
-        productName: p.productName || p.title || p.name || 'Unknown Product',
+      // Also try to get products by store slug if we have a slug
+      if (productsData.length === 0 && slug && window.API && window.API.getStoreProductsBySlug) {
+        try {
+          const result = await window.API.getStoreProductsBySlug(slug);
+          if (Array.isArray(result) && result.length > 0) {
+            productsData = result;
+          }
+        } catch (e) {
+          console.warn('API.getStoreProductsBySlug failed:', e);
+        }
+      }
+
+      productsData = (productsData || []).map(p => ({
+        productName: p.productName || p.title || p.name,
         image: p.productImages?.[0] || p.image || p.imageUrl || '../assets/products/p1.jpg',
         price: p.sellingPrice ?? p.price ?? 0,
-        mrp: p.mrp || p.originalPrice || p.sellingPrice || p.price || 0,
-        brand: p.brand || storeNameForBrand,
         raw: p
-      });
-      
-      // Fetch and display first page
-      let firstPageData = { content: [], hasNext: false, totalElements: 0 };
-      if (finalSellerId) {
-        firstPageData = await fetchProductsPage(0);
-        paginationState.currentPage = 0;
-        paginationState.hasMore = firstPageData.hasNext;
-        paginationState.totalProducts = firstPageData.totalElements || 0;
-        
-        console.log(`✅ First page loaded: ${firstPageData.content.length} products, Total: ${paginationState.totalProducts}, Has more: ${paginationState.hasMore}`);
-      }
-      
-      // Normalize first page products
-      const firstPageProducts = (firstPageData.content || []).map(normalizeProduct);
-      paginationState.displayedProducts = firstPageProducts;
+      }));
 
-      // Function to render products
-      const renderProducts = (productsToRender, append = false) => {
-        if (!grid) return;
-        
-        if (!productsToRender || productsToRender.length === 0) {
-          if (!append) {
-            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">No products found for this store.</p></div>';
-          }
-          return;
-        }
-
-        // Calculate discount percentage
-        const calculateDiscount = (mrp, price) => {
-          if (mrp > price && mrp > 0) {
-            const discount = Math.round(((mrp - price) / mrp) * 100);
-            return discount > 0 ? discount : 0;
-          }
-          return 0;
-        };
-
-        const productsHTML = productsToRender.map((p, index) => {
-          const discount = calculateDiscount(p.mrp, p.price);
-          // Build product URL with productId (primary) and fallback parameters
-          const productUrl = `product-detail.html?productId=${p.productId || ''}&name=${encodeURIComponent(p.productName)}&price=${p.price || p.sellingPrice || 0}&originalPrice=${p.mrp || p.originalPrice || p.price || p.sellingPrice || 0}&image=${encodeURIComponent(p.image || p.imageUrl || '../assets/products/p1.jpg')}&brand=${encodeURIComponent(p.brand || 'V Store')}`;
-          
-          // Use productId as unique key, fallback to index if no ID
-          const uniqueKey = p.productId || `product-${Date.now()}-${index}`;
-          
-          const isBestseller = p.isBestseller || false;
-          
-          return `
-          <div class="ecommerce-product-card" data-product-id="${p.productId || ''}" data-unique-key="${uniqueKey}" onclick="window.location.href='${productUrl}'">
-            <div class="product-image-wrapper" style="position: relative;">
-              ${isBestseller ? `<span class="bestseller-badge" style="position: absolute; top: 8px; left: 8px; background: #FFD700; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; z-index: 2;">Bestseller</span>` : ''}
-              <img src="${p.image}" alt="${p.productName}" onerror="this.src='../assets/products/p1.jpg'" />
-              ${discount > 0 ? `<span class="discount-badge">${discount}% OFF</span>` : ''}
-            </div>
-            <div class="product-info">
-              <div class="product-brand">${p.brand}</div>
-              <div class="product-name">${p.productName}</div>
-              <div class="product-price">
-                <span class="current-price">₹${Math.round(p.price)}</span>
-                ${discount > 0 ? `<span class="original-price">₹${Math.round(p.mrp)}</span>` : ''}
-                ${discount > 0 ? `<span class="discount">(${discount}% OFF)</span>` : ''}
-              </div>
-              <div style="display: flex; gap: 8px; margin-top: 12px;">
-                <button class="add-to-cart-btn" 
-                  data-name="${p.productName}" 
-                  data-price="${p.price}" 
-                  data-brand="${p.brand}" 
-                  data-img="${p.image}" 
-                  data-original-price="${p.mrp}"
-                  data-id="${p.productId || ''}"
-                  onclick="event.stopPropagation(); addToCartFromButton(this)" 
-                  style="flex: 1;">
-                  Add to Cart
-                </button>
-                <button class="wishlist-btn" 
-                  data-name="${p.productName}" 
-                  data-price="${p.price}" 
-                  data-original-price="${p.mrp}" 
-                  data-brand="${p.brand}" 
-                  data-img="${p.image}"
-                  data-id="${p.productId || ''}"
-                  onclick="event.stopPropagation(); addToWishlistFromProduct(this)" 
-                  title="Add to Wishlist" 
-                  style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-        }).join('');
-
-        if (append) {
-          grid.insertAdjacentHTML('beforeend', productsHTML);
-        } else {
-          grid.innerHTML = productsHTML;
-        }
-
-        // Setup add to cart buttons for new products
-        grid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
-          if (!btn.hasAttribute('data-listener-attached')) {
-            btn.setAttribute('data-listener-attached', 'true');
-            btn.addEventListener('click', function(e) {
-              e.stopPropagation();
-              const name = this.getAttribute('data-name');
-              const price = parseFloat(this.getAttribute('data-price')) || 0;
-              const img = this.getAttribute('data-img') || '';
-              const brand = this.getAttribute('data-brand') || '';
-              const id = this.getAttribute('data-id') || '';
-              
-              if (typeof addToCartFromButton === 'function') {
-                addToCartFromButton(this);
-              } else if (typeof addItemToCart === 'function') {
-                addItemToCart({ 
-                  name, 
-                  price, 
-                  quantity: 1, 
-                  image: img,
-                  brand: brand,
-                  id: id
-                });
-                if (window.showToast) showToast(`${name} added to cart`, 'success');
-              }
-            });
-          }
-        });
-
-        // Setup wishlist buttons for new products
-        grid.querySelectorAll('.wishlist-btn').forEach(btn => {
-          if (!btn.hasAttribute('data-listener-attached')) {
-            btn.setAttribute('data-listener-attached', 'true');
-            btn.addEventListener('click', function(e) {
-              e.stopPropagation();
-              if (typeof addToWishlistFromProduct === 'function') {
-                addToWishlistFromProduct(this);
-              }
-            });
-          }
-        });
-      };
-
-      // Function to load more products (next page)
-      const loadMoreProducts = async () => {
-        // Prevent multiple simultaneous loads
-        if (paginationState.isLoading) {
-          console.log('⏳ Already loading, skipping...');
-          return;
-        }
-        
-        const loadMoreBtn = document.getElementById('load-more-products');
-        if (loadMoreBtn) {
-          loadMoreBtn.disabled = true;
-          loadMoreBtn.textContent = 'Loading...';
-        }
-        
-        paginationState.isLoading = true;
-        
-        try {
-          // Calculate next page (currentPage is 0-indexed, so next is currentPage + 1)
-          const nextPage = paginationState.currentPage + 1;
-          
-          console.log(`🔄 Loading page ${nextPage}...`);
-          
-          // Fetch next page
-          const pageData = await fetchProductsPage(nextPage);
-          const newProducts = pageData.content || [];
-          
-          if (newProducts.length > 0) {
-            // Normalize new products
-            const normalizedNewProducts = newProducts.map(normalizeProduct);
-            
-            // Get IDs of already displayed products to prevent duplicates
-            const displayedProductIds = new Set(
-              paginationState.displayedProducts.map(p => p.productId).filter(id => id && id !== '')
-            );
-            
-            // Filter out duplicates by productId
-            const uniqueNewProducts = normalizedNewProducts.filter(p => {
-              if (!p.productId || p.productId === '') {
-                // If no ID, check by name+price as fallback
-                return !paginationState.displayedProducts.some(existing => 
-                  existing.productName === p.productName && existing.price === p.price
-                );
-              }
-              return !displayedProductIds.has(p.productId);
-            });
-            
-            if (uniqueNewProducts.length > 0) {
-              // Append new products to displayed products
-              paginationState.displayedProducts = [...paginationState.displayedProducts, ...uniqueNewProducts];
-              
-              // Render only the new products (append mode)
-              renderProducts(uniqueNewProducts, true);
-              
-              // Update pagination state
-              paginationState.currentPage = nextPage;
-              paginationState.hasMore = pageData.hasNext || false;
-              
-              console.log(`✅ Loaded page ${nextPage}: ${uniqueNewProducts.length} new products (${newProducts.length} total, ${newProducts.length - uniqueNewProducts.length} duplicates filtered)`);
-              console.log(`📊 Total displayed: ${paginationState.displayedProducts.length} products`);
-            } else {
-              console.warn(`⚠️ Page ${nextPage} returned ${newProducts.length} products, but all were duplicates`);
-              paginationState.hasMore = false;
-            }
-          } else {
-            // No more products
-            console.log(`ℹ️ Page ${nextPage} returned no products`);
-            paginationState.hasMore = false;
-          }
-          
-          // Update button visibility
-          updateLoadMoreButton();
-        } catch (error) {
-          console.error('❌ Error loading more products:', error);
-          if (loadMoreBtn) {
-            loadMoreBtn.textContent = 'Error. Click to retry.';
-          }
-        } finally {
-          paginationState.isLoading = false;
-          if (loadMoreBtn) {
-            loadMoreBtn.disabled = false;
-            loadMoreBtn.textContent = 'See More';
-          }
-        }
-      };
-      
-      // Expose loadMoreProducts globally
-      window.loadMoreProducts = loadMoreProducts;
-
-      // Function to update "See More" button visibility
-      const updateLoadMoreButton = () => {
-        const displayedCount = paginationState.displayedProducts.length;
-        const hasMore = paginationState.hasMore;
-        const totalProducts = paginationState.totalProducts;
-        
-        // Calculate if we should show the button
-        // Show if: backend says more pages exist, OR we have fewer displayed than total
-        const shouldShow = hasMore === true || (totalProducts > 0 && displayedCount < totalProducts);
-        
-        let loadMoreBtn = document.getElementById('load-more-products');
-        let buttonContainer = document.getElementById('load-more-button-container');
-        
-        if (!loadMoreBtn && shouldShow) {
-          // Create button container and button (only once)
-          buttonContainer = document.createElement('div');
-          buttonContainer.id = 'load-more-button-container';
-          buttonContainer.style.cssText = 'grid-column: 1/-1; text-align: center; padding: 40px 20px;';
-          buttonContainer.innerHTML = `
-            <button id="load-more-products" style="
-              padding: 16px 48px;
-              background: linear-gradient(135deg, #ff6d2e 0%, #ff8533 100%);
-              color: #fff;
-              border: none;
-              border-radius: 12px;
-              font-weight: 700;
-              font-size: 1rem;
-              cursor: pointer;
-              transition: all 0.3s;
-              box-shadow: 0 4px 12px rgba(255, 109, 46, 0.3);
-              letter-spacing: 0.02em;
-            ">
-              See More
-            </button>
-          `;
-          
-          // Append after the grid
-          if (grid && grid.parentElement) {
-            grid.parentElement.appendChild(buttonContainer);
-            loadMoreBtn = document.getElementById('load-more-products');
-            
-            if (loadMoreBtn) {
-              // Attach click handler
-              loadMoreBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                loadMoreProducts();
-              });
-              
-              // Hover effects
-              loadMoreBtn.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-2px)';
-                this.style.boxShadow = '0 6px 16px rgba(255, 109, 46, 0.4)';
-              });
-              loadMoreBtn.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = '0 4px 12px rgba(255, 109, 46, 0.3)';
-              });
-            }
-          }
-        } else if (loadMoreBtn) {
-          // Button exists - update visibility
-          if (shouldShow) {
-            loadMoreBtn.style.display = 'block';
-            loadMoreBtn.disabled = false;
-            loadMoreBtn.textContent = 'See More';
-            if (buttonContainer) buttonContainer.style.display = 'block';
-          } else {
-            loadMoreBtn.style.display = 'none';
-            if (buttonContainer) buttonContainer.style.display = 'none';
-          }
-        }
-      };
-
-      // Initial render - show first page products
       if (grid) {
-        if (!firstPageProducts || firstPageProducts.length === 0) {
-          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">No products found for this store.</p></div>';
+        if (!productsData || productsData.length === 0) {
+          grid.innerHTML = '<p>No products found for this store.</p>';
         } else {
-          // Render first page products (replace mode, not append)
-          renderProducts(firstPageProducts, false);
-          updateLoadMoreButton();
+          grid.innerHTML = productsData.map(p => `
+            <div class="product-card">
+              <img src="${p.image}" alt="${p.productName}" />
+              <h4>${p.productName}</h4>
+              <p>₹${Number(p.price).toFixed(2)}</p>
+              <button class="add-to-cart-btn" data-name="${p.productName}" data-price="${p.price}">Add to Cart</button>
+            </div>
+          `).join('');
+
+          grid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const name = btn.getAttribute('data-name');
+              const price = parseFloat(btn.getAttribute('data-price')) || 0;
+              addItemToCart({ name, price, quantity: 1 });
+              if (window.showToast) showToast(`${name} added to cart`, 'success');
+            });
+          });
         }
       }
     } catch (err) {
@@ -1263,16 +981,8 @@
     }
 
     // Try to load store page if present (will no-op on non-store pages)
-    // Only runs on store.html pages, not on index.html
     try {
-      // Check if we're actually on a store page before calling loadStorePage
-      const isStorePage = document.getElementById('store-products-grid') || 
-                         document.getElementById('store-page') ||
-                         window.location.pathname.includes('store.html');
-      
-      if (isStorePage) {
-        loadStorePage();
-      }
+      loadStorePage();
     } catch (e) {
       // ignore
     }
@@ -1386,14 +1096,10 @@
     const sidebarProfilePhone = document.querySelector('.profile-sidebar-phone');
 
     if (user) {
-      // Display name and phone in profile sidebar
-      const displayName = user.name || user.fullName || 'User';
-      const displayPhone = user.phone ? (user.phone.startsWith('+91') ? user.phone : `+91 ${user.phone}`) : '';
-      
-      if (profileName) profileName.textContent = displayName;
-      if (profilePhone) profilePhone.textContent = displayPhone || 'Phone not provided';
-      if (sidebarProfileName) sidebarProfileName.textContent = displayName;
-      if (sidebarProfilePhone) sidebarProfilePhone.textContent = displayPhone || 'Phone not provided';
+      if (profileName) profileName.textContent = user.name || 'User';
+      if (profilePhone) profilePhone.textContent = user.phone ? `+91 ${user.phone}` : '';
+      if (sidebarProfileName) sidebarProfileName.textContent = user.name || 'User';
+      if (sidebarProfilePhone) sidebarProfilePhone.textContent = user.phone ? `+91 ${user.phone}` : '';
     } else {
       if (profileName) profileName.textContent = 'Guest User';
       if (profilePhone) profilePhone.textContent = 'Login to view details';
@@ -1402,13 +1108,7 @@
     }
   }
 
-  function openProfileSidebar(e) {
-    // Prevent any default behavior or navigation
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
+  function openProfileSidebar() {
     const profileSidebar = document.getElementById('profileSidebar');
     const profileSidebarOverlay = document.getElementById('profileSidebarOverlay');
 
@@ -1422,9 +1122,6 @@
       }
       document.body.style.overflow = 'hidden';
     }
-    
-    // Always return false to prevent navigation
-    return false;
   }
 
   function closeProfileSidebar() {
@@ -1537,32 +1234,26 @@
       const newBtn = profileBtn.cloneNode(true);
       profileBtn.parentNode.replaceChild(newBtn, profileBtn);
       
-      // Add click listener with proper event handling
-      newBtn.addEventListener('click', function(e) {
-        e.preventDefault();
+      // Add click listener
+      newBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        e.stopImmediatePropagation();
+        e.preventDefault();
         if (typeof openProfileSidebar === 'function') {
-          openProfileSidebar(e);
+          openProfileSidebar();
         }
-        return false;
-      }, true); // Use capture phase for early handling
+      });
     }
     
     // Also use event delegation on document as ultimate fallback
-    // Use capture phase to handle before any other listeners
     document.addEventListener('click', function(e) {
-      const clickedBtn = e.target.closest('#profileBtn');
-      if (clickedBtn || e.target.id === 'profileBtn') {
+      if (e.target && (e.target.id === 'profileBtn' || e.target.closest('#profileBtn'))) {
         e.preventDefault();
         e.stopPropagation();
-        e.stopImmediatePropagation();
         if (typeof openProfileSidebar === 'function') {
-          openProfileSidebar(e);
+          openProfileSidebar();
         }
-        return false;
       }
-    }, true); // Capture phase - executes first
+    }, true);
 
     // Close sidebar
     if (profileSidebarClose) {
@@ -1816,8 +1507,7 @@
     observer.observe(headerPlaceholder, { childList: true, subtree: true });
   }
 
-  // Disable login modal on all pages except index.html, login.html, and store.html
-  // Store.html needs login modal because seller shares link and user must login first
+  // Disable login modal on all pages except index.html and login.html
   function disableLoginModalOnOtherPages() {
     const isIndexPage = window.location.pathname === '/' || 
                         window.location.pathname.endsWith('index.html') ||
@@ -1827,11 +1517,7 @@
     const isLoginPage = window.location.pathname.includes('login.html') ||
                         window.location.href.includes('login.html');
     
-    const isStorePage = window.location.pathname.includes('store.html') ||
-                        window.location.href.includes('store.html');
-    
-    // Allow login modal on index, login, and store pages
-    if (!isIndexPage && !isLoginPage && !isStorePage) {
+    if (!isIndexPage && !isLoginPage) {
       const loginModalOverlay = document.getElementById('loginModalOverlay');
       const loginModal = document.getElementById('loginModal');
       const otpForm = document.getElementById('otpForm');
@@ -2062,13 +1748,5 @@
   } else {
     startBannerCarousel();
   }
-
-  // Expose functions globally for external access (e.g., store.html debug buttons)
-  window.loadStorePage = loadStorePage;
-  window.getCart = getCart;
-  window.saveCart = saveCart;
-  window.updateCartCount = updateCartCount;
-  window.getWishlist = getWishlist;
-  window.saveWishlist = saveWishlist;
 })();
 

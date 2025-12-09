@@ -56,8 +56,7 @@ async function loadComponent(elementId, filePath) {
       if (elementId === 'header-placeholder') {
         // Initialize login modal IMMEDIATELY after header loads
         setTimeout(() => initializeLoginModalHandlers(), 50);
-        // Disable login modal on non-index, non-login, and non-store pages
-        // Store page needs login modal (seller shares link, user must login first)
+        // Disable login modal on non-index and non-login pages
         const isIndexPage = window.location.pathname === '/' || 
                             window.location.pathname.endsWith('index.html') ||
                             window.location.pathname.endsWith('/');
@@ -65,10 +64,7 @@ async function loadComponent(elementId, filePath) {
         const isLoginPage = window.location.pathname.includes('login.html') ||
                             window.location.href.includes('login.html');
         
-        const isStorePage = window.location.pathname.includes('store.html') ||
-                            window.location.href.includes('store.html');
-        
-        if (!isIndexPage && !isLoginPage && !isStorePage) {
+        if (!isIndexPage && !isLoginPage) {
           setTimeout(() => {
             const loginModalOverlay = document.getElementById('loginModalOverlay');
             if (loginModalOverlay) {
@@ -204,117 +200,16 @@ async function loadComponent(elementId, filePath) {
           overlay.dataset.initialized = 'true';
         }
         
-        // Initialize all navbar functionality after header loads
+        // Initialize once after short delay
         setTimeout(() => {
           initLoginModal();
-          
-          // Initialize mobile menu
-          if (typeof window.initMobileMenu === 'function') {
-            window.initMobileMenu();
-          } else {
-            // Fallback: initialize mobile menu directly
-            const mobileMenuBtn = document.getElementById("mobileMenuBtn");
-            const mobileNav = document.getElementById("mobileNav");
-            if (mobileMenuBtn && mobileNav) {
-              // Remove old listeners by cloning
-              const newBtn = mobileMenuBtn.cloneNode(true);
-              mobileMenuBtn.parentNode.replaceChild(newBtn, mobileMenuBtn);
-              
-              document.getElementById("mobileMenuBtn").addEventListener("click", () => {
-                const nav = document.getElementById("mobileNav");
-                if (nav) nav.classList.toggle("active");
-              });
-              
-              // Close menu when clicking outside
-              document.addEventListener("click", (e) => {
-                const btn = document.getElementById("mobileMenuBtn");
-                const nav = document.getElementById("mobileNav");
-                if (btn && nav && !btn.contains(e.target) && !nav.contains(e.target)) {
-                  nav.classList.remove("active");
-                }
-              });
-              
-              // Close menu when clicking nav items
-              const navItems = document.querySelectorAll("#mobileNav .nav-item");
-              navItems.forEach(item => {
-                item.addEventListener("click", () => {
-                  const nav = document.getElementById("mobileNav");
-                  if (nav) nav.classList.remove("active");
-                });
-              });
-            }
-          }
-          
-          // Initialize theme/dark mode toggle
-          if (typeof window.initTheme === 'function') {
-            window.initTheme();
-          } else {
-            // Fallback: initialize dark mode toggle directly
-            const darkModeSwitch = document.getElementById("dark-mode-switch");
-            if (darkModeSwitch) {
-              const savedTheme = localStorage.getItem("theme");
-              const isDark = savedTheme === "dark";
-              darkModeSwitch.checked = isDark;
-              
-              if (isDark) {
-                document.documentElement.classList.add("dark-mode");
-                document.body.classList.add("dark-mode");
-              }
-              
-              darkModeSwitch.addEventListener("change", function(e) {
-                const isDarkMode = e.target.checked;
-                if (isDarkMode) {
-                  document.documentElement.classList.add("dark-mode");
-                  document.body.classList.add("dark-mode");
-                  localStorage.setItem("theme", "dark");
-                } else {
-                  document.documentElement.classList.remove("dark-mode");
-                  document.body.classList.remove("dark-mode");
-                  localStorage.setItem("theme", "light");
-                }
-              });
-            }
-          }
-          
-          // Initialize profile sidebar after header loads
           if (typeof window.initProfileSidebar === 'function') {
             window.initProfileSidebar();
           }
-          // Also try to initialize profile button directly
-          const profileBtn = document.getElementById('profileBtn');
-          if (profileBtn && typeof window.openProfileSidebar === 'function') {
-            // Remove onclick attribute if present (we'll use event listeners)
-            profileBtn.removeAttribute('onclick');
-            profileBtn.setAttribute('type', 'button');
-            // Add event listener
-            profileBtn.addEventListener('click', function(e) {
-              e.preventDefault();
-              e.stopPropagation();
-              e.stopImmediatePropagation();
-              if (typeof window.openProfileSidebar === 'function') {
-                window.openProfileSidebar(e);
-              }
-              return false;
-            }, true);
-          }
-          
-          // Initialize header functions (search, cart, wishlist)
-          if (typeof window.initHeaderFunctions === 'function') {
-            window.initHeaderFunctions();
-          }
-          
-          // Update cart and wishlist counts
-          if (typeof window.updateCartCount === 'function') {
-            window.updateCartCount();
-          }
-          if (typeof window.updateWishlistCount === 'function') {
-            window.updateWishlistCount();
-          }
-          
           if (typeof window.highlightActiveMenuItem === 'function') {
             window.highlightActiveMenuItem();
           }
-        }, 100);
+        }, 50);
       }
     } else {
       console.warn(`Element with id "${elementId}" not found`);

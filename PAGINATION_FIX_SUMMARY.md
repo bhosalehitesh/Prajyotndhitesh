@@ -347,3 +347,4 @@ The pagination is now **clean, simple, and reliable**:
 The implementation follows best practices and should work reliably with any number of products.
 
 
+

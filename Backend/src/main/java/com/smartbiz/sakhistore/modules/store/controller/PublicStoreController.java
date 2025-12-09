@@ -11,6 +11,8 @@ import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.service.StoreDetailsService;
 import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.service.ProductService;
+import com.smartbiz.sakhistore.modules.category.model.Category;
+import com.smartbiz.sakhistore.modules.category.service.CategoryService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +26,9 @@ public class PublicStoreController {
     
     @Autowired
     private ProductService productService;
+    
+    @Autowired
+    private CategoryService categoryService;
 
     /**
      * Get store details by slug (public endpoint)
@@ -80,6 +85,42 @@ public class PublicStoreController {
         } catch (Exception e) {
             // Log error and return empty list instead of error
             System.err.println("Error fetching products for store slug: " + slug);
+            e.printStackTrace();
+            return ResponseEntity.ok(new java.util.ArrayList<>());
+        }
+    }
+
+    /**
+     * Get categories for a store by slug (public endpoint)
+     * Example: GET /api/public/store/brownn_boys/categories
+     */
+    @GetMapping("/{slug}/categories")
+    public ResponseEntity<?> getStoreCategories(@PathVariable String slug) {
+        try {
+            // Find store by slug
+            StoreDetails store = storeService.findBySlug(slug);
+            
+            // Check if store has a seller
+            if (store.getSeller() == null) {
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            // Get seller ID from store
+            Long sellerId = store.getSeller().getSellerId();
+            
+            if (sellerId == null) {
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            // Get categories by seller
+            List<Category> categories = categoryService.allCategories(sellerId);
+            
+            return ResponseEntity.ok(categories);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            // Log error and return empty list instead of error
+            System.err.println("Error fetching categories for store slug: " + slug);
             e.printStackTrace();
             return ResponseEntity.ok(new java.util.ArrayList<>());
         }

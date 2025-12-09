@@ -24,17 +24,32 @@ public class BusinessDetailsController {
 
     @Autowired
     private BusinessDetailsService businessDetailsService;
-    
+
     @Autowired
     private StoreDetailsService storeDetailsService;
     
     @Autowired
     private JwtService jwtService;
 
-    // ✅ Get all
+    // ✅ Get all (filtered by authenticated seller)
     @GetMapping("/allBusinessDetails")
-    public List<BusinessDetails> allBusinessDetails() {
-        return businessDetailsService.allBusinessDetails();
+    public List<BusinessDetails> allBusinessDetails(HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        return businessDetailsService.allBusinessDetails(sellerId);
+    }
+    
+    // Helper method to extract sellerId from JWT token
+    private Long extractSellerIdFromToken(HttpServletRequest httpRequest) {
+        try {
+            String authHeader = httpRequest.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                return jwtService.extractUserId(token);
+            }
+        } catch (Exception e) {
+            // If token extraction fails, return null (will return all business details for backward compatibility)
+        }
+        return null;
     }
 
 
@@ -113,16 +128,24 @@ public class BusinessDetailsController {
 
 
 
-    // ✅ Delete
-
+    // ✅ Delete (with seller verification)
     @DeleteMapping("/{id}")
-
-    public ResponseEntity<String> deleteBusinessDetails(@PathVariable Long id) {
+    public ResponseEntity<String> deleteBusinessDetails(@PathVariable Long id, HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        if (sellerId == null) {
+            return ResponseEntity.status(401).body("Authentication required. Please provide a valid JWT token.");
+        }
+        
+        // Verify business details belong to seller's store
+        BusinessDetails businessDetails = businessDetailsService.findById(id);
+        if (businessDetails.getStoreDetails() == null || 
+            businessDetails.getStoreDetails().getSeller() == null || 
+            !businessDetails.getStoreDetails().getSeller().getSellerId().equals(sellerId)) {
+            return ResponseEntity.status(403).body("You can only delete your own business details.");
+        }
 
         businessDetailsService.deleteBusinessDetails(id);
-
         return ResponseEntity.ok("✅ Business Details with ID " + id + " deleted successfully.");
-
     }
 
 }

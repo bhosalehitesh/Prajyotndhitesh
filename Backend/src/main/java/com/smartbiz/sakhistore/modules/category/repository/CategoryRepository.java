@@ -10,4 +10,8 @@ import java.util.List;
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findByBusinessCategoryContainingIgnoreCase(String businessCategory);
     List<Category> findByCategoryNameIgnoreCase(String categoryName);
+    
+    // Filter by seller
+    List<Category> findBySeller_SellerId(Long sellerId);
+    List<Category> findBySeller_SellerIdAndBusinessCategoryContainingIgnoreCase(Long sellerId, String businessCategory);
 }

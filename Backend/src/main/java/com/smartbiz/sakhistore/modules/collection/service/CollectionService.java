@@ -5,6 +5,8 @@ import com.smartbiz.sakhistore.modules.collection.model.collection;
 import com.smartbiz.sakhistore.modules.collection.repository.CollectionRepository;
 import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsRepo;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,9 @@ public class CollectionService {
     @Autowired
     private ProductRepository productRepository;
     
+    @Autowired
+    private SellerDetailsRepo sellerDetailsRepo;
+    
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -41,7 +46,8 @@ public class CollectionService {
             String seoTitleTag,
             String seoMetaDescription,
             List<MultipartFile> collectionImages,
-            MultipartFile socialSharingImage
+            MultipartFile socialSharingImage,
+            Long sellerId
     ) {
         try {
             List<String> collectionImageUrls = new ArrayList<>();
@@ -75,6 +81,13 @@ public class CollectionService {
             }
 
             newCollection.setSocialSharingImage(socialImageUrl);
+            
+            // ✅ Link collection to seller (prevent cross-seller visibility)
+            if (sellerId != null) {
+                SellerDetails seller = sellerDetailsRepo.findById(sellerId)
+                        .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
+                newCollection.setSeller(seller);
+            }
 
             // ✅ Save collection in DB
             return collectionRepository.save(newCollection);
@@ -85,12 +98,30 @@ public class CollectionService {
         }
     }
 
-    // ✅ Get all collections
+    // ✅ Get all collections (filtered by seller)
+    public List<collection> allCollections(Long sellerId) {
+        if (sellerId != null) {
+            return collectionRepository.findBySeller_SellerId(sellerId);
+        }
+        return collectionRepository.findAll();
+    }
+    
+    // ✅ Get all collections (backward compatibility - returns all, should be avoided)
     public List<collection> allCollections() {
         return collectionRepository.findAll();
     }
 
-    // ✅ Add / Edit Collection (Generic)
+    // ✅ Add / Edit Collection (with seller linking if sellerId provided)
+    public collection addCollection(collection col, Long sellerId) {
+        if (sellerId != null) {
+            SellerDetails seller = sellerDetailsRepo.findById(sellerId)
+                    .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
+            col.setSeller(seller);
+        }
+        return collectionRepository.save(col);
+    }
+    
+    // ✅ Add / Edit Collection (backward compatibility)
     public collection addCollection(collection col) {
         return collectionRepository.save(col);
     }
@@ -143,12 +174,28 @@ public class CollectionService {
         }
     }
 
-    // ✅ Get all collection names
+    // ✅ Get all collection names (filtered by seller)
+    public List<String> getAllCollectionNames(Long sellerId) {
+        if (sellerId != null) {
+            return collectionRepository.findAllDistinctCollectionNamesBySeller(sellerId);
+        }
+        return collectionRepository.findAllDistinctCollectionNames();
+    }
+    
+    // ✅ Get all collection names (backward compatibility)
     public List<String> getAllCollectionNames() {
         return collectionRepository.findAllDistinctCollectionNames();
     }
 
-    // ✅ Search by name
+    // ✅ Search by name (filtered by seller)
+    public List<collection> searchCollectionsByName(String name, Long sellerId) {
+        if (sellerId != null) {
+            return collectionRepository.findBySeller_SellerIdAndCollectionNameContainingIgnoreCase(sellerId, name);
+        }
+        return collectionRepository.findByCollectionNameContainingIgnoreCase(name);
+    }
+    
+    // ✅ Search by name (backward compatibility)
     public List<collection> searchCollectionsByName(String name) {
         return collectionRepository.findByCollectionNameContainingIgnoreCase(name);
     }

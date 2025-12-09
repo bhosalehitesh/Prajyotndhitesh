@@ -2,12 +2,14 @@ package com.smartbiz.sakhistore.modules.collection.controller;
 
 import com.smartbiz.sakhistore.modules.collection.model.collection;
 import com.smartbiz.sakhistore.modules.collection.service.CollectionService;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
         import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -18,6 +20,23 @@ public class CollectionController {
 
     @Autowired
     private CollectionService collectionService;
+    
+    @Autowired
+    private JwtService jwtService;
+    
+    // Helper method to extract sellerId from JWT token
+    private Long extractSellerIdFromToken(HttpServletRequest httpRequest) {
+        try {
+            String authHeader = httpRequest.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                return jwtService.extractUserId(token);
+            }
+        } catch (Exception e) {
+            // If token extraction fails, return null (will return all collections for backward compatibility)
+        }
+        return null;
+    }
 
     // Simple DTO for returning collections with product counts
     public static class CollectionWithCountDto {
@@ -29,10 +48,11 @@ public class CollectionController {
         public boolean hideFromWebsite;
     }
 
-    // ✅ Get all collections
+    // ✅ Get all collections (filtered by authenticated seller)
     @GetMapping("/all")
-    public List<collection> getAllCollections() {
-        return collectionService.allCollections();
+    public List<collection> getAllCollections(HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        return collectionService.allCollections(sellerId);
     }
 
     // ✅ Upload Collection with Images
@@ -43,11 +63,17 @@ public class CollectionController {
             @RequestParam(value = "seoTitleTag", required = false) String seoTitleTag,
             @RequestParam(value = "seoMetaDescription", required = false) String seoMetaDescription,
             @RequestParam(value = "collectionImages", required = false) List<MultipartFile> collectionImages,
-            @RequestParam(value = "socialSharingImage", required = false) MultipartFile socialSharingImage
+            @RequestParam(value = "socialSharingImage", required = false) MultipartFile socialSharingImage,
+            HttpServletRequest httpRequest
     ) {
         try {
+            Long sellerId = extractSellerIdFromToken(httpRequest);
+            if (sellerId == null) {
+                return ResponseEntity.status(401).body("Authentication required. Please provide a valid JWT token.");
+            }
+            
             collection col = collectionService.uploadCollectionWithImages(
-                    collectionName, description, seoTitleTag, seoMetaDescription, collectionImages, socialSharingImage
+                    collectionName, description, seoTitleTag, seoMetaDescription, collectionImages, socialSharingImage, sellerId
             );
             return ResponseEntity.ok(col);
         } catch (Exception e) {
@@ -57,8 +83,9 @@ public class CollectionController {
 
     // ✅ Add or Edit collection (via JSON)
     @PostMapping("/add")
-    public collection addCollection(@RequestBody collection col) {
-        return collectionService.addCollection(col);
+    public collection addCollection(@RequestBody collection col, HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        return collectionService.addCollection(col, sellerId);
     }
 
     // ✅ Get by ID
@@ -67,10 +94,21 @@ public class CollectionController {
         return collectionService.findById(id);
     }
 
-    // ✅ Delete collection
+    // ✅ Delete collection (with seller verification)
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable Long id, HttpServletRequest httpRequest) {
         try {
+            Long sellerId = extractSellerIdFromToken(httpRequest);
+            if (sellerId == null) {
+                return ResponseEntity.status(401).body("Authentication required. Please provide a valid JWT token.");
+            }
+            
+            // Verify collection belongs to seller
+            collection col = collectionService.findById(id);
+            if (col.getSeller() == null || !col.getSeller().getSellerId().equals(sellerId)) {
+                return ResponseEntity.status(403).body("You can only delete your own collections.");
+            }
+            
             System.out.println("========== DELETE COLLECTION REQUEST ==========");
             System.out.println("Collection ID: " + id);
             collectionService.deleteCollection(id);
@@ -89,16 +127,20 @@ public class CollectionController {
         }
     }
 
-    // ✅ Get all collection names
+    // ✅ Get all collection names (filtered by authenticated seller)
     @GetMapping("/names")
-    public ResponseEntity<List<String>> getAllCollectionNames() {
-        return ResponseEntity.ok(collectionService.getAllCollectionNames());
+    public ResponseEntity<List<String>> getAllCollectionNames(HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        return ResponseEntity.ok(collectionService.getAllCollectionNames(sellerId));
     }
 
-    // ✅ Search by name
+    // ✅ Search by name (filtered by authenticated seller)
     @GetMapping("/search")
-    public ResponseEntity<List<collection>> searchCollections(@RequestParam String name) {
-        return ResponseEntity.ok(collectionService.searchCollectionsByName(name));
+    public ResponseEntity<List<collection>> searchCollections(
+            @RequestParam String name,
+            HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        return ResponseEntity.ok(collectionService.searchCollectionsByName(name, sellerId));
     }
 
     // ✅ Set products for a collection (many-to-many mapping)
@@ -110,10 +152,11 @@ public class CollectionController {
         return ResponseEntity.ok(updated);
     }
 
-    // ✅ Get collections with product counts
+    // ✅ Get collections with product counts (filtered by authenticated seller)
     @GetMapping("/with-counts")
-    public ResponseEntity<List<CollectionWithCountDto>> getCollectionsWithCounts() {
-        List<collection> cols = collectionService.allCollections();
+    public ResponseEntity<List<CollectionWithCountDto>> getCollectionsWithCounts(HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        List<collection> cols = collectionService.allCollections(sellerId);
         List<CollectionWithCountDto> result = cols.stream().map(c -> {
             CollectionWithCountDto dto = new CollectionWithCountDto();
             dto.collectionId = c.getCollectionId();

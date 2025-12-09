@@ -30,7 +30,7 @@ public class StoreAddressController {
 
     @Autowired
     private StoreAddressService storeAddressService;
-    
+
     @Autowired
     private StoreDetailsService storeDetailsService;
     
@@ -39,14 +39,25 @@ public class StoreAddressController {
 
 
 
-    // Get all store addresses
-
+    // Get all store addresses (filtered by authenticated seller)
     @GetMapping("/allAddresses")
-
-    public List<StoreAddress> allAddresses() {
-
-        return storeAddressService.allAddresses();
-
+    public List<StoreAddress> allAddresses(HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        return storeAddressService.allAddresses(sellerId);
+    }
+    
+    // Helper method to extract sellerId from JWT token
+    private Long extractSellerIdFromToken(HttpServletRequest httpRequest) {
+        try {
+            String authHeader = httpRequest.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                return jwtService.extractUserId(token);
+            }
+        } catch (Exception e) {
+            // If token extraction fails, return null (will return all addresses for backward compatibility)
+        }
+        return null;
     }
 
 
@@ -121,16 +132,24 @@ public class StoreAddressController {
 
 
 
-    // Delete store address
-
+    // Delete store address (with seller verification)
     @DeleteMapping("/{id}")
-
-    public ResponseEntity<String> deleteAddress(@PathVariable Long id) {
+    public ResponseEntity<String> deleteAddress(@PathVariable Long id, HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        if (sellerId == null) {
+            return ResponseEntity.status(401).body("Authentication required. Please provide a valid JWT token.");
+        }
+        
+        // Verify address belongs to seller's store
+        StoreAddress address = storeAddressService.findById(id);
+        if (address.getStoreDetails() == null || 
+            address.getStoreDetails().getSeller() == null || 
+            !address.getStoreDetails().getSeller().getSellerId().equals(sellerId)) {
+            return ResponseEntity.status(403).body("You can only delete your own store addresses.");
+        }
 
         storeAddressService.deleteAddress(id);
-
         return ResponseEntity.ok("✅ Store Address with ID " + id + " deleted successfully.");
-
     }
 
 }

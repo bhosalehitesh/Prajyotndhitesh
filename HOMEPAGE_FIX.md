@@ -175,3 +175,4 @@ If the browser still opens `store.html`:
 🎯 **The homepage (`index.html`) is now the default landing page, matching the template design!**
 
 
+

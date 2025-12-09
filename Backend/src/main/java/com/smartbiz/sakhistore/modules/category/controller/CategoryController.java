@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.category.service.CategoryService;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
+import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,11 +21,29 @@ public class CategoryController {
 
     @Autowired
     public CategoryService categoryService;
+    
+    @Autowired
+    private JwtService jwtService;
 
-    // ✅ Get all categories
+    // ✅ Get all categories (filtered by authenticated seller)
     @GetMapping("/allCategory")
-    public List<Category> allCategories() {
-        return categoryService.allCategories();
+    public List<Category> allCategories(HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        return categoryService.allCategories(sellerId);
+    }
+    
+    // Helper method to extract sellerId from JWT token
+    private Long extractSellerIdFromToken(HttpServletRequest httpRequest) {
+        try {
+            String authHeader = httpRequest.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                return jwtService.extractUserId(token);
+            }
+        } catch (Exception e) {
+            // If token extraction fails, return null (will return all categories for backward compatibility)
+        }
+        return null;
     }
 
     // ✅ Upload category with multiple images (category + social)
@@ -35,13 +55,19 @@ public class CategoryController {
             @RequestParam("seoTitleTag") String seoTitleTag,
             @RequestParam("seoMetaDescription") String seoMetaDescription,
             @RequestParam(value = "categoryImages", required = false) List<MultipartFile> categoryImages,
-            @RequestParam(value = "socialSharingImage", required = false) MultipartFile socialSharingImage
+            @RequestParam(value = "socialSharingImage", required = false) MultipartFile socialSharingImage,
+            HttpServletRequest httpRequest
     ) {
         try {
+            Long sellerId = extractSellerIdFromToken(httpRequest);
+            if (sellerId == null) {
+                return ResponseEntity.status(401).body("Authentication required. Please provide a valid JWT token.");
+            }
+            
             Category category = categoryService.uploadCategoryWithImages(
                     categoryName, businessCategory, description,
                     seoTitleTag, seoMetaDescription,
-                    categoryImages, socialSharingImage
+                    categoryImages, socialSharingImage, sellerId
             );
             return ResponseEntity.ok(category);
         } catch (Exception e) {
@@ -51,8 +77,9 @@ public class CategoryController {
 
     // ✅ Add category (normal POST)
     @PostMapping("/addCategory")
-    public Category addCategory(Category category) {
-        return categoryService.addCategory(category);
+    public Category addCategory(Category category, HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        return categoryService.addCategory(category, sellerId);
     }
 
     // ✅ Edit category
@@ -67,17 +94,31 @@ public class CategoryController {
         return categoryService.findById(category_id);
     }
 
-    // ✅ Delete category
+    // ✅ Delete category (with seller verification)
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteCategory(@PathVariable Long id) {
+    public ResponseEntity<String> deleteCategory(@PathVariable Long id, HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        if (sellerId == null) {
+            return ResponseEntity.status(401).body("Authentication required. Please provide a valid JWT token.");
+        }
+        
+        // Verify category belongs to seller
+        Category category = categoryService.findById(id);
+        if (category.getSeller() == null || !category.getSeller().getSellerId().equals(sellerId)) {
+            return ResponseEntity.status(403).body("You can only delete your own categories.");
+        }
+        
         categoryService.deleteCategory(id);
         return ResponseEntity.ok("✅ Category with ID " + id + " deleted successfully.");
     }
 
-    // ✅ Find categories by business category
+    // ✅ Find categories by business category (filtered by authenticated seller)
     @GetMapping("/FindByBusinessCategory")
-    public ResponseEntity<List<Category>> searchCategories(@RequestParam String businessCategory) {
-        List<Category> categories = categoryService.searchCategoriesByBusiness(businessCategory);
+    public ResponseEntity<List<Category>> searchCategories(
+            @RequestParam String businessCategory,
+            HttpServletRequest httpRequest) {
+        Long sellerId = extractSellerIdFromToken(httpRequest);
+        List<Category> categories = categoryService.searchCategoriesByBusiness(businessCategory, sellerId);
         return ResponseEntity.ok(categories);
     }
 }

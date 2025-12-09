@@ -345,69 +345,16 @@
       };
     }
 
-    async function filterAndDisplayProducts() {
-      if (!category) {
-        grid.innerHTML = "<p style='text-align:center;padding:40px;color:var(--text-color);'>No category specified.</p>";
+    function filterAndDisplayProducts() {
+      if (!category || !products[category]) {
+          grid.innerHTML = "<p style='text-align:center;padding:40px;color:var(--text-color);'>No products found for this category.</p>";
         return;
       }
 
       title.textContent = category;
-      
-      // Show loading state
-      grid.innerHTML = "<p style='text-align:center;padding:40px;color:var(--text-color);'>Loading products...</p>";
 
-      // Try fetching from backend API first
-      let fetched = [];
-      try {
-        if (window.API && typeof window.API.getProductsByCategory === 'function') {
-          console.log('Fetching products for category:', category);
-          fetched = await window.API.getProductsByCategory(category);
-          console.log('Products fetched from API:', fetched);
-        } else if (typeof fetchProductsByCategory === 'function') {
-          // Fallback to app.js function
-          fetched = await fetchProductsByCategory(category);
-        }
-      } catch (e) {
-        console.warn('Error fetching products by category, falling back to local:', e);
-        fetched = null;
-      }
-
-      // Normalize products: convert API format to display format
-      let allProducts = [];
-      if (fetched && Array.isArray(fetched) && fetched.length > 0) {
-        allProducts = fetched.map(p => ({
-          id: p.productId || p.id,
-          name: p.productName || p.name || 'Unknown Product',
-          image: (p.productImages && p.productImages[0]) || p.image || p.imageUrl || '../assets/products/p1.jpg',
-          price: p.sellingPrice ?? p.price ?? 0,
-          mrp: p.mrp || p.originalPrice || p.price || 0,
-          color: p.color || p.colour || p.variantColor || 'N/A',
-          size: p.size || p.availableSize || 'N/A',
-          brand: p.brand || 'V Store',
-          raw: p
-        }));
-      } else if (products[category]) {
-        // Fallback to hardcoded data if API fails
-        console.warn('Using fallback hardcoded data for category:', category);
-        allProducts = products[category].map(p => ({
-          name: p.name,
-          image: p.image,
-          price: p.price,
-          mrp: p.price,
-          color: p.color || 'N/A',
-          size: p.size || 'N/A',
-          brand: 'V Store'
-        }));
-      }
-
-      if (allProducts.length === 0) {
-        grid.innerHTML = "<p style='text-align:center;padding:40px;color:var(--text-color);'>No products found for this category.</p>";
-        return;
-      }
-
-      // Apply filters
+      let filtered = [...products[category]];
       const { color, size, sort } = getFilters();
-      let filtered = [...allProducts];
 
       if (color !== "all") {
         filtered = filtered.filter(p => p.color === color);
@@ -455,37 +402,22 @@
         </button>`;
       }
 
-      grid.innerHTML = filtered.map(product => {
-        const productId = product.id || '';
-        const productUrl = `product-detail.html?id=${productId}${productId ? '' : '&name=' + encodeURIComponent(product.name)}`;
-        const discount = product.mrp > product.price ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
-        
-        const isBestseller = product.isBestseller || product.raw?.isBestseller || false;
-        
-        return `
+      grid.innerHTML = filtered.map(product => `
           <div class="ecommerce-product-card">
-            <a href="${productUrl}" style="text-decoration: none; color: inherit;">
-              <div class="product-image-wrapper" style="position: relative;">
-                ${isBestseller ? `<span class="bestseller-badge" style="position: absolute; top: 8px; left: 8px; background: #FFD700; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; z-index: 2;">Bestseller</span>` : ''}
-                <img src="${product.image}" alt="${product.name}" onerror="this.src='../assets/products/p1.jpg'" />
-                ${discount > 0 ? `<span class="discount-badge">${discount}% OFF</span>` : ''}
-              </div>
-            </a>
+          <img src="${product.image}" alt="${product.name}" />
             <div class="product-info">
-              <div class="product-brand">${product.brand || 'V Store'}</div>
+              <div class="product-brand">V Store</div>
               <div class="product-name">${product.name}</div>
               <div class="product-price">
                 <span class="current-price">₹${product.price}</span>
-                ${product.mrp > product.price ? `<span class="original-price">₹${product.mrp}</span>` : ''}
               </div>
               <div style="display: flex; gap: 8px; margin-top: 12px;">
-                <button class="add-to-cart-btn" data-name="${product.name}" data-price="${product.price}" data-id="${productId}" style="flex: 1;">Add to Cart</button>
+                <button class="add-to-cart-btn" data-name="${product.name}" data-price="${product.price}" style="flex: 1;">Add to Cart</button>
                 ${getWishlistButtonHTML(product)}
               </div>
             </div>
-          </div>
-        `;
-      }).join("");
+        </div>
+      `).join("");
     }
 
     // Helper function to update wishlist button icon
@@ -591,25 +523,15 @@
     window.isProductInWishlist = isProductInWishlist;
     window.updateWishlistButtonIcon = updateWishlistButtonIcon;
 
-    // Wait for API to load, then fetch products
     if (category) {
-      // Wait for API to be ready
-      const checkAndLoad = () => {
-        if (window.API && typeof window.API.getProductsByCategory === 'function') {
-          filterAndDisplayProducts();
-        } else {
-          // Retry after a short delay
-          setTimeout(checkAndLoad, 200);
-        }
-      };
-      checkAndLoad();
+      filterAndDisplayProducts();
     }
 
     document.getElementById("colorFilter").addEventListener("change", filterAndDisplayProducts);
     document.getElementById("sizeFilter").addEventListener("change", filterAndDisplayProducts);
     document.getElementById("sortSelect").addEventListener("change", filterAndDisplayProducts);
   </script>
-    <!-- API Configuration and Integration -->
+    <!-- API Integration - Must load before app.js -->
     <script src="../js/config.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/app.js"></script>

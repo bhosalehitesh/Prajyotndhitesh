@@ -3911,26 +3911,6 @@ body.dark-mode .autocomplete-item:hover {
   color: #fff;
 }
 
-/* Bestseller badge styling */
-.bestseller-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: #FFD700;
-  color: #000;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.product-image-wrapper {
-  position: relative;
-  overflow: hidden;
-}
-
 .product-badge.hot {
   background: #f44336;
   color: #fff;

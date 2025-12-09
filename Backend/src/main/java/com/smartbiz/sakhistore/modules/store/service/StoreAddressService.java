@@ -43,12 +43,17 @@ public class StoreAddressService {
 
 
 
-    // ✅ Get all store addresses
-
-    public List<StoreAddress> allAddresses() {
-
+    // ✅ Get all store addresses (filtered by seller)
+    public List<StoreAddress> allAddresses(Long sellerId) {
+        if (sellerId != null) {
+            return storeAddressRepository.findByStoreDetails_Seller_SellerId(sellerId);
+        }
         return storeAddressRepository.findAll();
-
+    }
+    
+    // ✅ Get all store addresses (backward compatibility - returns all, should be avoided)
+    public List<StoreAddress> allAddresses() {
+        return storeAddressRepository.findAll();
     }
 
 

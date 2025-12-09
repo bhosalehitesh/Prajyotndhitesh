@@ -43,12 +43,17 @@ public class BusinessDetailsService {
 
 
 
-    // ✅ Get all business details
-
-    public List<BusinessDetails> allBusinessDetails() {
-
+    // ✅ Get all business details (filtered by seller)
+    public List<BusinessDetails> allBusinessDetails(Long sellerId) {
+        if (sellerId != null) {
+            return businessDetailsRepository.findByStoreDetails_Seller_SellerId(sellerId);
+        }
         return businessDetailsRepository.findAll();
-
+    }
+    
+    // ✅ Get all business details (backward compatibility - returns all, should be avoided)
+    public List<BusinessDetails> allBusinessDetails() {
+        return businessDetailsRepository.findAll();
     }
 
 

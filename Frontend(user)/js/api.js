@@ -179,6 +179,27 @@
   }
 
   /**
+   * Get categories for a store by slug (public endpoint)
+   * @param {String} slug - Store slug
+   */
+  async function getStoreCategoriesBySlug(slug) {
+    try {
+      console.log('Fetching categories for store slug:', slug);
+      const result = await apiCall(`/api/public/store/${slug}/categories`);
+      console.log('Categories API response:', result);
+      if (Array.isArray(result)) {
+        console.log(`Found ${result.length} categories for store ${slug}`);
+        return result;
+      }
+      console.warn('API returned non-array result:', result);
+      return [];
+    } catch (error) {
+      console.error('Error in getStoreCategoriesBySlug:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get category by ID
    */
   async function getCategoryById(categoryId) {
@@ -219,6 +240,43 @@
       return filtered;
     } catch (error) {
       console.error('Error fetching products by category:', error);
+      return [];
+    }
+  }
+
+  // ====== COLLECTION APIs ======
+  
+  /**
+   * Get all collections
+   */
+  async function getAllCollections() {
+    return await apiCall('/api/collection/allCollection');
+  }
+
+  /**
+   * Get collection by ID
+   */
+  async function getCollectionById(collectionId) {
+    return await apiCall(`/api/collection/${collectionId}`);
+  }
+
+  /**
+   * Get products by collection name
+   */
+  async function getProductsByCollection(collectionName) {
+    try {
+      const collections = await getAllCollections();
+      const collection = collections.find(c => 
+        c.collectionName && c.collectionName.toLowerCase().includes(collectionName.toLowerCase())
+      );
+      
+      if (collection && collection.products) {
+        return Array.isArray(collection.products) ? collection.products : [];
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error fetching products by collection:', error);
       return [];
     }
   }
@@ -302,12 +360,6 @@
     getAllProducts,
     getProductsBySeller,
     getAllProductsBySeller,
-    
-    // Order APIs
-    placeOrder,
-    getOrderById,
-    getUserOrders,
-    getSellerOrders,
     getProductById,
     searchProductsByName,
     
@@ -316,11 +368,18 @@
     getCategoryById,
     getCategoriesByBusiness,
     getProductsByCategory,
+    getStoreCategoriesBySlug,
+    
+    // Collection APIs
+    getAllCollections,
+    getCollectionById,
+    getProductsByCollection,
     
     // Order APIs
     placeOrder,
     getOrderById,
     getUserOrders,
+    getSellerOrders,
     
     // User APIs
     sendOTP,

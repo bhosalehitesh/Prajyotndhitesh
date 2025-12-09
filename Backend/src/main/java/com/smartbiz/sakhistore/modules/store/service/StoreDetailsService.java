@@ -49,12 +49,17 @@ public class StoreDetailsService {
 
 
 
-    // ✅ Get all stores
-
-    public List<StoreDetails> allStores() {
-
+    // ✅ Get all stores (filtered by seller)
+    public List<StoreDetails> allStores(Long sellerId) {
+        if (sellerId != null) {
+            return storeRepository.findBySeller_SellerId(sellerId);
+        }
         return storeRepository.findAll();
-
+    }
+    
+    // ✅ Get all stores (backward compatibility - returns all, should be avoided)
+    public List<StoreDetails> allStores() {
+        return storeRepository.findAll();
     }
 
 
