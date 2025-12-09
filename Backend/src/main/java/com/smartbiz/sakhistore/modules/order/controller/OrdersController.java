@@ -60,4 +60,14 @@ public class OrdersController {
     ) {
         return ordersService.updateOrderStatus(id, status);
     }
+
+    // ===============================
+    // Get Orders by Seller ID
+    // Returns all orders containing products from this seller
+    // Includes customer information (user details)
+    // ===============================
+    @GetMapping("/seller/{sellerId}")
+    public List<Orders> getSellerOrders(@PathVariable Long sellerId) {
+        return ordersService.getOrdersBySellerId(sellerId);
+    }
 }

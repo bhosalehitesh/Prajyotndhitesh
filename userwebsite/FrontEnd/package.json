@@ -4,7 +4,7 @@
   "description": "Sakhi Store Frontend",
   "main": "index.html",
   "scripts": {
-    "start": "npx http-server . -p 3000 -o",
+    "start": "npx http-server . -p 3000 -o index.html",
     "dev": "npx live-server --port=3000 --open=/index.html"
   },
   "keywords": [],

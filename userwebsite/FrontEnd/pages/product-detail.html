@@ -1636,10 +1636,18 @@
   <script src="../js/load-components.js"></script>
   <script src="../js/app.js"></script>
   <script>
-    // Get product data from URL parameters
+    // Global product data variable
+    let currentProductData = null;
+
+    // Get product data from URL parameters (fallback for old links)
     function getProductFromURL() {
+      if (currentProductData) {
+        return currentProductData;
+      }
+      
       const params = new URLSearchParams(window.location.search);
       const productData = {
+        productId: params.get('productId') || params.get('id'),
         name: params.get('name') || "Men's Pure Cotton T-Shirt",
         price: parseInt(params.get('price')) || 476,
         originalPrice: parseInt(params.get('originalPrice')) || 1499,
@@ -1649,27 +1657,99 @@
       return productData;
     }
 
-      // Update page with product data
-      function loadProductData() {
-        const product = getProductFromURL();
-        document.getElementById('productTitle').textContent = product.name;
-        document.getElementById('currentPrice').textContent = '₹' + product.price;
-        document.getElementById('originalPrice').textContent = '₹' + product.originalPrice.toLocaleString();
+    // Load product data from backend API
+    async function loadProductFromAPI(productId) {
+      if (!productId || !window.API) {
+        console.warn('ProductId or API not available, using URL parameters');
+        return null;
+      }
+
+      try {
+        console.log('Fetching product data for productId:', productId);
+        const product = await window.API.getProductById(productId);
         
-        const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
-        document.getElementById('discountBadge').textContent = discount + '% OFF';
-        
-        document.getElementById('mainProductImage').src = product.image;
-        document.querySelectorAll('.thumbnail').forEach((thumb, index) => {
-          if (index === 0) thumb.src = product.image;
-        });
-        
-        // Update breadcrumb
-        const breadcrumbName = document.getElementById('breadcrumbProductName');
-        if (breadcrumbName) {
-          breadcrumbName.textContent = product.name;
+        if (product) {
+          // Map backend product data to frontend format
+          currentProductData = {
+            productId: product.productId || product.id,
+            name: product.productName || product.name,
+            price: product.sellingPrice || product.price,
+            originalPrice: product.mrp || product.originalPrice || product.sellingPrice,
+            image: product.imageUrl || product.image || '../assets/products/p1.jpg',
+            brand: product.brand || 'V Store',
+            description: product.description || product.productDescription || '',
+            category: product.productCategory || product.category,
+            stock: product.stock || product.quantity || 0,
+            sellerId: product.sellerId
+          };
+          
+          console.log('Product data loaded from API:', currentProductData);
+          return currentProductData;
+        }
+      } catch (error) {
+        console.error('Error loading product from API:', error);
+        return null;
+      }
+    }
+
+    // Update page with product data
+    async function loadProductData() {
+      const params = new URLSearchParams(window.location.search);
+      const productId = params.get('productId') || params.get('id');
+      
+      // Try to load from API first if productId is available
+      if (productId) {
+        const apiProduct = await loadProductFromAPI(productId);
+        if (apiProduct) {
+          currentProductData = apiProduct;
         }
       }
+      
+      // Get product data (from API or URL parameters)
+      const product = getProductFromURL();
+      
+      // Update page elements
+      if (document.getElementById('productTitle')) {
+        document.getElementById('productTitle').textContent = product.name;
+      }
+      
+      if (document.getElementById('currentPrice')) {
+        document.getElementById('currentPrice').textContent = '₹' + product.price.toLocaleString();
+      }
+      
+      if (document.getElementById('originalPrice')) {
+        document.getElementById('originalPrice').textContent = '₹' + (product.originalPrice || product.price).toLocaleString();
+      }
+      
+      if (document.getElementById('discountBadge') && product.originalPrice && product.originalPrice > product.price) {
+        const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+        document.getElementById('discountBadge').textContent = discount + '% OFF';
+      }
+      
+      if (document.getElementById('mainProductImage')) {
+        document.getElementById('mainProductImage').src = product.image;
+      }
+      
+      document.querySelectorAll('.thumbnail').forEach((thumb, index) => {
+        if (index === 0) thumb.src = product.image;
+      });
+      
+      // Update breadcrumb
+      const breadcrumbName = document.getElementById('breadcrumbProductName');
+      if (breadcrumbName) {
+        breadcrumbName.textContent = product.name;
+      }
+      
+      // Update product description if available
+      if (product.description && document.getElementById('productDescription')) {
+        document.getElementById('productDescription').textContent = product.description;
+      }
+      
+      // Update stock indicator
+      if (product.stock !== undefined) {
+        updateStockIndicator(product);
+      }
+    }
 
     // Change main image
     function changeMainImage(src) {

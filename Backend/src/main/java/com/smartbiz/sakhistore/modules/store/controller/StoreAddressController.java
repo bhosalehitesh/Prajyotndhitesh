@@ -6,11 +6,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
-
 import com.smartbiz.sakhistore.modules.store.dto.StoreAddressRequest;
 import com.smartbiz.sakhistore.modules.store.model.StoreAddress;
 import com.smartbiz.sakhistore.modules.store.service.StoreAddressService;
+import com.smartbiz.sakhistore.modules.store.service.StoreDetailsService;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,8 +29,13 @@ public class StoreAddressController {
 
 
     @Autowired
-
     private StoreAddressService storeAddressService;
+    
+    @Autowired
+    private StoreDetailsService storeDetailsService;
+    
+    @Autowired
+    private JwtService jwtService;
 
 
 
@@ -45,22 +52,41 @@ public class StoreAddressController {
 
 
     // Add new store address (accepts DTO with storeId directly)
+    // Automatically links to current seller's store if storeId not provided
     @PostMapping("/addAddress")
-    public StoreAddress addAddress(@RequestBody StoreAddressRequest request) {
-        // Use the DTO method which handles storeId directly
-        if (request.getStoreId() != null) {
-            return storeAddressService.addAddressFromRequest(request);
+    public StoreAddress addAddress(
+            @RequestBody StoreAddressRequest request,
+            HttpServletRequest httpRequest) {
+        
+        // If storeId is not provided, automatically get it from authenticated seller's store
+        if (request.getStoreId() == null) {
+            try {
+                // Extract sellerId from JWT token
+                String authHeader = httpRequest.getHeader("Authorization");
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    String token = authHeader.substring(7);
+                    Long sellerId = jwtService.extractUserId(token);
+                    
+                    // Find store for this seller
+                    try {
+                        Long storeId = storeDetailsService.findBySellerId(sellerId).getStoreId();
+                        request.setStoreId(storeId);
+                    } catch (Exception e) {
+                        throw new IllegalArgumentException("No store found for the current seller. Please create a store first.");
+                    }
+                } else {
+                    throw new IllegalArgumentException("Authentication required. Please provide a valid JWT token.");
+                }
+            } catch (Exception e) {
+                if (e instanceof IllegalArgumentException) {
+                    throw e;
+                }
+                throw new IllegalArgumentException("Unable to determine store. Please provide storeId or ensure you are authenticated and have a store.");
+            }
         }
         
-        // Fallback: create StoreAddress without storeId
-        StoreAddress address = new StoreAddress();
-        address.setShopNoBuildingCompanyApartment(request.getShopNoBuildingCompanyApartment());
-        address.setAreaStreetSectorVillage(request.getAreaStreetSectorVillage());
-        address.setLandmark(request.getLandmark());
-        address.setPincode(request.getPincode());
-        address.setTownCity(request.getTownCity());
-        address.setState(request.getState());
-        return storeAddressService.addAddress(address);
+        // Use the DTO method which handles storeId directly
+        return storeAddressService.addAddressFromRequest(request);
     }
     
     // Add new store address (backward compatibility - accepts StoreAddress entity)

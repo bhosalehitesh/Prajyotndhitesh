@@ -2,6 +2,8 @@ package com.smartbiz.sakhistore.modules.product.repository;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +16,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // All products for a specific seller
     List<Product> findBySeller_SellerId(Long sellerId);
+    
+    // Paginated products for a specific seller
+    Page<Product> findBySeller_SellerId(Long sellerId, Pageable pageable);
+    
+    // Optimized query with JOIN FETCH to avoid N+1 queries
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.seller " +
+           "LEFT JOIN FETCH p.category " +
+           "WHERE p.seller.sellerId = :sellerId " +
+           "ORDER BY p.createdAt DESC")
+    Page<Product> findBySeller_SellerIdWithRelations(@Param("sellerId") Long sellerId, Pageable pageable);
 
     // Count products in a specific collection
     long countByCollections_CollectionId(Long collectionId);

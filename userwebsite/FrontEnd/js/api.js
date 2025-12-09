@@ -5,7 +5,18 @@
   'use strict';
 
   // Ensure config.js is loaded first
-  const API_BASE = window.API_BASE || 'http://192.168.1.38:8080';
+  // Dynamic backend URL detection - use localhost for local development
+  const getBackendUrl = () => {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:8080';
+    }
+    // For network IPs, use the same hostname with port 8080
+    return `${protocol}//${hostname}:8080`;
+  };
+  
+  const API_BASE = window.API_BASE || getBackendUrl();
 
   // ====== API HELPER FUNCTIONS ======
   
@@ -63,10 +74,47 @@
   }
 
   /**
-   * Get store details by slug
+   * Get store details by slug (public endpoint)
    */
   async function getStoreBySlug(slug) {
-    return await apiCall(`/api/stores/slug/${slug}`);
+    // Try public endpoint first, fallback to old endpoint
+    try {
+      console.log('Calling API: /api/public/store/' + slug);
+      const result = await apiCall(`/api/public/store/${slug}`);
+      console.log('API response:', result);
+      return result;
+    } catch (e) {
+      console.warn('Public endpoint failed, trying fallback:', e);
+      // Fallback to old endpoint for backward compatibility
+      try {
+        return await apiCall(`/api/stores/slug/${slug}`);
+      } catch (e2) {
+        console.error('Both endpoints failed:', e2);
+        throw e2;
+      }
+    }
+  }
+  
+  /**
+   * Get products for a store by slug (public endpoint)
+   * @param {String} slug - Store slug
+   * @param {String} [category] - Optional category filter
+   */
+  async function getStoreProductsBySlug(slug, category = null) {
+    let endpoint = `/api/public/store/${slug}/products`;
+    if (category) {
+      endpoint += `?category=${encodeURIComponent(category)}`;
+    }
+    try {
+      const result = await apiCall(endpoint);
+      console.log('API call result:', result);
+      // Ensure we return an array
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error('Error in getStoreProductsBySlug:', error);
+      // Return empty array on error instead of throwing
+      return [];
+    }
   }
 
   /**
@@ -89,9 +137,9 @@
    * Get products by seller ID
    * @param {Number} sellerId - Seller ID
    * @param {Number} page - Page number (0-indexed, default: 0)
-   * @param {Number} size - Page size (default: 20)
+   * @param {Number} size - Page size (default: 8)
    */
-  async function getProductsBySeller(sellerId, page = 0, size = 20) {
+  async function getProductsBySeller(sellerId, page = 0, size = 8) {
     const params = new URLSearchParams({
       sellerId: sellerId,
       page: page,
@@ -144,6 +192,37 @@
     return await apiCall(`/api/category/FindByBusinessCategory?businessCategory=${encodeURIComponent(businessCategory)}`);
   }
 
+  /**
+   * Get products by category name
+   * Searches products by productCategory or businessCategory
+   */
+  async function getProductsByCategory(categoryName) {
+    try {
+      // First try to get all products and filter by category
+      const allProducts = await getAllProducts();
+      if (!Array.isArray(allProducts)) {
+        return [];
+      }
+      
+      // Filter products by category name (case-insensitive)
+      const categoryLower = categoryName.toLowerCase();
+      const filtered = allProducts.filter(p => {
+        const productCategory = (p.productCategory || '').toLowerCase();
+        const businessCategory = (p.businessCategory || '').toLowerCase();
+        const categoryName = (p.category?.categoryName || '').toLowerCase();
+        
+        return productCategory.includes(categoryLower) || 
+               businessCategory.includes(categoryLower) ||
+               categoryName.includes(categoryLower);
+      });
+      
+      return filtered;
+    } catch (error) {
+      console.error('Error fetching products by category:', error);
+      return [];
+    }
+  }
+
   // ====== ORDER APIs ======
   
   /**
@@ -178,6 +257,15 @@
     return await apiCall(`/orders/user/${userId}`);
   }
 
+  /**
+   * Get orders for a seller
+   * @param {Number} sellerId - Seller ID
+   * @returns {Promise<Array>} List of orders containing products from this seller
+   */
+  async function getSellerOrders(sellerId) {
+    return await apiCall(`/orders/seller/${sellerId}`);
+  }
+
   // ====== USER/CUSTOMER APIs ======
   
   /**
@@ -207,12 +295,19 @@
     getStoreById,
     getStoreBySellerId,
     getStoreBySlug,
+    getStoreProductsBySlug,
     getAllStores,
     
     // Product APIs
     getAllProducts,
     getProductsBySeller,
     getAllProductsBySeller,
+    
+    // Order APIs
+    placeOrder,
+    getOrderById,
+    getUserOrders,
+    getSellerOrders,
     getProductById,
     searchProductsByName,
     
@@ -220,6 +315,7 @@
     getAllCategories,
     getCategoryById,
     getCategoriesByBusiness,
+    getProductsByCategory,
     
     // Order APIs
     placeOrder,

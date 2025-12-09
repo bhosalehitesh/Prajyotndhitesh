@@ -118,4 +118,10 @@ public class StoreDetailsController {
         storeService.deleteStore(id);
         return ResponseEntity.ok("✅ Store with ID " + id + " deleted successfully.");
     }
+    
+    // Get store by slug (for public access)
+    @GetMapping("/slug/{slug}")
+    public StoreDetails getStoreBySlug(@PathVariable String slug) {
+        return storeService.findBySlug(slug);
+    }
 }

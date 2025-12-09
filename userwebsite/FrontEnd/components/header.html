@@ -7,9 +7,9 @@
       </div>
       <div class="divider"></div>
       <nav class="main-nav" aria-label="Main">
-        <a href="categories.html" class="nav-item">Categories</a>
-        <a href="featured.html" class="nav-item">Featured</a>
-        <a href="products.html" class="nav-item">Products</a>
+        <a href="pages/categories.html" class="nav-item">Categories</a>
+        <a href="pages/featured.html" class="nav-item">Featured</a>
+        <a href="pages/products.html" class="nav-item">Products</a>
       </nav>
       <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Menu">☰</button>
     </div>
@@ -60,7 +60,7 @@
         <span class="cart-count" id="cartCount">0</span>
       </button>
       <!-- Profile Button -->
-      <button class="icon-btn" id="profileBtn" title="Profile" onclick="openProfileSidebar()">
+      <button class="icon-btn" id="profileBtn" title="Profile" type="button">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
           <circle cx="12" cy="7" r="4"></circle>
@@ -86,6 +86,10 @@
       <h2 class="login-title">Welcome Back</h2>
       <p class="login-subtitle">Login or create an account</p>
       <form class="login-form" id="loginPhoneForm">
+        <div class="form-group">
+          <label for="loginName">Full Name</label>
+          <input type="text" id="loginName" placeholder="Enter your full name" required minlength="2" maxlength="100" autocomplete="name">
+        </div>
         <div class="form-group">
           <label for="loginPhone">Phone Number</label>
           <input type="tel" id="loginPhone" placeholder="Enter 10-digit phone number" required pattern="[0-9]{10}" maxlength="10" autocomplete="tel">
@@ -216,11 +220,11 @@
 
 <!-- Mobile Navigation -->
 <nav class="mobile-nav" id="mobileNav">
-  <a href="categories.html" class="nav-item">Categories</a>
-  <a href="featured.html" class="nav-item">Featured</a>
-  <a href="products.html" class="nav-item">Products</a>
-  <a href="cart.html" class="nav-item">Cart</a>
-  <a href="login.html" class="nav-item">Login</a>
+  <a href="pages/categories.html" class="nav-item">Categories</a>
+  <a href="pages/featured.html" class="nav-item">Featured</a>
+  <a href="pages/products.html" class="nav-item">Products</a>
+  <a href="pages/cart.html" class="nav-item">Cart</a>
+  <a href="pages/login.html" class="nav-item">Login</a>
 </nav>
 
 <!-- Search Modal -->

@@ -508,30 +508,30 @@
       
       // Fallback: Save to localStorage if API not available or failed
       if (!orderPlaced) {
-        const order = {
-          id: 'ORD' + Date.now(),
-          date: new Date().toLocaleDateString(),
-          items: cart,
-          total: total,
+      const order = {
+        id: 'ORD' + Date.now(),
+        date: new Date().toLocaleDateString(),
+        items: cart,
+        total: total,
           status: 'pending',
-          paymentMethod: selectedPaymentMethod,
+        paymentMethod: selectedPaymentMethod,
           phone: mobile,
           address: address
-        };
+      };
 
-        const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-        orders.unshift(order);
-        localStorage.setItem('orders', JSON.stringify(orders));
+      const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+      orders.unshift(order);
+      localStorage.setItem('orders', JSON.stringify(orders));
 
-        localStorage.removeItem('cart');
+      localStorage.removeItem('cart');
 
-        if (window.showToast) {
+      if (window.showToast) {
           showToast('Order saved locally. Please contact support to complete.', 'info', 'Order Saved');
-        }
+      }
 
-        setTimeout(() => {
-          window.location.href = 'orders.html';
-        }, 1000);
+      setTimeout(() => {
+        window.location.href = 'orders.html';
+      }, 1000);
       }
     }
 

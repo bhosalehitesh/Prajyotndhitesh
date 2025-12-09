@@ -50,6 +50,9 @@ public class Product {
     private String seoTitleTag;
     private String seoMetaDescription;
     private String socialSharingImage;
+    
+    @Column(name = "is_bestseller", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean isBestseller = false;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -220,6 +223,14 @@ public class Product {
 
     public void setSocialSharingImage(String socialSharingImage) {
         this.socialSharingImage = socialSharingImage;
+    }
+
+    public Boolean getIsBestseller() {
+        return isBestseller != null ? isBestseller : false;
+    }
+
+    public void setIsBestseller(Boolean isBestseller) {
+        this.isBestseller = isBestseller != null ? isBestseller : false;
     }
 
     public LocalDateTime getCreatedAt() {

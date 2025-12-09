@@ -474,55 +474,61 @@
   <script src="../js/api.js"></script>
   <script src="../js/app.js"></script>
   <script>
-    // Mock order data
-    function getOrders() {
-      const savedOrders = localStorage.getItem('orders');
-      if (savedOrders) {
-        return JSON.parse(savedOrders);
+    // Get orders from backend API or localStorage fallback
+    async function getOrders() {
+      // Try to get current user
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+      const userId = currentUser?.id || currentUser?.userId;
+      
+      // Try to fetch from backend API if user is logged in and API is available
+      if (userId && window.API && window.API.getUserOrders) {
+        try {
+          console.log('Fetching orders from backend for userId:', userId);
+          const backendOrders = await window.API.getUserOrders(userId);
+          
+          if (Array.isArray(backendOrders) && backendOrders.length > 0) {
+            // Transform backend orders to frontend format
+            const transformedOrders = backendOrders.map(order => ({
+              id: order.orderId || order.id || 'ORD' + Date.now(),
+              backendId: order.orderId || order.id,
+              date: order.orderDate || order.date || new Date().toISOString(),
+              status: (order.status || 'processing').toLowerCase(),
+              items: order.items || order.orderItems || [],
+              total: order.totalAmount || order.total || 0,
+              shippingAddress: order.shippingAddress || order.address || 'Address not provided',
+              mobile: order.mobile || order.phone || ''
+            }));
+            
+            console.log('Orders loaded from backend:', transformedOrders.length);
+            return transformedOrders;
+          }
+        } catch (error) {
+          console.error('Error fetching orders from backend:', error);
+          // Fall through to localStorage fallback
+        }
       }
       
-      // Generate mock orders from cart history
-      const mockOrders = [
-        {
-          id: 'ORD' + Date.now().toString().slice(-8),
-          date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'delivered',
-          items: [
-            { name: "Men's Pure Cotton T-Shirt", price: 476, quantity: 2, image: '../assets/products/p1.jpg', size: 'M', color: 'Blue' },
-            { name: "Men's Casual T-Shirt", price: 499, quantity: 1, image: '../assets/products/p2.jpg', size: 'L', color: 'White' }
-          ],
-          total: 1451,
-          shippingAddress: '123 Main St, City, State 12345'
-        },
-        {
-          id: 'ORD' + (Date.now() - 86400000).toString().slice(-8),
-          date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'shipped',
-          items: [
-            { name: "Men's Formal Shirt", price: 699, quantity: 1, image: '../assets/products/p3.jpg', size: 'L', color: 'White' }
-          ],
-          total: 699,
-          shippingAddress: '123 Main St, City, State 12345'
-        },
-        {
-          id: 'ORD' + (Date.now() - 172800000).toString().slice(-8),
-          date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'processing',
-          items: [
-            { name: "Men's Polo T-Shirt", price: 479, quantity: 1, image: '../assets/products/p4.jpg', size: 'M', color: 'Navy' },
-            { name: "Men's Cotton Shirt", price: 619, quantity: 1, image: '../assets/products/p5.jpg', size: 'L', color: 'Blue' }
-          ],
-          total: 1098,
-          shippingAddress: '123 Main St, City, State 12345'
+      // Fallback to localStorage
+      const savedOrders = localStorage.getItem('orders');
+      if (savedOrders) {
+        try {
+          const parsed = JSON.parse(savedOrders);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log('Orders loaded from localStorage:', parsed.length);
+            return parsed;
+          }
+        } catch (e) {
+          console.error('Error parsing localStorage orders:', e);
         }
-      ];
+      }
       
-      localStorage.setItem('orders', JSON.stringify(mockOrders));
-      return mockOrders;
+      // Return empty array if no orders found
+      console.log('No orders found');
+      return [];
     }
 
-    function renderOrders() {
-      const orders = getOrders();
+    async function renderOrders() {
+      const orders = await getOrders();
       const ordersList = document.getElementById('ordersList');
       
       if (!ordersList) return;
@@ -540,32 +546,44 @@
       
       ordersList.innerHTML = orders.map(order => {
         const orderDate = new Date(order.date);
-        const statusClass = order.status;
-        const statusText = order.status.charAt(0).toUpperCase() + order.status.slice(1);
+        const statusClass = order.status || 'processing';
+        const statusText = (order.status || 'processing').charAt(0).toUpperCase() + (order.status || 'processing').slice(1);
+        
+        // Handle items - could be array of items or order items from backend
+        const items = Array.isArray(order.items) ? order.items : [];
         
         return `
           <div class="order-card">
             <div class="order-header">
               <div class="order-info">
-                <div class="order-id">Order ID: ${order.id}</div>
+                <div class="order-id">Order ID: ${order.id || order.backendId || 'N/A'}</div>
                 <div class="order-date">Placed on ${orderDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
               </div>
               <div class="order-status ${statusClass}">${statusText}</div>
             </div>
             <div class="order-items">
-              ${order.items.map(item => `
-                <div class="order-item">
-                  <img src="${item.image}" alt="${item.name}" class="order-item-image">
-                  <div class="order-item-details">
-                    <div class="order-item-name">${item.name}</div>
-                    <div class="order-item-meta">Size: ${item.size || 'N/A'} | Color: ${item.color || 'N/A'} | Qty: ${item.quantity}</div>
-                    <div class="order-item-price">₹${item.price} × ${item.quantity} = ₹${item.price * item.quantity}</div>
+              ${items.length > 0 ? items.map(item => {
+                const itemName = item.productName || item.name || 'Product';
+                const itemPrice = item.price || item.sellingPrice || 0;
+                const itemQuantity = item.quantity || 1;
+                const itemImage = item.imageUrl || item.image || '../assets/products/p1.jpg';
+                const itemSize = item.size || 'N/A';
+                const itemColor = item.color || 'N/A';
+                
+                return `
+                  <div class="order-item">
+                    <img src="${itemImage}" alt="${itemName}" class="order-item-image" onerror="this.src='../assets/products/p1.jpg'">
+                    <div class="order-item-details">
+                      <div class="order-item-name">${itemName}</div>
+                      <div class="order-item-meta">Size: ${itemSize} | Color: ${itemColor} | Qty: ${itemQuantity}</div>
+                      <div class="order-item-price">₹${itemPrice} × ${itemQuantity} = ₹${itemPrice * itemQuantity}</div>
+                    </div>
                   </div>
-                </div>
-              `).join('')}
+                `;
+              }).join('') : '<div class="order-item"><div class="order-item-details">No items found</div></div>'}
             </div>
             <div class="order-footer">
-              <div class="order-total">Total: ₹${order.total}</div>
+              <div class="order-total">Total: ₹${order.total || 0}</div>
               <div class="order-actions">
                 ${order.status === 'delivered' ? '<button class="order-action-btn primary" onclick="reorder(\'' + order.id + '\')">Reorder</button>' : ''}
                 ${order.status === 'processing' ? '<button class="order-action-btn" onclick="cancelOrder(\'' + order.id + '\')">Cancel Order</button>' : ''}
@@ -577,8 +595,8 @@
       }).join('');
     }
 
-    function reorder(orderId) {
-      const orders = getOrders();
+    async function reorder(orderId) {
+      const orders = await getOrders();
       const order = orders.find(o => o.id === orderId);
       if (order && window.showToast) {
         showToast('Items added to cart!', 'success', 'Reorder');
@@ -599,11 +617,11 @@
       }
     }
 
-    function cancelOrder(orderId) {
+    async function cancelOrder(orderId) {
       if (window.showConfirmDialog) {
-        window.showConfirmDialog('Are you sure you want to cancel this order?', 'Cancel Order').then((confirmed) => {
+        window.showConfirmDialog('Are you sure you want to cancel this order?', 'Cancel Order').then(async (confirmed) => {
           if (confirmed) {
-            const orders = getOrders();
+            const orders = await getOrders();
             const order = orders.find(o => o.id === orderId);
             if (order) {
               order.status = 'cancelled';
@@ -616,7 +634,7 @@
           }
         });
       } else if (confirm('Are you sure you want to cancel this order?')) {
-        const orders = getOrders();
+        const orders = await getOrders();
         const order = orders.find(o => o.id === orderId);
         if (order) {
           order.status = 'cancelled';
@@ -629,8 +647,8 @@
       }
     }
 
-    function viewOrderDetails(orderId) {
-      const orders = getOrders();
+    async function viewOrderDetails(orderId) {
+      const orders = await getOrders();
       const order = orders.find(o => o.id === orderId);
       if (order) {
         alert(`Order Details:\n\nOrder ID: ${order.id}\nStatus: ${order.status}\nDate: ${new Date(order.date).toLocaleString()}\nTotal: ₹${order.total}\n\nShipping Address:\n${order.shippingAddress}`);

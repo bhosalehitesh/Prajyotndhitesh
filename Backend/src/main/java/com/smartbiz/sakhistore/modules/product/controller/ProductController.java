@@ -1,8 +1,13 @@
 package com.smartbiz.sakhistore.modules.product.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -108,10 +113,33 @@ public class ProductController {
         return ResponseEntity.ok(updated);
     }
 
-    // Get products for a specific seller
+    // Get products for a specific seller (with pagination support)
     @GetMapping("/sellerProducts")
-    public List<Product> getProductsForSeller(@RequestParam("sellerId") Long sellerId) {
-        return productService.allProductForSeller(sellerId);
+    public ResponseEntity<?> getProductsForSeller(
+            @RequestParam("sellerId") Long sellerId,
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "size", required = false) Integer size) {
+        
+        // If pagination parameters are provided, return paginated response
+        if (page != null && size != null) {
+            Pageable pageable = PageRequest.of(page, size);
+            Page<Product> productPage = productService.allProductForSellerPaginated(sellerId, pageable);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", productPage.getContent());
+            response.put("totalElements", productPage.getTotalElements());
+            response.put("totalPages", productPage.getTotalPages());
+            response.put("currentPage", productPage.getNumber());
+            response.put("size", productPage.getSize());
+            response.put("hasNext", productPage.hasNext());
+            response.put("hasPrevious", productPage.hasPrevious());
+            
+            return ResponseEntity.ok(response);
+        }
+        
+        // Backward compatibility: return list if no pagination params
+        List<Product> products = productService.allProductForSeller(sellerId);
+        return ResponseEntity.ok(products);
     }
 
     // Endpoint: Get all product categories

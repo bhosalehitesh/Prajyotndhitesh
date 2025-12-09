@@ -379,11 +379,22 @@
 
   </style>
     <script>
-      // Support URLs like index.html/storeId=20 -> rewrite to index.html?storeId=20
+      // Ensure we're on the homepage (index.html), not redirected to other pages
       (function() {
         try {
-          var p = window.location.pathname || '';
-          if (p.indexOf('index.html/') !== -1) {
+          var path = window.location.pathname || '';
+          var href = window.location.href || '';
+          
+          // If we're on store.html and there's no sellerId, redirect to homepage
+          // (This prevents accidental navigation to empty store page)
+          if (path.includes('store.html') && !window.location.search.includes('sellerId')) {
+            // Only redirect if it's clearly an error (no sellerId parameter)
+            // But allow intentional store visits with sellerId
+            console.log('Store page accessed without sellerId, staying on store page');
+          }
+          
+          // Support URLs like index.html/storeId=20 -> rewrite to index.html?storeId=20
+          if (path.indexOf('index.html/') !== -1) {
             var newHref = window.location.href.replace('/index.html/', '/index.html?');
             // preserve hash
             window.location.replace(newHref);
@@ -400,8 +411,11 @@
     <header class="topbar">
       <div class="topbar-inner container">
         <div class="left-group">
-          <div class="avatar" aria-hidden="true">
-            <a href="index.html" style="text-decoration:none;color:inherit;display:flex;align-items:center;justify-content:center;width:100%;height:100%;"><span>V</span></a>
+          <div class="avatar" id="header-avatar" aria-hidden="true">
+            <a href="index.html" id="header-logo-link" style="text-decoration:none;color:inherit;display:flex;align-items:center;justify-content:center;width:100%;height:100%;">
+              <span id="header-logo-text">V</span>
+              <img id="header-logo-img" src="" alt="Store Logo" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;" />
+            </a>
           </div>
           <div class="divider"></div>
           <nav class="main-nav" aria-label="Main">
@@ -458,7 +472,7 @@
             <span class="cart-count" id="cartCount">0</span>
           </button>
           <!-- Profile Button -->
-          <button class="icon-btn" id="profileBtn" title="Profile" onclick="openProfileSidebar()">
+          <button class="icon-btn" id="profileBtn" title="Profile" type="button">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
@@ -467,6 +481,35 @@
         </div>
       </div>
     </header>
+
+    <!-- Store View Container (shown when ?store= parameter is present) -->
+    <main id="store-view-container" style="display: none; flex: 1; background: var(--bg-color);">
+      <div class="container" style="background: transparent; padding: 40px 20px;">
+        <div class="page-header" style="text-align: center; padding: 20px 0;">
+          <img id="store-logo" src="" alt="Store Logo" style="display:none; max-width: 150px; margin: 0 auto 20px;" />
+          <h1 id="store-name" style="font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; color: var(--text-color, #333);">Store</h1>
+          <a id="store-link" href="#" target="_blank" style="display:none; color: #ff6d2e; text-decoration: none; font-size: 0.95rem;"></a>
+          <p id="store-description" style="font-size: 1.1rem; color: var(--text-color, #666); opacity: 0.8; margin-top: 10px;"></p>
+        </div>
+
+        <!-- Category Filter (if needed) -->
+        <div id="store-category-filter" style="display: none; margin: 20px 0; text-align: center;">
+          <select id="categorySelect" style="padding: 10px 20px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 1rem;">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+
+        <div class="ecommerce-grid" id="store-products-grid" style="padding-bottom: 0;"></div>
+        
+        <!-- Load More Button -->
+        <div id="load-more-container" style="text-align: center; margin: 30px 0; width: 100%; display: flex; justify-content: center; align-items: center;">
+          <button id="load-more-products" style="display: none; padding: 12px 30px; background: linear-gradient(135deg, #ff6d2e 0%, #ff8533 100%); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: transform 0.2s; margin: 0 auto;">See More</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Homepage Content (hidden when store view is active) -->
+    <div id="homepage-content">
 
     <!-- Login/Signup Modal (inline for home page) -->
     <div class="login-modal-overlay" id="loginModalOverlay">
@@ -484,6 +527,10 @@
           <h2 class="login-title">Welcome Back</h2>
           <p class="login-subtitle">Login or create an account</p>
           <form class="login-form" id="loginPhoneForm">
+            <div class="form-group">
+              <label for="loginName">Full Name</label>
+              <input type="text" id="loginName" placeholder="Enter your full name" required minlength="2" maxlength="100" autocomplete="name">
+            </div>
             <div class="form-group">
               <label for="loginPhone">Phone Number</label>
               <input type="tel" id="loginPhone" placeholder="Enter 10-digit phone number" required pattern="[0-9]{10}" maxlength="10" autocomplete="tel">
@@ -697,15 +744,12 @@
     <!-- Trending Categories -->
     <section class="trending-section">
       <div class="container">
-        <h2 class="section-title">Trending Categories</h2>
-        <div class="trending-grid">
-          <div class="category-card">
-            <img src="assets/products/cs.jpg" alt="Casual Wear" />
-            <p>Casual Wear</p>
-          </div>
-          <div class="category-card">
-            <img src="assets/products/GZ.jpg" alt="GenZ Wear" />
-            <p>GenZ Wear</p>
+        <h2 class="section-title">Shop by Category</h2>
+        <p style="text-align: center; color: var(--text-color, #666); margin-bottom: 30px;">Find your perfect style across all fashion essentials.</p>
+        <div class="trending-grid" id="categories-grid">
+          <!-- Categories will be loaded dynamically from database -->
+          <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+            <p>Loading categories...</p>
           </div>
         </div>
       </div>
@@ -780,6 +824,8 @@
         </div>
       </div>
     </section>
+    </div>
+    <!-- End Homepage Content -->
 
     <!-- Flash Sale Banner -->
     <section class="flash-sale-section" style="padding: 24px 0;">
@@ -1218,10 +1264,18 @@
         }
         
         // Clear inputs
+        const nameInput = document.getElementById('loginName');
         const phoneInput = document.getElementById('loginPhone');
         const otpInput = document.getElementById('otpInput');
+        if (nameInput) nameInput.value = '';
         if (phoneInput) phoneInput.value = '';
         if (otpInput) otpInput.value = '';
+        
+        // Clear stored data
+        currentPhoneNumber = '';
+        currentUserName = '';
+        localStorage.removeItem('pendingName');
+        localStorage.removeItem('pendingPhone');
         
         // Clear timer
         if (otpTimer) {
@@ -1324,13 +1378,26 @@
     };
 
     let currentPhoneNumber = '';
+    let currentUserName = '';
     let generatedOTP = '';
     let otpTimer = null;
 
     async function handlePhoneLogin(e) {
       e.preventDefault();
       
+      const nameInput = document.getElementById('loginName');
       const phoneInput = document.getElementById('loginPhone');
+      
+      if (!nameInput) {
+        console.error('Name input not found');
+        if (window.showToast) {
+          showToast('Error: Name input field not found. Please refresh the page.', 'error', 'Error');
+        } else {
+          alert('Error: Name input field not found. Please refresh the page.');
+        }
+        return;
+      }
+      
       if (!phoneInput) {
         console.error('Phone input not found');
         if (window.showToast) {
@@ -1341,7 +1408,17 @@
         return;
       }
       
+      const name = nameInput.value.trim();
       const phone = phoneInput.value.replace(/\D/g, '');
+      
+      if (name.length < 2) {
+        if (window.showToast) {
+          showToast('Please enter your full name (at least 2 characters)', 'error', 'Invalid Name');
+        } else {
+          alert('Please enter your full name (at least 2 characters)');
+        }
+        return;
+      }
       
       if (phone.length !== 10) {
         if (window.showToast) {
@@ -1351,6 +1428,12 @@
         }
         return;
       }
+      
+      // Store name and phone for later use
+      currentUserName = name;
+      currentPhoneNumber = phone;
+      localStorage.setItem('pendingName', name);
+      localStorage.setItem('pendingPhone', phone);
 
       // Show loading state
       const submitBtn = phoneInput.closest('form')?.querySelector('button[type="submit"]');
@@ -1363,8 +1446,6 @@
       try {
         // Send OTP via backend API
         const response = await UserAPI.sendOtp(phone);
-        currentPhoneNumber = phone;
-        localStorage.setItem('pendingPhone', phone);
         
         // Show OTP in console for testing (if backend returns it)
         if (response.otp) {
@@ -1479,15 +1560,21 @@
       }
 
       try {
+        // Get stored name from current session or localStorage
+        const storedName = currentUserName || localStorage.getItem('pendingName') || '';
+        
         // Verify OTP via backend API
         const response = await UserAPI.verifyOtp(phone, enteredOTP);
+        
+        // Use name from form if available, otherwise use backend response or fallback
+        const userName = storedName || response.fullName || `User ${phone.slice(-4)}`;
         
         // Backend returns: {token, userId, fullName, phone}
         const currentUser = {
           id: response.userId,
           userId: response.userId,
-          name: response.fullName || `User ${phone.slice(-4)}`,
-          fullName: response.fullName || `User ${phone.slice(-4)}`,
+          name: userName,
+          fullName: userName,
           phone: response.phone || phone,
           token: response.token
         };
@@ -1499,7 +1586,9 @@
         // Clear OTP data
         localStorage.removeItem('pendingOTP');
         localStorage.removeItem('pendingPhone');
+        localStorage.removeItem('pendingName');
         currentPhoneNumber = '';
+        currentUserName = '';
         
         // Clear timer
         if (otpTimer) {
@@ -1512,6 +1601,11 @@
           showToast('Login successful!', 'success', 'Welcome Back');
         }
         
+        // Dispatch login success event (for store page to listen)
+        window.dispatchEvent(new CustomEvent('userLoggedIn', { 
+          detail: { user: currentUser } 
+        }));
+        
         // Close modal
         closeLoginModal();
         
@@ -1521,10 +1615,17 @@
           updateProfileSidebar();
         }
         
-        // Refresh page to update all UI elements
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
+        // Check if we're on store page - if so, don't reload, just update visibility
+        const isStorePage = window.location.pathname.includes('store.html');
+        if (isStorePage) {
+          // On store page - let store page handle the update
+          console.log('Login successful on store page - store will load now');
+        } else {
+          // On other pages - refresh to update UI
+          setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        }
       } catch (error) {
         console.error('OTP verification failed:', error);
         const errorMessage = error.message || 'Invalid OTP. Please try again.';
@@ -1875,16 +1976,13 @@
     document.addEventListener('DOMContentLoaded', () => {
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
       const rememberUser = localStorage.getItem('rememberUser');
-      const hasSeenLogin = sessionStorage.getItem('hasSeenLogin');
       
       // Update floating button
       updateFloatingButton();
       
-      // Show login modal if:
-      // 1. User is not logged in
-      // 2. User hasn't chosen to remember
-      // 3. User hasn't seen it in this session
-      if (!currentUser && !rememberUser && !hasSeenLogin) {
+      // Show login modal if user is not logged in
+      // Always show on page load if not logged in (before seeing the page)
+      if (!currentUser || !rememberUser) {
         setTimeout(() => {
           openLoginModal();
         }, 500);
@@ -2399,6 +2497,646 @@
     }
 
 
+  </script>
+
+  <!-- Store View Logic -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    // ====== STORE VIEW HANDLING ======
+    // When ?store= parameter is present, show store view instead of homepage
+    
+    async function loadStoreView() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const storeSlug = urlParams.get('store');
+      const category = urlParams.get('category');
+      
+      if (!storeSlug) {
+        // No store parameter - show homepage
+        showHomepage();
+        return;
+      }
+      
+      // Hide homepage, show store view
+      hideHomepage();
+      showStoreView();
+      
+      // Ensure store view container is visible
+      const storeViewContainer = document.getElementById('store-view-container');
+      if (storeViewContainer) {
+        storeViewContainer.style.display = 'block';
+      }
+      
+      try {
+        console.log('Loading store view for slug:', storeSlug);
+        
+        // Check if API is available
+        if (!window.API || !window.API.getStoreBySlug) {
+          console.error('API not loaded yet, retrying...');
+          setTimeout(() => loadStoreView(), 500);
+          return;
+        }
+        
+        // Load store details
+        console.log('Fetching store details from API...');
+        const store = await window.API.getStoreBySlug(storeSlug);
+        console.log('Store details received:', store);
+        
+        if (!store) {
+          throw new Error('Store not found');
+        }
+        
+        // Update store info
+        const storeNameEl = document.getElementById('store-name');
+        const storeDescEl = document.getElementById('store-description');
+        const storeLinkEl = document.getElementById('store-link');
+        const storeLogoEl = document.getElementById('store-logo');
+        
+        if (storeNameEl) storeNameEl.textContent = store.storeName || 'Store';
+        if (storeDescEl) {
+          const desc = store.businessDetails?.businessDescription || store.description || '';
+          storeDescEl.textContent = desc;
+        }
+        if (storeLinkEl && store.storeLink) {
+          storeLinkEl.href = store.storeLink;
+          storeLinkEl.textContent = store.storeLink.replace(/^https?:\/\//, '');
+          storeLinkEl.style.display = 'inline-block';
+        }
+        if (storeLogoEl && store.logoUrl) {
+          storeLogoEl.src = store.logoUrl;
+          storeLogoEl.alt = store.storeName || 'Store Logo';
+          storeLogoEl.style.display = 'block';
+        }
+        
+        // Update page title
+        document.title = `${store.storeName || 'Store'} | V Store`;
+        
+        // Update header logo with store logo if available
+        updateHeaderLogo(store);
+        
+        // Update header logo link to stay on same page
+        updateHeaderLogoLink(storeSlug);
+        
+        // Re-initialize header functionalities after store loads
+        setTimeout(() => {
+          initHeaderFunctions();
+          // Also ensure profile sidebar is initialized
+          if (typeof window.initProfileSidebar === 'function') {
+            window.initProfileSidebar();
+          }
+        }, 300);
+        
+        // Load products
+        await loadStoreProducts(storeSlug, category);
+        
+      } catch (error) {
+        console.error('Failed to load store:', error);
+        const grid = document.getElementById('store-products-grid');
+        if (grid) {
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">Store not found or error loading store.</p></div>';
+        }
+      }
+    }
+    
+    // Pagination state for store view
+    let storeViewPagination = {
+      allProducts: [],
+      displayedCount: 0,
+      productsPerPage: 8
+    };
+    
+    async function loadStoreProducts(slug, category = null) {
+      // Ensure store view is visible
+      const storeViewContainer = document.getElementById('store-view-container');
+      if (storeViewContainer) {
+        storeViewContainer.style.display = 'block';
+      }
+      
+      const grid = document.getElementById('store-products-grid');
+      if (!grid) {
+        console.error('Store products grid not found');
+        console.error('Available elements:', {
+          storeView: document.getElementById('store-view-container'),
+          grid: document.getElementById('store-products-grid'),
+          homepage: document.getElementById('homepage-content')
+        });
+        return;
+      }
+      
+      try {
+        // Show loading
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px;"><p>Loading products...</p></div>';
+        
+        console.log('Fetching products for slug:', slug, 'category:', category);
+        
+        // Check if API is available
+        if (!window.API || !window.API.getStoreProductsBySlug) {
+          console.error('API.getStoreProductsBySlug not available');
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">API not loaded. Please refresh the page.</p></div>';
+          return;
+        }
+        
+        // Fetch all products
+        let allProducts = await window.API.getStoreProductsBySlug(slug, category);
+        
+        console.log('Products received:', allProducts);
+        console.log('Products type:', typeof allProducts);
+        console.log('Is array?', Array.isArray(allProducts));
+        
+        // Handle different response formats
+        if (allProducts && typeof allProducts === 'object' && !Array.isArray(allProducts)) {
+          // If response is an object, try to extract array
+          if (allProducts.data && Array.isArray(allProducts.data)) {
+            allProducts = allProducts.data;
+          } else if (allProducts.products && Array.isArray(allProducts.products)) {
+            allProducts = allProducts.products;
+          } else if (allProducts.content && Array.isArray(allProducts.content)) {
+            allProducts = allProducts.content;
+          }
+        }
+        
+        if (!allProducts || !Array.isArray(allProducts) || allProducts.length === 0) {
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">No products found for this store.</p><p style="font-size: 0.9rem; margin-top: 10px; opacity: 0.7;">The store may not have any products yet.</p></div>';
+          updateLoadMoreButton(0, 0);
+          return;
+        }
+        
+        // Store all products and reset pagination
+        storeViewPagination.allProducts = allProducts;
+        storeViewPagination.displayedCount = 0;
+        
+        // Show first page (8 products)
+        const firstPage = allProducts.slice(0, storeViewPagination.productsPerPage);
+        storeViewPagination.displayedCount = firstPage.length;
+        
+        console.log('Rendering', firstPage.length, 'of', allProducts.length, 'products');
+        
+        // Render first page
+        renderProductsSimple(firstPage, grid, false);
+        
+        // Update "See More" button
+        updateLoadMoreButton(allProducts.length, storeViewPagination.displayedCount);
+        
+      } catch (error) {
+        console.error('Failed to load products:', error);
+        console.error('Error details:', error.message, error.stack);
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">Error loading products.</p><p style="font-size: 0.9rem; margin-top: 10px; opacity: 0.7;">Check console for details.</p></div>';
+        updateLoadMoreButton(0, 0);
+      }
+    }
+    
+    function loadMoreStoreProducts() {
+      const grid = document.getElementById('store-products-grid');
+      if (!grid) return;
+      
+      const { allProducts, displayedCount, productsPerPage } = storeViewPagination;
+      
+      // Calculate next batch
+      const nextBatch = allProducts.slice(displayedCount, displayedCount + productsPerPage);
+      
+      if (nextBatch.length === 0) {
+        updateLoadMoreButton(allProducts.length, displayedCount);
+        return;
+      }
+      
+      // Append next batch
+      renderProductsSimple(nextBatch, grid, true);
+      
+      // Update displayed count
+      storeViewPagination.displayedCount += nextBatch.length;
+      
+      // Update button
+      updateLoadMoreButton(allProducts.length, storeViewPagination.displayedCount);
+    }
+    
+    function updateLoadMoreButton(totalProducts, displayedCount) {
+      const loadMoreBtn = document.getElementById('load-more-products');
+      if (!loadMoreBtn) return;
+      
+      const remaining = totalProducts - displayedCount;
+      const hasMore = remaining > 0;
+      
+      if (hasMore) {
+        loadMoreBtn.style.display = 'block';
+        loadMoreBtn.textContent = 'See More';
+      } else {
+        loadMoreBtn.style.display = 'none';
+      }
+    }
+    
+    function renderProductsSimple(products, grid, append = false) {
+      const calculateDiscount = (mrp, price) => {
+        if (mrp > price && mrp > 0) {
+          const discount = Math.round(((mrp - price) / mrp) * 100);
+          return discount > 0 ? discount : 0;
+        }
+        return 0;
+      };
+      
+      const productsHTML = products.map((p) => {
+        const productId = p.productId || p.id || p.productsId || '';
+        const productName = p.productName || p.name || 'Unknown Product';
+        const image = (p.productImages && p.productImages[0]) || p.image || '../assets/products/p1.jpg';
+        const price = p.sellingPrice ?? p.price ?? 0;
+        const mrp = p.mrp || p.originalPrice || price;
+        const discount = calculateDiscount(mrp, price);
+        const isBestseller = p.isBestseller || p.bestseller || false;
+        const storeSlug = new URLSearchParams(window.location.search).get('store');
+        const productUrl = `pages/product-detail.html?id=${productId}${storeSlug ? '&store=' + storeSlug : ''}`;
+        
+        return `
+          <div class="ecommerce-product-card" data-product-id="${productId}">
+            <a href="${productUrl}" style="text-decoration: none; color: inherit;">
+              <div class="product-image-wrapper" style="position: relative;">
+                ${isBestseller ? `<span class="bestseller-badge" style="position: absolute; top: 8px; left: 8px; background: #FFD700; color: #000; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; z-index: 2;">Bestseller</span>` : ''}
+                <img src="${image}" alt="${productName}" loading="lazy" />
+                ${discount > 0 ? `<span class="discount-badge">${discount}% OFF</span>` : ''}
+              </div>
+              <div class="product-info">
+                <h3 class="product-name">${productName}</h3>
+                <div class="product-price">
+                  <span class="current-price">₹${price}</span>
+                  ${mrp > price ? `<span class="original-price">₹${mrp}</span>` : ''}
+                </div>
+              </div>
+            </a>
+          </div>
+        `;
+      }).join('');
+      
+      if (append) {
+        grid.insertAdjacentHTML('beforeend', productsHTML);
+      } else {
+        grid.innerHTML = productsHTML;
+      }
+    }
+    
+    function showHomepage() {
+      const homepageContent = document.getElementById('homepage-content');
+      const storeView = document.getElementById('store-view-container');
+      
+      if (homepageContent) homepageContent.style.display = 'block';
+      if (storeView) storeView.style.display = 'none';
+      document.body.classList.remove('store-view');
+      document.body.classList.add('home-page');
+      
+      // Reset header logo to default
+      resetHeaderLogo();
+    }
+    
+    function hideHomepage() {
+      const homepageContent = document.getElementById('homepage-content');
+      if (homepageContent) homepageContent.style.display = 'none';
+    }
+    
+    function showStoreView() {
+      const storeView = document.getElementById('store-view-container');
+      if (storeView) storeView.style.display = 'block';
+      document.body.classList.remove('home-page');
+      document.body.classList.add('store-view');
+    }
+    
+    function updateHeaderLogo(store) {
+      const logoText = document.getElementById('header-logo-text');
+      const logoImg = document.getElementById('header-logo-img');
+      
+      if (store && store.logoUrl) {
+        // Show logo image, hide text
+        if (logoImg) {
+          logoImg.src = store.logoUrl;
+          logoImg.alt = store.storeName || 'Store Logo';
+          logoImg.style.display = 'block';
+        }
+        if (logoText) {
+          logoText.style.display = 'none';
+        }
+      } else {
+        // Show text, hide logo image
+        if (logoText) {
+          logoText.style.display = 'block';
+        }
+        if (logoImg) {
+          logoImg.style.display = 'none';
+        }
+      }
+    }
+    
+    function updateHeaderLogoLink(storeSlug) {
+      const logoLink = document.getElementById('header-logo-link');
+      if (logoLink && storeSlug) {
+        // Update link to stay on same page with store parameter
+        logoLink.href = `index.html?store=${storeSlug}`;
+        // Prevent navigation if already on the same page
+        logoLink.addEventListener('click', (e) => {
+          const currentUrl = new URL(window.location.href);
+          const currentStore = currentUrl.searchParams.get('store');
+          if (currentStore === storeSlug) {
+            e.preventDefault();
+            // Just scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        });
+      } else if (logoLink) {
+        // No store parameter, link to homepage
+        logoLink.href = 'index.html';
+      }
+    }
+    
+    function resetHeaderLogo() {
+      const logoText = document.getElementById('header-logo-text');
+      const logoImg = document.getElementById('header-logo-img');
+      const logoLink = document.getElementById('header-logo-link');
+      
+      if (logoText) logoText.style.display = 'block';
+      if (logoImg) logoImg.style.display = 'none';
+      if (logoLink) logoLink.href = 'index.html';
+    }
+    
+    // Initialize header functionalities
+    function initHeaderFunctions() {
+      console.log('Initializing header functions...');
+      
+      // Initialize mobile menu
+      const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+      const mobileNav = document.getElementById("mobileNav");
+      if (mobileMenuBtn && mobileNav) {
+        // Remove old listeners by cloning
+        const newBtn = mobileMenuBtn.cloneNode(true);
+        mobileMenuBtn.parentNode.replaceChild(newBtn, mobileMenuBtn);
+        
+        document.getElementById("mobileMenuBtn").addEventListener("click", () => {
+          const nav = document.getElementById("mobileNav");
+          if (nav) nav.classList.toggle("active");
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener("click", (e) => {
+          const btn = document.getElementById("mobileMenuBtn");
+          const nav = document.getElementById("mobileNav");
+          if (btn && nav && !btn.contains(e.target) && !nav.contains(e.target)) {
+            nav.classList.remove("active");
+          }
+        });
+        
+        // Close menu when clicking nav items
+        const navItems = document.querySelectorAll("#mobileNav .nav-item");
+        navItems.forEach(item => {
+          item.addEventListener("click", () => {
+            const nav = document.getElementById("mobileNav");
+            if (nav) nav.classList.remove("active");
+          });
+        });
+      }
+      
+      // Initialize dark mode toggle
+      const darkModeSwitch = document.getElementById("dark-mode-switch");
+      if (darkModeSwitch) {
+        const savedTheme = localStorage.getItem("theme");
+        const isDark = savedTheme === "dark";
+        darkModeSwitch.checked = isDark;
+        
+        if (isDark) {
+          document.documentElement.classList.add("dark-mode");
+          document.body.classList.add("dark-mode");
+        }
+        
+        // Remove old listener by cloning
+        const newSwitch = darkModeSwitch.cloneNode(true);
+        darkModeSwitch.parentNode.replaceChild(newSwitch, darkModeSwitch);
+        
+        document.getElementById("dark-mode-switch").addEventListener("change", function(e) {
+          const isDarkMode = e.target.checked;
+          if (isDarkMode) {
+            document.documentElement.classList.add("dark-mode");
+            document.body.classList.add("dark-mode");
+            localStorage.setItem("theme", "dark");
+          } else {
+            document.documentElement.classList.remove("dark-mode");
+            document.body.classList.remove("dark-mode");
+            localStorage.setItem("theme", "light");
+          }
+          
+          // Update sidebar text
+          const sidebarLightModeText = document.getElementById('sidebarLightModeText');
+          if (sidebarLightModeText) {
+            sidebarLightModeText.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+          }
+        });
+      }
+      
+      // Initialize search modal - use event delegation to ensure it always works
+      const searchBtn = document.getElementById('searchBtn');
+      const searchModal = document.getElementById('searchModal');
+      const searchClose = document.getElementById('searchClose');
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      
+      // Use event delegation on document for search button (works even if button is recreated)
+      document.addEventListener('click', function searchBtnHandler(e) {
+        if (e.target.closest('#searchBtn') || e.target.id === 'searchBtn') {
+          e.preventDefault();
+          e.stopPropagation();
+          const modal = document.getElementById('searchModal');
+          if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => {
+              const input = document.getElementById('searchInput');
+              if (input) input.focus();
+            }, 100);
+          }
+        }
+      }, true); // Use capture phase
+      
+      // Also add direct listener if button exists
+      if (searchBtn && searchModal) {
+        // Remove any existing listeners by cloning
+        const newSearchBtn = searchBtn.cloneNode(true);
+        searchBtn.parentNode.replaceChild(newSearchBtn, searchBtn);
+        
+        // Add new listener
+        document.getElementById('searchBtn').addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const modal = document.getElementById('searchModal');
+          if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => {
+              const input = document.getElementById('searchInput');
+              if (input) input.focus();
+            }, 100);
+          }
+        });
+      }
+      
+      if (searchClose) {
+        // Remove old listener and add new one
+        const newSearchClose = searchClose.cloneNode(true);
+        searchClose.parentNode.replaceChild(newSearchClose, searchClose);
+        
+        document.getElementById('searchClose').addEventListener('click', () => {
+          const modal = document.getElementById('searchModal');
+          const input = document.getElementById('searchInput');
+          const results = document.getElementById('searchResults');
+          if (modal) modal.style.display = 'none';
+          if (input) input.value = '';
+          if (results) results.innerHTML = '';
+        });
+      }
+      
+      // Close modal when clicking outside
+      if (searchModal) {
+        searchModal.addEventListener('click', (e) => {
+          if (e.target === searchModal) {
+            searchModal.style.display = 'none';
+            if (searchInput) searchInput.value = '';
+            if (searchResults) searchResults.innerHTML = '';
+          }
+        });
+      }
+      
+      // Initialize profile sidebar
+      if (typeof window.initProfileSidebar === 'function') {
+        window.initProfileSidebar();
+      } else {
+        console.warn('initProfileSidebar function not found');
+      }
+      
+      // Also add direct profile button handler as backup
+      const profileBtn = document.getElementById('profileBtn');
+      if (profileBtn) {
+        // Remove old listener by cloning
+        const newProfileBtn = profileBtn.cloneNode(true);
+        profileBtn.parentNode.replaceChild(newProfileBtn, profileBtn);
+        
+        // Add new listener
+        document.getElementById('profileBtn').addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof window.openProfileSidebar === 'function') {
+            window.openProfileSidebar(e);
+          } else {
+            console.warn('openProfileSidebar function not found');
+          }
+          return false;
+        }, true);
+      }
+      
+      // Initialize cart and wishlist counts
+      if (typeof window.updateCartCount === 'function') {
+        window.updateCartCount();
+      }
+      if (typeof window.updateWishlistCount === 'function') {
+        window.updateWishlistCount();
+      }
+      
+      console.log('Header functions initialized');
+    }
+    
+    // Make function globally available
+    window.initHeaderFunctions = initHeaderFunctions;
+    
+    // Load categories from database
+    async function loadCategories() {
+      const categoriesGrid = document.getElementById('categories-grid');
+      if (!categoriesGrid) {
+        console.warn('Categories grid not found');
+        return;
+      }
+      
+      try {
+        // Check if API is available
+        if (!window.API || !window.API.getAllCategories) {
+          console.error('API.getAllCategories not available');
+          categoriesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">API not loaded. Please refresh the page.</p></div>';
+          return;
+        }
+        
+        console.log('Fetching categories from API...');
+        const categories = await window.API.getAllCategories();
+        console.log('Categories received:', categories);
+        
+        if (!categories || !Array.isArray(categories) || categories.length === 0) {
+          categoriesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">No categories found.</p></div>';
+          return;
+        }
+        
+        // Render categories
+        categoriesGrid.innerHTML = categories.map(category => {
+          const categoryName = category.categoryName || 'Unnamed Category';
+          const categoryImage = category.categoryImage || category.socialSharingImage || 'assets/products/p1.jpg';
+          const categoryUrl = `pages/category.html?name=${encodeURIComponent(categoryName)}`;
+          
+          return `
+            <a href="${categoryUrl}" class="category-card" style="text-decoration: none; color: inherit;">
+              <img src="${categoryImage}" alt="${categoryName}" onerror="this.src='assets/products/p1.jpg'" />
+              <p>${categoryName}</p>
+            </a>
+          `;
+        }).join('');
+        
+        console.log('Categories rendered successfully');
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+        categoriesGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">Error loading categories.</p><p style="font-size: 0.9rem; margin-top: 10px; opacity: 0.7;">Check console for details.</p></div>';
+      }
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initialize header functions first
+      initHeaderFunctions();
+      
+      // Load categories from database (only on homepage, not store view)
+      const urlParams = new URLSearchParams(window.location.search);
+      const storeSlug = urlParams.get('store');
+      if (!storeSlug) {
+        // Only load categories if we're on the homepage
+        setTimeout(() => {
+          loadCategories();
+        }, 500);
+      }
+      
+      // Wait for API to be ready
+      setTimeout(() => {
+        loadStoreView();
+        // Re-initialize header functions after store view loads (in case DOM changed)
+        setTimeout(initHeaderFunctions, 600);
+      }, 500);
+      
+      // Handle "See More" button click
+      const loadMoreBtn = document.getElementById('load-more-products');
+      if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          loadMoreStoreProducts();
+        });
+      }
+    });
+    
+    // Also handle clicks on dynamically created button (in case DOMContentLoaded already fired)
+    document.addEventListener('click', (e) => {
+      if (e.target.id === 'load-more-products' || e.target.closest('#load-more-products')) {
+        e.preventDefault();
+        loadMoreStoreProducts();
+      }
+    });
+    
+    // Handle category filter changes
+    document.addEventListener('change', (e) => {
+      if (e.target.id === 'categorySelect') {
+        const category = e.target.value;
+        const urlParams = new URLSearchParams(window.location.search);
+        const storeSlug = urlParams.get('store');
+        
+        if (category) {
+          urlParams.set('category', category);
+        } else {
+          urlParams.delete('category');
+        }
+        
+        window.location.search = urlParams.toString();
+      }
+    });
   </script>
 </body>
 </html>

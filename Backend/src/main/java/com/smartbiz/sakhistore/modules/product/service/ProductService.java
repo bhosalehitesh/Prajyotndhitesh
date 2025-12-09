@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -102,11 +104,18 @@ public class ProductService{
                 product.setSeller(seller);
             }
 
-            // Link to category if provided
+            // Link to category - automatically find if not provided
             if (categoryId != null) {
+                // Use provided categoryId
                 Category category = categoryRepository.findById(categoryId)
                         .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
                 product.setCategory(category);
+            } else {
+                // Automatically find category based on productCategory or businessCategory
+                Category category = findOrCreateCategoryForProduct(productCategory, businessCategory);
+                if (category != null) {
+                    product.setCategory(category);
+                }
             }
 
             // ✅ Save in database
@@ -129,6 +138,20 @@ public class ProductService{
         return productRepository.findBySeller_SellerId(sellerId);
     }
 
+    /**
+     * Get paginated products for a seller with optimized query to avoid N+1 problems
+     * @param sellerId The seller ID
+     * @param pageable Pageable object with page number and size
+     * @return Page of products
+     */
+    public Page<Product> allProductForSellerPaginated(Long sellerId, Pageable pageable) {
+        if (sellerId == null) {
+            return productRepository.findAll(pageable);
+        }
+        // Use optimized query with JOIN FETCH to avoid N+1 queries
+        return productRepository.findBySeller_SellerIdWithRelations(sellerId, pageable);
+    }
+
 
 
 
@@ -149,6 +172,14 @@ public class ProductService{
             Category category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
             product.setCategory(category);
+        } else {
+            // Automatically find category based on productCategory or businessCategory if not provided
+            String productCategory = product.getProductCategory();
+            String businessCategory = product.getBusinessCategory();
+            Category category = findOrCreateCategoryForProduct(productCategory, businessCategory);
+            if (category != null) {
+                product.setCategory(category);
+            }
         }
         return productRepository.save(product);
     }
@@ -200,6 +231,54 @@ public class ProductService{
         // Image updates are handled via the upload endpoint; seller relation stays the same.
 
         return productRepository.save(existing);
+    }
+
+    // ✅ Automatically find or create category for product based on productCategory or businessCategory
+    private Category findOrCreateCategoryForProduct(String productCategory, String businessCategory) {
+        if (productCategory == null && businessCategory == null) {
+            // If no category info, try to get first available category or return null
+            List<Category> allCategories = categoryRepository.findAll();
+            if (!allCategories.isEmpty()) {
+                return allCategories.get(0); // Return first category as default
+            }
+            return null; // No categories exist
+        }
+        
+        // Try to find by productCategory name (exact match)
+        if (productCategory != null && !productCategory.trim().isEmpty()) {
+            List<Category> categories = categoryRepository.findByCategoryNameIgnoreCase(productCategory.trim());
+            if (!categories.isEmpty()) {
+                return categories.get(0); // Return first match
+            }
+        }
+        
+        // Try to find by businessCategory (contains match)
+        if (businessCategory != null && !businessCategory.trim().isEmpty()) {
+            List<Category> categories = categoryRepository.findByBusinessCategoryContainingIgnoreCase(businessCategory.trim());
+            if (!categories.isEmpty()) {
+                return categories.get(0); // Return first match
+            }
+        }
+        
+        // If no match found, try to find any category with similar businessCategory
+        if (businessCategory != null && !businessCategory.trim().isEmpty()) {
+            List<Category> allCategories = categoryRepository.findAll();
+            String searchTerm = businessCategory.trim().toLowerCase();
+            for (Category cat : allCategories) {
+                if (cat.getBusinessCategory() != null && 
+                    cat.getBusinessCategory().toLowerCase().contains(searchTerm)) {
+                    return cat;
+                }
+            }
+        }
+        
+        // Last resort: return first available category or null
+        List<Category> allCategories = categoryRepository.findAll();
+        if (!allCategories.isEmpty()) {
+            return allCategories.get(0); // Return first category as default
+        }
+        
+        return null; // No categories exist in database
     }
 
     //  Get all unique product categories

@@ -127,31 +127,10 @@
           <p>Find your perfect style across all fashion essentials.</p>
         </div>
 
-        <div class="category-grid">
-          <a href="category.html?name=Casual%20Wear" class="category-card">
-            <img src="../assets/products/cs.jpg" alt="Casual Wear" />
-            <h3>Casual Wear</h3>
-          </a>
-          <a href="category.html?name=T-Shirts" class="category-card">
-            <img src="../assets/genz/ts.webp" alt="T-Shirts" />
-            <h3>T-Shirts</h3>
-          </a>
-          <a href="category.html?name=Jeans" class="category-card">
-            <img src="../assets/genz/Bg.jpg" alt="Jeans" />
-            <h3>Jeans</h3>
-          </a>
-          <a href="category.html?name=Hoodies" class="category-card">
-            <img src="../assets/genz/hd.webp" alt="Hoodies" />
-            <h3>Hoodies</h3>
-          </a>
-          <a href="category.html?name=Lowers%20%26%20Joggers" class="category-card">
-            <img src="../assets/genz/ls.webp" alt="Lowers & Joggers" />
-            <h3>Lowers & Joggers</h3>
-          </a>
-          <a href="category.html?name=Co-ord%20Sets" class="category-card">
-            <img src="../assets/genz/cd.webp" alt="Co-ord Sets" />
-            <h3>Co-ord Sets</h3>
-          </a>
+        <div class="category-grid" id="categories-grid">
+          <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+            <p>Loading categories...</p>
+          </div>
         </div>
       </div>
     </main>
@@ -166,6 +145,49 @@
   <script src="../js/config.js"></script>
   <script src="../js/api.js"></script>
   <script src="../js/app.js"></script>
+  <script>
+    (function() {
+      async function loadCategories() {
+        const grid = document.getElementById('categories-grid');
+        if (!grid) return;
+
+        try {
+          if (!window.API || !window.API.getAllCategories) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">API not available. Please refresh.</p></div>';
+            return;
+          }
+
+          const categories = await window.API.getAllCategories();
+          if (!Array.isArray(categories) || categories.length === 0) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">No categories found.</p></div>';
+            return;
+          }
+
+          const cards = categories.map(cat => {
+            const name = cat.categoryName || 'Category';
+            const img = cat.categoryImage || cat.socialSharingImage || '../assets/products/p1.jpg';
+            const link = `category.html?name=${encodeURIComponent(name)}`;
+            return `
+              <a href="${link}" class="category-card" style="text-decoration: none; color: inherit;">
+                <img src="${img}" alt="${name}" onerror="this.src='../assets/products/p1.jpg'" />
+                <h3>${name}</h3>
+              </a>
+            `;
+          }).join('');
+
+          grid.innerHTML = cards;
+        } catch (error) {
+          console.error('Failed to load categories:', error);
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);"><p style="font-size: 1.1rem;">Error loading categories.</p><p style="font-size: 0.9rem; margin-top: 10px; opacity: 0.7;">Please try again later.</p></div>';
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        // small delay to ensure API is ready
+        setTimeout(loadCategories, 300);
+      });
+    })();
+  </script>
   <script>
     // Search functionality
     const searchBtn = document.getElementById('searchBtn');
