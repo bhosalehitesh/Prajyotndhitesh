@@ -1,6 +1,7 @@
 package com.smartbiz.sakhistore.modules.store.controller;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -109,8 +110,37 @@ public class StoreDetailsController {
     // Get store for a specific seller (assumes one store per seller)
     // Use a fixed path segment to avoid conflict with "/{storeId}"
     @GetMapping("/seller")
-    public StoreDetails getStoreBySeller(@RequestParam("sellerId") Long sellerId) {
-        return storeService.findBySellerId(sellerId);
+    public ResponseEntity<?> getStoreBySeller(@RequestParam("sellerId") Long sellerId) {
+        try {
+            StoreDetails store = storeService.findBySellerId(sellerId);
+            
+            // Try to get logo from store_logos table first (new table)
+            try {
+                com.smartbiz.sakhistore.modules.store.model.StoreLogo activeLogo = 
+                    storeService.getActiveLogoBySellerId(sellerId);
+                if (activeLogo != null && activeLogo.getLogoUrl() != null) {
+                    // Use logo from store_logos table if available
+                    store.setLogoUrl(activeLogo.getLogoUrl());
+                    System.out.println("✅ Retrieved logo from store_logos table for sellerId: " + sellerId);
+                } else if (store.getLogoUrl() != null) {
+                    // Fallback to store_details.logoUrl
+                    System.out.println("ℹ️ Using logo from store_details table for sellerId: " + sellerId);
+                }
+            } catch (Exception e) {
+                // If new table doesn't exist yet or error, use store_details.logoUrl
+                System.out.println("⚠️ Could not retrieve from store_logos, using store_details: " + e.getMessage());
+            }
+            
+            return ResponseEntity.ok(store);
+        } catch (NoSuchElementException e) {
+            // Return null/empty response instead of 500 error when store doesn't exist
+            return ResponseEntity.ok(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new java.util.HashMap<String, Object>() {{
+                put("error", "Internal Server Error");
+                put("message", e.getMessage());
+            }});
+        }
     }
 
     @DeleteMapping("/deleteStore/{id}")

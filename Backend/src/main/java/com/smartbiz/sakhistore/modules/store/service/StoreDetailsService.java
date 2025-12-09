@@ -12,7 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.smartbiz.sakhistore.config.CloudinaryHelper;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
+import com.smartbiz.sakhistore.modules.store.model.StoreLogo;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
+import com.smartbiz.sakhistore.modules.store.repository.StoreLogoRepo;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsRepo;
 
@@ -41,6 +43,9 @@ public class StoreDetailsService {
 
     @Autowired
     private SellerDetailsRepo sellerRepository;
+
+    @Autowired
+    private StoreLogoRepo storeLogoRepo;
 
 
 
@@ -213,6 +218,7 @@ public class StoreDetailsService {
     // Upload logo for a store
     public StoreDetails uploadLogo(Long storeId, MultipartFile logoFile) {
         StoreDetails store = findByIdDS(storeId);
+        SellerDetails seller = store.getSeller();
         
         // Upload logo to Cloudinary
         String logoUrl = cloudinaryHelper.saveImage(logoFile);
@@ -221,7 +227,22 @@ public class StoreDetailsService {
             throw new RuntimeException("Failed to upload logo. Please try again.");
         }
         
-        // Save logo URL to store
+        // Deactivate all previous logos for this store
+        List<StoreLogo> existingLogos = storeLogoRepo.findByStore_StoreId(storeId);
+        for (StoreLogo existingLogo : existingLogos) {
+            existingLogo.setIsActive(false);
+            storeLogoRepo.save(existingLogo);
+        }
+        
+        // Create new logo entry in store_logos table
+        StoreLogo storeLogo = new StoreLogo();
+        storeLogo.setStore(store);
+        storeLogo.setSeller(seller);
+        storeLogo.setLogoUrl(logoUrl);
+        storeLogo.setIsActive(true);
+        storeLogoRepo.save(storeLogo);
+        
+        // Also save logo URL to store_details table for backward compatibility
         store.setLogoUrl(logoUrl);
         return storeRepository.save(store);
     }
@@ -229,6 +250,7 @@ public class StoreDetailsService {
     // Upload logo for a store by seller ID
     public StoreDetails uploadLogoBySellerId(Long sellerId, MultipartFile logoFile) {
         StoreDetails store = findBySellerId(sellerId);
+        SellerDetails seller = store.getSeller();
         
         // Upload logo to Cloudinary
         String logoUrl = cloudinaryHelper.saveImage(logoFile);
@@ -237,8 +259,44 @@ public class StoreDetailsService {
             throw new RuntimeException("Failed to upload logo. Please try again.");
         }
         
-        // Save logo URL to store
+        // Deactivate all previous logos for this store
+        List<StoreLogo> existingLogos = storeLogoRepo.findByStore_StoreId(store.getStoreId());
+        for (StoreLogo existingLogo : existingLogos) {
+            existingLogo.setIsActive(false);
+            storeLogoRepo.save(existingLogo);
+        }
+        
+        // Create new logo entry in store_logos table
+        StoreLogo storeLogo = new StoreLogo();
+        storeLogo.setStore(store);
+        storeLogo.setSeller(seller);
+        storeLogo.setLogoUrl(logoUrl);
+        storeLogo.setIsActive(true);
+        StoreLogo savedLogo = storeLogoRepo.save(storeLogo);
+        
+        System.out.println("✅ Logo saved to store_logos table - LogoId: " + savedLogo.getLogoId() + 
+                          ", StoreId: " + store.getStoreId() + 
+                          ", SellerId: " + sellerId + 
+                          ", LogoUrl: " + logoUrl);
+        
+        // Also save logo URL to store_details table for backward compatibility
         store.setLogoUrl(logoUrl);
-        return storeRepository.save(store);
+        StoreDetails savedStore = storeRepository.save(store);
+        
+        System.out.println("✅ Logo also saved to store_details table - StoreId: " + savedStore.getStoreId());
+        
+        return savedStore;
+    }
+
+    // Get active logo for a store by seller ID
+    public StoreLogo getActiveLogoBySellerId(Long sellerId) {
+        return storeLogoRepo.findBySeller_SellerIdAndIsActiveTrue(sellerId)
+                .orElse(null);
+    }
+
+    // Get active logo for a store by store ID
+    public StoreLogo getActiveLogoByStoreId(Long storeId) {
+        return storeLogoRepo.findByStore_StoreIdAndIsActiveTrue(storeId)
+                .orElse(null);
     }
 }

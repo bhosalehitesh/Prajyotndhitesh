@@ -14,7 +14,6 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
-import ColorPicker from '../../../components/ColorPicker';
 import {launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse} from 'react-native-image-picker';
 import ViewShot, {captureRef} from 'react-native-view-shot';
 import { createProduct, uploadProductWithImages, updateProduct } from '../../../utils/api';
@@ -48,12 +47,16 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       : '',
   );
   const [sku, setSku] = useState(existing?.sku || '');
-  const [color, setColor] = useState(existing?.color || '');
-  const [colorHex, setColorHex] = useState('#000000');
+  const [colors, setColors] = useState<string[]>(existing?.color ? existing.color.split(',').map(c => c.trim()).filter(c => c) : []);
   const [size, setSize] = useState(existing?.size || '');
   const [hsn, setHsn] = useState(existing?.hsnCode || '');
   const [bestSeller, setBestSeller] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [sizeChartPickerOpen, setSizeChartPickerOpen] = useState(false);
+  const [sizeChartImage, setSizeChartImage] = useState<string | null>(null);
+  const [colorChartPickerOpen, setColorChartPickerOpen] = useState(false);
+  const [colorChartImage, setColorChartImage] = useState<string | null>(null);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [productCategoryOpen, setProductCategoryOpen] = useState(false);
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
@@ -146,7 +149,12 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           Alert.alert('Unsupported format', 'Use JPG, PNG, WEBP, GIF, HEIC, HEIF');
           return;
         }
-        setImages(prev => prev.length < 6 ? [uri!, ...prev] : prev);
+        const newImages = [...images, uri!];
+        if (newImages.length <= 6) {
+          setImages(newImages);
+        } else {
+          Alert.alert('Limit Reached', 'You can add up to 6 images only');
+        }
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -160,8 +168,13 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       const uri = await captureRef(screenShotRef, {format: 'jpg', quality: 0.9} as any);
       if (uri) {
         setShotUri(uri as string);
-        Alert.alert('Screenshot captured', 'Preview added to the first image slot.');
-        setImages(prev => prev.length < 6 ? [uri as string, ...prev] : prev);
+        const newImages = [...images, uri as string];
+        if (newImages.length <= 6) {
+          setImages(newImages);
+          Alert.alert('Screenshot captured', 'Preview added to images.');
+        } else {
+          Alert.alert('Limit Reached', 'You can add up to 6 images only');
+        }
       }
     } catch (e) {
       console.warn('ViewShot error', e);
@@ -184,7 +197,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         productCategory: productCategory || undefined,
         inventoryQuantity: quantity ? Number(quantity) : undefined,
         customSku: sku || undefined,
-        color: color || colorHex || undefined,
+        color: colors.length > 0 ? colors.join(', ') : undefined,
         size: size || undefined,
         hsnCode: hsn || undefined,
       };
@@ -236,17 +249,29 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
       <ViewShot ref={screenShotRef} style={{flex: 1}}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Image picker placeholder */}
-        <View style={styles.imageRow}>
-          <TouchableOpacity style={styles.imagePlaceholder} onPress={() => setPickerOpen(true)}>
-            {images.length === 0 ? (
+        {/* Multiple Image picker */}
+        <Text style={styles.sectionLabel}>Product Images</Text>
+        <View style={styles.imagesContainer}>
+          {images.map((uri, index) => (
+            <View key={index} style={styles.imageItem}>
+              <Image source={{uri}} style={styles.previewImg} />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={() => {
+                  setImages(prev => prev.filter((_, i) => i !== index));
+                }}
+              >
+                <IconSymbol name="close" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          {images.length < 6 && (
+            <TouchableOpacity style={styles.imagePlaceholder} onPress={() => setPickerOpen(true)}>
               <IconSymbol name="add" size={28} color="#6c757d" />
-            ) : (
-              <Image source={{uri: images[0]}} style={styles.previewImg} />
-            )}
-          </TouchableOpacity>
-          <Text style={styles.imageHint}>Add upto 6 images of &lt;10mb (1 image mandatory)</Text>
+            </TouchableOpacity>
+          )}
         </View>
+        <Text style={styles.imageHint}>Add up to 6 images (max 10MB each, 1 image mandatory)</Text>
 
         {/* Product Name */}
         <Text style={styles.sectionLabel}>Product Name</Text>
@@ -327,10 +352,21 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
         {/* Size Chart + Image guidelines */}
         <Text style={styles.subTitle}>Size Chart <Text style={styles.optional}>(Optional)</Text></Text>
-        <TouchableOpacity style={styles.uploadBtn} onPress={() => setPickerOpen(true)}>
+        <TouchableOpacity style={styles.uploadBtn} onPress={() => setSizeChartPickerOpen(true)}>
           <IconSymbol name="add" size={18} color="#111827" />
-          <Text style={styles.uploadText}>Upload</Text>
+          <Text style={styles.uploadText}>{sizeChartImage ? 'Change Size Chart' : 'Upload Size Chart'}</Text>
         </TouchableOpacity>
+        {sizeChartImage && (
+          <View style={styles.sizeChartPreview}>
+            <Image source={{uri: sizeChartImage}} style={styles.sizeChartImage} resizeMode="contain" />
+            <TouchableOpacity
+              style={styles.removeSizeChartBtn}
+              onPress={() => setSizeChartImage(null)}
+            >
+              <IconSymbol name="close" size={20} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.guidelineCard}>
           <Text style={styles.guidelineTitle}>Image Guidelines:</Text>
           <Text style={styles.guidelineBody}>Recommended Minimum Width for Size Chart: 800px</Text>
@@ -351,22 +387,69 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         <Text style={styles.sectionHeader}>Features</Text>
         <Text style={styles.helperBody}>Add color and size information about this product</Text>
         
-        <ColorPicker
-          colorName={color}
-          hexCode={colorHex}
-          onColorNameChange={setColor}
-          onHexCodeChange={setColorHex}
-          onColorChange={(hex) => {
-            setColorHex(hex);
-            // Optionally update color name based on hex if name is empty
-            if (!color.trim()) {
-              // You could add color name mapping here if needed
-            }
-          }}
-        />
-        <Text style={styles.helper}>Maximum 50 characters</Text>
+        {/* Color Selection */}
+        <Text style={[styles.sectionLabel, {marginTop: 12}]}>Colors</Text>
+        <Text style={styles.helperBody}>Select one or more colors for this product</Text>
         
-        <TextInput style={styles.input} placeholder="Enter Size" placeholderTextColor="#9CA3AF" value={size} onChangeText={setSize} />
+        {/* Selected Colors Display */}
+        {colors.length > 0 && (
+          <View style={styles.selectedColorsContainer}>
+            {colors.map((selectedColor, index) => (
+              <View key={index} style={styles.colorChip}>
+                <Text style={styles.colorChipText}>{selectedColor}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    const newColors = colors.filter((_, i) => i !== index);
+                    setColors(newColors);
+                  }}
+                  style={styles.colorChipRemove}
+                >
+                  <IconSymbol name="close" size={16} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+        
+        <TouchableOpacity style={styles.dropdown} onPress={() => setColorPickerOpen(true)}>
+          <Text style={{color: '#6c757d'}}>
+            {colors.length > 0 ? 'Add More Colors' : 'Select Colors'}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.helper}>You can select multiple colors</Text>
+
+        {/* Color Chart */}
+        <Text style={[styles.subTitle, {marginTop: 20}]}>Color Chart <Text style={styles.optional}>(Optional)</Text></Text>
+        <TouchableOpacity style={styles.uploadBtn} onPress={() => setColorChartPickerOpen(true)}>
+          <IconSymbol name="add" size={18} color="#111827" />
+          <Text style={styles.uploadText}>{colorChartImage ? 'Change Color Chart' : 'Upload Color Chart'}</Text>
+        </TouchableOpacity>
+        {colorChartImage && (
+          <View style={styles.sizeChartPreview}>
+            <Image source={{uri: colorChartImage}} style={styles.sizeChartImage} resizeMode="contain" />
+            <TouchableOpacity
+              style={styles.removeSizeChartBtn}
+              onPress={() => setColorChartImage(null)}
+            >
+              <IconSymbol name="close" size={20} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        )}
+        <View style={styles.guidelineCard}>
+          <Text style={styles.guidelineTitle}>Image Guidelines:</Text>
+          <Text style={styles.guidelineBody}>Recommended Minimum Width for Color Chart: 800px</Text>
+        </View>
+        
+        {/* Size Input */}
+        <Text style={[styles.sectionLabel, {marginTop: 20}]}>Size</Text>
+        <TextInput 
+          style={styles.input} 
+          placeholder="Enter Size" 
+          placeholderTextColor="#9CA3AF" 
+          value={size} 
+          onChangeText={setSize}
+          maxLength={50}
+        />
         <Text style={styles.helper}>Maximum 50 characters</Text>
 
         {/* Variants / Tax */}
@@ -422,12 +505,35 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
                 <Text style={styles.pickLabel}>Camera</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.pickBox} onPress={async () => {
-                const res = await launchImageLibrary({mediaType:'photo',selectionLimit:1,quality:0.8});
-                if (res.assets?.[0]?.uri) {
-                  const {fileSize, type, uri} = res.assets[0];
-                  if (fileSize && fileSize > 10 * 1024 * 1024) { Alert.alert('Image too large','Please select an image less than 10MB'); return; }
-                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) { Alert.alert('Unsupported format','Use JPG, PNG, WEBP, GIF, HEIC, HEIF'); return; }
-                  setImages(prev => prev.length < 6 ? [uri!, ...prev] : prev);
+                const remainingSlots = 6 - images.length;
+                const res = await launchImageLibrary({
+                  mediaType: 'photo',
+                  selectionLimit: remainingSlots,
+                  quality: 0.8,
+                });
+                if (res.assets && res.assets.length > 0) {
+                  const validImages: string[] = [];
+                  for (const asset of res.assets) {
+                    if (asset.uri) {
+                      const {fileSize, type, uri} = asset;
+                      if (fileSize && fileSize > 10 * 1024 * 1024) {
+                        Alert.alert('Image too large', `Image "${asset.fileName || 'image'}" is larger than 10MB. Skipping.`);
+                        continue;
+                      }
+                      if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) {
+                        Alert.alert('Unsupported format', `Image "${asset.fileName || 'image'}" format not supported. Skipping.`);
+                        continue;
+                      }
+                      validImages.push(uri!);
+                    }
+                  }
+                  if (validImages.length > 0) {
+                    const newImages = [...images, ...validImages].slice(0, 6);
+                    setImages(newImages);
+                    if (validImages.length < res.assets.length) {
+                      Alert.alert('Partial Success', `Added ${validImages.length} image(s). Some images were skipped due to size or format issues.`);
+                    }
+                  }
                 }
                 setPickerOpen(false);
               }}>
@@ -529,6 +635,176 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           </View>
         </View>
       </Modal>
+
+      {/* Color Selection Modal */}
+      <Modal transparent visible={colorPickerOpen} animationType="slide" onRequestClose={() => setColorPickerOpen(false)}>
+        <View style={styles.centerOverlay}>
+          <View style={styles.listCard}>
+            <View style={styles.listHeader}> 
+              <Text style={styles.listTitle}>Select Colors</Text>
+              <TouchableOpacity onPress={() => setColorPickerOpen(false)}><Text style={{fontSize:28, fontWeight:'bold'}}>×</Text></TouchableOpacity>
+            </View>
+            <ScrollView>
+              {[
+                'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'Pink', 'Black', 'White', 
+                'Gray', 'Brown', 'Beige', 'Navy', 'Maroon', 'Teal', 'Cyan', 'Magenta', 'Lime',
+                'Gold', 'Silver', 'Bronze', 'Turquoise', 'Coral', 'Salmon', 'Khaki', 'Olive',
+                'Violet', 'Indigo', 'Crimson', 'Aqua'
+              ].map(item => {
+                const isSelected = colors.includes(item);
+                return (
+                  <TouchableOpacity 
+                    key={item} 
+                    style={[styles.listItem, isSelected && styles.listItemSelected]} 
+                    onPress={() => { 
+                      if (isSelected) {
+                        // Remove color if already selected
+                        setColors(colors.filter(c => c !== item));
+                      } else {
+                        // Add color if not selected
+                        setColors([...colors, item]);
+                      }
+                    }}
+                  >
+                    <Text style={[styles.listItemText, isSelected && styles.listItemTextSelected]}>{item}</Text>
+                    {isSelected && <IconSymbol name="checkmark" size={20} color="#e61580" />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.doneButton}
+                onPress={() => setColorPickerOpen(false)}
+              >
+                <Text style={styles.doneButtonText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Size Chart Image Picker Modal */}
+      <Modal transparent visible={sizeChartPickerOpen} animationType="fade" onRequestClose={() => setSizeChartPickerOpen(false)}>
+        <View style={styles.centerOverlay}>
+          <View style={styles.sheetCard}>
+            <View style={styles.pickRow}>
+              <TouchableOpacity style={styles.pickBox} onPress={async () => {
+                const hasPermission = await requestCameraPermission();
+                if (!hasPermission) {
+                  Alert.alert('Permission Required', 'Please grant camera permission to take photos');
+                  return;
+                }
+                const res = await launchCamera({mediaType:'photo',quality:0.8});
+                if (res.assets?.[0]?.uri) {
+                  const {fileSize, type, uri} = res.assets[0];
+                  if (fileSize && fileSize > 10 * 1024 * 1024) { 
+                    Alert.alert('Image too large','Please select an image less than 10MB'); 
+                    return; 
+                  }
+                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) { 
+                    Alert.alert('Unsupported format','Use JPG, PNG, WEBP, GIF, HEIC, HEIF'); 
+                    return; 
+                  }
+                  setSizeChartImage(uri!);
+                  setSizeChartPickerOpen(false);
+                }
+              }}>
+                <IconSymbol name="camera-outline" size={36} color="#111827" />
+                <Text style={styles.pickLabel}>Camera</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.pickBox} onPress={async () => {
+                const res = await launchImageLibrary({mediaType:'photo',selectionLimit:1,quality:0.8});
+                if (res.assets?.[0]?.uri) {
+                  const {fileSize, type, uri} = res.assets[0];
+                  if (fileSize && fileSize > 10 * 1024 * 1024) { 
+                    Alert.alert('Image too large','Please select an image less than 10MB'); 
+                    return; 
+                  }
+                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) { 
+                    Alert.alert('Unsupported format','Use JPG, PNG, WEBP, GIF, HEIC, HEIF'); 
+                    return; 
+                  }
+                  setSizeChartImage(uri!);
+                  setSizeChartPickerOpen(false);
+                }
+              }}>
+                <IconSymbol name="image-outline" size={36} color="#111827" />
+                <Text style={styles.pickLabel}>Gallery</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{marginTop: 12}}>
+              <Text>{'• Make sure Image size is less than 10 MB'}</Text>
+              <Text>{'• Supported formats: JPG, PNG, WEBP, GIF, HEIC, HEIF'}</Text>
+              <Text>{'• Recommended Minimum Width: 800px'}</Text>
+            </View>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setSizeChartPickerOpen(false)}>
+              <Text style={{fontWeight:'bold', fontSize: 28}}>×</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Color Chart Image Picker Modal */}
+      <Modal transparent visible={colorChartPickerOpen} animationType="fade" onRequestClose={() => setColorChartPickerOpen(false)}>
+        <View style={styles.centerOverlay}>
+          <View style={styles.sheetCard}>
+            <View style={styles.pickRow}>
+              <TouchableOpacity style={styles.pickBox} onPress={async () => {
+                const hasPermission = await requestCameraPermission();
+                if (!hasPermission) {
+                  Alert.alert('Permission Required', 'Please grant camera permission to take photos');
+                  return;
+                }
+                const res = await launchCamera({mediaType:'photo',quality:0.8});
+                if (res.assets?.[0]?.uri) {
+                  const {fileSize, type, uri} = res.assets[0];
+                  if (fileSize && fileSize > 10 * 1024 * 1024) { 
+                    Alert.alert('Image too large','Please select an image less than 10MB'); 
+                    return; 
+                  }
+                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) { 
+                    Alert.alert('Unsupported format','Use JPG, PNG, WEBP, GIF, HEIC, HEIF'); 
+                    return; 
+                  }
+                  setColorChartImage(uri!);
+                  setColorChartPickerOpen(false);
+                }
+              }}>
+                <IconSymbol name="camera-outline" size={36} color="#111827" />
+                <Text style={styles.pickLabel}>Camera</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.pickBox} onPress={async () => {
+                const res = await launchImageLibrary({mediaType:'photo',selectionLimit:1,quality:0.8});
+                if (res.assets?.[0]?.uri) {
+                  const {fileSize, type, uri} = res.assets[0];
+                  if (fileSize && fileSize > 10 * 1024 * 1024) { 
+                    Alert.alert('Image too large','Please select an image less than 10MB'); 
+                    return; 
+                  }
+                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) { 
+                    Alert.alert('Unsupported format','Use JPG, PNG, WEBP, GIF, HEIC, HEIF'); 
+                    return; 
+                  }
+                  setColorChartImage(uri!);
+                  setColorChartPickerOpen(false);
+                }
+              }}>
+                <IconSymbol name="image-outline" size={36} color="#111827" />
+                <Text style={styles.pickLabel}>Gallery</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{marginTop: 12}}>
+              <Text>{'• Make sure Image size is less than 10 MB'}</Text>
+              <Text>{'• Supported formats: JPG, PNG, WEBP, GIF, HEIC, HEIF'}</Text>
+              <Text>{'• Recommended Minimum Width: 800px'}</Text>
+            </View>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setColorChartPickerOpen(false)}>
+              <Text style={{fontWeight:'bold', fontSize: 28}}>×</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -542,9 +818,47 @@ const styles = StyleSheet.create({
 
   content: {padding: 16, paddingBottom: 40},
   imageRow: {marginBottom: 16},
-  imagePlaceholder: {width: 120, height: 120, borderWidth: 1, borderStyle: 'dashed', borderColor: '#9CA3AF', borderRadius: 8, alignItems: 'center', justifyContent: 'center'},
-  previewImg: {width: 120, height: 120, borderRadius: 8},
-  imageHint: {color: '#6c757d', marginTop: 8},
+  imagesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 8,
+  },
+  imageItem: {
+    position: 'relative',
+    width: 100,
+    height: 100,
+  },
+  imagePlaceholder: {
+    width: 100,
+    height: 100,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#9CA3AF',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  previewImg: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  imageHint: {color: '#6c757d', marginTop: 8, fontSize: 12},
 
   sectionLabel: {fontWeight: 'bold', color: '#111827', marginTop: 12},
   optional: {color: '#9CA3AF', fontWeight: 'normal'},
@@ -606,6 +920,24 @@ const styles = StyleSheet.create({
   createCategoryBtnDisabled: {backgroundColor:'#D1D5DB'},
   createCategoryBtnText: {color:'#FFFFFF', fontWeight:'bold'},
   createCategoryBtnTextDisabled: {color:'#9CA3AF'},
+
+  // Size Chart Preview
+  sizeChartPreview: {marginTop: 12, position: 'relative', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#dee2e6'},
+  sizeChartImage: {width: '100%', height: 200, backgroundColor: '#f8f9fa'},
+  removeSizeChartBtn: {position: 'absolute', top: 8, right: 8, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 4},
+
+  // Selected Colors
+  selectedColorsContainer: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 8},
+  colorChip: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFEFF', borderWidth: 1, borderColor: '#C7F2F9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6},
+  colorChipText: {color: '#e61580', fontWeight: '600', fontSize: 14},
+  colorChipRemove: {marginLeft: 4},
+
+  // Color Selection Modal
+  listItemSelected: {backgroundColor: '#ECFEFF', borderLeftWidth: 3, borderLeftColor: '#e61580'},
+  listItemTextSelected: {color: '#e61580', fontWeight: '600'},
+  modalFooter: {padding: 16, borderTopWidth: 1, borderTopColor: '#dee2e6'},
+  doneButton: {backgroundColor: '#e61580', padding: 14, borderRadius: 8, alignItems: 'center'},
+  doneButtonText: {color: '#FFFFFF', fontWeight: 'bold', fontSize: 16},
 });
 
 export default AddProductScreen;

@@ -178,6 +178,8 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
         
         if (result.success && result.logoUrl) {
           setLogoUri(result.logoUrl);
+          // Save logo URL to local storage for persistence
+          await storage.setItem('storeLogoUrl', result.logoUrl);
           Alert.alert('Success', 'Logo uploaded successfully');
           setHasChanges(false);
         } else {

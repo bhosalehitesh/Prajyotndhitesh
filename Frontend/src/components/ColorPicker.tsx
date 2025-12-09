@@ -124,20 +124,6 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
   const currentHex = hslToHex(hue, saturation, lightness);
 
-  // Handle hex code input
-  const handleHexCodeChange = (text: string) => {
-    const cleaned = text.replace(/[^0-9A-Fa-f#]/g, '').replace(/^#?/, '#').slice(0, 7);
-    onHexCodeChange(cleaned);
-    
-    if (cleaned.length === 7 && cleaned.match(/^#[0-9A-Fa-f]{6}$/)) {
-      const hsl = hexToHsl(cleaned);
-      setHue(hsl.h);
-      setSaturation(hsl.s);
-      setLightness(hsl.l);
-      onColorChange(cleaned.toUpperCase());
-    }
-  };
-
   // Get handle position on color wheel
   const getColorWheelPosition = () => {
     const center = COLOR_WHEEL_SIZE / 2;
@@ -326,29 +312,8 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
     <View style={styles.container}>
       <Text style={styles.label}>Select Color</Text>
       
-      <Text style={styles.inputLabel}>Color Name</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Color Name"
-        placeholderTextColor="#9CA3AF"
-        value={colorName}
-        onChangeText={onColorNameChange}
-        maxLength={50}
-      />
-
       {renderColorWheel()}
       {renderSlider()}
-
-      <Text style={styles.inputLabel}>Hex-code</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Hex-code"
-        placeholderTextColor="#9CA3AF"
-        value={hexCode}
-        onChangeText={handleHexCodeChange}
-        maxLength={7}
-        autoCapitalize="characters"
-      />
     </View>
   );
 };

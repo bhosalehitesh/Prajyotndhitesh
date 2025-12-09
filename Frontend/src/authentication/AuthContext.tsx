@@ -60,6 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await storage.removeItem('storeName');
       await storage.removeItem('storeLink');
       await storage.removeItem('storeId');
+      await storage.removeItem('storeLogoUrl');
       await storage.removeItem('onboardingData');
       setIsAuthenticated(false);
     } catch (error) {
