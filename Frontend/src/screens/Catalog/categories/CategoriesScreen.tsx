@@ -106,6 +106,27 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
     });
   };
 
+  const handleAddProducts = () => {
+    setBottomSheetOpen(false);
+    if (activeCategoryId && activeCategory) {
+      console.log('🔵 Navigating to Add Products to Category:', {
+        categoryId: activeCategoryId,
+        categoryName: activeCategory.name,
+      });
+      navigation.push('Products', {
+        categoryId: activeCategoryId,
+        categoryName: activeCategory.name,
+        addToCategory: true,
+        returnScreen: 'Categories',
+      });
+    } else {
+      console.error('❌ Cannot navigate: missing categoryId or activeCategory', {
+        activeCategoryId,
+        activeCategory,
+      });
+    }
+  };
+
   const handleShare = async () => {
     setBottomSheetOpen(false);
     
@@ -207,8 +228,10 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
               style={styles.categoryCard}
               onPress={() =>
                 navigation.navigate('Products', {
+                  categoryId: category.id,
                   categoryName: category.name,
                   businessCategory: category.businessCategory,
+                  returnScreen: 'Categories',
                 })
               }
             >
@@ -264,6 +287,11 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
             <TouchableOpacity style={styles.actionRow} onPress={handleEdit}>
               <Text style={styles.actionRowText}>Edit Category</Text>
               <IconSymbol name="pencil" size={20} color="#111827" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionRow} onPress={handleAddProducts}>
+              <Text style={styles.actionRowText}>Add Products</Text>
+              <IconSymbol name="add-circle" size={20} color="#111827" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionRow} onPress={handleShare}>

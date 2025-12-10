@@ -194,6 +194,27 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
     setCategoryImage(null);
   };
 
+  const handleAddProductsToCategory = () => {
+    if (!isEditMode || !route?.params?.categoryId) {
+      Alert.alert('Add products', 'Please save the category first, then add products.');
+      return;
+    }
+
+    navigation.push('Products', {
+      categoryId: route.params.categoryId,
+      categoryName: categoryName || route.params.name,
+      addToCategory: true,
+      returnScreen: 'AddCategory',
+      returnParams: {
+        categoryId: route.params.categoryId,
+        name: categoryName,
+        description: categoryDescription,
+        image: categoryImage,
+        businessCategory: businessCategory,
+      },
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -298,6 +319,15 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
 
       {/* Save Button */}
       <View style={styles.buttonContainer}>
+          {isEditMode && (
+            <TouchableOpacity
+              style={[styles.saveButton, styles.secondaryButton]}
+              onPress={handleAddProductsToCategory}>
+              <Text style={[styles.saveButtonText, styles.secondaryButtonText]}>
+                Add Products to Category
+              </Text>
+            </TouchableOpacity>
+          )}
         <TouchableOpacity
           style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
           onPress={handleSave}
@@ -529,6 +559,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    marginBottom: 12,
   },
   saveButtonDisabled: {
     backgroundColor: '#9CA3AF',
@@ -540,6 +571,14 @@ const styles = StyleSheet.create({
   },
   saveButtonTextDisabled: {
     color: '#E5E7EB',
+  },
+  secondaryButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#e61580',
+  },
+  secondaryButtonText: {
+    color: '#e61580',
   },
   backdrop: {
     flex: 1,
