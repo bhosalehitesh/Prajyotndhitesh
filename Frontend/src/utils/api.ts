@@ -189,11 +189,23 @@ export const verifyOtp = async (data: VerifyOtpRequest): Promise<AuthResponse> =
     throw new Error('Invalid OTP response from server');
   }
 
-  const userId = typeof payload.sellerId === 'number' ? payload.sellerId : NaN;
+  // Extract userId from response - check both userId and sellerId fields
+  let userId: number | null = null;
+  
+  if (typeof payload.userId === 'number' && payload.userId > 0) {
+    userId = payload.userId;
+  } else if (typeof payload.sellerId === 'number' && payload.sellerId > 0) {
+    userId = payload.sellerId;
+  }
+
+  if (userId === null || userId <= 0) {
+    console.error('Error: userId is missing or invalid in verifyOtp response:', payload);
+    throw new Error('Signup failed: User ID not received from server. Please try again.');
+  }
 
   return {
     token: payload.token,
-    userId,
+    userId: userId,
     fullName: payload.fullName ?? '',
     phone: payload.phone ?? data.phone,
   };
@@ -300,20 +312,23 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
       throw new Error('Login failed: No token received from server');
     }
 
-    const userId =
-      typeof payload.userId === 'number'
-        ? payload.userId
-        : typeof payload.sellerId === 'number'
-        ? payload.sellerId
-        : null;
+    // Extract userId from response - check both userId and sellerId fields
+    let userId: number | null = null;
+    
+    if (typeof payload.userId === 'number' && payload.userId > 0) {
+      userId = payload.userId;
+    } else if (typeof payload.sellerId === 'number' && payload.sellerId > 0) {
+      userId = payload.sellerId;
+    }
 
-    if (userId === null || isNaN(userId)) {
-      console.warn('Warning: userId is missing or invalid in response:', payload);
+    if (userId === null || userId <= 0) {
+      console.error('Error: userId is missing or invalid in login response:', payload);
+      throw new Error('Login failed: User ID not received from server. Please try again.');
     }
 
     const authResponse = {
       token: payload.token,
-      userId: userId || 0,
+      userId: userId,
       fullName: payload.fullName ?? '',
       phone: payload.phone ?? data.phone,
     };
@@ -368,11 +383,22 @@ export const loginWithOtp = async (phone: string, otpCode: string): Promise<Auth
       throw new Error('Invalid OTP login response from server');
     }
 
-    const userId = typeof payload.sellerId === 'number' ? payload.sellerId : NaN;
+    // Validate userId/sellerId from payload
+    const userId =
+      typeof payload.userId === 'number' && payload.userId > 0
+        ? payload.userId
+        : typeof payload.sellerId === 'number' && payload.sellerId > 0
+        ? payload.sellerId
+        : null;
+
+    if (userId === null || isNaN(userId) || userId <= 0) {
+      console.error('Invalid userId in loginWithOtp response:', payload);
+      throw new Error('Login failed: User ID not received from server. Please try again.');
+    }
 
     return {
       token: payload.token,
-      userId: userId || 0,
+      userId: userId,
       fullName: payload.fullName ?? '',
       phone: payload.phone ?? cleanPhone,
     };
@@ -1114,6 +1140,8 @@ export const saveCollectionProducts = async (
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const url = `${API_BASE_URL}/api/collections/${collectionId}/products`;
 
+  console.log(`Adding ${productIds.length} product(s) to collection ${collectionId}:`, productIds);
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -1130,9 +1158,11 @@ export const saveCollectionProducts = async (
       typeof payload === 'string'
         ? payload
         : payload?.message || 'Failed to update collection products';
+    console.error('Failed to add products to collection:', { collectionId, productIds, error: message });
     throw new Error(message);
   }
 
+  console.log(`Successfully added ${productIds.length} product(s) to collection ${collectionId}`);
   return payload;
 };
 
@@ -1199,6 +1229,46 @@ export const setCollectionVisibility = async (
   }
 
   return payload as CollectionDto;
+};
+
+/**
+ * Fetch products for a specific collection.
+ * Backend: GET /api/collections/{id}/products
+ */
+export const fetchProductsByCollection = async (
+  collectionId: string | number,
+): Promise<ProductDto[]> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof collectionId === 'string' ? collectionId : String(collectionId);
+  const url = `${API_BASE_URL}/api/collections/${id}/products`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to load collection products';
+    throw new Error(message);
+  }
+
+  if (!payload) {
+    return [];
+  }
+
+  if (!Array.isArray(payload)) {
+    throw new Error('Invalid products response from server');
+  }
+
+  return payload as ProductDto[];
 };
 
 /**
@@ -1370,9 +1440,28 @@ export const createProduct = async (body: {
 }) => {
   const baseUrl = `${API_BASE_URL}/api/products/addProduct`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
-  const userId = await storage.getItem('userId');
+  const userIdRaw = await storage.getItem('userId');
+  
+  // Debug logging
+  console.log('Create product - userId from storage:', userIdRaw, 'type:', typeof userIdRaw);
+  
+  // Validate userId - must be a valid number > 0
+  const userId = userIdRaw && !isNaN(Number(userIdRaw)) && Number(userIdRaw) > 0 
+    ? String(userIdRaw) 
+    : null;
 
-  const url = userId ? `${baseUrl}?sellerId=${userId}` : baseUrl;
+  if (!userId) {
+    console.error('Create product failed - userId validation:', {
+      userIdRaw,
+      parsed: userIdRaw ? Number(userIdRaw) : null,
+      isValid: userIdRaw && !isNaN(Number(userIdRaw)) && Number(userIdRaw) > 0,
+    });
+    throw new Error('User ID not found. Please logout and login again to refresh your session.');
+  }
+  
+  console.log('Create product - using userId:', userId);
+
+  const url = `${baseUrl}?sellerId=${userId}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -1419,7 +1508,26 @@ export const uploadProductWithImages = async (params: {
 }) => {
   const url = `${API_BASE_URL}/api/products/upload`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
-  const userId = await storage.getItem('userId');
+  const userIdRaw = await storage.getItem('userId');
+  
+  // Debug logging
+  console.log('Product upload - userId from storage:', userIdRaw, 'type:', typeof userIdRaw);
+  
+  // Validate userId - must be a valid number > 0
+  const userId = userIdRaw && !isNaN(Number(userIdRaw)) && Number(userIdRaw) > 0 
+    ? String(userIdRaw) 
+    : null;
+
+  if (!userId) {
+    console.error('Product upload failed - userId validation:', {
+      userIdRaw,
+      parsed: userIdRaw ? Number(userIdRaw) : null,
+      isValid: userIdRaw && !isNaN(Number(userIdRaw)) && Number(userIdRaw) > 0,
+    });
+    throw new Error('User ID not found. Please logout and login again to refresh your session.');
+  }
+  
+  console.log('Product upload - using userId:', userId);
 
   const form = new FormData();
 
@@ -1437,10 +1545,7 @@ export const uploadProductWithImages = async (params: {
   form.append('hsnCode', params.hsnCode ?? '');
   form.append('seoTitleTag', params.seoTitleTag ?? params.productName);
   form.append('seoMetaDescription', params.seoMetaDescription ?? params.description ?? '');
-
-  if (userId) {
-    form.append('sellerId', userId);
-  }
+  form.append('sellerId', userId);
 
   // Add categoryId if provided
   if (params.categoryId) {

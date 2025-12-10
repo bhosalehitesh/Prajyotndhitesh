@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import IconSymbol from '../../../components/IconSymbol';
-import { fetchProducts, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto } from '../../../utils/api';
+import { fetchProducts, fetchProductsByCollection, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto } from '../../../utils/api';
 import { storage } from '../../../authentication/storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -30,6 +30,17 @@ interface ProductsScreenProps {
 }
 
 const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
+  // Check if we're in "add to collection" mode
+  const targetCollectionId = route?.params?.collectionId;
+  // Fallback: if returning from EditCollection with a collectionId, force add-to-collection mode
+  const addToCollectionMode =
+    route?.params?.addToCollection === true ||
+    (!!targetCollectionId && route?.params?.returnScreen === 'EditCollection');
+  const returnScreen = route?.params?.returnScreen;
+  // Check if we're viewing products in a collection
+  const viewCollectionProducts = route?.params?.viewCollectionProducts === true;
+  const collectionName = route?.params?.collectionName;
+  
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
@@ -81,12 +92,33 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   const [sortBy, setSortBy] = useState<'title-az' | 'title-za' | 'price-low' | 'price-high' | 'disc-low' | 'disc-high'>('title-az');
   const [categoryFilter] = useState<string | null>(route?.params?.categoryName ?? null);
   const [businessFilter] = useState<string | null>(route?.params?.businessCategory ?? null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedForCollection, setSelectedForCollection] = useState<Record<string, boolean>>({});
+  const [addingSelected, setAddingSelected] = useState(false);
+  const [alreadyAdded, setAlreadyAdded] = useState<Record<string, boolean>>({});
+  const [navBusy, setNavBusy] = useState(false);
   
   // Animation for refresh button
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
+  // When in add-to-collection mode, reset filters/search so all products show
+  React.useEffect(() => {
+    if (addToCollectionMode) {
+      setInventory('all');
+      setDiscounts({});
+      setPriceRange({min: 0, max: 0});
+      setSortBy('title-az');
+      setFilterTab('Inventory');
+      setSearchQuery('');
+    }
+  }, [addToCollectionMode]);
+
   const handleAddProduct = () => {
+    if (navBusy) return;
+    setNavBusy(true);
     navigation.navigate('AddProduct');
+    // small delay to prevent double-tap spam; navigation will replace anyway
+    setTimeout(() => setNavBusy(false), 800);
     console.log('Navigate to Add Product screen');
   };
 
@@ -202,7 +234,20 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       };
       startRotation();
       
-      const apiProducts: ProductDto[] = await fetchProducts();
+      // Determine data source
+      const viewCollection = route?.params?.viewCollectionProducts === true;
+      const collectionId = route?.params?.collectionId;
+      let apiProducts: ProductDto[] = [];
+      if (addToCollectionMode) {
+        // In add-to-collection picker, always show all products to pick from
+        apiProducts = await fetchProducts();
+      } else if (viewCollection && collectionId) {
+        // Viewing a specific collection
+        apiProducts = await fetchProductsByCollection(collectionId);
+      } else {
+        // Default: all products
+        apiProducts = await fetchProducts();
+      }
       const mapped = apiProducts.map(p => ({
         id: String(p.productsId),
         title: p.productName,
@@ -230,7 +275,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       rotateAnim.stopAnimation();
       rotateAnim.setValue(0);
     }
-  }, [rotateAnim]);
+  }, [rotateAnim, route]);
 
   // Comprehensive refresh function that resets everything and reloads
   const refreshScreen = React.useCallback(async () => {
@@ -265,8 +310,15 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       setConfirmDeleteOpen(false);
       setCollectionSheetOpen(false);
       
-      // Reload products
-      const apiProducts: ProductDto[] = await fetchProducts();
+      // Reload products (mirror the logic in loadProducts)
+      let apiProducts: ProductDto[] = [];
+      if (addToCollectionMode) {
+        apiProducts = await fetchProducts();
+      } else if (viewCollectionProducts && targetCollectionId) {
+        apiProducts = await fetchProductsByCollection(targetCollectionId);
+      } else {
+        apiProducts = await fetchProducts();
+      }
       const mapped = apiProducts.map(p => ({
         id: String(p.productsId),
         title: p.productName,
@@ -289,9 +341,11 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadProducts();
+      // Refresh collections when returning from AddCollection
+      loadCollectionsForSheet();
     });
     return unsubscribe;
-  }, [navigation, loadProducts]);
+  }, [navigation, loadProducts, loadCollectionsForSheet]);
 
   // Compute absolute price bounds from product data
   const absoluteMinPrice = useMemo(() => {
@@ -368,7 +422,23 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
 
   // Build filtered and sorted list based on current filter state
   const filteredProducts = useMemo(() => {
+    // In add-to-collection picker, always show all products (ignore filters/search)
+    if (addToCollectionMode) {
+      return products;
+    }
+
     let items = products.slice();
+    // Text search
+    if (searchQuery.trim().length > 0) {
+      const q = searchQuery.toLowerCase().trim();
+      items = items.filter(p =>
+        (p.title || '').toLowerCase().includes(q) ||
+        (p.productCategory || '').toLowerCase().includes(q) ||
+        (p.businessCategory || '').toLowerCase().includes(q) ||
+        (p.description || '').toLowerCase().includes(q) ||
+        (p.sku || '').toLowerCase().includes(q),
+      );
+    }
     // Category filter (when navigated from Categories screen)
     if (businessFilter) {
       const b = businessFilter.toLowerCase().trim();
@@ -436,7 +506,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     });
     
     return items;
-  }, [products, inventory, priceRange, discounts, categoryFilter, businessFilter, sortBy]);
+  }, [products, addToCollectionMode, searchQuery, inventory, priceRange, discounts, categoryFilter, businessFilter, sortBy]);
 
   // Counts for filter UI
   const inventoryCounts = useMemo(() => ({
@@ -444,6 +514,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     in: products.filter(p=>p.inStock).length,
     out: products.filter(p=>!p.inStock).length,
   }), [products]);
+
+  const selectedCount = useMemo(() => Object.values(selectedForCollection).filter(Boolean).length, [selectedForCollection]);
 
   const discountRanges = ['0 - 20%','21 - 40%','41 - 60%','61 - 80%','81% and above'];
   const discountCounts = useMemo(() => {
@@ -512,12 +584,49 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => navigation.goBack()}>
+          onPress={() => {
+            if (returnScreen) {
+              navigation.navigate(returnScreen);
+            } else {
+              navigation.goBack();
+            }
+          }}>
           <IconSymbol name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{categoryFilter ?? businessFilter ?? 'All Products'}</Text>
-        <TouchableOpacity 
-          style={styles.headerRight} 
+        <Text style={styles.headerTitle}>
+          {addToCollectionMode 
+            ? 'Add Products to Collection' 
+            : viewCollectionProducts && collectionName
+            ? collectionName
+            : (categoryFilter ?? businessFilter ?? 'All Products')}
+        </Text>
+        <View style={styles.headerRight}>
+          {viewCollectionProducts && targetCollectionId && !addToCollectionMode ? (
+            // Show "Add" button when viewing collection products
+            <TouchableOpacity 
+              style={styles.headerAddButton}
+              onPress={() => {
+                if (navBusy) return;
+                setNavBusy(true);
+                navigation.push('Products', {
+                  collectionId: targetCollectionId,
+                  collectionName: collectionName,
+                  addToCollection: true,
+                  returnScreen: 'Products',
+                  returnParams: {
+                    collectionId: targetCollectionId,
+                    collectionName: collectionName,
+                    viewCollectionProducts: true,
+                  },
+                });
+                setTimeout(() => setNavBusy(false), 800);
+              }}
+              activeOpacity={0.7}>
+              <IconSymbol name="add" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity 
+            style={styles.headerRefreshButton} 
           onPress={refreshScreen}
           disabled={loading}
           activeOpacity={0.7}
@@ -535,9 +644,11 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             <IconSymbol name="refresh" size={22} color={loading ? "#CCCCCC" : "#FFFFFF"} />
           </Animated.View>
         </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Search and Filter Section */}
+      {/* Search and Filter Section (hidden in add-to-collection mode to keep UI clean) */}
+      {!addToCollectionMode && (
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
           <IconSymbol name="search" size={20} color="#666666" />
@@ -545,6 +656,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             style={styles.searchInput}
             placeholder="Search Products"
             placeholderTextColor="#999999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
           />
         </View>
         
@@ -558,6 +671,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           </TouchableOpacity>
         </View>
       </View>
+      )}
 
       {/* Main Content - Product List */}
       <ScrollView style={styles.content}>
@@ -571,60 +685,152 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             key={item.id}
             style={styles.card}
             activeOpacity={0.8}
-            onPress={() =>
-              navigation.navigate('AddProduct', {
-                mode: 'edit',
-                product: item,
-              })
-            }>
-            {item.imageUrl ? (
-              <Image source={{uri: item.imageUrl}} style={styles.thumbImage} />
-            ) : (
-              <View style={styles.thumbPlaceholder}>
-                <IconSymbol name="image-outline" size={18} color="#9CA3AF" />
-              </View>
-            )}
-            <View style={{flex: 1}}>
-              <Text style={styles.title}>{item.title}</Text>
-              {!!item.variantCount && item.variantCount > 1 && (
-                <Text style={styles.variantCountText}>
-                  {item.variantCount} Variant{item.variantCount > 1 ? 's' : ''}
-                </Text>
-              )}
-              <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-                <Text style={styles.price}>₹{item.price}</Text>
-                {item.mrp ? <Text style={styles.mrp}>₹{item.mrp}</Text> : null}
-              </View>
-              {!item.inStock && (
-                <View style={styles.stockBadgeRow}>
-                  <Text style={styles.outOfStockBadge}>Out of Stock</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setActiveProductId(item.id);
-                      setActionSheetOpen(true);
-                    }}>
-                    <Text style={styles.updateInventory}>Update Inventory</Text>
-                  </TouchableOpacity>
+            onPress={async () => {
+      // If in "add to collection" mode, just toggle selection (bulk add via bottom button)
+      if (addToCollectionMode && targetCollectionId) {
+        setSelectedForCollection(prev => ({
+          ...prev,
+          [item.id]: !prev[item.id],
+        }));
+      } else {
+        // Normal mode - navigate to edit product
+        navigation.navigate('AddProduct', {
+          mode: 'edit',
+          product: item,
+        });
+      }
+            }}>
+            <View style={{flexDirection:'row', alignItems:'center', flex:1}}>
+              {item.imageUrl ? (
+                <Image source={{uri: item.imageUrl}} style={styles.thumbImage} />
+              ) : (
+                <View style={styles.thumbPlaceholder}>
+                  <IconSymbol name="image-outline" size={18} color="#9CA3AF" />
                 </View>
               )}
+              <View style={{flex: 1}}>
+                <View style={{flexDirection:'row', alignItems:'center', justifyContent:'space-between'}}>
+                  <View style={{flex:1, paddingRight:8}}>
+                    <Text style={styles.title}>{item.title}</Text>
+                    {!!item.variantCount && item.variantCount > 1 && (
+                      <Text style={styles.variantCountText}>
+                        {item.variantCount} Variant{item.variantCount > 1 ? 's' : ''}
+                      </Text>
+                    )}
+                  </View>
+                  {addToCollectionMode ? (
+                    <IconSymbol
+                      name={selectedForCollection[item.id] ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={22}
+                      color={selectedForCollection[item.id] ? '#10B981' : '#9CA3AF'}
+                    />
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.kebab}
+                      onPress={() => {
+                        setActiveProductId(item.id);
+                        setActionSheetOpen(true);
+                      }}>
+                      <IconSymbol name="ellipsis-vertical" size={18} color="#111827" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                  <Text style={styles.price}>₹{item.price}</Text>
+                  {item.mrp ? <Text style={styles.mrp}>₹{item.mrp}</Text> : null}
+                </View>
+                {!item.inStock && (
+                  <View style={styles.stockBadgeRow}>
+                    <Text style={styles.outOfStockBadge}>Out of Stock</Text>
+                    {!addToCollectionMode && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setActiveProductId(item.id);
+                        setActionSheetOpen(true);
+                      }}>
+                      <Text style={styles.updateInventory}>Update Inventory</Text>
+                    </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+                {addToCollectionMode && (
+                  <View style={styles.stockBadgeRow}>
+                    <Text style={styles.addToCollectionHint}>Tap to add to collection</Text>
+                  </View>
+                )}
+              </View>
             </View>
-            <TouchableOpacity
-              style={styles.kebab}
-              onPress={() => {
-                setActiveProductId(item.id);
-                setActionSheetOpen(true);
-              }}>
-              <IconSymbol name="ellipsis-vertical" size={18} color="#111827" />
-            </TouchableOpacity>
           </TouchableOpacity>
         ))}
 
         {/* Add Product Button (bottom) */}
+        {addToCollectionMode ? (
+          <TouchableOpacity 
+            style={[
+              styles.addButton,
+              {alignSelf:'center', marginVertical:24},
+              (selectedCount === 0 || addingSelected) && styles.addButtonDisabled
+            ]}
+            disabled={selectedCount === 0 || addingSelected}
+            onPress={async () => {
+              if (addingSelected) return; // extra guard against double-tap
+              if (!targetCollectionId) return;
+              const ids = Array.from(new Set(Object.keys(selectedForCollection).filter(id => selectedForCollection[id])));
+              if (ids.length === 0) return;
+              setAddingSelected(true);
+              try {
+                for (const pid of ids) {
+                  // Skip if already added in this session
+                  if (alreadyAdded[pid]) continue;
+                  await addProductToCollection(targetCollectionId, pid);
+                  setAlreadyAdded(prev => ({ ...prev, [pid]: true }));
+                }
+                Alert.alert('Success', `Added ${ids.length} product(s) to collection`);
+                setSelectedForCollection({});
+                if (returnScreen && route?.params?.returnParams) {
+                  navigation.navigate(returnScreen, route.params.returnParams);
+                } else {
+                  navigation.goBack();
+                }
+              } catch (e:any) {
+                console.error('Failed to add selected products', e);
+                Alert.alert('Error', e?.message || 'Failed to add products to collection');
+              } finally {
+                setAddingSelected(false);
+              }
+            }}>
+            <Text style={styles.addButtonText}>{addingSelected ? 'Adding...' : `Add to Collection (${selectedCount})`}</Text>
+          </TouchableOpacity>
+        ) : viewCollectionProducts && targetCollectionId ? (
+          // When viewing collection products, show "Add Products to Collection" button
+          <TouchableOpacity 
+            style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}
+            onPress={() => {
+              if (navBusy) return;
+              setNavBusy(true);
+              // Navigate to all products in "add to collection" mode
+              navigation.navigate('Products', {
+                collectionId: targetCollectionId,
+                collectionName: collectionName,
+                addToCollection: true,
+                returnScreen: 'Products', // Return to this screen after adding
+                returnParams: {
+                  collectionId: targetCollectionId,
+                  collectionName: collectionName,
+                  viewCollectionProducts: true,
+                },
+              });
+              setTimeout(() => setNavBusy(false), 800);
+            }}>
+            <Text style={styles.addButtonText}>+ Add Products to Collection</Text>
+          </TouchableOpacity>
+        ) : (
         <TouchableOpacity 
           style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}
           onPress={handleAddProduct}>
           <Text style={styles.addButtonText}>Add New Product</Text>
         </TouchableOpacity>
+        )}
         {groupedProducts.length === 0 && (
           <View style={{alignItems:'center', marginBottom:24}}>
             <Text style={{color:'#6c757d'}}>No products match your filters</Text>
@@ -900,8 +1106,11 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.addCollectionRow}
             onPress={() => {
+              // Pass productId so it can be added to the new collection
+              navigation.navigate('AddCollection', {
+                productIdToAdd: activeProductId,
+              });
               setCollectionSheetOpen(false);
-              navigation.navigate('AddCollection');
             }}>
             <IconSymbol name="add" size={18} color="#e61580" />
             <Text
@@ -985,7 +1194,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headerRight: {
-    width: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerAddButton: {
+    padding: 4,
+  },
+  headerRefreshButton: {
+    padding: 4,
   },
   searchSection: {
     flexDirection: 'row',
@@ -1040,6 +1257,7 @@ const styles = StyleSheet.create({
   stockBadgeRow: {marginTop:8, flexDirection:'row', alignItems:'center', justifyContent:'space-between'},
   outOfStockBadge: {backgroundColor:'#F3E8E2', color:'#6c757d', paddingVertical:6, paddingHorizontal:10, borderRadius:8},
   updateInventory: {color:'#B91C1C', fontWeight:'600'},
+  addToCollectionHint: {color:'#e61580', fontWeight:'600', fontSize:12, marginTop:4},
   addButton: {
     backgroundColor: '#e61580',
     paddingVertical: 15,
@@ -1053,6 +1271,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  addButtonDisabled: {
+    opacity: 0.5,
   },
   backdrop: {flex: 1, backgroundColor: 'rgba(0,0,0,0.25)'},
   sheet: {position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16},

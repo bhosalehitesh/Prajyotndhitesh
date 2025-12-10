@@ -187,4 +187,16 @@ public class CollectionController {
         collection updated = collectionService.addProductToCollection(id, productId);
         return ResponseEntity.ok(updated);
     }
+
+    // ✅ Get products for a specific collection
+    @GetMapping("/{id}/products")
+    public ResponseEntity<?> getProductsByCollection(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(collectionService.getProductsByCollection(id));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(404).body("Collection not found with ID: " + id);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Failed to load collection products: " + e.getMessage());
+        }
+    }
 }
