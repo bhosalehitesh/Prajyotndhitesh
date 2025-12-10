@@ -185,9 +185,7 @@
     }
 
     /* Hide default categories when store slug exists in URL */
-    body:not(:has([data-no-store-slug])) .category-card[data-default-category="true"] {
-      /* Will be hidden by inline style if store slug exists */
-    }
+    /* Note: Default categories are hidden via inline styles injected by JavaScript */
 
     @media (max-width: 1200px) {
       .category-grid {
@@ -365,9 +363,16 @@
           categories.forEach((category) => {
           const categoryName = category.categoryName || category.name || 'Category';
           const categoryImage = category.categoryImage || category.image || '';
-          const categoryId = category.category_id || category.id || '';
+          const categoryId = category.category_id || category.id || category.categoryId || '';
           const safeName = (categoryName || '').trim();
-          const categoryUrl = `category.html?name=${encodeURIComponent(safeName)}${categoryId ? '&categoryId=' + encodeURIComponent(categoryId) : ''}${storeSlug ? '&store=' + encodeURIComponent(storeSlug) : ''}`;
+          // Build category URL with name, categoryId, and store slug
+          let categoryUrl = `category.html?name=${encodeURIComponent(safeName)}`;
+          if (categoryId) {
+            categoryUrl += `&categoryId=${encodeURIComponent(categoryId)}`;
+          }
+          if (storeSlug) {
+            categoryUrl += `&store=${encodeURIComponent(storeSlug)}`;
+          }
             
             const card = document.createElement('a');
             card.href = categoryUrl;

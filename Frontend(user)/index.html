@@ -2423,12 +2423,20 @@
     window.currentStoreSlug = getStoreSlug();
 
     // Load store data and products when homepage loads with ?store=slug
+    let isLoadingStoreHomepage = false; // Prevent multiple simultaneous calls
     async function loadStoreHomepage() {
       const storeSlug = getStoreSlug();
       if (!storeSlug) {
         // No store parameter - show default homepage
         return;
       }
+
+      // Prevent multiple simultaneous calls
+      if (isLoadingStoreHomepage) {
+        console.log('Store homepage already loading, skipping...');
+        return;
+      }
+      isLoadingStoreHomepage = true;
 
       const storeInfoSection = document.getElementById('store-info-section');
       const storeNameDisplay = document.getElementById('store-name-display');
@@ -2500,8 +2508,32 @@
           // Clear existing items
           carouselTrack.innerHTML = '';
 
-          // Add products to carousel
-          products.slice(0, 12).forEach(product => {
+          // Deduplicate products by productId to prevent duplicates
+          const seenProductIds = new Set();
+          const uniqueProducts = products.filter(product => {
+            const productId = product.productId || product.id;
+            if (!productId) {
+              // If no ID, use name+price as fallback identifier
+              const fallbackId = `${product.productName || product.name || ''}_${product.sellingPrice || product.price || ''}`;
+              if (seenProductIds.has(fallbackId)) {
+                console.warn('Duplicate product found (no ID):', product.productName || product.name);
+                return false;
+              }
+              seenProductIds.add(fallbackId);
+              return true;
+            }
+            if (seenProductIds.has(productId)) {
+              console.warn('Duplicate product found (ID):', productId, product.productName || product.name);
+              return false; // Duplicate found, skip it
+            }
+            seenProductIds.add(productId);
+            return true;
+          });
+
+          console.log(`Loaded ${products.length} products, ${uniqueProducts.length} unique products for store: ${storeSlug}`);
+
+          // Add unique products to carousel
+          uniqueProducts.slice(0, 12).forEach(product => {
             const productName = product.productName || product.name || 'Product';
             const productPrice = product.sellingPrice || product.price || 0;
             const productImage = product.productImages?.[0] || product.image || product.imageUrl || 'assets/products/p1.jpg';
@@ -2522,10 +2554,12 @@
             carouselTrack.appendChild(carouselItem);
           });
 
-          // Reinitialize carousel if needed
-          if (window.initCarousel) {
-            window.initCarousel();
-          }
+          // Reinitialize carousel if needed (with a small delay to ensure DOM is updated)
+          setTimeout(() => {
+            if (window.initCarousel) {
+              window.initCarousel();
+            }
+          }, 100);
         }
 
         // 4. Load and display categories - Store-specific
@@ -2547,7 +2581,13 @@
               storeCategories.innerHTML = '';
               storeCategoriesList.slice(0, 8).forEach(category => {
                 const categoryName = category.categoryName || category.name || 'Category';
-                const categoryUrl = `pages/categories.html?store=${encodeURIComponent(storeSlug)}`;
+                const categoryId = category.category_id || category.id || category.categoryId || '';
+                // Link directly to category page with products, not categories list
+                let categoryUrl = `pages/category.html?name=${encodeURIComponent(categoryName)}`;
+                if (categoryId) {
+                  categoryUrl += `&categoryId=${encodeURIComponent(categoryId)}`;
+                }
+                categoryUrl += `&store=${encodeURIComponent(storeSlug)}`;
                 
                 const categoryCard = document.createElement('a');
                 categoryCard.href = categoryUrl;
@@ -2571,6 +2611,9 @@
             <p>Failed to load store data. Please try again later.</p>
           </div>`;
         }
+      } finally {
+        // Reset loading flag
+        isLoadingStoreHomepage = false;
       }
     }
 

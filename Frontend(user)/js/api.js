@@ -214,6 +214,44 @@
   }
 
   /**
+   * Get products by category ID
+   * @param {Number|String} categoryId - Category ID
+   */
+  async function getProductsByCategoryId(categoryId) {
+    try {
+      // Try direct API endpoint first
+      try {
+        const result = await apiCall(`/api/products/category/${categoryId}`);
+        if (Array.isArray(result)) {
+          return result;
+        }
+        if (result && Array.isArray(result.products)) {
+          return result.products;
+        }
+      } catch (e) {
+        console.warn('Direct categoryId endpoint failed, trying fallback:', e);
+      }
+      
+      // Fallback: Get all products and filter by categoryId
+      const allProducts = await getAllProducts();
+      if (!Array.isArray(allProducts)) {
+        return [];
+      }
+      
+      const categoryIdStr = String(categoryId);
+      const filtered = allProducts.filter(p => {
+        const pid = p.categoryId || p.category_id || p.category?.category_id || p.category?.id;
+        return pid && String(pid) === categoryIdStr;
+      });
+      
+      return filtered;
+    } catch (error) {
+      console.error('Error fetching products by categoryId:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get products by category name
    * Searches products by productCategory or businessCategory
    */
@@ -230,11 +268,11 @@
       const filtered = allProducts.filter(p => {
         const productCategory = (p.productCategory || '').toLowerCase();
         const businessCategory = (p.businessCategory || '').toLowerCase();
-        const categoryName = (p.category?.categoryName || '').toLowerCase();
+        const catName = (p.category?.categoryName || '').toLowerCase();
         
         return productCategory.includes(categoryLower) || 
                businessCategory.includes(categoryLower) ||
-               categoryName.includes(categoryLower);
+               catName.includes(categoryLower);
       });
       
       return filtered;
@@ -368,6 +406,7 @@
     getCategoryById,
     getCategoriesByBusiness,
     getProductsByCategory,
+    getProductsByCategoryId,
     getStoreCategoriesBySlug,
     
     // Collection APIs
