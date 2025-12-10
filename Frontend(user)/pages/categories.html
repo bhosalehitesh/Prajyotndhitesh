@@ -268,41 +268,6 @@
   <script src="../js/api.js"></script>
   <script src="../js/app.js"></script>
   <script>
-    // Default categories data (only used if no store slug and API fails)
-    const defaultCategoriesData = [
-      { name: 'Casual Wear', image: '../assets/products/cs.jpg' },
-      { name: 'T-Shirts', image: '../assets/genz/ts.webp' },
-      { name: 'Jeans', image: '../assets/genz/Bg.jpg' },
-      { name: 'Hoodies', image: '../assets/genz/hd.webp' },
-      { name: 'Lowers & Joggers', image: '../assets/genz/ls.webp' },
-      { name: 'Co-ord Sets', image: '../assets/genz/cd.webp' }
-    ];
-    
-    // Render default categories only if no store slug
-    function renderDefaultCategories() {
-      const storeSlug = new URLSearchParams(window.location.search).get('store');
-      if (!storeSlug) {
-        const categoryGrid = document.getElementById('category-grid');
-        if (categoryGrid && categoryGrid.children.length === 0) {
-          defaultCategoriesData.forEach(cat => {
-            const safeName = (cat.name || '').trim();
-            const card = document.createElement('a');
-            card.href = `category.html?name=${encodeURIComponent(safeName)}`;
-            card.className = 'category-card';
-            card.innerHTML = `
-              <img src="${cat.image}" alt="${cat.name}" onerror="this.style.background='var(--muted-white, #f0f0f0)';" />
-              <div class="category-card-content">
-                <div class="category-brand">Category</div>
-                <h3>${cat.name}</h3>
-                <div class="category-count">View Collection</div>
-              </div>
-            `;
-            categoryGrid.appendChild(card);
-          });
-        }
-      }
-    }
-
     // Load categories from API - Store-specific
     async function loadCategoriesFromAPI() {
       const storeSlug = new URLSearchParams(window.location.search).get('store');
@@ -341,38 +306,32 @@
           } else {
             console.error('getStoreCategoriesBySlug function not available');
           }
-        } else if (window.API.getAllCategories) {
-          // Fallback: get all categories (for backward compatibility)
-          console.log('Loading all categories (no store slug)');
-          categories = await window.API.getAllCategories();
+        } else {
+          // No store slug: do NOT load all categories (avoid cross-store leakage)
+          console.warn('No store slug provided; skipping category load.');
+          categories = [];
         }
 
-        // ALWAYS clear grid completely if store slug exists
-        if (storeSlug) {
-          categoryGrid.innerHTML = '';
-          console.log('Grid cleared for store-specific categories');
-        } else {
-          // Remove only default categories if no store slug
-          const defaultCategories = categoryGrid.querySelectorAll('[data-default-category="true"]');
-          defaultCategories.forEach(cat => cat.remove());
-        }
+        // ALWAYS clear grid completely
+        categoryGrid.innerHTML = '';
+        console.log('Grid cleared');
 
         // If we have categories from API, update the grid
         if (Array.isArray(categories) && categories.length > 0) {
           console.log(`Adding ${categories.length} categories to grid`);
           categories.forEach((category) => {
-          const categoryName = category.categoryName || category.name || 'Category';
-          const categoryImage = category.categoryImage || category.image || '';
-          const categoryId = category.category_id || category.id || category.categoryId || '';
-          const safeName = (categoryName || '').trim();
-          // Build category URL with name, categoryId, and store slug
-          let categoryUrl = `category.html?name=${encodeURIComponent(safeName)}`;
-          if (categoryId) {
-            categoryUrl += `&categoryId=${encodeURIComponent(categoryId)}`;
-          }
-          if (storeSlug) {
-            categoryUrl += `&store=${encodeURIComponent(storeSlug)}`;
-          }
+            const categoryName = category.categoryName || category.name || 'Category';
+            const categoryImage = category.categoryImage || category.image || '';
+            const categoryId = category.category_id || category.id || category.categoryId || '';
+            const safeName = (categoryName || '').trim();
+            // Build category URL with name, categoryId, and store slug
+            let categoryUrl = `category.html?name=${encodeURIComponent(safeName)}`;
+            if (categoryId) {
+              categoryUrl += `&categoryId=${encodeURIComponent(categoryId)}`;
+            }
+            if (storeSlug) {
+              categoryUrl += `&store=${encodeURIComponent(storeSlug)}`;
+            }
             
             const card = document.createElement('a');
             card.href = categoryUrl;
@@ -393,15 +352,7 @@
           });
         } else {
           // If no categories found, show message
-          if (storeSlug) {
-            console.log('No categories returned from API for store:', storeSlug);
-            // Ensure grid is empty
-            categoryGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);">No categories found for this store.</div>';
-          } else {
-            console.log('No store slug - rendering default categories');
-            // Render default categories if no store slug
-            renderDefaultCategories();
-          }
+          categoryGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-color, #666);">No categories found for this store.</div>';
         }
       } catch (error) {
         console.error('Failed to load categories from API:', error);

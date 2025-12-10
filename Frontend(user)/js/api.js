@@ -97,14 +97,21 @@
   
   /**
    * Get products for a store by slug (public endpoint)
+   * Supports categoryId (preferred) or legacy category string
    * @param {String} slug - Store slug
-   * @param {String} [category] - Optional category filter
+   * @param {Object} options - { categoryId?: number|string, category?: string }
    */
-  async function getStoreProductsBySlug(slug, category = null) {
-    let endpoint = `/api/public/store/${slug}/products`;
-    if (category) {
-      endpoint += `?category=${encodeURIComponent(category)}`;
+  async function getStoreProductsBySlug(slug, options = {}) {
+    const { categoryId = null, category = null } = options;
+    const params = new URLSearchParams();
+    if (categoryId) {
+      params.set('categoryId', categoryId);
+    } else if (category) {
+      params.set('category', category);
     }
+    const endpoint = params.toString()
+      ? `/api/public/store/${slug}/products?${params.toString()}`
+      : `/api/public/store/${slug}/products`;
     try {
       const result = await apiCall(endpoint);
       console.log('API call result:', result);

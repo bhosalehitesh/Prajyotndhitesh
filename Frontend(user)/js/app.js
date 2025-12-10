@@ -521,8 +521,11 @@
       // If store slug is present, use store-specific product endpoint
       if (storeSlug && window.API && window.API.getStoreProductsBySlug) {
         try {
-          // Get all store products first
-          fetched = await window.API.getStoreProductsBySlug(storeSlug);
+          // Get store products (prefer backend filtering by categoryId/category)
+          fetched = await window.API.getStoreProductsBySlug(storeSlug, {
+            categoryId: categoryId || null,
+            category: category || null
+          });
           console.log('Fetched store products:', fetched?.length || 0);
           
           if (Array.isArray(fetched) && fetched.length > 0) {
