@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import IconSymbol from '../../../components/IconSymbol';
-import { fetchProducts, fetchProductsByCollection, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto } from '../../../utils/api';
+import { fetchProducts, fetchProductsByCollection, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, updateProduct } from '../../../utils/api';
 import { storage } from '../../../authentication/storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -40,6 +40,11 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   // Check if we're viewing products in a collection
   const viewCollectionProducts = route?.params?.viewCollectionProducts === true;
   const collectionName = route?.params?.collectionName;
+  
+  // Add to category mode
+  const targetCategoryId = route?.params?.categoryId;
+  const categoryName = route?.params?.categoryName;
+  const addToCategoryMode = route?.params?.addToCategory === true;
   
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -90,20 +95,24 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   const [discounts, setDiscounts] = useState<{[key: string]: boolean}>({});
   const [priceRange, setPriceRange] = useState<{min: number; max: number}>({min: 0, max: 0});
   const [sortBy, setSortBy] = useState<'title-az' | 'title-za' | 'price-low' | 'price-high' | 'disc-low' | 'disc-high'>('title-az');
-  const [categoryFilter] = useState<string | null>(route?.params?.categoryName ?? null);
-  const [businessFilter] = useState<string | null>(route?.params?.businessCategory ?? null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(route?.params?.categoryName ?? null);
+  const [businessFilter, setBusinessFilter] = useState<string | null>(route?.params?.businessCategory ?? null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedForCollection, setSelectedForCollection] = useState<Record<string, boolean>>({});
   const [addingSelected, setAddingSelected] = useState(false);
   const [alreadyAdded, setAlreadyAdded] = useState<Record<string, boolean>>({});
+  const [selectedForCategory, setSelectedForCategory] = useState<Record<string, boolean>>({});
+  const [addingToCategory, setAddingToCategory] = useState(false);
+  const [alreadyAddedToCategory, setAlreadyAddedToCategory] = useState<Record<string, boolean>>({});
   const [navBusy, setNavBusy] = useState(false);
   
   // Animation for refresh button
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
-  // When in add-to-collection mode, reset filters/search so all products show
+  // When in add-to-collection or add-to-category mode, reset filters/search so all products show
   React.useEffect(() => {
-    if (addToCollectionMode) {
+    if (addToCollectionMode || addToCategoryMode) {
+      console.log('🔄 Resetting filters for add-to-collection/category mode');
       setInventory('all');
       setDiscounts({});
       setPriceRange({min: 0, max: 0});
@@ -111,7 +120,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       setFilterTab('Inventory');
       setSearchQuery('');
     }
-  }, [addToCollectionMode]);
+  }, [addToCollectionMode, addToCategoryMode]);
 
   const handleAddProduct = () => {
     if (navBusy) return;
@@ -237,10 +246,22 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       // Determine data source
       const viewCollection = route?.params?.viewCollectionProducts === true;
       const collectionId = route?.params?.collectionId;
+      const currentAddToCategoryMode = route?.params?.addToCategory === true;
+      
+      console.log('📦 Loading products:', {
+        addToCollectionMode,
+        currentAddToCategoryMode,
+        addToCategoryMode,
+        viewCollection,
+        collectionId,
+      });
+      
       let apiProducts: ProductDto[] = [];
-      if (addToCollectionMode) {
-        // In add-to-collection picker, always show all products to pick from
+      if (addToCollectionMode || currentAddToCategoryMode || addToCategoryMode) {
+        // In add-to-collection or add-to-category picker, always show all products to pick from
+        console.log('✅ Fetching ALL products for add-to-collection/category mode');
         apiProducts = await fetchProducts();
+        console.log(`✅ Fetched ${apiProducts.length} products`);
       } else if (viewCollection && collectionId) {
         // Viewing a specific collection
         apiProducts = await fetchProductsByCollection(collectionId);
@@ -275,7 +296,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       rotateAnim.stopAnimation();
       rotateAnim.setValue(0);
     }
-  }, [rotateAnim, route]);
+  }, [rotateAnim, route, addToCollectionMode, addToCategoryMode]);
 
   // Comprehensive refresh function that resets everything and reloads
   const refreshScreen = React.useCallback(async () => {
@@ -312,7 +333,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       
       // Reload products (mirror the logic in loadProducts)
       let apiProducts: ProductDto[] = [];
-      if (addToCollectionMode) {
+      if (addToCollectionMode || addToCategoryMode) {
         apiProducts = await fetchProducts();
       } else if (viewCollectionProducts && targetCollectionId) {
         apiProducts = await fetchProductsByCollection(targetCollectionId);
@@ -335,17 +356,44 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       rotateAnim.stopAnimation();
       rotateAnim.setValue(0);
     }
-  }, [rotateAnim]);
+  }, [rotateAnim, addToCollectionMode, addToCategoryMode, viewCollectionProducts, targetCollectionId]);
 
   // Load products whenever screen gains focus
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
+      console.log('👁️ Screen focused, loading products...', {
+        addToCollectionMode,
+        addToCategoryMode,
+        routeParams: route?.params,
+      });
       loadProducts();
       // Refresh collections when returning from AddCollection
       loadCollectionsForSheet();
     });
     return unsubscribe;
-  }, [navigation, loadProducts, loadCollectionsForSheet]);
+  }, [navigation, loadProducts, loadCollectionsForSheet, addToCollectionMode, addToCategoryMode, route?.params]);
+  
+  // If coming from Categories to view products, seed category/business filters (view mode)
+  React.useEffect(() => {
+    if (!addToCategoryMode) {
+      if (route?.params?.categoryName) {
+        setCategoryFilter(route.params.categoryName);
+      }
+      if (route?.params?.businessCategory) {
+        setBusinessFilter(route.params.businessCategory);
+      }
+    }
+  }, [addToCategoryMode, route?.params?.categoryName, route?.params?.businessCategory]);
+
+  // Also load products on mount
+  React.useEffect(() => {
+    console.log('🚀 Component mounted, loading products...', {
+      addToCollectionMode,
+      addToCategoryMode,
+      routeParams: route?.params,
+    });
+    loadProducts();
+  }, []);
 
   // Compute absolute price bounds from product data
   const absoluteMinPrice = useMemo(() => {
@@ -422,8 +470,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
 
   // Build filtered and sorted list based on current filter state
   const filteredProducts = useMemo(() => {
-    // In add-to-collection picker, always show all products (ignore filters/search)
-    if (addToCollectionMode) {
+    // In add-to-collection or add-to-category picker, always show all products (ignore filters/search)
+    if (addToCollectionMode || addToCategoryMode) {
       return products;
     }
 
@@ -440,12 +488,15 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       );
     }
     // Category filter (when navigated from Categories screen)
-    if (businessFilter) {
-      const b = businessFilter.toLowerCase().trim();
-      items = items.filter(p => (p.businessCategory || '').toLowerCase().trim() === b);
-    } else if (categoryFilter) {
+    // Prefer matching by category name; if not set, fall back to business category
+    if (categoryFilter) {
       const cat = categoryFilter.toLowerCase().trim();
       items = items.filter(p => (p.productCategory || '').toLowerCase().trim() === cat);
+      console.log(`🔍 Category filter applied: ${cat}, results: ${items.length}`);
+    } else if (businessFilter) {
+      const b = businessFilter.toLowerCase().trim();
+      items = items.filter(p => (p.businessCategory || '').toLowerCase().trim() === b);
+      console.log(`🔍 Business filter applied: ${b}, results: ${items.length}`);
     }
     // Inventory filter
     if (inventory === 'in') items = items.filter(p => p.inStock);
@@ -506,7 +557,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     });
     
     return items;
-  }, [products, addToCollectionMode, searchQuery, inventory, priceRange, discounts, categoryFilter, businessFilter, sortBy]);
+  }, [products, addToCollectionMode, addToCategoryMode, searchQuery, inventory, priceRange, discounts, categoryFilter, businessFilter, sortBy]);
 
   // Counts for filter UI
   const inventoryCounts = useMemo(() => ({
@@ -515,7 +566,12 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     out: products.filter(p=>!p.inStock).length,
   }), [products]);
 
-  const selectedCount = useMemo(() => Object.values(selectedForCollection).filter(Boolean).length, [selectedForCollection]);
+  const selectedCount = useMemo(() => {
+    if (addToCategoryMode) {
+      return Object.values(selectedForCategory).filter(Boolean).length;
+    }
+    return Object.values(selectedForCollection).filter(Boolean).length;
+  }, [selectedForCollection, selectedForCategory, addToCategoryMode]);
 
   const discountRanges = ['0 - 20%','21 - 40%','41 - 60%','61 - 80%','81% and above'];
   const discountCounts = useMemo(() => {
@@ -542,7 +598,20 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   }, [products]);
 
   // Group variants by base product (name + categories)
+  // In add-to-collection or add-to-category mode, show all products individually (no grouping)
   const groupedProducts = useMemo(() => {
+    // In add-to-collection or add-to-category mode, show all products individually
+    if (addToCollectionMode || addToCategoryMode) {
+      const result = filteredProducts.map(p => ({
+        ...p,
+        variantCount: 1,
+        variants: [p],
+      }));
+      console.log(`📋 Displaying ${result.length} products in add-to-collection/category mode (from ${filteredProducts.length} filtered, ${products.length} total)`);
+      return result;
+    }
+
+    // Normal mode: group variants
     const groups = new Map<string, {base: any; variants: any[]}>();
 
     filteredProducts.forEach(p => {
@@ -576,7 +645,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         variants,
       };
     });
-  }, [filteredProducts]);
+  }, [filteredProducts, addToCollectionMode, addToCategoryMode]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -595,7 +664,9 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {addToCollectionMode 
-            ? 'Add Products to Collection' 
+            ? 'Add Products to Collection'
+            : addToCategoryMode
+            ? 'Add Products to Category'
             : viewCollectionProducts && collectionName
             ? collectionName
             : (categoryFilter ?? businessFilter ?? 'All Products')}
@@ -647,8 +718,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         </View>
       </View>
 
-      {/* Search and Filter Section (hidden in add-to-collection mode to keep UI clean) */}
-      {!addToCollectionMode && (
+      {/* Search and Filter Section (hidden in add-to-collection and add-to-category modes) */}
+      {!addToCollectionMode && !addToCategoryMode && (
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
           <IconSymbol name="search" size={20} color="#666666" />
@@ -692,6 +763,12 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           ...prev,
           [item.id]: !prev[item.id],
         }));
+      } else if (addToCategoryMode && targetCategoryId) {
+        // If in "add to category" mode, toggle selection
+        setSelectedForCategory(prev => ({
+          ...prev,
+          [item.id]: !prev[item.id],
+        }));
       } else {
         // Normal mode - navigate to edit product
         navigation.navigate('AddProduct', {
@@ -724,6 +801,12 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                       size={22}
                       color={selectedForCollection[item.id] ? '#10B981' : '#9CA3AF'}
                     />
+                  ) : addToCategoryMode ? (
+                    <IconSymbol
+                      name={selectedForCategory[item.id] ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={22}
+                      color={selectedForCategory[item.id] ? '#10B981' : '#9CA3AF'}
+                    />
                   ) : (
                     <TouchableOpacity
                       style={styles.kebab}
@@ -739,10 +822,19 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                   <Text style={styles.price}>₹{item.price}</Text>
                   {item.mrp ? <Text style={styles.mrp}>₹{item.mrp}</Text> : null}
                 </View>
-                {!item.inStock && (
+                {addToCollectionMode && (
+                  <View style={styles.stockBadgeRow}>
+                    <Text style={styles.addToCollectionHint}>Tap to add to collection</Text>
+                  </View>
+                )}
+                {addToCategoryMode && (
+                  <View style={styles.stockBadgeRow}>
+                    <Text style={styles.addToCollectionHint}>Tap to add to category</Text>
+                  </View>
+                )}
+                {!item.inStock && !addToCollectionMode && !addToCategoryMode && (
                   <View style={styles.stockBadgeRow}>
                     <Text style={styles.outOfStockBadge}>Out of Stock</Text>
-                    {!addToCollectionMode && (
                     <TouchableOpacity
                       onPress={() => {
                         setActiveProductId(item.id);
@@ -750,12 +842,6 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                       }}>
                       <Text style={styles.updateInventory}>Update Inventory</Text>
                     </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-                {addToCollectionMode && (
-                  <View style={styles.stockBadgeRow}>
-                    <Text style={styles.addToCollectionHint}>Tap to add to collection</Text>
                   </View>
                 )}
               </View>
@@ -801,6 +887,54 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             }}>
             <Text style={styles.addButtonText}>{addingSelected ? 'Adding...' : `Add to Collection (${selectedCount})`}</Text>
           </TouchableOpacity>
+        ) : addToCategoryMode ? (
+          <TouchableOpacity 
+            style={[
+              styles.addButton,
+              {alignSelf:'center', marginVertical:24},
+              (selectedCount === 0 || addingToCategory) && styles.addButtonDisabled
+            ]}
+            disabled={selectedCount === 0 || addingToCategory}
+            onPress={async () => {
+              if (addingToCategory) return; // extra guard against double-tap
+              if (!targetCategoryId || !categoryName) return;
+              const ids = Array.from(new Set(Object.keys(selectedForCategory).filter(id => selectedForCategory[id])));
+              if (ids.length === 0) return;
+              setAddingToCategory(true);
+              try {
+                // Fetch each product and update its productCategory
+                for (const pid of ids) {
+                  if (alreadyAddedToCategory[pid]) continue;
+                  const product = products.find(p => p.id === pid);
+                  if (product) {
+                    await updateProduct(pid, {
+                      productName: product.title,
+                      sellingPrice: product.price,
+                      productCategory: categoryName, // Set the category
+                      businessCategory: product.businessCategory || '',
+                      description: product.description || '',
+                      mrp: product.mrp,
+                      inventoryQuantity: product.inventoryQuantity || 0,
+                      customSku: product.sku,
+                      color: product.color,
+                      size: product.size,
+                      hsnCode: product.hsnCode,
+                    });
+                    setAlreadyAddedToCategory(prev => ({ ...prev, [pid]: true }));
+                  }
+                }
+                Alert.alert('Success', `Added ${ids.length} product(s) to category "${categoryName}"`);
+                setSelectedForCategory({});
+                navigation.goBack();
+              } catch (e: any) {
+                console.error('Failed to add products to category', e);
+                Alert.alert('Error', e?.message || 'Failed to add products to category');
+              } finally {
+                setAddingToCategory(false);
+              }
+            }}>
+            <Text style={styles.addButtonText}>{addingToCategory ? 'Adding...' : `Add to Category (${selectedCount})`}</Text>
+          </TouchableOpacity>
         ) : viewCollectionProducts && targetCollectionId ? (
           // When viewing collection products, show "Add Products to Collection" button
           <TouchableOpacity 
@@ -823,6 +957,27 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
               setTimeout(() => setNavBusy(false), 800);
             }}>
             <Text style={styles.addButtonText}>+ Add Products to Collection</Text>
+          </TouchableOpacity>
+        ) : targetCategoryId ? (
+          // When viewing a category, show "Add Products" to enter add-to-category mode
+          <TouchableOpacity 
+            style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}
+            onPress={() => {
+              if (navBusy) return;
+              setNavBusy(true);
+              navigation.push('Products', {
+                categoryId: targetCategoryId,
+                categoryName: categoryName,
+                addToCategory: true,
+                returnScreen: 'Products',
+                returnParams: {
+                  categoryId: targetCategoryId,
+                  categoryName: categoryName,
+                },
+              });
+              setTimeout(() => setNavBusy(false), 800);
+            }}>
+            <Text style={styles.addButtonText}>Add Products</Text>
           </TouchableOpacity>
         ) : (
         <TouchableOpacity 

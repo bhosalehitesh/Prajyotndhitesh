@@ -638,13 +638,22 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           </>
         )}
 
+        {/* Category quick actions (edit mode) */}
+        {isEditMode && (
+          <TouchableOpacity
+            style={[styles.submitBtn, styles.secondaryBtn]}
+            onPress={() => navigation.navigate('Categories')}>
+            <Text style={[styles.submitText, styles.secondaryBtnText]}>Edit Categories</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Submit */}
         <TouchableOpacity
           style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
           disabled={!canSubmit}
           onPress={handleSubmit}
         >
-          <Text style={styles.submitText}>Add Product</Text>
+          <Text style={styles.submitText}>{isEditMode ? 'Update Product' : 'Add Product'}</Text>
         </TouchableOpacity>
       </ScrollView>
       </ViewShot>
@@ -1108,6 +1117,15 @@ const styles = StyleSheet.create({
   submitBtn: {marginTop: 16, backgroundColor: '#e61580', padding: 14, borderRadius: 10},
   submitBtnDisabled: {backgroundColor: '#D1D5DB'},
   submitText: {textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold'},
+  secondaryBtn: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#e61580',
+    marginTop: 16,
+  },
+  secondaryBtnText: {
+    color: '#e61580',
+  },
 
   // Modals
   centerOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 16},
