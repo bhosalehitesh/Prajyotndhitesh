@@ -1393,6 +1393,7 @@ export const updateProduct = async (
     color?: string;
     size?: string;
     hsnCode?: string;
+    bestSeller?: boolean;
   },
 ): Promise<ProductDto> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
@@ -1437,6 +1438,7 @@ export const createProduct = async (body: {
   color?: string;
   size?: string;
   hsnCode?: string;
+  bestSeller?: boolean;
 }) => {
   const baseUrl = `${API_BASE_URL}/api/products/addProduct`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
@@ -1505,6 +1507,7 @@ export const uploadProductWithImages = async (params: {
   seoMetaDescription?: string;
   imageUris: string[];
   categoryId?: number; // Add categoryId parameter
+  bestSeller?: boolean;
 }) => {
   const url = `${API_BASE_URL}/api/products/upload`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
@@ -1543,6 +1546,7 @@ export const uploadProductWithImages = async (params: {
   form.append('size', params.size ?? '');
   form.append('variant', ''); // not used for now
   form.append('hsnCode', params.hsnCode ?? '');
+  form.append('bestSeller', String(params.bestSeller ?? false));
   form.append('seoTitleTag', params.seoTitleTag ?? params.productName);
   form.append('seoMetaDescription', params.seoMetaDescription ?? params.description ?? '');
   form.append('sellerId', userId);

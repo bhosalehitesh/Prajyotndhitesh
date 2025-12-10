@@ -253,23 +253,23 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
                   });
                 }}
                 activeOpacity={0.7}>
-                <View style={styles.collectionImageContainer}>
-                  {collection.image && typeof collection.image === 'string' && collection.image !== 'placeholder' ? (
-                    <Image source={{uri: collection.image}} style={styles.collectionImage} />
-                  ) : (
-                    <View style={styles.collectionImagePlaceholder}>
-                      <IconSymbol name="image" size={24} color="#9CA3AF" />
-                    </View>
-                  )}
-                </View>
-                <View style={styles.collectionInfo}>
-                  <Text style={styles.collectionName}>{collection.name}</Text>
-                  <Text style={styles.collectionCount}>
-                    {collection.productCount === 0
-                      ? 'No products'
-                      : `${collection.productCount} product${collection.productCount > 1 ? 's' : ''}`}
-                  </Text>
-                </View>
+              <View style={styles.collectionImageContainer}>
+                {collection.image && typeof collection.image === 'string' && collection.image !== 'placeholder' ? (
+                  <Image source={{uri: collection.image}} style={styles.collectionImage} />
+                ) : (
+                  <View style={styles.collectionImagePlaceholder}>
+                    <IconSymbol name="image" size={24} color="#9CA3AF" />
+                  </View>
+                )}
+              </View>
+              <View style={styles.collectionInfo}>
+                <Text style={styles.collectionName}>{collection.name}</Text>
+                <Text style={styles.collectionCount}>
+                  {collection.productCount === 0
+                    ? 'No products'
+                    : `${collection.productCount} product${collection.productCount > 1 ? 's' : ''}`}
+                </Text>
+              </View>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.menuButton}

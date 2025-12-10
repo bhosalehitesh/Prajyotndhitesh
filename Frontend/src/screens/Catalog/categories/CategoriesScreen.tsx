@@ -248,8 +248,8 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
                 <Text style={styles.categoryName}>{category.name}</Text>
                 <Text style={styles.categoryCount}>
                   {category.productCount === 0
-                    ? 'No product listed'
-                    : `${category.productCount} product${category.productCount > 1 ? 's' : ''} listed`}
+                    ? 'No products'
+                    : `${category.productCount} product${category.productCount > 1 ? 's' : ''}`}
                 </Text>
               </View>
               <TouchableOpacity

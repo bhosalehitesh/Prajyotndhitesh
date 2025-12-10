@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class ProductController {
 
     @Autowired
@@ -74,14 +75,18 @@ public class ProductController {
             @RequestParam("productImages") List<MultipartFile> productImages,
             @RequestParam("socialSharingImage") MultipartFile socialSharingImage,
             @RequestParam(value = "sellerId", required = false) Long sellerId,
-            @RequestParam(value = "categoryId", required = false) Long categoryId
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            // Frontend sends bestSeller; keep backward compat with isBestseller name
+            @RequestParam(value = "bestSeller", required = false) Boolean bestSeller,
+            @RequestParam(value = "isBestseller", required = false) Boolean isBestseller
     ) {
         try {
+            Boolean bestsellerFlag = bestSeller != null ? bestSeller : (isBestseller != null ? isBestseller : false);
             Product product = productService.uploadProductWithImages(
                     productName, description, mrp, sellingPrice, businessCategory,
                     productCategory, inventoryQuantity, customSku, color, size,
                     variant, hsnCode, seoTitleTag, seoMetaDescription,
-                    productImages, socialSharingImage, sellerId, categoryId
+                    productImages, socialSharingImage, sellerId, categoryId, bestsellerFlag
             );
             return ResponseEntity.ok(product);
         } catch (Exception e) {
@@ -160,6 +165,14 @@ public class ProductController {
         
         // Backward compatibility: return list if no pagination params
         List<Product> products = productService.allProductForSeller(sellerId);
+        return ResponseEntity.ok(products);
+    }
+
+    // Featured (best seller) products
+    @GetMapping("/featured")
+    public ResponseEntity<?> getFeaturedProducts(
+            @RequestParam(value = "sellerId", required = false) Long sellerId) {
+        List<Product> products = productService.featuredProducts(sellerId);
         return ResponseEntity.ok(products);
     }
 

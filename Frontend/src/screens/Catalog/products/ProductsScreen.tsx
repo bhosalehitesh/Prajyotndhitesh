@@ -597,21 +597,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     return map;
   }, [products]);
 
-  // Group variants by base product (name + categories)
-  // In add-to-collection or add-to-category mode, show all products individually (no grouping)
+  // Group variants by base product (name + categories) so variants are treated as one product
   const groupedProducts = useMemo(() => {
-    // In add-to-collection or add-to-category mode, show all products individually
-    if (addToCollectionMode || addToCategoryMode) {
-      const result = filteredProducts.map(p => ({
-        ...p,
-        variantCount: 1,
-        variants: [p],
-      }));
-      console.log(`📋 Displaying ${result.length} products in add-to-collection/category mode (from ${filteredProducts.length} filtered, ${products.length} total)`);
-      return result;
-    }
-
-    // Normal mode: group variants
     const groups = new Map<string, {base: any; variants: any[]}>();
 
     filteredProducts.forEach(p => {
@@ -674,7 +661,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         <View style={styles.headerRight}>
           {viewCollectionProducts && targetCollectionId && !addToCollectionMode ? (
             // Show "Add" button when viewing collection products
-            <TouchableOpacity 
+        <TouchableOpacity 
               style={styles.headerAddButton}
               onPress={() => {
                 if (navBusy) return;
@@ -771,29 +758,25 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         }));
       } else {
         // Normal mode - navigate to edit product
-        navigation.navigate('AddProduct', {
-          mode: 'edit',
-          product: item,
+              navigation.navigate('AddProduct', {
+                mode: 'edit',
+                product: item,
         });
       }
             }}>
             <View style={{flexDirection:'row', alignItems:'center', flex:1}}>
-              {item.imageUrl ? (
-                <Image source={{uri: item.imageUrl}} style={styles.thumbImage} />
-              ) : (
-                <View style={styles.thumbPlaceholder}>
-                  <IconSymbol name="image-outline" size={18} color="#9CA3AF" />
-                </View>
-              )}
-              <View style={{flex: 1}}>
+            {item.imageUrl ? (
+              <Image source={{uri: item.imageUrl}} style={styles.thumbImage} />
+            ) : (
+              <View style={styles.thumbPlaceholder}>
+                <IconSymbol name="image-outline" size={18} color="#9CA3AF" />
+              </View>
+            )}
+            <View style={{flex: 1}}>
                 <View style={{flexDirection:'row', alignItems:'center', justifyContent:'space-between'}}>
                   <View style={{flex:1, paddingRight:8}}>
-                    <Text style={styles.title}>{item.title}</Text>
-                    {!!item.variantCount && item.variantCount > 1 && (
-                      <Text style={styles.variantCountText}>
-                        {item.variantCount} Variant{item.variantCount > 1 ? 's' : ''}
-                      </Text>
-                    )}
+              <Text style={styles.title}>{item.title}</Text>
+                    {/* Variants hidden per request; show products as single items */}
                   </View>
                   {addToCollectionMode ? (
                     <IconSymbol
@@ -818,10 +801,10 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                     </TouchableOpacity>
                   )}
                 </View>
-                <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-                  <Text style={styles.price}>₹{item.price}</Text>
-                  {item.mrp ? <Text style={styles.mrp}>₹{item.mrp}</Text> : null}
-                </View>
+              <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                <Text style={styles.price}>₹{item.price}</Text>
+                {item.mrp ? <Text style={styles.mrp}>₹{item.mrp}</Text> : null}
+              </View>
                 {addToCollectionMode && (
                   <View style={styles.stockBadgeRow}>
                     <Text style={styles.addToCollectionHint}>Tap to add to collection</Text>
@@ -833,25 +816,25 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                   </View>
                 )}
                 {!item.inStock && !addToCollectionMode && !addToCategoryMode && (
-                  <View style={styles.stockBadgeRow}>
-                    <Text style={styles.outOfStockBadge}>Out of Stock</Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setActiveProductId(item.id);
-                        setActionSheetOpen(true);
-                      }}>
-                      <Text style={styles.updateInventory}>Update Inventory</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
+                <View style={styles.stockBadgeRow}>
+                  <Text style={styles.outOfStockBadge}>Out of Stock</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setActiveProductId(item.id);
+                      setActionSheetOpen(true);
+                    }}>
+                    <Text style={styles.updateInventory}>Update Inventory</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
             </View>
           </TouchableOpacity>
         ))}
 
         {/* Add Product Button (bottom) */}
         {addToCollectionMode ? (
-          <TouchableOpacity 
+            <TouchableOpacity
             style={[
               styles.addButton,
               {alignSelf:'center', marginVertical:24},
@@ -939,7 +922,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           // When viewing collection products, show "Add Products to Collection" button
           <TouchableOpacity 
             style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}
-            onPress={() => {
+              onPress={() => {
               if (navBusy) return;
               setNavBusy(true);
               // Navigate to all products in "add to collection" mode
@@ -957,7 +940,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
               setTimeout(() => setNavBusy(false), 800);
             }}>
             <Text style={styles.addButtonText}>+ Add Products to Collection</Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
         ) : targetCategoryId ? (
           // When viewing a category, show "Add Products" to enter add-to-category mode
           <TouchableOpacity 

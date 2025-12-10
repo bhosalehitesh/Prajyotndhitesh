@@ -39,6 +39,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT DISTINCT p.productCategory FROM Product p WHERE p.productCategory IS NOT NULL")
     List<String> findAllDistinctProductCategories();
 
+    // Featured (best seller) products
+    List<Product> findByIsBestsellerTrue();
+
+    // Featured products for a specific seller
+    List<Product> findByIsBestsellerTrueAndSeller_SellerId(Long sellerId);
+
     //Search products by name (case-insensitive)
     @Query("SELECT p FROM Product p WHERE LOWER(p.productName) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Product> findByProductNameContainingIgnoreCase(@Param("name") String name);

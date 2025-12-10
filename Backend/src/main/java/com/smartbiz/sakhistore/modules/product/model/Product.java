@@ -52,6 +52,7 @@ public class Product {
     private String socialSharingImage;
     
     @Column(name = "is_bestseller", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    @com.fasterxml.jackson.annotation.JsonProperty("bestSeller")
     private Boolean isBestseller = false;
 
     @CreationTimestamp
@@ -225,10 +226,12 @@ public class Product {
         this.socialSharingImage = socialSharingImage;
     }
 
+    @com.fasterxml.jackson.annotation.JsonProperty("bestSeller")
     public Boolean getIsBestseller() {
         return isBestseller != null ? isBestseller : false;
     }
 
+    @com.fasterxml.jackson.annotation.JsonProperty("bestSeller")
     public void setIsBestseller(Boolean isBestseller) {
         this.isBestseller = isBestseller != null ? isBestseller : false;
     }

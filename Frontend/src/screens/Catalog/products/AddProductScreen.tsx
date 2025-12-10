@@ -48,7 +48,14 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       : '',
   );
   const [sku, setSku] = useState(existing?.sku || '');
-  const [colors, setColors] = useState<string[]>(existing?.color ? existing.color.split(',').map(c => c.trim()).filter(c => c) : []);
+  const [colors, setColors] = useState<string[]>(
+    existing?.color
+      ? existing.color
+          .split(',')
+          .map((c: string) => c.trim())
+          .filter((c: string) => c)
+      : [],
+  );
   const [size, setSize] = useState(existing?.size || '');
   const [hsn, setHsn] = useState(existing?.hsnCode || '');
   const [bestSeller, setBestSeller] = useState(false);
@@ -264,6 +271,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         color: colors.length > 0 ? colors.join(', ') : undefined,
         size: size || undefined,
         hsnCode: hsn || undefined,
+        bestSeller: bestSeller,
       };
 
       let productId: string | null = null;
@@ -328,12 +336,12 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           ? 'Product updated successfully' 
           : `Product added successfully${collectionMessage}`,
         [
-          {
-            text: 'OK',
-            onPress: () => {
-              navigation.goBack();
-            },
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.goBack();
           },
+        },
         ],
       );
     } catch (error) {

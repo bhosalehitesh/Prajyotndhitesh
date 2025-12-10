@@ -57,7 +57,8 @@ public class ProductService{
             List<MultipartFile> productImages,
             MultipartFile socialSharingImage,
             Long sellerId,
-            Long categoryId
+            Long categoryId,
+            Boolean isBestseller
     ) {
         try {
             List<String> productImageUrls = new ArrayList<>();
@@ -96,6 +97,7 @@ public class ProductService{
             product.setSeoMetaDescription(seoMetaDescription);
             product.setProductImages(productImageUrls);
             product.setSocialSharingImage(socialImageUrl);
+            product.setIsBestseller(isBestseller != null ? isBestseller : false);
 
             // Link to seller if provided
             if (sellerId != null) {
@@ -136,6 +138,13 @@ public class ProductService{
             return productRepository.findAll();
         }
         return productRepository.findBySeller_SellerId(sellerId);
+    }
+
+    public List<Product> featuredProducts(Long sellerId) {
+        if (sellerId == null) {
+            return productRepository.findByIsBestsellerTrue();
+        }
+        return productRepository.findByIsBestsellerTrueAndSeller_SellerId(sellerId);
     }
 
     /**
@@ -226,6 +235,7 @@ public class ProductService{
         existing.setHsnCode(updated.getHsnCode());
         existing.setSeoTitleTag(updated.getSeoTitleTag());
         existing.setSeoMetaDescription(updated.getSeoMetaDescription());
+        existing.setIsBestseller(updated.getIsBestseller() != null ? updated.getIsBestseller() : false);
 
         // NOTE: We intentionally do NOT modify productImages, socialSharingImage or seller here.
         // Image updates are handled via the upload endpoint; seller relation stays the same.
