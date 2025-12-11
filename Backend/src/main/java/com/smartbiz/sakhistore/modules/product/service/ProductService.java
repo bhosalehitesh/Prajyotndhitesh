@@ -180,6 +180,8 @@ public class ProductService{
                     .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
             product.setSeller(seller);
         }
+        // Ensure bestseller flag is never null so it persists correctly
+        product.setIsBestseller(product.getIsBestseller() != null ? product.getIsBestseller() : false);
         // If product has a category with categoryId, fetch the actual Category entity
         if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
             Long categoryId = product.getCategory().getCategory_id();
