@@ -96,8 +96,9 @@ public class ProductController {
 
     @PostMapping("/addProduct")
     public Product addProduct(@RequestBody Product product,
-                              @RequestParam(value = "sellerId", required = false) Long sellerId) {
-        return productService.addproduct(product, sellerId);
+                              @RequestParam(value = "sellerId", required = false) Long sellerId,
+                              @RequestParam(value = "categoryId", required = false) Long categoryId) {
+        return productService.addproduct(product, sellerId, categoryId);
     }
 
     @PostMapping("/Edit Product")

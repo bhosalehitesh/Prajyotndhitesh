@@ -3,6 +3,42 @@
  * This script dynamically loads header.html and footer.html into pages
  */
 
+// Helper: get store slug from current URL
+function getCurrentStoreSlug() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const store = params.get('store');
+    return store ? store.trim() : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Function to append store param to navigation links so cross-page navigation preserves store context
+function appendStoreParamToLinks(rootEl, storeSlug) {
+  if (!rootEl || !storeSlug) return;
+  const selectors = [
+    'a[href$="index.html"]',
+    'a[href$="categories.html"]',
+    'a[href$="featured.html"]',
+    'a[href$="products.html"]',
+    'a[href="/"]',
+    'a[href="./"]',
+  ];
+  const links = rootEl.querySelectorAll(selectors.join(','));
+  links.forEach(link => {
+    const href = link.getAttribute('href');
+    if (!href) return;
+    try {
+      const url = new URL(href, window.location.href);
+      url.searchParams.set('store', storeSlug);
+      link.setAttribute('href', url.pathname + url.search);
+    } catch (e) {
+      // ignore malformed URLs
+    }
+  });
+}
+
 // Function to fix paths in loaded HTML based on current page location
 function fixPathsInHTML(html, isInPagesFolder) {
         if (isInPagesFolder) {
@@ -46,6 +82,12 @@ async function loadComponent(elementId, filePath) {
     const element = document.getElementById(elementId);
     if (element) {
       element.innerHTML = html;
+      
+      // Preserve store context across navigation links
+      const storeSlug = getCurrentStoreSlug();
+      if (storeSlug) {
+        appendStoreParamToLinks(element, storeSlug);
+      }
       
       // Re-initialize any scripts that need to run after component loads
       if (typeof initializeComponents === 'function') {

@@ -46,11 +46,13 @@ public class PublicStoreController {
 
     /**
      * Get products for a store by slug (public endpoint)
-     * Example: GET /api/public/store/brownn_boys/products?category=shoes
+     * Supports filtering by categoryId (preferred) or legacy category string.
+     * Example: GET /api/public/store/{slug}/products?categoryId=5
      */
     @GetMapping("/{slug}/products")
     public ResponseEntity<?> getStoreProducts(
             @PathVariable String slug,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "category", required = false) String category) {
         try {
             // Find store by slug
@@ -71,11 +73,19 @@ public class PublicStoreController {
             // Get products by seller
             List<Product> products = productService.allProductForSeller(sellerId);
             
-            // Filter by category if provided
-            if (category != null && !category.isEmpty()) {
+            // Filter by categoryId if provided
+            if (categoryId != null) {
                 products = products.stream()
-                    .filter(p -> category.equalsIgnoreCase(p.getProductCategory()) || 
-                                category.equalsIgnoreCase(p.getBusinessCategory()))
+                    .filter(p -> p.getCategory() != null && p.getCategory().getCategory_id() != null
+                            && p.getCategory().getCategory_id().equals(categoryId))
+                    .toList();
+            }
+            // Legacy filter by category name (productCategory/businessCategory)
+            else if (category != null && !category.isEmpty()) {
+                final String catLower = category.toLowerCase();
+                products = products.stream()
+                    .filter(p -> (p.getProductCategory() != null && p.getProductCategory().toLowerCase().contains(catLower)) ||
+                                 (p.getBusinessCategory() != null && p.getBusinessCategory().toLowerCase().contains(catLower)))
                     .toList();
             }
             
