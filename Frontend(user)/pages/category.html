@@ -300,125 +300,136 @@
   
   <!-- Load components first, then app.js -->
   <script src="../js/load-components.js"></script>
+  <!-- API Integration - Must load before app.js -->
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/app.js"></script>
   <script>
-    const products = {
-      "Casual Wear": [
-        { name: "Casual Shirt", image: "../assets/products/cs.jpg", price: 29, color: "Blue", size: "M" },
-        { name: "Relaxed Polo", image: "../assets/genz/w1.webp", price: 35, color: "White", size: "L" }
-      ],
-      "T-Shirts": [
-        { name: "Graphic Tee", image: "../assets/genz/ts.webp", price: 19, color: "Black", size: "S" },
-          { name: "Plain T-Shirt", image: "../assets/genz/w2.webp", price: 15, color: "White", size: "M" }
-      ],
-      "Jeans": [
-        { name: "Slim Fit Jeans", image: "../assets/genz/Bg.jpg", price: 40, color: "Blue", size: "L" },
-        { name: "Distressed Jeans", image: "../assets/genz/w3.webp", price: 45, color: "Black", size: "XL" }
-      ],
-      "Hoodies": [
-        { name: "Pullover Hoodie", image: "../assets/genz/hd.webp", price: 50, color: "Grey", size: "M" },
-        { name: "Zip Hoodie", image: "../assets/genz/w4.jpg", price: 55, color: "Black", size: "L" }
-      ],
-      "Lowers & Joggers": [
-        { name: "Cotton Joggers", image: "../assets/genz/ls.webp", price: 30, color: "Grey", size: "M" },
-        { name: "Track Pants", image: "../assets/genz/w5.webp", price: 28, color: "Black", size: "S" }
-      ],
-      "Co-ord Sets": [
-        { name: "Summer Co-ord", image: "../assets/genz/cd.webp", price: 60, color: "White", size: "L" },
-        { name: "Winter Co-ord", image: "../assets/genz/w6.webp", price: 70, color: "Black", size: "XL" }
-      ]
-    };
-
-    function getCategoryFromURL() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("name");
+    // Wait for app.js to load, then use its filterAndDisplayProducts function
+    // This page will use the API-based product filtering from app.js
+    
+    // Helper function to check if product is in wishlist
+    function isProductInWishlist(productName) {
+      if (window.WishlistUtils) {
+        const wishlist = window.WishlistUtils.getWishlist();
+        return wishlist.some(item => item.name === productName);
+      } else {
+        const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+        return wishlist.some(item => item.name === productName);
+      }
     }
 
-      const category = decodeURIComponent(getCategoryFromURL() || "");
-    const title = document.getElementById("category-title");
-    const grid = document.getElementById("product-grid");
-
-    function getFilters() {
-      return {
-        color: document.getElementById("colorFilter").value,
-        size: document.getElementById("sizeFilter").value,
-        sort: document.getElementById("sortSelect").value
-      };
+    // Helper function to get wishlist button HTML
+    function getWishlistButtonHTML(product) {
+      const isWishlisted = isProductInWishlist(product.name);
+      const wishlistIcon = isWishlisted 
+        ? `<img src="../assets/gifs/wishlist.gif" alt="Wishlisted" style="width: 20px; height: 20px; object-fit: contain;" />`
+        : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+          </svg>`;
+      
+      const title = isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist';
+      
+      return `<button class="wishlist-btn" data-name="${product.name}" data-price="${product.price}" data-brand="${product.brand || 'V Store'}" data-img="${product.image}" onclick="event.stopPropagation(); addToWishlistFromProduct(this)" title="${title}" style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+        ${wishlistIcon}
+      </button>`;
     }
 
-    function filterAndDisplayProducts() {
-      if (!category || !products[category]) {
-          grid.innerHTML = "<p style='text-align:center;padding:40px;color:var(--text-color);'>No products found for this category.</p>";
-        return;
-      }
-
-      title.textContent = category;
-
-      let filtered = [...products[category]];
-      const { color, size, sort } = getFilters();
-
-      if (color !== "all") {
-        filtered = filtered.filter(p => p.color === color);
-      }
-
-      if (size !== "all") {
-        filtered = filtered.filter(p => p.size === size);
-      }
-
-      if (sort === "lowToHigh") {
-        filtered.sort((a, b) => a.price - b.price);
-      } else if (sort === "highToLow") {
-        filtered.sort((a, b) => b.price - a.price);
-      }
-
-      if (filtered.length === 0) {
-          grid.innerHTML = "<p style='text-align:center;padding:40px;color:var(--text-color);'>No matching products found.</p>";
-        return;
-      }
-
-      // Helper function to check if product is in wishlist
-      function isProductInWishlist(productName) {
-        if (window.WishlistUtils) {
-          const wishlist = window.WishlistUtils.getWishlist();
-          return wishlist.some(item => item.name === productName);
-        } else {
-          const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-          return wishlist.some(item => item.name === productName);
-        }
-      }
-
-      // Helper function to get wishlist button HTML
-      function getWishlistButtonHTML(product) {
-        const isWishlisted = isProductInWishlist(product.name);
-        const wishlistIcon = isWishlisted 
-          ? `<img src="../assets/gifs/wishlist.gif" alt="Wishlisted" style="width: 20px; height: 20px; object-fit: contain;" />`
-          : `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-            </svg>`;
-        
-        const title = isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist';
-        
-        return `<button class="wishlist-btn" data-name="${product.name}" data-price="${product.price}" data-brand="V Store" data-img="${product.image}" onclick="event.stopPropagation(); addToWishlistFromProduct(this)" title="${title}" style="padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
-          ${wishlistIcon}
-        </button>`;
-      }
-
-      grid.innerHTML = filtered.map(product => `
-          <div class="ecommerce-product-card">
-          <img src="${product.image}" alt="${product.name}" />
-            <div class="product-info">
-              <div class="product-brand">V Store</div>
-              <div class="product-name">${product.name}</div>
-              <div class="product-price">
-                <span class="current-price">₹${product.price}</span>
-              </div>
-              <div style="display: flex; gap: 8px; margin-top: 12px;">
-                <button class="add-to-cart-btn" data-name="${product.name}" data-price="${product.price}" style="flex: 1;">Add to Cart</button>
-                ${getWishlistButtonHTML(product)}
-              </div>
-            </div>
-        </div>
-      `).join("");
+    // Override the product display to include wishlist buttons
+    const originalFilterAndDisplay = window.filterAndDisplayProducts;
+    if (typeof originalFilterAndDisplay === 'function') {
+      // Store reference to original
+      window._originalFilterAndDisplayProducts = originalFilterAndDisplay;
     }
+
+    // Enhanced filterAndDisplayProducts that adds wishlist support
+    async function enhancedFilterAndDisplayProducts() {
+      const grid = document.getElementById("product-grid");
+      if (!grid) return;
+
+      // Call the original function from app.js
+      if (window._originalFilterAndDisplayProducts) {
+        await window._originalFilterAndDisplayProducts();
+      } else if (typeof filterAndDisplayProducts === 'function') {
+        await filterAndDisplayProducts();
+      }
+
+      // After products are displayed, enhance them with wishlist buttons
+      setTimeout(() => {
+        const productCards = grid.querySelectorAll('.product-card');
+        productCards.forEach(card => {
+          // Check if wishlist button already exists
+          if (!card.querySelector('.wishlist-btn')) {
+            const productName = card.querySelector('h4')?.textContent || '';
+            const productPrice = card.querySelector('p')?.textContent?.replace(/[₹,]/g, '') || '0';
+            const productImage = card.querySelector('img')?.src || '';
+            const addToCartBtn = card.querySelector('.add-to-cart-btn');
+            
+            if (addToCartBtn) {
+              // Create wishlist button
+              const wishlistBtn = document.createElement('button');
+              wishlistBtn.className = 'wishlist-btn';
+              wishlistBtn.setAttribute('data-name', productName);
+              wishlistBtn.setAttribute('data-price', productPrice);
+              wishlistBtn.setAttribute('data-brand', 'V Store');
+              wishlistBtn.setAttribute('data-img', productImage);
+              wishlistBtn.onclick = (e) => {
+                e.stopPropagation();
+                addToWishlistFromProduct(wishlistBtn);
+              };
+              
+              // Add wishlist icon
+              const isWishlisted = isProductInWishlist(productName);
+              if (isWishlisted) {
+                wishlistBtn.innerHTML = `<img src="../assets/gifs/wishlist.gif" alt="Wishlisted" style="width: 20px; height: 20px; object-fit: contain;" />`;
+                wishlistBtn.title = 'Remove from Wishlist';
+              } else {
+                wishlistBtn.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>`;
+                wishlistBtn.title = 'Add to Wishlist';
+              }
+              
+              wishlistBtn.style.cssText = 'padding: 12px; min-width: 48px; height: 48px; background: var(--muted-white, #f5f5f5); border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;';
+              
+              // Wrap buttons in a flex container
+              const buttonContainer = document.createElement('div');
+              buttonContainer.style.cssText = 'display: flex; gap: 8px; margin-top: 12px;';
+              addToCartBtn.style.flex = '1';
+              buttonContainer.appendChild(addToCartBtn);
+              buttonContainer.appendChild(wishlistBtn);
+              card.appendChild(buttonContainer);
+            }
+          }
+        });
+      }, 100);
+    }
+
+    // Initialize when page loads
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(enhancedFilterAndDisplayProducts, 200);
+      });
+    } else {
+      setTimeout(enhancedFilterAndDisplayProducts, 200);
+    }
+
+    // Update filter event listeners to use enhanced function
+    setTimeout(() => {
+      const colorFilter = document.getElementById("colorFilter");
+      const sizeFilter = document.getElementById("sizeFilter");
+      const sortSelect = document.getElementById("sortSelect");
+      
+      if (colorFilter) {
+        colorFilter.addEventListener("change", enhancedFilterAndDisplayProducts);
+      }
+      if (sizeFilter) {
+        sizeFilter.addEventListener("change", enhancedFilterAndDisplayProducts);
+      }
+      if (sortSelect) {
+        sortSelect.addEventListener("change", enhancedFilterAndDisplayProducts);
+      }
+    }, 300);
 
     // Helper function to update wishlist button icon
     function updateWishlistButtonIcon(button, isWishlisted) {
@@ -522,20 +533,8 @@
     window.addToWishlistFromProduct = addToWishlistFromProduct;
     window.isProductInWishlist = isProductInWishlist;
     window.updateWishlistButtonIcon = updateWishlistButtonIcon;
-
-    if (category) {
-      filterAndDisplayProducts();
-    }
-
-    document.getElementById("colorFilter").addEventListener("change", filterAndDisplayProducts);
-    document.getElementById("sizeFilter").addEventListener("change", filterAndDisplayProducts);
-    document.getElementById("sortSelect").addEventListener("change", filterAndDisplayProducts);
   </script>
-    <!-- API Integration - Must load before app.js -->
-    <script src="../js/config.js"></script>
-    <script src="../js/api.js"></script>
-    <script src="../js/app.js"></script>
-    <script>
+  <script>
       // Search functionality
       const searchBtn = document.getElementById('searchBtn');
       const searchModal = document.getElementById('searchModal');

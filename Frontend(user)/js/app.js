@@ -516,28 +516,50 @@
     // Try fetching from backend API. If backend fails, fallback to local products object.
     let fetched = [];
     try {
+      console.log('Fetching products for category:', category, 'categoryId:', categoryId, 'storeSlug:', storeSlug);
+      
       // If store slug is present, use store-specific product endpoint
       if (storeSlug && window.API && window.API.getStoreProductsBySlug) {
         try {
-          fetched = await window.API.getStoreProductsBySlug(storeSlug, category);
+          // Get all store products first
+          fetched = await window.API.getStoreProductsBySlug(storeSlug);
+          console.log('Fetched store products:', fetched?.length || 0);
+          
           if (Array.isArray(fetched) && fetched.length > 0) {
-            // If categoryId is provided, filter by id first
+            // If categoryId is provided, filter by id first (most reliable)
             if (categoryId) {
+              const beforeFilter = fetched.length;
               fetched = fetched.filter(p => {
-                const pid = p.categoryId || p.category_id || p.category?.category_id || p.category?.id;
-                return pid && String(pid) === String(categoryId);
+                // Check all possible field name variations
+                const pid = p.categoryId || 
+                           p.category_id || 
+                           p.categoryId || 
+                           p.category?.category_id || 
+                           p.category?.categoryId ||
+                           p.category?.id ||
+                           (p.category && p.category.category_id) ||
+                           (p.category && p.category.categoryId);
+                const matches = pid && String(pid) === String(categoryId);
+                if (matches) {
+                  console.log('✅ Product matches categoryId:', p.productName || p.name, 'categoryId:', pid, 'Product data:', p);
+                }
+                return matches;
               });
-            } else if (category) {
+              console.log(`Filtered by categoryId ${categoryId}: ${beforeFilter} -> ${fetched.length} products`);
+            } else if (category && category !== 'Category') {
               // Otherwise filter by category name
               const categoryLower = category.toLowerCase();
+              const beforeFilter = fetched.length;
               fetched = fetched.filter(p => {
                 const productCategory = (p.productCategory || '').toLowerCase();
                 const businessCategory = (p.businessCategory || '').toLowerCase();
                 const catName = (p.category?.categoryName || '').toLowerCase();
-                return productCategory.includes(categoryLower) || 
+                const matches = productCategory.includes(categoryLower) || 
                        businessCategory.includes(categoryLower) ||
                        catName.includes(categoryLower);
+                return matches;
               });
+              console.log(`Filtered by category name "${category}": ${beforeFilter} -> ${fetched.length} products`);
             }
           }
         } catch (e) {
@@ -545,19 +567,91 @@
         }
       }
       
-      // Fallback to category API
-      if ((!fetched || fetched.length === 0) && typeof fetchProductsByCategory === 'function') {
-        fetched = await fetchProductsByCategory(category);
-        if (categoryId && fetched && fetched.length > 0) {
-          fetched = fetched.filter(p => {
-            const pid = p.categoryId || p.category_id || p.category?.category_id || p.category?.id;
-            return pid && String(pid) === String(categoryId);
-          });
+      // If no store slug OR no products found, try fetching products by categoryId directly
+      if ((!fetched || fetched.length === 0) && categoryId && window.API && window.API.getProductsByCategoryId) {
+        try {
+          console.log('Fetching products by categoryId directly:', categoryId);
+          fetched = await window.API.getProductsByCategoryId(categoryId);
+          console.log('getProductsByCategoryId returned:', fetched?.length || 0);
+        } catch (e) {
+          console.warn('getProductsByCategoryId failed, trying getAllProducts:', e);
+          // Fallback: Get all products and filter
+          if (window.API.getAllProducts) {
+            try {
+              const allProducts = await window.API.getAllProducts();
+              console.log('Got all products:', allProducts?.length || 0);
+              
+              if (Array.isArray(allProducts) && allProducts.length > 0) {
+                fetched = allProducts.filter(p => {
+                  // Check all possible field name variations
+                  const pid = p.categoryId || 
+                             p.category_id || 
+                             p.category?.category_id || 
+                             p.category?.categoryId ||
+                             p.category?.id ||
+                             (p.category && p.category.category_id) ||
+                             (p.category && p.category.categoryId);
+                  const matches = pid && String(pid) === String(categoryId);
+                  if (matches) {
+                    console.log('✅ Product from allProducts matches categoryId:', p.productName || p.name, 'categoryId:', pid);
+                  }
+                  return matches;
+                });
+                console.log(`Filtered all products by categoryId ${categoryId}: ${fetched.length} products`);
+              }
+            } catch (e2) {
+              console.warn('Failed to fetch all products:', e2);
+            }
+          }
+        }
+      }
+      
+      // Fallback to category name API
+      if ((!fetched || fetched.length === 0) && category && category !== 'Category' && typeof fetchProductsByCategory === 'function') {
+        try {
+          console.log('Trying fetchProductsByCategory for:', category);
+          fetched = await fetchProductsByCategory(category);
+          console.log('fetchProductsByCategory returned:', fetched?.length || 0);
+          
+          if (categoryId && fetched && fetched.length > 0) {
+            const beforeFilter = fetched.length;
+            fetched = fetched.filter(p => {
+              // Check all possible field name variations
+              const pid = p.categoryId || 
+                         p.category_id || 
+                         p.category?.category_id || 
+                         p.category?.categoryId ||
+                         p.category?.id ||
+                         (p.category && p.category.category_id) ||
+                         (p.category && p.category.categoryId);
+              return pid && String(pid) === String(categoryId);
+            });
+            console.log(`Filtered by categoryId after fetchProductsByCategory: ${beforeFilter} -> ${fetched.length}`);
+          }
+        } catch (e) {
+          console.warn('fetchProductsByCategory failed:', e);
         }
       }
     } catch (e) {
-      console.warn('Error fetching products by category, falling back to local:', e);
+      console.error('Error fetching products by category:', e);
       fetched = null;
+    }
+    
+    console.log('Final fetched products count:', fetched?.length || 0);
+    
+    // Debug: Log first product structure to see what fields are available
+    if (fetched && fetched.length > 0) {
+      console.log('📦 Sample product structure:', JSON.stringify(fetched[0], null, 2));
+      console.log('🔍 Category fields in first product:', {
+        categoryId: fetched[0].raw?.categoryId,
+        category_id: fetched[0].raw?.category_id,
+        category: fetched[0].raw?.category,
+        'category.category_id': fetched[0].raw?.category?.category_id,
+        'category.categoryId': fetched[0].raw?.category?.categoryId,
+        'category.id': fetched[0].raw?.category?.id
+      });
+    } else {
+      console.warn('⚠️ No products fetched! Check API response and categoryId matching.');
     }
 
     // Normalize source: backend may return array or { products: [...] }
@@ -571,7 +665,13 @@
       price: p.sellingPrice ?? p.price ?? p.amount ?? 0,
       color: p.color || p.colour || p.variantColor || 'N/A',
       size: p.size || p.availableSize || 'N/A',
-      categoryId: p.categoryId || p.category_id || p.category?.category_id || p.category?.id,
+      categoryId: p.categoryId || 
+                  p.category_id || 
+                  p.category?.category_id || 
+                  p.category?.categoryId ||
+                  p.category?.id ||
+                  (p.category && p.category.category_id) ||
+                  (p.category && p.category.categoryId),
       raw: p
     }));
 
@@ -580,7 +680,18 @@
 
     if (color && color !== "all") filtered = filtered.filter(p => String(p.color).toLowerCase() === String(color).toLowerCase());
     if (categoryId) {
-      filtered = filtered.filter(p => p.categoryId && String(p.categoryId) === String(categoryId));
+      filtered = filtered.filter(p => {
+        // Check all possible field name variations
+        const pid = p.categoryId || 
+                   p.category_id || 
+                   p.category?.category_id || 
+                   p.category?.categoryId ||
+                   p.category?.id ||
+                   (p.category && p.category.category_id) ||
+                   (p.category && p.category.categoryId);
+        return pid && String(pid) === String(categoryId);
+      });
+      console.log(`Final filter by categoryId ${categoryId}: ${filtered.length} products`);
     }
     if (size && size !== "all") filtered = filtered.filter(p => String(p.size).toLowerCase() === String(size).toLowerCase());
 
@@ -594,14 +705,26 @@
 
     window.filtered = filtered; // for add-to-cart
     if (grid) {
-      grid.innerHTML = filtered.map((product, index) => `
-        <div class="product-card">
-          <img src="${product.image}" alt="${product.name}" />
-          <h4>${product.name}</h4>
-          <p>₹${Number(product.price).toFixed(2)}</p>
-          <button class="add-to-cart-btn" data-index="${index}">Add to Cart</button>
-        </div>
-      `).join("");
+      // Get store slug for product URLs
+      const params = new URLSearchParams(window.location.search);
+      const storeSlug = params.get('store');
+      const storeParam = storeSlug ? `&store=${encodeURIComponent(storeSlug)}` : '';
+      
+      grid.innerHTML = filtered.map((product, index) => {
+        const productId = product.raw?.productId || product.raw?.id || '';
+        const productUrl = productId 
+          ? `product-detail.html?id=${productId}${storeParam}`
+          : `product-detail.html?name=${encodeURIComponent(product.name)}&price=${product.price}&image=${encodeURIComponent(product.image)}${storeParam}`;
+        
+        return `
+          <div class="product-card" onclick="window.location.href='${productUrl}'" style="cursor: pointer;">
+            <img src="${product.image}" alt="${product.name}" onerror="this.src='../assets/products/p1.jpg'" />
+            <h4>${product.name}</h4>
+            <p>₹${Number(product.price).toFixed(2)}</p>
+            <button class="add-to-cart-btn" data-index="${index}" onclick="event.stopPropagation();">Add to Cart</button>
+          </div>
+        `;
+      }).join("");
       setupAddToCartButtons();
     }
   }

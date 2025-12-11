@@ -106,17 +106,22 @@ public class ProductService{
                 product.setSeller(seller);
             }
 
-            // Link to category - automatically find if not provided
+            // Link to category - require explicit categoryId to avoid incorrect assignments
             if (categoryId != null) {
-                // Use provided categoryId
+                // Use provided categoryId (preferred method)
                 Category category = categoryRepository.findById(categoryId)
                         .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
                 product.setCategory(category);
             } else {
-                // Automatically find category based on productCategory or businessCategory
+                // Try to automatically find category based on productCategory or businessCategory
+                // ⚠️ This is a fallback - explicit categoryId should be provided
                 Category category = findOrCreateCategoryForProduct(productCategory, businessCategory);
                 if (category != null) {
                     product.setCategory(category);
+                } else {
+                    // If no category found and no categoryId provided, log warning but don't fail
+                    // Product will be created without category (category_id will be null)
+                    System.out.println("⚠️ WARNING: Product created without category. Please provide categoryId explicitly.");
                 }
             }
 
@@ -183,11 +188,15 @@ public class ProductService{
             product.setCategory(category);
         } else {
             // Automatically find category based on productCategory or businessCategory if not provided
+            // ⚠️ This is a fallback - explicit categoryId should be provided
             String productCategory = product.getProductCategory();
             String businessCategory = product.getBusinessCategory();
             Category category = findOrCreateCategoryForProduct(productCategory, businessCategory);
             if (category != null) {
                 product.setCategory(category);
+            } else {
+                // If no category found and no categoryId provided, log warning but don't fail
+                System.out.println("⚠️ WARNING: Product created without category. Please provide categoryId explicitly.");
             }
         }
         return productRepository.save(product);
@@ -237,6 +246,25 @@ public class ProductService{
         existing.setSeoMetaDescription(updated.getSeoMetaDescription());
         existing.setIsBestseller(updated.getIsBestseller() != null ? updated.getIsBestseller() : false);
 
+        // ✅ Update category if provided
+        if (updated.getCategory() != null && updated.getCategory().getCategory_id() != null) {
+            Long categoryId = updated.getCategory().getCategory_id();
+            Category category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
+            existing.setCategory(category);
+        } else if (updated.getProductCategory() != null || updated.getBusinessCategory() != null) {
+            // If category object is not provided but productCategory/businessCategory changed,
+            // try to find matching category (but don't default to first category)
+            Category category = findOrCreateCategoryForProduct(
+                updated.getProductCategory(), 
+                updated.getBusinessCategory()
+            );
+            if (category != null) {
+                existing.setCategory(category);
+            }
+            // If no match found, keep existing category (don't change it)
+        }
+
         // NOTE: We intentionally do NOT modify productImages, socialSharingImage or seller here.
         // Image updates are handled via the upload endpoint; seller relation stays the same.
 
@@ -244,14 +272,12 @@ public class ProductService{
     }
 
     // ✅ Automatically find or create category for product based on productCategory or businessCategory
+    // ⚠️ IMPORTANT: This method will NOT default to category 1. It only returns a category if there's an exact match.
+    // Products should explicitly provide categoryId to avoid incorrect category assignment.
     private Category findOrCreateCategoryForProduct(String productCategory, String businessCategory) {
+        // If no category info provided, return null (don't default to first category)
         if (productCategory == null && businessCategory == null) {
-            // If no category info, try to get first available category or return null
-            List<Category> allCategories = categoryRepository.findAll();
-            if (!allCategories.isEmpty()) {
-                return allCategories.get(0); // Return first category as default
-            }
-            return null; // No categories exist
+            return null; // Require explicit categoryId instead of defaulting
         }
         
         // Try to find by productCategory name (exact match)
@@ -282,13 +308,9 @@ public class ProductService{
             }
         }
         
-        // Last resort: return first available category or null
-        List<Category> allCategories = categoryRepository.findAll();
-        if (!allCategories.isEmpty()) {
-            return allCategories.get(0); // Return first category as default
-        }
-        
-        return null; // No categories exist in database
+        // ⚠️ CHANGED: Don't default to first category. Return null if no match found.
+        // This forces the caller to explicitly provide categoryId.
+        return null; // No matching category found - require explicit categoryId
     }
 
     //  Get all unique product categories

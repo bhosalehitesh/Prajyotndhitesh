@@ -16,7 +16,7 @@ import {
 import IconSymbol from '../../../components/IconSymbol';
 import {launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse} from 'react-native-image-picker';
 import ViewShot, {captureRef} from 'react-native-view-shot';
-import { createProduct, uploadProductWithImages, updateProduct, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto } from '../../../utils/api';
+import { createProduct, uploadProductWithImages, updateProduct, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, fetchCategories, CategoryDto } from '../../../utils/api';
 import { storage } from '../../../authentication/storage';
 
 interface AddProductScreenProps {
@@ -75,6 +75,11 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   const [collectionPickerOpen, setCollectionPickerOpen] = useState(false);
   const [collections, setCollections] = useState<Array<{id: string; name: string}>>([]);
   const [selectedCollections, setSelectedCollections] = useState<Record<string, boolean>>({});
+  const [databaseCategories, setDatabaseCategories] = useState<CategoryDto[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    existing?.categoryId || existing?.category_id || null
+  );
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 
   const categoryList = [
     'Appliances','Baby','Beauty and Personal Care','Books and Stationery','Clothing','Electronics','Food and Grocery','Footwear','Furniture','General','Health Supplements','Home and Kitchen','Home Care','Jewelry','Lawn and Garden','Luggage and Bags','Multipurpose','Pet Products','Sports and Fitness','Toys and games','Watches',
@@ -133,6 +138,20 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       loadCollections();
     }
   }, [isEditMode]);
+
+  // Load database categories when screen mounts
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categories = await fetchCategories();
+        setDatabaseCategories(categories);
+        console.log('Loaded categories:', categories.length);
+      } catch (error) {
+        console.error('Failed to load categories', error);
+      }
+    };
+    loadCategories();
+  }, []);
 
   // Require at least name, price, one image. Collections are optional.
   const canSubmit = name.trim().length > 0 && 
@@ -272,6 +291,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         size: size || undefined,
         hsnCode: hsn || undefined,
         bestSeller: bestSeller,
+        categoryId: selectedCategoryId || undefined, // Add categoryId from database category selection
       };
 
       let productId: string | null = null;
@@ -461,6 +481,15 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         >
           <Text style={{color: productCategory ? '#111827' : '#6c757d'}}>
             {productCategory || 'Product Category'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Database Category Selection */}
+        <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryPickerOpen(true)}>
+          <Text style={{color: selectedCategoryId ? '#111827' : '#6c757d'}}>
+            {selectedCategoryId 
+              ? databaseCategories.find(c => c.category_id === selectedCategoryId)?.categoryName || 'Category Selected'
+              : 'Select Category (from your categories)'}
           </Text>
         </TouchableOpacity>
 
@@ -759,6 +788,50 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
                   <Text style={styles.listItemText}>{item}</Text>
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Database Category Picker Modal */}
+      <Modal transparent visible={categoryPickerOpen} animationType="slide" onRequestClose={() => setCategoryPickerOpen(false)}>
+        <View style={styles.centerOverlay}>
+          <View style={styles.listCard}>
+            <View style={styles.listHeader}>
+              <Text style={styles.listTitle}>Select Category</Text>
+              <TouchableOpacity onPress={() => setCategoryPickerOpen(false)}>
+                <Text style={{fontSize:28, fontWeight:'bold', color: '#FFFFFF'}}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{maxHeight: 400}}>
+              {databaseCategories.length === 0 ? (
+                <View style={styles.listItem}>
+                  <Text style={styles.listItemText}>No categories found. Create one first.</Text>
+                </View>
+              ) : (
+                databaseCategories.map(category => (
+                  <TouchableOpacity 
+                    key={category.category_id} 
+                    style={[
+                      styles.listItem,
+                      selectedCategoryId === category.category_id && {backgroundColor: '#ECFEFF'}
+                    ]} 
+                    onPress={() => { 
+                      setSelectedCategoryId(category.category_id); 
+                      setCategoryPickerOpen(false);
+                      console.log('Selected category:', category.categoryName, 'ID:', category.category_id);
+                    }}
+                  >
+                    <Text style={styles.listItemText}>
+                      {category.categoryName}
+                      {category.businessCategory && ` (${category.businessCategory})`}
+                    </Text>
+                    {selectedCategoryId === category.category_id && (
+                      <Text style={{color: '#e61580', fontWeight: 'bold', marginLeft: 8}}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -1146,8 +1219,12 @@ const styles = StyleSheet.create({
   listCard: {backgroundColor:'#FFFFFF', borderRadius:12, paddingBottom:8, width:'100%', maxHeight:'80%'},
   listHeader: {flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:16, paddingVertical:14, backgroundColor:'#111827', borderTopLeftRadius:12, borderTopRightRadius:12},
   listTitle: {color:'#FFFFFF', fontWeight:'600'},
-  listItem: {paddingHorizontal:16, paddingVertical:14, borderBottomWidth:1, borderBottomColor:'#dee2e6'},
-  listItemText: {color:'#111827', fontSize:16},
+  listItem: {paddingHorizontal:16, paddingVertical:14, borderBottomWidth:1, borderBottomColor:'#dee2e6', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
+  listItemText: {color:'#111827', fontSize:16, flex: 1},
+  selectedListItem: {backgroundColor: '#ECFEFF'},
+  selectedListItemText: {color: '#e61580', fontWeight: '600'},
+  checkmark: {color: '#e61580', fontWeight: 'bold', fontSize: 18},
+  emptyText: {padding: 20, textAlign: 'center', color: '#6c757d'},
 
   // Create Category Modal
   createCategoryCard: {backgroundColor:'#FFFFFF', borderRadius:12, padding:20, width:'90%'},
