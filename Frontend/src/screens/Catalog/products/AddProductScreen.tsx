@@ -80,6 +80,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
     existing?.categoryId || existing?.category_id || null
   );
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // prevent double submits
 
   const categoryList = [
     'Appliances','Baby','Beauty and Personal Care','Books and Stationery','Clothing','Electronics','Food and Grocery','Footwear','Furniture','General','Health Supplements','Home and Kitchen','Home Care','Jewelry','Lawn and Garden','Luggage and Bags','Multipurpose','Pet Products','Sports and Fitness','Toys and games','Watches',
@@ -153,10 +154,11 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
     loadCategories();
   }, []);
 
-  // Require at least name, price, one image. Collections are optional.
+  // Require at least name, price, one image, and a category. Collections are optional.
   const canSubmit = name.trim().length > 0 && 
                     price.trim().length > 0 && 
-                    images.length > 0;
+                    images.length > 0 &&
+                    !!selectedCategoryId;
 
   const requestCameraPermission = async (): Promise<boolean> => {
     try {
@@ -240,9 +242,13 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   };
 
   const handleSubmit = async () => {
-    if (!canSubmit) {
+    if (!canSubmit || isSubmitting) {
       return;
     }
+    setIsSubmitting(true);
+
+    // Generate idempotency key per submission
+    const idempotencyKey = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     // Check userId before submitting
     try {
@@ -260,6 +266,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
             },
           ],
         );
+        setIsSubmitting(false);
         return;
       }
     } catch (error) {
@@ -274,6 +281,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           },
         ],
       );
+      setIsSubmitting(false);
       return;
     }
 
@@ -307,10 +315,14 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           createdProduct = await uploadProductWithImages({
             ...common,
             imageUris: images,
+            idempotencyKey,
           });
         } else {
           // Fallback (should not happen because canSubmit enforces image)
-          createdProduct = await createProduct(common);
+          createdProduct = await createProduct({
+            ...common,
+            idempotencyKey,
+          });
         }
         
         // Extract product ID from response
@@ -370,6 +382,8 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         'Error',
         error instanceof Error ? error.message : 'Failed to save product. Please try again.',
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -686,11 +700,16 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
         {/* Submit */}
         <TouchableOpacity
-          style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
-          disabled={!canSubmit}
+          style={[
+            styles.submitBtn,
+            (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
+          ]}
+          disabled={!canSubmit || isSubmitting}
           onPress={handleSubmit}
         >
-          <Text style={styles.submitText}>{isEditMode ? 'Update Product' : 'Add Product'}</Text>
+          <Text style={styles.submitText}>
+            {isSubmitting ? 'Please wait...' : isEditMode ? 'Update Product' : 'Add Product'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
       </ViewShot>

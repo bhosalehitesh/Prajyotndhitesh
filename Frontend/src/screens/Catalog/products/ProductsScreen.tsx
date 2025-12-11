@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import IconSymbol from '../../../components/IconSymbol';
-import { fetchProducts, fetchProductsByCollection, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, updateProduct } from '../../../utils/api';
+import { fetchProducts, fetchProductsByCollection, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, updateProduct, updateProductStatus } from '../../../utils/api';
 import { storage } from '../../../authentication/storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -52,6 +52,9 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [collectionSheetOpen, setCollectionSheetOpen] = useState(false);
   const [collections, setCollections] = useState<Array<{id: string; name: string}>>([]);
+  const [storeName, setStoreName] = useState('My Store');
+  const [storeLink, setStoreLink] = useState<string | null>(null);
+  const [storeOpen, setStoreOpen] = useState(true);
   const [selectedCollections, setSelectedCollections] = useState<Record<string, boolean>>({});
   const [products, setProducts] = useState<Array<{
     id: string;
@@ -90,8 +93,9 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   }>>([]);
   const [loading, setLoading] = useState(false);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
-  const [filterTab, setFilterTab] = useState<'Inventory' | 'Discount' | 'Price Range'>('Inventory');
+  const [filterTab, setFilterTab] = useState<'Inventory' | 'Status' | 'Discount' | 'Price Range'>('Inventory');
   const [inventory, setInventory] = useState<'all' | 'in' | 'out'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'hidden'>('all');
   const [discounts, setDiscounts] = useState<{[key: string]: boolean}>({});
   const [priceRange, setPriceRange] = useState<{min: number; max: number}>({min: 0, max: 0});
   const [sortBy, setSortBy] = useState<'title-az' | 'title-za' | 'price-low' | 'price-high' | 'disc-low' | 'disc-high'>('title-az');
@@ -105,9 +109,25 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   const [addingToCategory, setAddingToCategory] = useState(false);
   const [alreadyAddedToCategory, setAlreadyAddedToCategory] = useState<Record<string, boolean>>({});
   const [navBusy, setNavBusy] = useState(false);
+  const [pageSize, setPageSize] = useState(20);
   
   // Animation for refresh button
   const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  // Load store info (name/link)
+  React.useEffect(() => {
+    const loadStoreInfo = async () => {
+      try {
+        const name = (await storage.getItem('storeName')) || 'My Store';
+        const link = await storage.getItem('storeLink');
+        setStoreName(name);
+        setStoreLink(link);
+      } catch (e) {
+        // ignore
+      }
+    };
+    loadStoreInfo();
+  }, []);
 
   // When in add-to-collection or add-to-category mode, reset filters/search so all products show
   React.useEffect(() => {
@@ -256,18 +276,23 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         collectionId,
       });
       
+      const isActiveParam =
+        statusFilter === 'active' ? true :
+        statusFilter === 'hidden' ? false :
+        undefined;
+
       let apiProducts: ProductDto[] = [];
       if (addToCollectionMode || currentAddToCategoryMode || addToCategoryMode) {
         // In add-to-collection or add-to-category picker, always show all products to pick from
         console.log('✅ Fetching ALL products for add-to-collection/category mode');
-        apiProducts = await fetchProducts();
+        apiProducts = await fetchProducts({ isActive: undefined });
         console.log(`✅ Fetched ${apiProducts.length} products`);
       } else if (viewCollection && collectionId) {
         // Viewing a specific collection
         apiProducts = await fetchProductsByCollection(collectionId);
       } else {
-        // Default: all products
-        apiProducts = await fetchProducts();
+        // Default: all products (with status filter if set)
+        apiProducts = await fetchProducts({ isActive: isActiveParam });
       }
       const mapped = apiProducts.map(p => ({
         id: String(p.productsId),
@@ -279,6 +304,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           (p.productImages && p.productImages[0]) ||
           (p.socialSharingImage ?? undefined),
         images: p.productImages ?? [],
+        isActive: typeof (p as any).isActive === 'boolean' ? (p as any).isActive : undefined,
         businessCategory: p.businessCategory,
         productCategory: p.productCategory,
         description: p.description,
@@ -296,7 +322,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       rotateAnim.stopAnimation();
       rotateAnim.setValue(0);
     }
-  }, [rotateAnim, route, addToCollectionMode, addToCategoryMode]);
+  }, [rotateAnim, route, addToCollectionMode, addToCategoryMode, statusFilter]);
 
   // Comprehensive refresh function that resets everything and reloads
   const refreshScreen = React.useCallback(async () => {
@@ -705,6 +731,40 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         </View>
       </View>
 
+      {/* Store header and counters */}
+      {!addToCollectionMode && !addToCategoryMode && (
+        <View style={styles.storeHeader}>
+          <View style={styles.storeRow}>
+            <View>
+              <Text style={styles.storeName}>{storeName}</Text>
+              <Text style={styles.storeStatus}>Catalog overview</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.statusBadge}
+              onPress={() => setStoreOpen(prev => !prev)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.statusDot, {backgroundColor: storeOpen ? '#10B981' : '#F59E0B'}]} />
+              <Text style={styles.statusText}>{storeOpen ? 'Open' : 'Closed'}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.countersRow}>
+            <View style={styles.counterCard}>
+              <Text style={styles.counterValue}>{inventoryCounts.all}</Text>
+              <Text style={styles.counterLabel}>Total</Text>
+            </View>
+            <View style={styles.counterCard}>
+              <Text style={styles.counterValue}>{inventoryCounts.in}</Text>
+              <Text style={styles.counterLabel}>Active/In Stock</Text>
+            </View>
+            <View style={styles.counterCard}>
+              <Text style={styles.counterValue}>{inventoryCounts.out}</Text>
+              <Text style={styles.counterLabel}>Out of Stock</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Search and Filter Section (hidden in add-to-collection and add-to-category modes) */}
       {!addToCollectionMode && !addToCategoryMode && (
       <View style={styles.searchSection}>
@@ -738,7 +798,14 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             <Text style={{color: '#6c757d'}}>Loading products...</Text>
           </View>
         )}
-        {groupedProducts.map(item => (
+        {groupedProducts
+          .filter(item => {
+            if (statusFilter === 'active') return item.isActive !== false;
+            if (statusFilter === 'hidden') return item.isActive === false;
+            return true;
+          })
+          .slice(0, pageSize)
+          .map(item => (
           <TouchableOpacity
             key={item.id}
             style={styles.card}
@@ -776,8 +843,24 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                 <View style={{flexDirection:'row', alignItems:'center', justifyContent:'space-between'}}>
                   <View style={{flex:1, paddingRight:8}}>
               <Text style={styles.title}>{item.title}</Text>
-                    {/* Variants hidden per request; show products as single items */}
+              {item.variantCount && item.variantCount > 0 ? (
+                <Text style={styles.variantCountText}>
+                  {item.variantCount} variant{item.variantCount > 1 ? 's' : ''} • {item.variants?.filter(v=>v.inStock).length ?? 0} in stock
+                </Text>
+              ) : (
+                <Text style={styles.variantCountText}>
+                  {item.inStock ? 'In stock' : 'Out of stock'}
+                </Text>
+              )}
                   </View>
+                  {typeof item.isActive === 'boolean' && (
+                    <View style={[styles.statusChip, item.isActive ? styles.statusChipActive : styles.statusChipDisabled]}>
+                      <View style={[styles.statusDotSmall, {backgroundColor: item.isActive ? '#10B981' : '#9CA3AF'}]} />
+                      <Text style={[styles.statusChipText, {color: item.isActive ? '#065F46' : '#4B5563'}]}>
+                        {item.isActive ? 'Active' : 'Hidden'}
+                      </Text>
+                    </View>
+                  )}
                   {addToCollectionMode ? (
                     <IconSymbol
                       name={selectedForCollection[item.id] ? 'checkmark-circle' : 'ellipse-outline'}
@@ -974,6 +1057,18 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             <Text style={{color:'#6c757d'}}>No products match your filters</Text>
           </View>
         )}
+        {groupedProducts.length > pageSize && (
+          <View style={{alignItems:'center', marginBottom:24}}>
+            <TouchableOpacity 
+              style={[styles.addButton,{alignSelf:'center', marginVertical:12}]}
+              onPress={() => setPageSize(prev => prev + 20)}>
+              <Text style={styles.addButtonText}>Load more</Text>
+            </TouchableOpacity>
+            <Text style={{color:'#6B7280', fontSize:12}}>
+              Showing {Math.min(pageSize, groupedProducts.length)} of {groupedProducts.length}
+            </Text>
+          </View>
+        )}
       </ScrollView>
       {/* Filter Bottom Sheet */}
       <Modal transparent visible={isFilterOpen} animationType="slide" onRequestClose={() => setIsFilterOpen(false)}>
@@ -981,13 +1076,13 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         <View style={styles.sheet}>
           <View style={styles.sheetHeaderRow}>
             <Text style={styles.sheetTitle}>Filter</Text>
-            <TouchableOpacity onPress={() => { setInventory('all'); setDiscounts({}); setPriceRange({min:0,max:0}); }}>
+            <TouchableOpacity onPress={() => { setInventory('all'); setDiscounts({}); setPriceRange({min:0,max:0}); setStatusFilter('all'); }}>
               <Text style={styles.clearAll}>Clear All</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.sheetBody}>
             <View style={styles.sheetTabs}>
-              {['Inventory','Discount','Price Range'].map(tab => (
+              {['Inventory','Status','Discount','Price Range'].map(tab => (
                 <TouchableOpacity key={tab} style={[styles.tabItem, filterTab===tab && styles.tabItemActive]} onPress={() => setFilterTab(tab as any)}>
                   <Text style={[styles.tabText, filterTab===tab && styles.tabTextActive]}>{tab}</Text>
                 </TouchableOpacity>
@@ -1005,6 +1100,18 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                       <Text style={styles.optionCount}>
                         {opt.key==='all'?inventoryCounts.all: opt.key==='in'?inventoryCounts.in: inventoryCounts.out}
                       </Text>
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+              {filterTab==='Status' && (
+                <>
+                  {[{key:'all',label:'Show All'},{key:'active',label:'Active'},{key:'hidden',label:'Hidden'}].map(opt => (
+                    <TouchableOpacity key={opt.key} style={styles.optionRow} onPress={() => setStatusFilter(opt.key as any)}>
+                      <View style={[styles.radioOuter, statusFilter===opt.key && styles.radioOuterActive]}>
+                        {statusFilter===opt.key && <View style={styles.radioInner} />}
+                      </View>
+                      <Text style={styles.optionLabel}>{opt.label}</Text>
                     </TouchableOpacity>
                   ))}
                 </>
@@ -1160,6 +1267,48 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
               <IconSymbol name="chevron-forward" size={18} color="#10B981" />
             </TouchableOpacity>
           )}
+        {typeof activeProduct?.isActive === 'boolean' && (
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={async () => {
+                console.log('🔀 Toggling status', { activeProductId, current: activeProduct?.isActive });
+              if (!activeProductId) {
+                setActionSheetOpen(false);
+                return;
+              }
+              try {
+                await updateProductStatus(activeProductId, !activeProduct.isActive);
+                await loadProducts();
+              } catch (e) {
+                  console.error('Failed to update status', e);
+                  Alert.alert('Error', e instanceof Error ? e.message : 'Failed to update product status');
+              } finally {
+                setActionSheetOpen(false);
+              }
+            }}>
+            <Text style={styles.actionText}>{activeProduct.isActive ? 'Disable (Hide)' : 'Enable (Show)'}</Text>
+            <IconSymbol name="chevron-forward" size={18} color="#10B981" />
+          </TouchableOpacity>
+        )}
+          <TouchableOpacity
+            style={styles.actionRow}
+            onPress={async () => {
+              setActionSheetOpen(false);
+              // slight delay to allow sheet close animation
+              await new Promise(res => setTimeout(res, 200));
+              if (!storeLink) {
+                Alert.alert('Store link not set', 'Add your store link in settings to view on website.');
+                return;
+              }
+              try {
+                await Linking.openURL(storeLink);
+              } catch (e) {
+                Alert.alert('Error', 'Unable to open store link.');
+              }
+            }}>
+            <Text style={styles.actionText}>View on Website</Text>
+            <IconSymbol name="chevron-forward" size={18} color="#10B981" />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionRow} onPress={() => { setActionSheetOpen(false); setConfirmDeleteOpen(true); }}>
             <Text style={styles.actionText}>Delete</Text>
             <IconSymbol name="chevron-forward" size={18} color="#10B981" />
@@ -1342,6 +1491,17 @@ const styles = StyleSheet.create({
   headerRefreshButton: {
     padding: 4,
   },
+  storeHeader: {padding:16, paddingTop:12},
+  storeRow: {flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:12},
+  storeName: {fontSize:18, fontWeight:'700', color:'#111827'},
+  storeStatus: {fontSize:13, color:'#6B7280', marginTop:2},
+  statusBadge: {flexDirection:'row', alignItems:'center', backgroundColor:'#ECFDF3', paddingHorizontal:10, paddingVertical:6, borderRadius:12},
+  statusDot: {width:8, height:8, borderRadius:4, backgroundColor:'#10B981', marginRight:6},
+  statusText: {color:'#065F46', fontWeight:'600', fontSize:12},
+  countersRow: {flexDirection:'row', justifyContent:'space-between', gap:10},
+  counterCard: {flex:1, backgroundColor:'#FFFFFF', borderRadius:12, padding:12, shadowColor:'#000', shadowOpacity:0.06, shadowRadius:4, shadowOffset:{width:0,height:2}, elevation:2},
+  counterValue: {fontSize:18, fontWeight:'700', color:'#111827'},
+  counterLabel: {fontSize:12, color:'#6B7280', marginTop:4},
   searchSection: {
     flexDirection: 'row',
     padding: 15,
@@ -1396,6 +1556,11 @@ const styles = StyleSheet.create({
   outOfStockBadge: {backgroundColor:'#F3E8E2', color:'#6c757d', paddingVertical:6, paddingHorizontal:10, borderRadius:8},
   updateInventory: {color:'#B91C1C', fontWeight:'600'},
   addToCollectionHint: {color:'#e61580', fontWeight:'600', fontSize:12, marginTop:4},
+  statusChip: {flexDirection:'row', alignItems:'center', paddingHorizontal:10, paddingVertical:6, borderRadius:12, gap:6},
+  statusChipActive: {backgroundColor:'#ECFDF3'},
+  statusChipDisabled: {backgroundColor:'#F3F4F6'},
+  statusDotSmall: {width:8, height:8, borderRadius:4},
+  statusChipText: {fontSize:12, fontWeight:'600'},
   addButton: {
     backgroundColor: '#e61580',
     paddingVertical: 15,

@@ -1050,28 +1050,126 @@
   <script src="../js/api.js"></script>
   <script src="../js/app.js"></script>
   <script>
-    // ====== ADVANCED FILTERS & SORTING ======
-    const allProductsData = [
-      { name: 'Colourblocked Polo T-shirt', price: 593, originalPrice: 1099, brand: 'Allen Solly', image: '../assets/all_products/q1.jpg', discount: 46 },
-      { name: 'Pure Cotton Custom Fit Shirt', price: 917, originalPrice: 1799, brand: 'Allen Solly', image: '../assets/all_products/q3.jpg', discount: 49 },
-      { name: 'Polo Collar Slim Fit T-shirt', price: 929, originalPrice: 1499, brand: 'Louis Philippe Jeans', image: '../assets/all_products/q4.jpg', discount: 38 },
-      { name: 'Pure Cotton Casual Shirt', price: 993, originalPrice: 1949, brand: 'Allen Solly', image: '../assets/all_products/q5.jpg', discount: 49 },
-      { name: 'Classic Fit Formal Shirt', price: 849, originalPrice: 1599, brand: 'Louis Philippe Jeans', image: '../assets/all_products/q1.jpg', discount: 47 },
-      { name: 'Regular Fit Cotton T-shirt', price: 699, originalPrice: 1299, brand: 'Allen Solly', image: '../assets/all_products/q4.jpg', discount: 46 },
-      { name: 'Slim Fit Cotton Shirt', price: 799, originalPrice: 1499, brand: 'Louis Philippe Jeans', image: '../assets/all_products/q3.jpg', discount: 47 },
-      { name: 'Oversized Graphic Tee', price: 499, originalPrice: 1099, brand: 'V Store', image: '../assets/genz/ts.webp', discount: 55 },
-      { name: 'Minimalist Hoodie', price: 799, originalPrice: 1499, brand: 'V Store', image: '../assets/genz/hd.webp', discount: 47 },
-      { name: 'Baggy Fit Jeans', price: 999, originalPrice: 1799, brand: 'V Store', image: '../assets/genz/Bg.jpg', discount: 44 },
-      { name: 'Co-ord Set', price: 1199, originalPrice: 1999, brand: 'V Store', image: '../assets/genz/cd.webp', discount: 40 }
-    ];
-
-    let currentProducts = [...allProductsData];
+    // ====== PRODUCT DATA LOADING ======
+    let allProductsData = []; // Will be populated from API
+    let currentProducts = [];
+    let productsLoaded = false;
     let activeFilters = {
       minPrice: 0,
       maxPrice: 5000,
       brands: [],
       discounts: []
     };
+
+    // Load products from API (filtered by store)
+    async function loadProductsFromAPI() {
+      // Get store slug from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const storeSlug = urlParams.get('store');
+      
+      console.log('🛍️ Loading products for store:', storeSlug || 'ALL');
+      
+      if (!storeSlug) {
+        console.error('❌ ERROR: No store slug in URL! Cannot load products.');
+        const grid = document.getElementById('products-grid');
+        if (grid) {
+          grid.innerHTML = '<p style="text-align:center; padding: 40px; color: var(--text-color, #666);">Store parameter missing. Please navigate from a store page.</p>';
+        }
+        productsLoaded = true;
+        return;
+      }
+      
+      try {
+        let products = [];
+        
+        // PREFERRED: Use store-specific products endpoint via API function
+        if (window.API && window.API.getStoreProductsBySlug) {
+          console.log('🎯 Using getStoreProductsBySlug API function for store:', storeSlug);
+          products = await window.API.getStoreProductsBySlug(storeSlug);
+          console.log('✅ API function returned:', products?.length || 0, 'products');
+        } else {
+          // Fallback: Direct API call
+          const getBackendUrl = () => {
+            const hostname = window.location.hostname;
+            const protocol = window.location.protocol;
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+              return 'http://localhost:8080';
+            }
+            return `${protocol}//${hostname}:8080`;
+          };
+          const baseUrl = window.API_BASE || getBackendUrl();
+          const productsUrl = `${baseUrl}/api/public/store/${encodeURIComponent(storeSlug)}/products`;
+          console.log('🎯 Using direct API call:', productsUrl);
+          const res = await fetch(productsUrl);
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error('❌ API Error:', res.status, res.statusText, errorText);
+            throw new Error(`Failed to load products: ${res.status} ${res.statusText}`);
+          }
+          products = await res.json();
+          console.log('✅ Direct API call returned:', products?.length || 0, 'products');
+        }
+        
+        console.log('✅ Received products from API:', products?.length || 0, 'items');
+        console.log('📦 First product sample:', products?.[0]);
+        
+        // Transform API products to match expected format
+        allProductsData = (products || []).map(p => {
+          const name = p.productName || p.name || 'Product';
+          const price = p.sellingPrice || p.price || 0;
+          const originalPrice = p.mrp || p.originalPrice || price;
+          const brand = p.businessCategory || p.brand || 'V Store';
+          const image = (p.productImages && Array.isArray(p.productImages) && p.productImages[0]) || 
+                       (Array.isArray(p.productImages) ? p.productImages[0] : null) ||
+                       p.socialSharingImage || 
+                       p.image || 
+                       '../assets/genz/ts.webp';
+          const discount = originalPrice > price 
+            ? Math.round(((originalPrice - price) / originalPrice) * 100) 
+            : 0;
+          
+          return {
+            name,
+            price,
+            originalPrice,
+            brand,
+            image,
+            discount,
+            isNew: p.isNew || false,
+            isBestseller: p.isBestseller || p.bestSeller || false,
+            productId: p.productId || p.id || null
+          };
+        });
+        
+        console.log('✅ Transformed products:', allProductsData.length);
+        
+        currentProducts = [...allProductsData];
+        productsLoaded = true;
+        
+        // Render products
+        if (allProductsData.length > 0) {
+          renderProducts(allProductsData);
+          updateResultsCount(allProductsData.length);
+          // Update brand filters based on actual products
+          updateBrandFilters();
+        } else {
+          const grid = document.getElementById('products-grid');
+          if (grid) {
+            grid.innerHTML = '<p style="text-align:center; padding: 40px; color: var(--text-color, #666);">No products found for this store.</p>';
+          }
+          updateResultsCount(0);
+        }
+        
+        console.log('✅ Products loaded and rendered:', allProductsData.length);
+      } catch (error) {
+        console.error('❌ Error loading products:', error);
+        const grid = document.getElementById('products-grid');
+        if (grid) {
+          grid.innerHTML = `<p style="text-align:center; padding: 40px; color: var(--text-color, #666);">Failed to load products. Error: ${error.message}</p>`;
+        }
+        productsLoaded = true; // Set to true to prevent infinite retry
+      }
+    }
 
     function extractProductData() {
       const products = [];
@@ -1092,6 +1190,20 @@
         }
       });
       return products.length > 0 ? products : allProductsData;
+    }
+    
+    // Update brand filters based on actual products
+    function updateBrandFilters() {
+      const brands = [...new Set(allProductsData.map(p => p.brand))].sort();
+      const brandFiltersContainer = document.getElementById('brandFilters');
+      if (brandFiltersContainer && brands.length > 0) {
+        brandFiltersContainer.innerHTML = brands.map(brand => `
+          <label class="filter-checkbox">
+            <input type="checkbox" name="brand" value="${brand}">
+            <span>${brand}</span>
+          </label>
+        `).join('');
+      }
     }
 
     function applyFilters() {
@@ -1220,7 +1332,11 @@
       
       grid.innerHTML = products.map(product => {
         const discountPercent = product.discount || Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
-        const productUrl = `product-detail.html?name=${encodeURIComponent(product.name)}&price=${product.price}&originalPrice=${product.originalPrice}&image=${encodeURIComponent(product.image)}&brand=${encodeURIComponent(product.brand)}`;
+        // Build product detail URL with store context
+        const urlParams = new URLSearchParams(window.location.search);
+        const storeSlug = urlParams.get('store');
+        const storeParam = storeSlug ? `&store=${encodeURIComponent(storeSlug)}` : '';
+        const productUrl = `product-detail.html?name=${encodeURIComponent(product.name)}&price=${product.price}&originalPrice=${product.originalPrice}&image=${encodeURIComponent(product.image)}&brand=${encodeURIComponent(product.brand)}${storeParam}${product.productId ? '&id=' + product.productId : ''}`;
         // Determine badge
         let badgeHtml = '';
         if (discountPercent >= 50) {
@@ -1260,6 +1376,13 @@
       
       // Re-attach event listeners for new buttons
       attachProductButtons();
+    }
+
+    // Safe no-op implementation to avoid runtime errors if global handler is missing
+    if (typeof attachProductButtons !== 'function') {
+      function attachProductButtons() {
+        // Intentionally left blank; buttons already have inline handlers
+      }
     }
 
     function updateResultsCount(count) {
@@ -1408,6 +1531,17 @@
         }
       });
       
+      // Wait for products to load before filtering
+      if (!productsLoaded) {
+        console.log('⏳ Waiting for products to load...');
+        setTimeout(() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const searchQuery = urlParams.get('search');
+          handleSearchAndFilters(searchQuery);
+        }, 500);
+        return;
+      }
+      
       if (searchQuery) {
         // Filter products by search query
         const filtered = allProductsData.filter(p => 
@@ -1428,22 +1562,38 @@
       }
     });
 
-    // Loading state simulation (for demo purposes)
-    window.addEventListener('load', () => {
+    // Load products when page loads (use DOMContentLoaded for faster execution)
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('📄 Products page DOMContentLoaded');
       const productsGrid = document.getElementById('products-grid');
       const productsLoading = document.getElementById('products-loading');
       
-      // Simulate loading delay (remove in production)
+      // Show loading state
       if (productsLoading) {
         productsLoading.style.display = 'grid';
         productsLoading.style.gridTemplateColumns = 'repeat(auto-fill, minmax(250px, 1fr))';
         productsLoading.style.gap = '24px';
-        
-        setTimeout(() => {
-          if (productsLoading) {
-            productsLoading.style.display = 'none';
-          }
-        }, 800);
+      }
+      
+      if (productsGrid) {
+        productsGrid.innerHTML = '<p style="text-align:center; padding: 20px;">Loading products...</p>';
+      }
+      
+      // Load products from API
+      console.log('🚀 Calling loadProductsFromAPI...');
+      await loadProductsFromAPI();
+      
+      // Hide loading state
+      if (productsLoading) {
+        productsLoading.style.display = 'none';
+      }
+    });
+    
+    // Also try on window load as fallback
+    window.addEventListener('load', async () => {
+      if (!productsLoaded) {
+        console.log('📄 Products page window.load (fallback)');
+        await loadProductsFromAPI();
       }
     });
 
