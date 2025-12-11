@@ -135,8 +135,16 @@
   
   /**
    * Get all products
+   * WARNING: This returns ALL products from ALL sellers. 
+   * For public store pages, use getStoreProductsBySlug() instead to ensure data isolation.
+   * @param {String} storeSlug - Optional store slug to filter by store
    */
-  async function getAllProducts() {
+  async function getAllProducts(storeSlug = null) {
+    // If store slug is provided, use store-specific endpoint for data isolation
+    if (storeSlug) {
+      console.warn('getAllProducts called with storeSlug. Consider using getStoreProductsBySlug() instead for better data isolation.');
+      return await getStoreProductsBySlug(storeSlug);
+    }
     return await apiCall('/api/products/allProduct');
   }
 
@@ -202,6 +210,27 @@
       return [];
     } catch (error) {
       console.error('Error in getStoreCategoriesBySlug:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get featured products for a store by slug (public endpoint)
+   * @param {String} slug - Store slug
+   */
+  async function getStoreFeaturedProductsBySlug(slug) {
+    try {
+      console.log('Fetching featured products for store slug:', slug);
+      const result = await apiCall(`/api/public/store/${slug}/featured`);
+      console.log('Featured products API response:', result);
+      if (Array.isArray(result)) {
+        console.log(`Found ${result.length} featured products for store ${slug}`);
+        return result;
+      }
+      console.warn('API returned non-array result:', result);
+      return [];
+    } catch (error) {
+      console.error('Error in getStoreFeaturedProductsBySlug:', error);
       return [];
     }
   }
@@ -399,6 +428,7 @@
     getStoreBySellerId,
     getStoreBySlug,
     getStoreProductsBySlug,
+    getStoreFeaturedProductsBySlug,
     getAllStores,
     
     // Product APIs

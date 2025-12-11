@@ -135,5 +135,41 @@ public class PublicStoreController {
             return ResponseEntity.ok(new java.util.ArrayList<>());
         }
     }
+
+    /**
+     * Get featured products for a store by slug (public endpoint)
+     * Example: GET /api/public/store/brownn_boys/featured
+     */
+    @GetMapping("/{slug}/featured")
+    public ResponseEntity<?> getStoreFeaturedProducts(@PathVariable String slug) {
+        try {
+            // Find store by slug
+            StoreDetails store = storeService.findBySlug(slug);
+            
+            // Check if store has a seller
+            if (store.getSeller() == null) {
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            // Get seller ID from store
+            Long sellerId = store.getSeller().getSellerId();
+            
+            if (sellerId == null) {
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            // Get featured products by seller
+            List<Product> products = productService.featuredProducts(sellerId);
+            
+            return ResponseEntity.ok(products);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            // Log error and return empty list instead of error
+            System.err.println("Error fetching featured products for store slug: " + slug);
+            e.printStackTrace();
+            return ResponseEntity.ok(new java.util.ArrayList<>());
+        }
+    }
 }
 
