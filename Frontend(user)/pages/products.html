@@ -1051,8 +1051,21 @@
   <script src="../js/app.js"></script>
   <script>
     // ====== ADVANCED FILTERS & SORTING ======
-    let allProductsData = [];
-    let currentProducts = [];
+    const allProductsData = [
+      { name: 'Colourblocked Polo T-shirt', price: 593, originalPrice: 1099, brand: 'Allen Solly', image: '../assets/all_products/q1.jpg', discount: 46 },
+      { name: 'Pure Cotton Custom Fit Shirt', price: 917, originalPrice: 1799, brand: 'Allen Solly', image: '../assets/all_products/q3.jpg', discount: 49 },
+      { name: 'Polo Collar Slim Fit T-shirt', price: 929, originalPrice: 1499, brand: 'Louis Philippe Jeans', image: '../assets/all_products/q4.jpg', discount: 38 },
+      { name: 'Pure Cotton Casual Shirt', price: 993, originalPrice: 1949, brand: 'Allen Solly', image: '../assets/all_products/q5.jpg', discount: 49 },
+      { name: 'Classic Fit Formal Shirt', price: 849, originalPrice: 1599, brand: 'Louis Philippe Jeans', image: '../assets/all_products/q1.jpg', discount: 47 },
+      { name: 'Regular Fit Cotton T-shirt', price: 699, originalPrice: 1299, brand: 'Allen Solly', image: '../assets/all_products/q4.jpg', discount: 46 },
+      { name: 'Slim Fit Cotton Shirt', price: 799, originalPrice: 1499, brand: 'Louis Philippe Jeans', image: '../assets/all_products/q3.jpg', discount: 47 },
+      { name: 'Oversized Graphic Tee', price: 499, originalPrice: 1099, brand: 'V Store', image: '../assets/genz/ts.webp', discount: 55 },
+      { name: 'Minimalist Hoodie', price: 799, originalPrice: 1499, brand: 'V Store', image: '../assets/genz/hd.webp', discount: 47 },
+      { name: 'Baggy Fit Jeans', price: 999, originalPrice: 1799, brand: 'V Store', image: '../assets/genz/Bg.jpg', discount: 44 },
+      { name: 'Co-ord Set', price: 1199, originalPrice: 1999, brand: 'V Store', image: '../assets/genz/cd.webp', discount: 40 }
+    ];
+
+    let currentProducts = [...allProductsData];
     let activeFilters = {
       minPrice: 0,
       maxPrice: 5000,
@@ -1061,8 +1074,6 @@
     };
 
     function extractProductData() {
-      // Not needed when using API-driven data; keep fallback for safety
-      if (allProductsData.length > 0) return allProductsData;
       const products = [];
       document.querySelectorAll('.ecommerce-product-card').forEach(card => {
         const name = card.querySelector('.product-name')?.textContent || '';
@@ -1080,7 +1091,7 @@
           products.push({ name, price, originalPrice, brand, image, discount });
         }
       });
-      return products;
+      return products.length > 0 ? products : allProductsData;
     }
 
     function applyFilters() {
@@ -1317,54 +1328,7 @@
       });
     }
 
-    // Load products from API (store-aware)
-    async function loadProductsFromAPI() {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const storeSlug = params.get('store');
-        let fetched = [];
-        
-        if (storeSlug && window.API && window.API.getStoreProductsBySlug) {
-          fetched = await window.API.getStoreProductsBySlug(storeSlug);
-        } else if (window.API && window.API.getAllProducts) {
-          fetched = await window.API.getAllProducts();
-        }
-        
-        if (!Array.isArray(fetched)) fetched = [];
-        
-        // Map API products to view model
-        allProductsData = fetched.map(p => {
-          const price = p.sellingPrice ?? p.price ?? 0;
-          const originalPrice = p.originalPrice ?? p.mrp ?? price;
-          const image = p.productImages?.[0] || p.image || p.imageUrl || '../assets/products/p1.jpg';
-          const brand = p.brand || p.brandName || p.storeName || 'Store';
-          return {
-            name: p.productName || p.title || p.name || 'Product',
-            price,
-            originalPrice,
-            brand,
-            image,
-            discount: originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0,
-            raw: p
-          };
-        });
-        
-        currentProducts = [...allProductsData];
-        renderProducts(currentProducts);
-        updateResultsCount(currentProducts.length);
-      } catch (e) {
-        console.error('Failed to load products:', e);
-        allProductsData = extractProductData();
-        currentProducts = [...allProductsData];
-        renderProducts(currentProducts);
-        updateResultsCount(currentProducts.length);
-      }
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
-      // Load products first
-      loadProductsFromAPI();
-      
       // Initialize wishlist button states
       initializeWishlistButtons();
       
