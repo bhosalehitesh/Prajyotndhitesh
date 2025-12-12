@@ -108,7 +108,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
   const [hsn, setHsn] = useState(existing?.hsnCode || '');
 
-  const [bestSeller, setBestSeller] = useState(false);
+  const [bestSeller, setBestSeller] = useState(existing?.bestSeller || false);
 
   const [pickerOpen, setPickerOpen] = useState(false);
 

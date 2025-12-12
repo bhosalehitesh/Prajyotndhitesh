@@ -181,9 +181,14 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
       deleteCategory(idToDelete)
         .then(() => {
           setCategories(prev => prev.filter(c => c.id !== idToDelete));
+          // Show success message if you have a toast/alert system
+          Alert.alert('Success', 'Category deleted successfully');
         })
         .catch(err => {
           console.error('Failed to delete category', err);
+          // Show the actual error message from backend
+          const errorMessage = err.message || 'Failed to delete category';
+          Alert.alert('Error', errorMessage);
         });
     }
   };

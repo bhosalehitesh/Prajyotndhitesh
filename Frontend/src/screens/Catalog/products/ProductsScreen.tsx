@@ -72,6 +72,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     color?: string;
     size?: string;
     hsnCode?: string;
+    bestSeller?: boolean;
     variantCount?: number;
     variants?: Array<{
       id: string;
@@ -313,6 +314,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         color: p.color,
         size: p.size,
         hsnCode: p.hsnCode,
+        bestSeller: p.bestSeller ?? false,
       }));
       setProducts(mapped);
     } catch (error) {
@@ -373,6 +375,17 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         mrp: p.mrp ?? undefined,
         inStock: (p.inventoryQuantity ?? 0) > 0,
         imageUrl: (p.productImages && p.productImages[0]) || (p.socialSharingImage ?? undefined),
+        images: p.productImages ?? [],
+        isActive: typeof (p as any).isActive === 'boolean' ? (p as any).isActive : undefined,
+        businessCategory: p.businessCategory,
+        productCategory: p.productCategory,
+        description: p.description,
+        inventoryQuantity: p.inventoryQuantity,
+        sku: p.customSku,
+        color: p.color,
+        size: p.size,
+        hsnCode: p.hsnCode,
+        bestSeller: p.bestSeller ?? false,
       }));
       setProducts(mapped);
     } catch (error) {
@@ -1290,6 +1303,47 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             <IconSymbol name="chevron-forward" size={18} color="#10B981" />
           </TouchableOpacity>
         )}
+        {/* Best Seller Toggle */}
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={async () => {
+            if (!activeProductId || !activeProduct) {
+              setActionSheetOpen(false);
+              return;
+            }
+            const currentBestSeller = activeProduct.bestSeller || false;
+            setActionSheetOpen(false);
+            try {
+              await updateProduct(activeProductId, {
+                productName: activeProduct.title,
+                sellingPrice: activeProduct.price,
+                businessCategory: activeProduct.businessCategory || '',
+                description: activeProduct.description || '',
+                mrp: activeProduct.mrp,
+                inventoryQuantity: activeProduct.inventoryQuantity || 0,
+                customSku: activeProduct.sku,
+                color: activeProduct.color,
+                size: activeProduct.size,
+                hsnCode: activeProduct.hsnCode,
+                bestSeller: !currentBestSeller,
+              });
+              await loadProducts();
+              Alert.alert(
+                'Success',
+                !currentBestSeller 
+                  ? 'Product marked as Best Seller' 
+                  : 'Product unmarked from Best Seller'
+              );
+            } catch (e) {
+              console.error('Failed to toggle best seller', e);
+              Alert.alert('Error', e instanceof Error ? e.message : 'Failed to update best seller status');
+            }
+          }}>
+          <Text style={styles.actionText}>
+            {activeProduct?.bestSeller ? 'Unmark Best Seller' : 'Mark as Best Seller'}
+          </Text>
+          <IconSymbol name="chevron-forward" size={18} color="#10B981" />
+        </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionRow}
             onPress={async () => {

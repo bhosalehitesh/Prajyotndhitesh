@@ -488,6 +488,16 @@ export interface ProductDto {
   color?: string;
   size?: string;
   hsnCode?: string;
+  isActive?: boolean;
+  bestSeller?: boolean;
+  variants?: Array<{
+    id?: string | number;
+    title?: string;
+    price?: number;
+    mrp?: number;
+    inStock?: boolean;
+    inventoryQuantity?: number;
+  }>;
 }
 
 export interface CategoryDto {
@@ -875,22 +885,40 @@ export const deleteCategory = async (categoryId: string | number): Promise<void>
   const id = typeof categoryId === 'string' ? categoryId : String(categoryId);
   const url = `${API_BASE_URL}/api/category/${id}`;
 
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
+  try {
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
 
-  const payload = await parseJsonOrText(response);
+    const payload = await parseJsonOrText(response);
 
-  if (!response.ok) {
-    const message =
-      typeof payload === 'string'
-        ? payload
-        : payload?.message || 'Failed to delete category';
-    throw new Error(message);
+    if (!response.ok) {
+      // Log detailed error for debugging
+      console.error('Delete Category API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        payload,
+        url,
+      });
+
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || `Failed to delete category (${response.status}: ${response.statusText})`;
+      throw new Error(message);
+    }
+  } catch (error: any) {
+    // Handle network errors
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      console.error('Network error during category deletion:', error);
+      throw new Error('Network error: Cannot connect to server. Please check your connection.');
+    }
+    // Re-throw other errors (including our Error with message)
+    throw error;
   }
 };
 

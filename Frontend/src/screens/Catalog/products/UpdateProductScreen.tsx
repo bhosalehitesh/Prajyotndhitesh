@@ -25,6 +25,7 @@ interface UpdateProductScreenProps {
         businessCategory?: string;
         productCategory?: string;
         inStock: boolean;
+        bestSeller?: boolean;
       };
     };
   };
@@ -56,6 +57,7 @@ const UpdateProductScreen: React.FC<UpdateProductScreenProps> = ({
   const [colorHex, setColorHex] = useState('#000000');
   const [size, setSize] = useState('');
   const [hsn, setHsn] = useState('');
+  const [bestSeller, setBestSeller] = useState(p?.bestSeller || false);
   const [saving, setSaving] = useState(false);
 
   const canSubmit = name.trim().length > 0 && price.trim().length > 0;
@@ -79,6 +81,7 @@ const UpdateProductScreen: React.FC<UpdateProductScreenProps> = ({
         color: color || colorHex || undefined,
         size: size || undefined,
         hsnCode: hsn || undefined,
+        bestSeller: bestSeller,
       });
 
       Alert.alert('Success', 'Product updated successfully', [
@@ -202,6 +205,17 @@ const UpdateProductScreen: React.FC<UpdateProductScreenProps> = ({
           maxLength={8}
         />
 
+        {/* Best Seller */}
+        <TouchableOpacity 
+          style={styles.checkRow} 
+          onPress={() => setBestSeller(!bestSeller)}
+        >
+          <View style={[styles.checkbox, bestSeller && styles.checkboxChecked]} />
+          <Text style={styles.checkLabel}>
+            {bestSeller ? 'Marked as Best Seller' : 'Mark as Best Seller'}
+          </Text>
+        </TouchableOpacity>
+
         {/* Update button */}
         <TouchableOpacity
           style={[
@@ -269,6 +283,30 @@ const styles = StyleSheet.create({
   submitBtn: {marginTop: 24, backgroundColor: '#e61580', padding: 14, borderRadius: 10},
   submitBtnDisabled: {backgroundColor: '#D1D5DB'},
   submitText: {textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold'},
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  checkboxChecked: {
+    backgroundColor: '#e61580',
+    borderColor: '#e61580',
+  },
+  checkLabel: {
+    fontSize: 16,
+    color: '#111827',
+    fontWeight: '500',
+  },
 });
 
 export default UpdateProductScreen;
