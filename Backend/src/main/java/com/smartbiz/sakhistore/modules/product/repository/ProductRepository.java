@@ -49,7 +49,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p WHERE LOWER(p.productName) LIKE LOWER(CONCAT('%', :name, '%'))")
     List<Product> findByProductNameContainingIgnoreCase(@Param("name") String name);
 
-
     Product findByCustomSku(String customSku);
+
+    // Check SKU uniqueness per seller
+    Product findBySeller_SellerIdAndCustomSku(Long sellerId, String customSku);
+
+    // Idempotency lookup
+    Product findBySeller_SellerIdAndIdempotencyKey(Long sellerId, String idempotencyKey);
+
+    // Filter by seller and active flag
+    List<Product> findBySeller_SellerIdAndIsActive(Long sellerId, Boolean isActive);
 }
 

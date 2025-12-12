@@ -96,8 +96,14 @@ public class ProductController {
 
     @PostMapping("/addProduct")
     public Product addProduct(@RequestBody Product product,
-                              @RequestParam(value = "sellerId", required = false) Long sellerId) {
-        return productService.addproduct(product, sellerId);
+                              @RequestParam(value = "sellerId", required = false) Long sellerId,
+                              @RequestParam(value = "categoryId", required = false) Long categoryId,
+                              @RequestParam(value = "idempotencyKey", required = false) String idempotencyKey) {
+        // Attach idempotencyKey from param to product (if provided)
+        if (idempotencyKey != null && !idempotencyKey.trim().isEmpty()) {
+            product.setIdempotencyKey(idempotencyKey.trim());
+        }
+        return productService.addproduct(product, sellerId, categoryId);
     }
 
     @PostMapping("/Edit Product")
@@ -115,6 +121,17 @@ public class ProductController {
     public ResponseEntity<String> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);
         return ResponseEntity.ok("✅ Product with ID " + id + " deleted successfully.");
+    }
+
+    // Enable/Disable product
+    @PatchMapping("/{id}/status")
+    @PostMapping("/{id}/status") // allow POST for clients that don't support PATCH well
+    public ResponseEntity<Product> updateProductStatus(
+            @PathVariable Long id,
+            @RequestParam("isActive") boolean isActive
+    ) {
+        Product updated = productService.updateActiveStatus(id, isActive);
+        return ResponseEntity.ok(updated);
     }
 
     // ✅ Update product details (JSON, no image upload)
@@ -144,12 +161,13 @@ public class ProductController {
     public ResponseEntity<?> getProductsForSeller(
             @RequestParam("sellerId") Long sellerId,
             @RequestParam(value = "page", required = false) Integer page,
-            @RequestParam(value = "size", required = false) Integer size) {
+            @RequestParam(value = "size", required = false) Integer size,
+            @RequestParam(value = "isActive", required = false) Boolean isActive) {
         
         // If pagination parameters are provided, return paginated response
         if (page != null && size != null) {
             Pageable pageable = PageRequest.of(page, size);
-            Page<Product> productPage = productService.allProductForSellerPaginated(sellerId, pageable);
+            Page<Product> productPage = productService.allProductForSellerPaginated(sellerId, isActive, pageable);
             
             Map<String, Object> response = new HashMap<>();
             response.put("content", productPage.getContent());

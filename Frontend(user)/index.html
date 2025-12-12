@@ -2588,9 +2588,14 @@
             // Use store-specific categories endpoint if available
             if (storeSlug && window.API.getStoreCategoriesBySlug) {
               categories = await window.API.getStoreCategoriesBySlug(storeSlug);
-            } else if (window.API.getAllCategories) {
-              // Fallback to all categories (for backward compatibility)
+            } else if (!storeSlug && window.API.getAllCategories) {
+              // Only use getAllCategories when there's NO store context (main landing page)
+              // SECURITY: Never use getAllCategories when storeSlug exists to prevent data leak
               categories = await window.API.getAllCategories();
+            } else if (storeSlug) {
+              // If storeSlug exists but getStoreCategoriesBySlug failed, return empty array
+              console.warn('Store slug present but getStoreCategoriesBySlug not available. Returning empty categories to prevent data leak.');
+              categories = [];
             }
             
             const storeCategoriesList = Array.isArray(categories) ? categories : [];

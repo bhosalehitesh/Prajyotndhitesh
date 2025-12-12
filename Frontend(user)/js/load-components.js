@@ -17,24 +17,60 @@ function getCurrentStoreSlug() {
 // Function to append store param to navigation links so cross-page navigation preserves store context
 function appendStoreParamToLinks(rootEl, storeSlug) {
   if (!rootEl || !storeSlug) return;
+  
+  // Get all links that should preserve store context
   const selectors = [
-    'a[href$="index.html"]',
-    'a[href$="categories.html"]',
-    'a[href$="featured.html"]',
-    'a[href$="products.html"]',
+    'a[href*="index.html"]',
+    'a[href*="categories.html"]',
+    'a[href*="featured.html"]',
+    'a[href*="products.html"]',
     'a[href="/"]',
     'a[href="./"]',
+    'a[data-preserve-store]', // Links with data-preserve-store attribute
   ];
+  
   const links = rootEl.querySelectorAll(selectors.join(','));
   links.forEach(link => {
     const href = link.getAttribute('href');
     if (!href) return;
-    try {
-      const url = new URL(href, window.location.href);
-      url.searchParams.set('store', storeSlug);
-      link.setAttribute('href', url.pathname + url.search);
-    } catch (e) {
-      // ignore malformed URLs
+    
+    // Skip if already has store parameter
+    if (href.includes('store=')) return;
+    
+    // Skip external links
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+      const url = new URL(href);
+      if (url.hostname !== window.location.hostname) return;
+    }
+    
+    // For simple relative paths, manually append store param (more reliable)
+    if (href.includes('.html')) {
+      const separator = href.includes('?') ? '&' : '?';
+      link.setAttribute('href', href + separator + 'store=' + encodeURIComponent(storeSlug));
+    } else if (href === '/' || href === './') {
+      // For root/home links
+      const separator = href.includes('?') ? '&' : '?';
+      link.setAttribute('href', href + separator + 'store=' + encodeURIComponent(storeSlug));
+    } else {
+      // Try URL constructor as fallback
+      try {
+        const url = new URL(href, window.location.href);
+        if (url.hostname === window.location.hostname || !href.includes('://')) {
+          url.searchParams.set('store', storeSlug);
+          // Preserve relative path
+          const newHref = href.startsWith('/') 
+            ? url.pathname + url.search
+            : url.pathname.split('/').pop() + url.search;
+          link.setAttribute('href', newHref);
+        }
+      } catch (e) {
+        // If URL constructor fails, try simple append
+        if (href.includes('?')) {
+          link.setAttribute('href', href + '&store=' + encodeURIComponent(storeSlug));
+        } else {
+          link.setAttribute('href', href + '?store=' + encodeURIComponent(storeSlug));
+        }
+      }
     }
   });
 }

@@ -50,6 +50,29 @@ public class Product {
     private String seoTitleTag;
     private String seoMetaDescription;
     private String socialSharingImage;
+
+    // Idempotency key to prevent duplicate creates (per seller)
+    private String idempotencyKey;
+
+    // Active flag to control visibility (default true)
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean isActive = true;
+
+    public Boolean getIsActive() {
+        return isActive != null ? isActive : true;
+    }
+
+    public void setIsActive(Boolean active) {
+        this.isActive = active != null ? active : true;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
+    }
     
     @Column(name = "is_bestseller", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     @com.fasterxml.jackson.annotation.JsonProperty("bestSeller")
@@ -274,6 +297,16 @@ public class Product {
 
     public void setSeller(SellerDetails seller) {
         this.seller = seller;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
+    public Boolean jsonGetIsActive() {
+        return getIsActive();
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
+    public void jsonSetIsActive(Boolean active) {
+        setIsActive(active);
     }
 
     public Product() {}

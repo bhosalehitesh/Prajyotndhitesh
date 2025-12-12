@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -158,12 +159,26 @@ public class ProductService{
      * @param pageable Pageable object with page number and size
      * @return Page of products
      */
-    public Page<Product> allProductForSellerPaginated(Long sellerId, Pageable pageable) {
+    public Page<Product> allProductForSellerPaginated(Long sellerId, Boolean isActive, Pageable pageable) {
         if (sellerId == null) {
             return productRepository.findAll(pageable);
         }
+        // If active filter provided, apply it
+        if (isActive != null) {
+            List<Product> filtered = productRepository.findBySeller_SellerIdAndIsActive(sellerId, isActive);
+            int start = (int) pageable.getOffset();
+            int end = Math.min((start + pageable.getPageSize()), filtered.size());
+            return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size());
+        }
         // Use optimized query with JOIN FETCH to avoid N+1 queries
         return productRepository.findBySeller_SellerIdWithRelations(sellerId, pageable);
+    }
+
+    public Product updateActiveStatus(Long productId, Boolean isActive) {
+        Product existing = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
+        existing.setIsActive(isActive != null ? isActive : true);
+        return productRepository.save(existing);
     }
 
 
@@ -175,16 +190,46 @@ public class ProductService{
     }
 
     public Product addproduct(Product product, Long sellerId){
+        return addproduct(product, sellerId, null);
+    }
+
+    public Product addproduct(Product product, Long sellerId, Long categoryId){
+        // Enforce SKU uniqueness per seller (if SKU provided and seller provided)
+        if (sellerId != null && product.getCustomSku() != null && !product.getCustomSku().trim().isEmpty()) {
+            Product existingSku = productRepository.findBySeller_SellerIdAndCustomSku(sellerId, product.getCustomSku().trim());
+            if (existingSku != null) {
+                throw new RuntimeException("SKU already exists for this seller. Please use a unique SKU.");
+            }
+        }
+
+        // Idempotency: if key provided and seller provided, return existing product instead of creating duplicate
+        if (sellerId != null && product.getIdempotencyKey() != null && !product.getIdempotencyKey().trim().isEmpty()) {
+            Product existingByIdem = productRepository.findBySeller_SellerIdAndIdempotencyKey(sellerId, product.getIdempotencyKey().trim());
+            if (existingByIdem != null) {
+                return existingByIdem;
+            }
+        }
+
+        // Default isActive to true if null
+        product.setIsActive(product.getIsActive());
+
         if (sellerId != null) {
             SellerDetails seller = sellerDetailsRepo.findById(sellerId)
                     .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
             product.setSeller(seller);
         }
-        // If product has a category with categoryId, fetch the actual Category entity
-        if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
-            Long categoryId = product.getCategory().getCategory_id();
+        
+        // Link to category - use provided categoryId parameter first, then check product.getCategory()
+        if (categoryId != null) {
+            // Use provided categoryId (preferred method)
             Category category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
+            product.setCategory(category);
+        } else if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
+            // If product has a category with categoryId, fetch the actual Category entity
+            Long catId = product.getCategory().getCategory_id();
+            Category category = categoryRepository.findById(catId)
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + catId));
             product.setCategory(category);
         } else {
             // Automatically find category based on productCategory or businessCategory if not provided
@@ -224,6 +269,14 @@ public class ProductService{
         return productRepository.save(product);
     }
 
+    // ✅ Update status (enable/disable) for a product
+    public Product updateProductStatus(Long productId, boolean isActive) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
+        product.setIsActive(isActive);
+        return productRepository.save(product);
+    }
+
     // ✅ Update all editable fields of a product (without changing seller or images)
     public Product updateProduct(Long productId, Product updated) {
         Product existing = productRepository.findById(productId)
@@ -245,6 +298,7 @@ public class ProductService{
         existing.setSeoTitleTag(updated.getSeoTitleTag());
         existing.setSeoMetaDescription(updated.getSeoMetaDescription());
         existing.setIsBestseller(updated.getIsBestseller() != null ? updated.getIsBestseller() : false);
+        existing.setIsActive(updated.getIsActive());
 
         // ✅ Update category if provided
         if (updated.getCategory() != null && updated.getCategory().getCategory_id() != null) {

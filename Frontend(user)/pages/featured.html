@@ -87,16 +87,143 @@
   <script src="../js/load-components.js"></script>
   <script src="../js/app.js"></script>
   <script>
-    // Fetch featured products (best sellers) from backend
+    // Preserve store parameter if missing (fallback)
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (!urlParams.get('store')) {
+        // Try to get from referrer
+        try {
+          const referrer = document.referrer;
+          if (referrer) {
+            const referrerUrl = new URL(referrer);
+            const referrerStore = referrerUrl.searchParams.get('store');
+            if (referrerStore) {
+              // Redirect to same page with store parameter
+              urlParams.set('store', referrerStore);
+              window.location.replace(window.location.pathname + '?' + urlParams.toString());
+              return;
+            }
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+        
+        // Try to get from sessionStorage (set by other pages)
+        try {
+          const storedStore = sessionStorage.getItem('currentStoreSlug');
+          if (storedStore) {
+            urlParams.set('store', storedStore);
+            window.location.replace(window.location.pathname + '?' + urlParams.toString());
+            return;
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      } else {
+        // Store store slug in sessionStorage for future navigation
+        try {
+          sessionStorage.setItem('currentStoreSlug', urlParams.get('store'));
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    })();
+    
+    // Fetch featured products (best sellers) from backend - FILTERED BY STORE
     async function loadFeaturedProducts() {
       const grid = document.getElementById('featured-grid');
       grid.innerHTML = '<p style="text-align:center;">Loading featured products...</p>';
 
       const baseUrl = (window.API_BASE_URL && window.API_BASE_URL()) || 'http://localhost:8080';
+      
+      // Get store slug from URL to filter products by store
+      const urlParams = new URLSearchParams(window.location.search);
+      const storeSlug = urlParams.get('store');
+      
+      console.log('🔍 Featured Products - Store Slug from URL:', storeSlug);
+      
+      let sellerId = null;
+      
+      // If we have a store slug, get the sellerId from the store
+      if (storeSlug && window.API && window.API.getStoreBySlug) {
+        try {
+          console.log('📞 Calling getStoreBySlug for:', storeSlug);
+          const store = await window.API.getStoreBySlug(storeSlug);
+          console.log('📦 Store data received:', store);
+          
+          if (store) {
+            // Try multiple ways to get sellerId
+            sellerId = store.seller?.sellerId || 
+                      store.sellerId || 
+                      (store.seller && store.seller.sellerId) ||
+                      (store.seller && typeof store.seller === 'object' && store.seller.sellerId);
+            
+            console.log('✅ Extracted sellerId:', sellerId);
+            console.log('📋 Full store object:', JSON.stringify(store, null, 2));
+            
+            if (!sellerId) {
+              console.error('❌ WARNING: Store found but sellerId is null/undefined!');
+              console.error('Store seller object:', store.seller);
+            }
+          } else {
+            console.error('❌ Store not found for slug:', storeSlug);
+          }
+        } catch (e) {
+          console.error('❌ Failed to get store by slug:', e);
+          console.error('Error details:', e.message, e.stack);
+        }
+      } else {
+        if (!storeSlug) {
+          console.warn('⚠️ No store slug in URL - will show ALL featured products from ALL sellers!');
+        }
+        if (!window.API) {
+          console.error('❌ window.API is not available!');
+        }
+        if (!window.API?.getStoreBySlug) {
+          console.error('❌ window.API.getStoreBySlug is not available!');
+        }
+      }
+      
       try {
-        const res = await fetch(`${baseUrl}/api/products/featured`);
-        if (!res.ok) throw new Error('Failed to load featured products');
-        const products = await res.json();
+        // PREFERRED: Use store-specific featured endpoint (more reliable)
+        let products = [];
+        
+        if (storeSlug && window.API && window.API.getStoreFeaturedProductsBySlug) {
+          // Use the new dedicated endpoint
+          console.log('🎯 Using getStoreFeaturedProductsBySlug API function');
+          products = await window.API.getStoreFeaturedProductsBySlug(storeSlug);
+        } else if (storeSlug) {
+          // Direct API call to store-specific endpoint
+          const featuredUrl = `${baseUrl}/api/public/store/${encodeURIComponent(storeSlug)}/featured`;
+          console.log('🎯 Using store-specific featured endpoint:', featuredUrl);
+          const res = await fetch(featuredUrl);
+          if (!res.ok) {
+            console.error('❌ API request failed:', res.status, res.statusText);
+            throw new Error(`Failed to load featured products: ${res.status} ${res.statusText}`);
+          }
+          products = await res.json();
+        } else if (sellerId) {
+          // Fallback: Use sellerId parameter
+          const featuredUrl = `${baseUrl}/api/products/featured?sellerId=${sellerId}`;
+          console.log('📌 Using sellerId parameter:', featuredUrl);
+          const res = await fetch(featuredUrl);
+          if (!res.ok) {
+            console.error('❌ API request failed:', res.status, res.statusText);
+            throw new Error(`Failed to load featured products: ${res.status} ${res.statusText}`);
+          }
+          products = await res.json();
+        } else {
+          // Last resort: Get all featured products (should not happen for store pages)
+          console.warn('⚠️ WARNING: No store slug or sellerId - showing ALL featured products!');
+          const featuredUrl = `${baseUrl}/api/products/featured`;
+          const res = await fetch(featuredUrl);
+          if (!res.ok) {
+            throw new Error(`Failed to load featured products: ${res.status} ${res.statusText}`);
+          }
+          products = await res.json();
+        }
+        
+        console.log('✅ Received products:', products?.length || 0, 'items');
 
         if (!Array.isArray(products) || products.length === 0) {
           grid.innerHTML = '<p style="text-align:center;">No featured products yet.</p>';

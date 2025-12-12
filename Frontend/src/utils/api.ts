@@ -30,6 +30,15 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+// Log the API configuration on module load (for debugging)
+console.log('API Configuration:', {
+  API_BASE_URL,
+  USE_IP_ADDRESS,
+  __DEV__,
+  API_BASE_URL_DEV,
+  API_BASE_URL_DEV_IP_FINAL,
+});
+
 // Types kept so screens compile; adjusted to match seller auth backend
 interface SignupRequest {
   fullName: string;
@@ -141,9 +150,15 @@ export const signup = async (data: SignupRequest): Promise<string> => {
       );
     }
     
-    // Handle network errors
+    // Handle network errors with detailed diagnostics
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
       console.error('Network error during signup:', error);
+      console.error('Connection diagnostics:', {
+        API_BASE_URL,
+        url,
+        errorType: error.constructor.name,
+        errorMessage: error.message,
+      });
       throw new Error(
         `Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
       );
@@ -252,6 +267,13 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
     return '';
   } catch (error: any) {
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      console.error('Network error during sendLoginOtp:', error);
+      console.error('Connection diagnostics:', {
+        API_BASE_URL,
+        url,
+        errorType: error.constructor.name,
+        errorMessage: error.message,
+      });
       throw new Error(
         `Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
       );
@@ -336,10 +358,21 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
     console.log('Login successful:', { userId: authResponse.userId, fullName: authResponse.fullName });
     return authResponse;
   } catch (error) {
-    // Handle network errors
+    // Handle network errors with detailed diagnostics
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
       console.error('Network error during login:', error);
-      throw new Error(`Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`);
+      console.error('Connection diagnostics:', {
+        API_BASE_URL,
+        url,
+        errorType: error.constructor.name,
+        errorMessage: error.message,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Provide more actionable error message
+      const diagnosticMessage = `Network request failed. Backend URL: ${API_BASE_URL}. Troubleshooting: 1) Verify backend is running, 2) Check device can reach this IP, 3) Ensure same WiFi network, 4) Check firewall settings.`;
+      
+      throw new Error(diagnosticMessage);
     }
     // Re-throw other errors
     console.error('Login error:', error);
@@ -404,6 +437,13 @@ export const loginWithOtp = async (phone: string, otpCode: string): Promise<Auth
     };
   } catch (error: any) {
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      console.error('Network error during loginWithOtp:', error);
+      console.error('Connection diagnostics:', {
+        API_BASE_URL,
+        url,
+        errorType: error.constructor.name,
+        errorMessage: error.message,
+      });
       throw new Error(
         `Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
       );
@@ -448,6 +488,15 @@ export interface ProductDto {
   color?: string;
   size?: string;
   hsnCode?: string;
+  isActive?: boolean;
+  variants?: Array<{
+    id?: string | number;
+    title?: string;
+    price?: number;
+    mrp?: number;
+    inStock?: boolean;
+    inventoryQuantity?: number;
+  }>;
 }
 
 export interface CategoryDto {
@@ -1275,14 +1324,22 @@ export const fetchProductsByCollection = async (
  * Fetch all products for the current seller.
  * Backend: GET /api/products/allProduct
  */
-export const fetchProducts = async (): Promise<ProductDto[]> => {
+export const fetchProducts = async (options?: { isActive?: boolean }): Promise<ProductDto[]> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userIdRaw = await storage.getItem('userId');
   const sellerId = userIdRaw && !isNaN(Number(userIdRaw)) ? userIdRaw : null;
 
+  // RN doesn't fully support URLSearchParams.set in some runtimes; build query manually.
+  const queryParts: string[] = [];
+  if (sellerId) queryParts.push(`sellerId=${encodeURIComponent(String(sellerId))}`);
+  if (options?.isActive !== undefined) {
+    queryParts.push(`isActive=${options.isActive ? 'true' : 'false'}`);
+  }
+  const query = queryParts.length ? `?${queryParts.join('&')}` : '';
+
   const url = sellerId
-    ? `${API_BASE_URL}/api/products/sellerProducts?sellerId=${sellerId}`
-    : `${API_BASE_URL}/api/products/allProduct`;
+    ? `${API_BASE_URL}/api/products/sellerProducts${query}`
+    : `${API_BASE_URL}/api/products/allProduct${query}`;
 
   const response = await fetch(url, {
     method: 'GET',
@@ -1311,6 +1368,36 @@ export const fetchProducts = async (): Promise<ProductDto[]> => {
   }
 
   return payload as ProductDto[];
+};
+
+/**
+ * Update product active status (enable/disable)
+ * Backend: PATCH /api/products/{id}/status?isActive=true|false
+ */
+export const updateProductStatus = async (productId: string | number, isActive: boolean): Promise<ProductDto> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof productId === 'string' ? productId : String(productId);
+  const url = `${API_BASE_URL}/api/products/${id}/status?isActive=${isActive ? 'true' : 'false'}`;
+
+  const response = await fetch(url, {
+    method: 'PATCH', // prefer PATCH; backend also allows POST if needed
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || `Failed to update product status (${response.status})`;
+    throw new Error(message);
+  }
+
+  return payload as ProductDto;
 };
 
 /**
@@ -1439,6 +1526,8 @@ export const createProduct = async (body: {
   size?: string;
   hsnCode?: string;
   bestSeller?: boolean;
+  categoryId?: number; // ensure categoryId can be sent in JSON body
+  idempotencyKey?: string;
 }) => {
   const baseUrl = `${API_BASE_URL}/api/products/addProduct`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
@@ -1463,7 +1552,12 @@ export const createProduct = async (body: {
   
   console.log('Create product - using userId:', userId);
 
-  const url = `${baseUrl}?sellerId=${userId}`;
+  // RN URLSearchParams.set is not always available; build manually
+  const queryParts: string[] = [`sellerId=${encodeURIComponent(userId)}`];
+  if (body.idempotencyKey) {
+    queryParts.push(`idempotencyKey=${encodeURIComponent(body.idempotencyKey)}`);
+  }
+  const url = `${baseUrl}?${queryParts.join('&')}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -1508,8 +1602,13 @@ export const uploadProductWithImages = async (params: {
   imageUris: string[];
   categoryId?: number; // Add categoryId parameter
   bestSeller?: boolean;
+  idempotencyKey?: string;
 }) => {
-  const url = `${API_BASE_URL}/api/products/upload`;
+  const qp: string[] = [];
+  if (params.idempotencyKey) {
+    qp.push(`idempotencyKey=${encodeURIComponent(params.idempotencyKey)}`);
+  }
+  const url = `${API_BASE_URL}/api/products/upload${qp.length ? `?${qp.join('&')}` : ''}`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userIdRaw = await storage.getItem('userId');
   
@@ -1992,6 +2091,51 @@ export const getStoreBySellerId = async (sellerId: number): Promise<StoreDetails
   } catch (error) {
     console.error('Error fetching store:', error);
     return null;
+  }
+};
+
+/**
+ * Test backend connection
+ * Useful for debugging network issues
+ */
+export const testBackendConnection = async (): Promise<{ success: boolean; message: string }> => {
+  const testUrl = `${API_BASE_URL}/api/sellers/login-seller`;
+  
+  try {
+    console.log('Testing backend connection to:', API_BASE_URL);
+    
+    // Try a simple OPTIONS request first (CORS preflight)
+    const response = await fetch(testUrl, {
+      method: 'OPTIONS',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('Connection test response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+    
+    return {
+      success: true,
+      message: `Backend is reachable at ${API_BASE_URL}`,
+    };
+  } catch (error) {
+    console.error('Connection test failed:', error);
+    
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      return {
+        success: false,
+        message: `Cannot reach backend at ${API_BASE_URL}. Check: 1) Backend is running, 2) IP address is correct, 3) Device/emulator can reach this IP, 4) Same WiFi network, 5) Firewall settings.`,
+      };
+    }
+    
+    return {
+      success: false,
+      message: `Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
   }
 };
 
