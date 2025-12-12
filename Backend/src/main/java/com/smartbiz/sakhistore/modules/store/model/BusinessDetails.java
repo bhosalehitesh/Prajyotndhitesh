@@ -21,7 +21,15 @@ public class BusinessDetails {
     @JsonIgnore // prevent infinite JSON recursion via StoreDetails -> BusinessDetails -> StoreDetails -> ...
     private StoreDetails storeDetails;
 
-    // Getters and Setters
+    
+    
+    
+    
+    public BusinessDetails() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	// Getters and Setters
     public Long getBusinessId() { return businessId; }
     public void setBusinessId(Long businessId) { this.businessId = businessId; }
 
@@ -31,7 +39,17 @@ public class BusinessDetails {
     public String getOwnBusiness() {
         return ownBusiness;
     }
-    public void setOwnBusiness(String ownBusiness) {
+    public BusinessDetails(Long businessId, String businessDescription, String ownBusiness, String businessSize,
+			String platform, StoreDetails storeDetails) {
+		super();
+		this.businessId = businessId;
+		this.businessDescription = businessDescription;
+		this.ownBusiness = ownBusiness;
+		this.businessSize = businessSize;
+		this.platform = platform;
+		this.storeDetails = storeDetails;
+	}
+	public void setOwnBusiness(String ownBusiness) {
         this.ownBusiness = ownBusiness;
     }
 

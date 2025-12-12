@@ -47,6 +47,54 @@
       <artifactId>mysql-connector-j</artifactId>
       <scope>runtime</scope>
     </dependency>
+    
+   
+    <!-- OpenHTMLToPDF Core (HTML → PDF) -->
+<dependency>
+    <groupId>com.openhtmltopdf</groupId>
+    <artifactId>openhtmltopdf-pdfbox</artifactId>
+    <version>1.0.10</version>
+</dependency>
+
+<!-- For using CSS/HTML properly -->
+<dependency>
+    <groupId>com.openhtmltopdf</groupId>
+    <artifactId>openhtmltopdf-slf4j</artifactId>
+    <version>1.0.10</version>
+</dependency>
+
+<!-- Optional but recommended (Use HTML5 tags better) -->
+<dependency>
+    <groupId>com.openhtmltopdf</groupId>
+    <artifactId>openhtmltopdf-java2d</artifactId>
+    <version>1.0.10</version>
+</dependency>
+
+
+<!-- QR Code (ZXing) -->
+<dependency>
+  <groupId>com.google.zxing</groupId>
+  <artifactId>core</artifactId>
+  <version>3.5.1</version>
+</dependency>
+<dependency>
+  <groupId>com.google.zxing</groupId>
+  <artifactId>javase</artifactId>
+  <version>3.5.1</version>
+</dependency>
+
+<!-- Mail -->
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter</artifactId>
+</dependency>
+
+<!-- Twilio (optional for SMS) -->
+<dependency>
+  <groupId>com.twilio.sdk</groupId>
+  <artifactId>twilio</artifactId>
+  <version>8.31.1</version>
+</dependency>
 
 		<dependency>
 			<groupId>org.postgresql</groupId>
@@ -55,11 +103,15 @@
 		</dependency>
 		
 		
+			<!-- https://mvnrepository.com/artifact/com.razorpay/razorpay-java -->
+
 		<dependency>
     	<groupId>com.razorpay</groupId>
     	<artifactId>razorpay-java</artifactId>
     	<version>1.4.8</version>
 		</dependency>
+		
+	
 		
 		<dependency>
 			<groupId>com.cloudinary</groupId>
@@ -76,32 +128,10 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
-		
-		
-		 <dependency>
-
-    <groupId>org.apache.poi</groupId>
-
-    <artifactId>poi-ooxml</artifactId>
-
-    <version>5.2.5</version>
-
-</dependency>
-		
-		
-		
-		
-		
-		
 		<dependency>
-			<groupId>com.cloudinary</groupId>
-			<artifactId>cloudinary-http5</artifactId>
-			<version>2.0.0</version>
-		</dependency>
-		<dependency>
-			<groupId>com.cloudinary</groupId>
-			<artifactId>cloudinary-taglib</artifactId>
-			<version>2.0.0</version>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.2.5</version>
 		</dependency>
 		
 		 <!-- JWT Dependencies -->
@@ -173,6 +203,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
+					<mainClass>com.smartbiz.sakhistore.SakhistoreApplication</mainClass>
 					<excludes>
 						<exclude>
 							<groupId>org.projectlombok</groupId>

@@ -5,16 +5,24 @@ import java.util.NoSuchElementException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.smartbiz.sakhistore.common.exceptions.ResourceNotFoundException;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
+import com.smartbiz.sakhistore.modules.category.model.Category;
+import com.smartbiz.sakhistore.modules.collection.model.collection;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.service.StoreDetailsService;
-import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
 
 import jakarta.servlet.http.HttpServletRequest;
-
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -186,4 +194,54 @@ public class StoreDetailsController {
     public StoreDetails getStoreBySlug(@PathVariable String slug) {
         return storeService.findBySlug(slug);
     }
+    
+   
+  /*  @GetMapping("/{storeName}/categories")
+    public ResponseEntity<?> getStoreCategories(@PathVariable String storeName) {
+        try {
+            List<Category> categories = storeService.getCategoriesByStoreName(storeName);
+            return ResponseEntity.ok(categories);
+
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(404).body("Store not found: " + storeName);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Something went wrong: " + e.getMessage());
+        }
+    } */
+    
+    @GetMapping("/{storeName}/categories1")
+    public ResponseEntity<?> getStoreCategories1(@PathVariable String storeName) {
+        try {
+            List<Category> categories = storeService.getCategoriesByStoreName(storeName);
+            return ResponseEntity.ok(categories);
+
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(404).body("Store not found: " + storeName);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Something went wrong");
+        }
+    }
+    
+    @GetMapping("/{storeName}/collections")
+    public ResponseEntity<?> getStoreCollections(@PathVariable String storeName) {
+        try {
+            List<collection> collections = storeService.getCollectionsByStoreName(storeName);
+            return ResponseEntity.ok(collections);
+
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(404).body("Store not found: " + storeName);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Something went wrong");
+        }
+    }
+
+
+
+
 }

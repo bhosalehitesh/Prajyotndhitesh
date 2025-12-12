@@ -50,33 +50,12 @@ public class Product {
     private String seoTitleTag;
     private String seoMetaDescription;
     private String socialSharingImage;
-
-    // Idempotency key to prevent duplicate creates (per seller)
-    private String idempotencyKey;
-
-    // Active flag to control visibility (default true)
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
-    private Boolean isActive = true;
-
-    public Boolean getIsActive() {
-        return isActive != null ? isActive : true;
-    }
-
-    public void setIsActive(Boolean active) {
-        this.isActive = active != null ? active : true;
-    }
-
-    public String getIdempotencyKey() {
-        return idempotencyKey;
-    }
-
-    public void setIdempotencyKey(String idempotencyKey) {
-        this.idempotencyKey = idempotencyKey;
-    }
     
     @Column(name = "is_bestseller", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
-    @com.fasterxml.jackson.annotation.JsonProperty("bestSeller")
     private Boolean isBestseller = false;
+
+    @Column(name = "is_active", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean isActive = true;
 
     @CreationTimestamp
     @Column(updatable = false)
@@ -249,14 +228,20 @@ public class Product {
         this.socialSharingImage = socialSharingImage;
     }
 
-    @com.fasterxml.jackson.annotation.JsonProperty("bestSeller")
     public Boolean getIsBestseller() {
         return isBestseller != null ? isBestseller : false;
     }
 
-    @com.fasterxml.jackson.annotation.JsonProperty("bestSeller")
     public void setIsBestseller(Boolean isBestseller) {
         this.isBestseller = isBestseller != null ? isBestseller : false;
+    }
+
+    public Boolean getIsActive() {
+        return isActive != null ? isActive : true;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive != null ? isActive : true;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -297,16 +282,6 @@ public class Product {
 
     public void setSeller(SellerDetails seller) {
         this.seller = seller;
-    }
-
-    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
-    public Boolean jsonGetIsActive() {
-        return getIsActive();
-    }
-
-    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
-    public void jsonSetIsActive(Boolean active) {
-        setIsActive(active);
     }
 
     public Product() {}

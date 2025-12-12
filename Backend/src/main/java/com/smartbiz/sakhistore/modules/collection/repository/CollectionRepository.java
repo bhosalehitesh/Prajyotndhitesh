@@ -29,4 +29,6 @@ public interface CollectionRepository extends JpaRepository<collection, Long> {
     @Modifying(clearAutomatically = true)
     @Query(value = "DELETE FROM collection_products WHERE collection_id = :collectionId", nativeQuery = true)
     void deleteCollectionProducts(@Param("collectionId") Long collectionId);
+    
+    
 }

@@ -286,15 +286,4 @@ public class CollectionService {
         productRepository.save(product);
         return collectionRepository.save(col);
     }
-
-    /**
-     * Get all products for a specific collection.
-     */
-    public List<Product> getProductsByCollection(Long collectionId) {
-        // Verify collection exists
-        collectionRepository.findById(collectionId)
-                .orElseThrow(() -> new NoSuchElementException("Collection not found with ID: " + collectionId));
-        // Return products for this collection
-        return productRepository.findByCollections_CollectionId(collectionId);
-    }
 }

@@ -7,16 +7,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import org.springframework.web.multipart.MultipartFile;
 
 import com.smartbiz.sakhistore.config.CloudinaryHelper;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
+import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsRepo;
+import com.smartbiz.sakhistore.modules.category.model.Category;
+import com.smartbiz.sakhistore.modules.category.repository.CategoryRepository;
+import com.smartbiz.sakhistore.modules.collection.model.collection;
+import com.smartbiz.sakhistore.modules.collection.repository.CollectionRepository;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.model.StoreLogo;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
 import com.smartbiz.sakhistore.modules.store.repository.StoreLogoRepo;
-import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
-import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsRepo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -33,8 +36,12 @@ public class StoreDetailsService {
     @Value("${app.store.domain}")
     private String domain;
 
+    @Autowired
+    CategoryRepository categoryRepository;
 
-
+    @Autowired
+   CollectionRepository collectionRepository;
+    
     @Autowired
     private StoreDetailsRepo storeRepository;
 
@@ -299,9 +306,41 @@ public class StoreDetailsService {
                 .orElse(null);
     }
 
-    // Get active logo for a store by store ID
-    public StoreLogo getActiveLogoByStoreId(Long storeId) {
-        return storeLogoRepo.findByStore_StoreIdAndIsActiveTrue(storeId)
-                .orElse(null);
+   
+    public List<Category> getCategoriesByStoreName(String storeName) {
+
+        StoreDetails store = storeRepository.findByStoreName(storeName)
+                .orElseThrow(() -> new NoSuchElementException("Store not found: " + storeName));
+
+        if (store.getSeller() == null || store.getSeller().getSellerId() == null) {
+            throw new NoSuchElementException("Store has no seller assigned.");
+        }
+
+        Long sellerId = store.getSeller().getSellerId();
+
+        return categoryRepository.findBySeller_SellerId(sellerId);
     }
+    
+
+public List<collection> getCollectionsByStoreName(String storeName) {
+
+    StoreDetails store = storeRepository.findByStoreName(storeName)
+            .orElseThrow(() -> new NoSuchElementException("Store not found"));
+
+    if (store.getSeller() == null || store.getSeller().getSellerId() == null) {
+        throw new NoSuchElementException("Store has no seller assigned.");
+    }
+
+    Long sellerId = store.getSeller().getSellerId();
+
+    return collectionRepository.findBySeller_SellerId(sellerId);
+}
+
+
+
+
+	
+
+
+
 }

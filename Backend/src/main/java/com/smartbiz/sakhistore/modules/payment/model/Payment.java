@@ -1,17 +1,13 @@
 package com.smartbiz.sakhistore.modules.payment.model;
 
 import java.time.LocalDateTime;
+
 import org.hibernate.annotations.CreationTimestamp;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.smartbiz.sakhistore.modules.order.model.Orders;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,9 +15,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Payment {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long Payment_idAuto;
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "Payment_idAuto")
+	private Long paymentAutoId;
 
     @Column(nullable = false)
     private Double amount;
@@ -33,46 +31,110 @@ public class Payment {
     @CreationTimestamp
     private LocalDateTime createdTime;
 
+    // Internal unique payment id for our record (you already used this)
     @Column(nullable = false, unique = true)
     private String paymentId;
 
-    @OneToOne
-    Orders orders;
+    // Razorpay specific fields
+    private String razorpayOrderId;
+    private String razorpayPaymentId;
+    private String razorpaySignature;
 
-    public Double getAmount() {
-        return amount;
-    }
-    public void setAmount(Double amount) {
-        this.amount = amount;
-    }
-    public PaymentStatus getStatus() {
-        return status;
-    }
-    public void setStatus(PaymentStatus status) {
-        this.status = status;
-    }
-    public LocalDateTime getCreatedTime() {
-        return createdTime;
-    }
-    public void setCreatedTime(LocalDateTime createdTime) {
-        this.createdTime = createdTime;
-    }
-    public String getPaymentId() {
-        return paymentId;
-    }
-    public void setPaymentId(String paymentId) {
-        this.paymentId = paymentId;
-    }
-    public Orders getOrders() {
-        return orders;
-    }
-    public void setOrders(Orders orders) {
-        this.orders = orders;
-    }
-    public Long getPayment_idAuto() {
-        return Payment_idAuto;
-    }
-    public void setPayment_idAuto(Long payment_idAuto) {
-        Payment_idAuto = payment_idAuto;
-    }
+    @OneToOne
+    @JsonIgnore
+    private Orders orders;
+
+	public Long getPaymentAutoId() {
+		return paymentAutoId;
+	}
+
+	public void setPaymentAutoId(Long paymentAutoId) {
+		this.paymentAutoId = paymentAutoId;
+	}
+
+	public Double getAmount() {
+		return amount;
+	}
+
+	public void setAmount(Double amount) {
+		this.amount = amount;
+	}
+
+	public PaymentStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(PaymentStatus status) {
+		this.status = status;
+	}
+
+	public LocalDateTime getCreatedTime() {
+		return createdTime;
+	}
+
+	public void setCreatedTime(LocalDateTime createdTime) {
+		this.createdTime = createdTime;
+	}
+
+	public String getPaymentId() {
+		return paymentId;
+	}
+
+	public void setPaymentId(String paymentId) {
+		this.paymentId = paymentId;
+	}
+
+	public String getRazorpayOrderId() {
+		return razorpayOrderId;
+	}
+
+	public void setRazorpayOrderId(String razorpayOrderId) {
+		this.razorpayOrderId = razorpayOrderId;
+	}
+
+	public String getRazorpayPaymentId() {
+		return razorpayPaymentId;
+	}
+
+	public void setRazorpayPaymentId(String razorpayPaymentId) {
+		this.razorpayPaymentId = razorpayPaymentId;
+	}
+
+	public String getRazorpaySignature() {
+		return razorpaySignature;
+	}
+
+	public void setRazorpaySignature(String razorpaySignature) {
+		this.razorpaySignature = razorpaySignature;
+	}
+
+	public Orders getOrders() {
+		return orders;
+	}
+
+	public void setOrders(Orders orders) {
+		this.orders = orders;
+	}
+
+	public Payment(Long paymentAutoId, Double amount, PaymentStatus status, LocalDateTime createdTime, String paymentId,
+			String razorpayOrderId, String razorpayPaymentId, String razorpaySignature, Orders orders) {
+		super();
+		this.paymentAutoId = paymentAutoId;
+		this.amount = amount;
+		this.status = status;
+		this.createdTime = createdTime;
+		this.paymentId = paymentId;
+		this.razorpayOrderId = razorpayOrderId;
+		this.razorpayPaymentId = razorpayPaymentId;
+		this.razorpaySignature = razorpaySignature;
+		this.orders = orders;
+	}
+
+	public Payment() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+    
+    
+    
 }

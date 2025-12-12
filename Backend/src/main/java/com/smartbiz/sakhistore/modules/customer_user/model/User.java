@@ -1,7 +1,21 @@
 package com.smartbiz.sakhistore.modules.customer_user.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.smartbiz.sakhistore.modules.cart.model.WishlistItem;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "users")
@@ -19,6 +33,12 @@ public class User {
 
     private String email;
 
+    
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<WishlistItem> wishlistItems = new ArrayList<>();
+    
+    
     public String getEmail() {
         return email;
     }
@@ -128,27 +148,6 @@ public class User {
     }
 
 
-    public User(Long id, String fullName, String phone, boolean enabled, LocalDateTime createdAt,
-                LocalDateTime updatedAt, boolean whatsappUpdates, String pincode, String flatOrHouseNo, String areaOrStreet,
-                String landmark, String city, String state, String addressType, String email) {
-        super();
-        this.id = id;
-        this.fullName = fullName;
-        this.phone = phone;
-
-        this.enabled = enabled;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.whatsappUpdates = whatsappUpdates;
-        this.pincode = pincode;
-        this.flatOrHouseNo = flatOrHouseNo;
-        this.areaOrStreet = areaOrStreet;
-        this.landmark = landmark;
-        this.city = city;
-        this.state = state;
-        this.addressType = addressType;
-        this.email=email;
-    }
 
     // Getters and Setters
     public Long getId() {
@@ -199,12 +198,39 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-
-
-
     }
 
-    @PreUpdate
+    public User(Long id, String fullName, String phone, String email, List<WishlistItem> wishlistItems, boolean enabled,
+			LocalDateTime createdAt, LocalDateTime updatedAt, boolean whatsappUpdates, String pincode,
+			String flatOrHouseNo, String areaOrStreet, String landmark, String city, String state, String addressType) {
+		super();
+		this.id = id;
+		this.fullName = fullName;
+		this.phone = phone;
+		this.email = email;
+		this.wishlistItems = wishlistItems;
+		this.enabled = enabled;
+		this.createdAt = createdAt;
+		this.updatedAt = updatedAt;
+		this.whatsappUpdates = whatsappUpdates;
+		this.pincode = pincode;
+		this.flatOrHouseNo = flatOrHouseNo;
+		this.areaOrStreet = areaOrStreet;
+		this.landmark = landmark;
+		this.city = city;
+		this.state = state;
+		this.addressType = addressType;
+	}
+
+	public List<WishlistItem> getWishlistItems() {
+		return wishlistItems;
+	}
+
+	public void setWishlistItems(List<WishlistItem> wishlistItems) {
+		this.wishlistItems = wishlistItems;
+	}
+
+	@PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }

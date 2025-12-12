@@ -46,13 +46,11 @@ public class PublicStoreController {
 
     /**
      * Get products for a store by slug (public endpoint)
-     * Supports filtering by categoryId (preferred) or legacy category string.
-     * Example: GET /api/public/store/{slug}/products?categoryId=5
+     * Example: GET /api/public/store/brownn_boys/products?category=shoes
      */
     @GetMapping("/{slug}/products")
     public ResponseEntity<?> getStoreProducts(
             @PathVariable String slug,
-            @RequestParam(value = "categoryId", required = false) Long categoryId,
             @RequestParam(value = "category", required = false) String category) {
         try {
             // Find store by slug
@@ -73,19 +71,11 @@ public class PublicStoreController {
             // Get products by seller
             List<Product> products = productService.allProductForSeller(sellerId);
             
-            // Filter by categoryId if provided
-            if (categoryId != null) {
+            // Filter by category if provided
+            if (category != null && !category.isEmpty()) {
                 products = products.stream()
-                    .filter(p -> p.getCategory() != null && p.getCategory().getCategory_id() != null
-                            && p.getCategory().getCategory_id().equals(categoryId))
-                    .toList();
-            }
-            // Legacy filter by category name (productCategory/businessCategory)
-            else if (category != null && !category.isEmpty()) {
-                final String catLower = category.toLowerCase();
-                products = products.stream()
-                    .filter(p -> (p.getProductCategory() != null && p.getProductCategory().toLowerCase().contains(catLower)) ||
-                                 (p.getBusinessCategory() != null && p.getBusinessCategory().toLowerCase().contains(catLower)))
+                    .filter(p -> category.equalsIgnoreCase(p.getProductCategory()) || 
+                                category.equalsIgnoreCase(p.getBusinessCategory()))
                     .toList();
             }
             
@@ -135,41 +125,4 @@ public class PublicStoreController {
             return ResponseEntity.ok(new java.util.ArrayList<>());
         }
     }
-
-    /**
-     * Get featured products for a store by slug (public endpoint)
-     * Example: GET /api/public/store/brownn_boys/featured
-     */
-    @GetMapping("/{slug}/featured")
-    public ResponseEntity<?> getStoreFeaturedProducts(@PathVariable String slug) {
-        try {
-            // Find store by slug
-            StoreDetails store = storeService.findBySlug(slug);
-            
-            // Check if store has a seller
-            if (store.getSeller() == null) {
-                return ResponseEntity.ok(new java.util.ArrayList<>());
-            }
-            
-            // Get seller ID from store
-            Long sellerId = store.getSeller().getSellerId();
-            
-            if (sellerId == null) {
-                return ResponseEntity.ok(new java.util.ArrayList<>());
-            }
-            
-            // Get featured products by seller
-            List<Product> products = productService.featuredProducts(sellerId);
-            
-            return ResponseEntity.ok(products);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            // Log error and return empty list instead of error
-            System.err.println("Error fetching featured products for store slug: " + slug);
-            e.printStackTrace();
-            return ResponseEntity.ok(new java.util.ArrayList<>());
-        }
-    }
 }
-

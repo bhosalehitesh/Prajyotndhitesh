@@ -1,19 +1,13 @@
 package com.smartbiz.sakhistore.modules.store.service;
 
 import java.util.List;
-
 import java.util.NoSuchElementException;
 
-
-
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.stereotype.Service;
-
 import org.springframework.transaction.annotation.Transactional;
 
-
-
+import com.smartbiz.sakhistore.modules.store.dto.BusinessDetailsRequest;
 import com.smartbiz.sakhistore.modules.store.model.BusinessDetails;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.repository.BusinessDetailsRepo;
@@ -71,7 +65,7 @@ public class BusinessDetailsService {
     }
 
     // ✅ Add or update business details (using DTO with direct storeId)
-    public BusinessDetails addBusinessDetailsFromRequest(com.smartbiz.sakhistore.modules.store.dto.BusinessDetailsRequest request) {
+    public BusinessDetails addBusinessDetailsFromRequest(BusinessDetailsRequest request) {
         BusinessDetails details = new BusinessDetails();
         details.setBusinessDescription(request.getBusinessDescription());
         details.setOwnBusiness(request.getOwnBusiness());

@@ -1,17 +1,20 @@
 package com.smartbiz.sakhistore.modules.category.repository;
 
-import com.smartbiz.sakhistore.modules.category.model.Category;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-
+import com.smartbiz.sakhistore.modules.category.model.Category;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
+
     List<Category> findByBusinessCategoryContainingIgnoreCase(String businessCategory);
+
     List<Category> findByCategoryNameIgnoreCase(String categoryName);
-    
-    // Filter by seller
+
+    // Filter by sellerId — CORRECT
     List<Category> findBySeller_SellerId(Long sellerId);
-    List<Category> findBySeller_SellerIdAndBusinessCategoryContainingIgnoreCase(Long sellerId, String businessCategory);
+
+    List<Category> findBySeller_SellerIdAndBusinessCategoryContainingIgnoreCase(
+            Long sellerId, String businessCategory);
 }
+

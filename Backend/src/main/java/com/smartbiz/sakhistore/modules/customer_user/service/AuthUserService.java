@@ -15,6 +15,9 @@ import java.time.LocalDateTime;
 @Service
 public class AuthUserService {
 
+    // ⭐ ThreadLocal to capture fullName from controller
+    public static ThreadLocal<String> USER_FULLNAME = new ThreadLocal<>();
+
     @Autowired
     private UserRepository userRepo;
 
@@ -63,17 +66,25 @@ public class AuthUserService {
         otp.setVerified(true);
         otpRepo.save(otp);
 
-        // find user OR auto-register
+        // find existing user
         User user = userRepo.findByPhone(phone).orElse(null);
-
         boolean isNewUser = false;
 
         if (user == null) {
+
+            // ⭐ retrieve frontend fullName
+            String fullName = USER_FULLNAME.get();
+
+            if (fullName == null || fullName.trim().isEmpty()) {
+                throw new RuntimeException("Full name is required for new user registration");
+            }
+
             user = new User();
             user.setPhone(phone);
-            user.setFullName("New User");
+            user.setFullName(fullName); // ⭐ name from frontend
             user.setEnabled(true);
             user.setCreatedAt(LocalDateTime.now());
+
             userRepo.save(user);
             isNewUser = true;
         }
@@ -94,7 +105,7 @@ public class AuthUserService {
         // Revoke old tokens
         tokenRepo.revokeAllTokensByUser(user);
 
-        // Generate new JWT
+        // Generate JWT token
         String token = userJwtService.generateToken(user);
         userJwtService.saveUserToken(token, user);
 
@@ -106,61 +117,7 @@ public class AuthUserService {
         );
     }
 
-    // ===========================================================
-    // ⭐ ALTERNATE VERIFY OTP METHOD (if needed)
-    // ===========================================================
-    public UserAuthResponse verifyOtp1(String phone, String otpInput) {
-
-        Otp otp = otpRepo.findTopByPhoneOrderByIdDesc(phone);
-
-        if (otp == null)
-            throw new RuntimeException("OTP not found");
-
-        if (otp.isExpired())
-            throw new RuntimeException("OTP expired");
-
-        if (!otp.getCode().equals(otpInput)) {
-            otp.incrementAttempts();
-            otpRepo.save(otp);
-            throw new RuntimeException("Invalid OTP");
-        }
-
-        otp.setVerified(true);
-        otpRepo.save(otp);
-
-        User user = userRepo.findByPhone(phone).orElse(null);
-        boolean isNewUser = false;
-
-        if (user == null) {
-            user = new User();
-            user.setPhone(phone);
-            user.setFullName("New User");
-            user.setEnabled(true);
-            userRepo.save(user);
-            isNewUser = true;
-        }
-
-        if (isNewUser && user.getEmail() != null) {
-            try {
-                emailService.sendWelcomeEmail(user.getEmail(), user.getFullName(), user.getPhone());
-            } catch (Exception e) {
-                System.out.println("Welcome email failed: " + e.getMessage());
-            }
-        }
-
-        tokenRepo.revokeAllTokensByUser(user);
-
-        String token = userJwtService.generateToken(user);
-        userJwtService.saveUserToken(token, user);
-
-        return new UserAuthResponse(
-                token,
-                user.getId(),
-                user.getFullName(),
-                user.getPhone()
-        );
-    }
-    // ➤ Update Username by ID
+    
     public User updateUserName(Long id, String fullName) {
         User user = userRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -168,5 +125,6 @@ public class AuthUserService {
         user.setFullName(fullName);
         return userRepo.save(user);
     }
-}
 
+	
+}

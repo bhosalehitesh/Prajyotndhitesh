@@ -7,7 +7,6 @@ import java.util.NoSuchElementException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +18,8 @@ import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.category.repository.CategoryRepository;
 import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
+import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
+import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +39,9 @@ public class ProductService{
 
     @Autowired
     private CategoryRepository categoryRepository;
+    
+    @Autowired
+    private StoreDetailsRepo storeRepository;
 
 
     public Product uploadProductWithImages(
@@ -58,8 +62,7 @@ public class ProductService{
             List<MultipartFile> productImages,
             MultipartFile socialSharingImage,
             Long sellerId,
-            Long categoryId,
-            Boolean isBestseller
+            Long categoryId
     ) {
         try {
             List<String> productImageUrls = new ArrayList<>();
@@ -98,7 +101,6 @@ public class ProductService{
             product.setSeoMetaDescription(seoMetaDescription);
             product.setProductImages(productImageUrls);
             product.setSocialSharingImage(socialImageUrl);
-            product.setIsBestseller(isBestseller != null ? isBestseller : false);
 
             // Link to seller if provided
             if (sellerId != null) {
@@ -107,22 +109,17 @@ public class ProductService{
                 product.setSeller(seller);
             }
 
-            // Link to category - require explicit categoryId to avoid incorrect assignments
+            // Link to category - automatically find if not provided
             if (categoryId != null) {
-                // Use provided categoryId (preferred method)
+                // Use provided categoryId
                 Category category = categoryRepository.findById(categoryId)
                         .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
                 product.setCategory(category);
             } else {
-                // Try to automatically find category based on productCategory or businessCategory
-                // ⚠️ This is a fallback - explicit categoryId should be provided
+                // Automatically find category based on productCategory or businessCategory
                 Category category = findOrCreateCategoryForProduct(productCategory, businessCategory);
                 if (category != null) {
                     product.setCategory(category);
-                } else {
-                    // If no category found and no categoryId provided, log warning but don't fail
-                    // Product will be created without category (category_id will be null)
-                    System.out.println("⚠️ WARNING: Product created without category. Please provide categoryId explicitly.");
                 }
             }
 
@@ -146,39 +143,38 @@ public class ProductService{
         return productRepository.findBySeller_SellerId(sellerId);
     }
 
-    public List<Product> featuredProducts(Long sellerId) {
-        if (sellerId == null) {
-            return productRepository.findByIsBestsellerTrue();
-        }
-        return productRepository.findByIsBestsellerTrueAndSeller_SellerId(sellerId);
-    }
-
     /**
      * Get paginated products for a seller with optimized query to avoid N+1 problems
      * @param sellerId The seller ID
+     * @param isActive Filter by active status (null = all products)
      * @param pageable Pageable object with page number and size
      * @return Page of products
      */
     public Page<Product> allProductForSellerPaginated(Long sellerId, Boolean isActive, Pageable pageable) {
         if (sellerId == null) {
+            if (isActive != null) {
+                return productRepository.findByIsActive(isActive, pageable);
+            }
             return productRepository.findAll(pageable);
         }
-        // If active filter provided, apply it
-        if (isActive != null) {
-            List<Product> filtered = productRepository.findBySeller_SellerIdAndIsActive(sellerId, isActive);
-            int start = (int) pageable.getOffset();
-            int end = Math.min((start + pageable.getPageSize()), filtered.size());
-            return new PageImpl<>(filtered.subList(start, end), pageable, filtered.size());
-        }
         // Use optimized query with JOIN FETCH to avoid N+1 queries
+        if (isActive != null) {
+            return productRepository.findBySeller_SellerIdAndIsActiveWithRelations(sellerId, isActive, pageable);
+        }
         return productRepository.findBySeller_SellerIdWithRelations(sellerId, pageable);
     }
 
-    public Product updateActiveStatus(Long productId, Boolean isActive) {
-        Product existing = productRepository.findById(productId)
+    /**
+     * Update product active status (enable/disable)
+     * @param productId The product ID
+     * @param isActive The new active status
+     * @return Updated product
+     */
+    public Product updateActiveStatus(Long productId, boolean isActive) {
+        Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
-        existing.setIsActive(isActive != null ? isActive : true);
-        return productRepository.save(existing);
+        product.setIsActive(isActive);
+        return productRepository.save(product);
     }
 
 
@@ -186,63 +182,28 @@ public class ProductService{
 
     // Backwards-compatible method used from older code paths
     public Product addproduct(Product product){
-        return addproduct(product, null, null);
+        return addproduct(product, null);
     }
 
     public Product addproduct(Product product, Long sellerId){
-        return addproduct(product, sellerId, null);
-    }
-
-    public Product addproduct(Product product, Long sellerId, Long categoryId){
-        // Enforce SKU uniqueness per seller (if SKU provided and seller provided)
-        if (sellerId != null && product.getCustomSku() != null && !product.getCustomSku().trim().isEmpty()) {
-            Product existingSku = productRepository.findBySeller_SellerIdAndCustomSku(sellerId, product.getCustomSku().trim());
-            if (existingSku != null) {
-                throw new RuntimeException("SKU already exists for this seller. Please use a unique SKU.");
-            }
-        }
-
-        // Idempotency: if key provided and seller provided, return existing product instead of creating duplicate
-        if (sellerId != null && product.getIdempotencyKey() != null && !product.getIdempotencyKey().trim().isEmpty()) {
-            Product existingByIdem = productRepository.findBySeller_SellerIdAndIdempotencyKey(sellerId, product.getIdempotencyKey().trim());
-            if (existingByIdem != null) {
-                return existingByIdem;
-            }
-        }
-
-        // Default isActive to true if null
-        product.setIsActive(product.getIsActive());
-
         if (sellerId != null) {
             SellerDetails seller = sellerDetailsRepo.findById(sellerId)
                     .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
             product.setSeller(seller);
         }
-        // Ensure bestseller flag is never null so it persists correctly
-        product.setIsBestseller(product.getIsBestseller() != null ? product.getIsBestseller() : false);
-        // Prefer explicit categoryId parameter if provided
-        if (categoryId != null) {
+        // If product has a category with categoryId, fetch the actual Category entity
+        if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
+            Long categoryId = product.getCategory().getCategory_id();
             Category category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
             product.setCategory(category);
-        }
-        // Else use category from payload if present
-        else if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
-            Long payloadCategoryId = product.getCategory().getCategory_id();
-            Category category = categoryRepository.findById(payloadCategoryId)
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + payloadCategoryId));
-            product.setCategory(category);
         } else {
             // Automatically find category based on productCategory or businessCategory if not provided
-            // ⚠️ This is a fallback - explicit categoryId should be provided
             String productCategory = product.getProductCategory();
             String businessCategory = product.getBusinessCategory();
             Category category = findOrCreateCategoryForProduct(productCategory, businessCategory);
             if (category != null) {
                 product.setCategory(category);
-            } else {
-                // If no category found and no categoryId provided, log warning but don't fail
-                System.out.println("⚠️ WARNING: Product created without category. Please provide categoryId explicitly.");
             }
         }
         return productRepository.save(product);
@@ -270,14 +231,6 @@ public class ProductService{
         return productRepository.save(product);
     }
 
-    // ✅ Update status (enable/disable) for a product
-    public Product updateProductStatus(Long productId, boolean isActive) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
-        product.setIsActive(isActive);
-        return productRepository.save(product);
-    }
-
     // ✅ Update all editable fields of a product (without changing seller or images)
     public Product updateProduct(Long productId, Product updated) {
         Product existing = productRepository.findById(productId)
@@ -298,27 +251,6 @@ public class ProductService{
         existing.setHsnCode(updated.getHsnCode());
         existing.setSeoTitleTag(updated.getSeoTitleTag());
         existing.setSeoMetaDescription(updated.getSeoMetaDescription());
-        existing.setIsBestseller(updated.getIsBestseller() != null ? updated.getIsBestseller() : false);
-        existing.setIsActive(updated.getIsActive());
-
-        // ✅ Update category if provided
-        if (updated.getCategory() != null && updated.getCategory().getCategory_id() != null) {
-            Long categoryId = updated.getCategory().getCategory_id();
-            Category category = categoryRepository.findById(categoryId)
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
-            existing.setCategory(category);
-        } else if (updated.getProductCategory() != null || updated.getBusinessCategory() != null) {
-            // If category object is not provided but productCategory/businessCategory changed,
-            // try to find matching category (but don't default to first category)
-            Category category = findOrCreateCategoryForProduct(
-                updated.getProductCategory(), 
-                updated.getBusinessCategory()
-            );
-            if (category != null) {
-                existing.setCategory(category);
-            }
-            // If no match found, keep existing category (don't change it)
-        }
 
         // NOTE: We intentionally do NOT modify productImages, socialSharingImage or seller here.
         // Image updates are handled via the upload endpoint; seller relation stays the same.
@@ -327,12 +259,14 @@ public class ProductService{
     }
 
     // ✅ Automatically find or create category for product based on productCategory or businessCategory
-    // ⚠️ IMPORTANT: This method will NOT default to category 1. It only returns a category if there's an exact match.
-    // Products should explicitly provide categoryId to avoid incorrect category assignment.
     private Category findOrCreateCategoryForProduct(String productCategory, String businessCategory) {
-        // If no category info provided, return null (don't default to first category)
         if (productCategory == null && businessCategory == null) {
-            return null; // Require explicit categoryId instead of defaulting
+            // If no category info, try to get first available category or return null
+            List<Category> allCategories = categoryRepository.findAll();
+            if (!allCategories.isEmpty()) {
+                return allCategories.get(0); // Return first category as default
+            }
+            return null; // No categories exist
         }
         
         // Try to find by productCategory name (exact match)
@@ -363,9 +297,13 @@ public class ProductService{
             }
         }
         
-        // ⚠️ CHANGED: Don't default to first category. Return null if no match found.
-        // This forces the caller to explicitly provide categoryId.
-        return null; // No matching category found - require explicit categoryId
+        // Last resort: return first available category or null
+        List<Category> allCategories = categoryRepository.findAll();
+        if (!allCategories.isEmpty()) {
+            return allCategories.get(0); // Return first category as default
+        }
+        
+        return null; // No categories exist in database
     }
 
     //  Get all unique product categories
@@ -422,4 +360,15 @@ public class ProductService{
 	    public List<Product> getAllProducts() {
 	        return productRepository.findAll();
 	    } */
+    
+    public List<Product> getProductsByStoreName(String storeName) {
+
+        StoreDetails store = storeRepository.findByStoreName(storeName)
+                .orElseThrow(() -> new NoSuchElementException("Store not found"));
+
+        Long sellerId = store.getSeller().getSellerId();
+
+        return productRepository.findBySeller_SellerId(sellerId);
+    }
+
 }

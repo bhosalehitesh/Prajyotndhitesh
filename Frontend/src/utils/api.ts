@@ -488,15 +488,6 @@ export interface ProductDto {
   color?: string;
   size?: string;
   hsnCode?: string;
-  isActive?: boolean;
-  variants?: Array<{
-    id?: string | number;
-    title?: string;
-    price?: number;
-    mrp?: number;
-    inStock?: boolean;
-    inventoryQuantity?: number;
-  }>;
 }
 
 export interface CategoryDto {
@@ -1324,22 +1315,14 @@ export const fetchProductsByCollection = async (
  * Fetch all products for the current seller.
  * Backend: GET /api/products/allProduct
  */
-export const fetchProducts = async (options?: { isActive?: boolean }): Promise<ProductDto[]> => {
+export const fetchProducts = async (): Promise<ProductDto[]> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userIdRaw = await storage.getItem('userId');
   const sellerId = userIdRaw && !isNaN(Number(userIdRaw)) ? userIdRaw : null;
 
-  // RN doesn't fully support URLSearchParams.set in some runtimes; build query manually.
-  const queryParts: string[] = [];
-  if (sellerId) queryParts.push(`sellerId=${encodeURIComponent(String(sellerId))}`);
-  if (options?.isActive !== undefined) {
-    queryParts.push(`isActive=${options.isActive ? 'true' : 'false'}`);
-  }
-  const query = queryParts.length ? `?${queryParts.join('&')}` : '';
-
   const url = sellerId
-    ? `${API_BASE_URL}/api/products/sellerProducts${query}`
-    : `${API_BASE_URL}/api/products/allProduct${query}`;
+    ? `${API_BASE_URL}/api/products/sellerProducts?sellerId=${sellerId}`
+    : `${API_BASE_URL}/api/products/allProduct`;
 
   const response = await fetch(url, {
     method: 'GET',
@@ -1368,36 +1351,6 @@ export const fetchProducts = async (options?: { isActive?: boolean }): Promise<P
   }
 
   return payload as ProductDto[];
-};
-
-/**
- * Update product active status (enable/disable)
- * Backend: PATCH /api/products/{id}/status?isActive=true|false
- */
-export const updateProductStatus = async (productId: string | number, isActive: boolean): Promise<ProductDto> => {
-  const token = await storage.getItem(AUTH_TOKEN_KEY);
-  const id = typeof productId === 'string' ? productId : String(productId);
-  const url = `${API_BASE_URL}/api/products/${id}/status?isActive=${isActive ? 'true' : 'false'}`;
-
-  const response = await fetch(url, {
-    method: 'PATCH', // prefer PATCH; backend also allows POST if needed
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-
-  const payload = await parseJsonOrText(response);
-
-  if (!response.ok) {
-    const message =
-      typeof payload === 'string'
-        ? payload
-        : payload?.message || `Failed to update product status (${response.status})`;
-    throw new Error(message);
-  }
-
-  return payload as ProductDto;
 };
 
 /**
@@ -1510,6 +1463,36 @@ export const updateProduct = async (
 };
 
 /**
+ * Update product active status (enable/disable)
+ * Backend: PATCH /api/products/{id}/status?isActive=true|false
+ */
+export const updateProductStatus = async (productId: string | number, isActive: boolean): Promise<ProductDto> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof productId === 'string' ? productId : String(productId);
+  const url = `${API_BASE_URL}/api/products/${id}/status?isActive=${isActive ? 'true' : 'false'}`;
+
+  const response = await fetch(url, {
+    method: 'PATCH', // prefer PATCH; backend also allows POST if needed
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || `Failed to update product status (${response.status})`;
+    throw new Error(message);
+  }
+
+  return payload as ProductDto;
+};
+
+/**
  * Create a new product.
  * Backend: POST /api/products/addProduct
  */
@@ -1527,7 +1510,6 @@ export const createProduct = async (body: {
   hsnCode?: string;
   bestSeller?: boolean;
   categoryId?: number; // ensure categoryId can be sent in JSON body
-  idempotencyKey?: string;
 }) => {
   const baseUrl = `${API_BASE_URL}/api/products/addProduct`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
@@ -1552,12 +1534,7 @@ export const createProduct = async (body: {
   
   console.log('Create product - using userId:', userId);
 
-  // RN URLSearchParams.set is not always available; build manually
-  const queryParts: string[] = [`sellerId=${encodeURIComponent(userId)}`];
-  if (body.idempotencyKey) {
-    queryParts.push(`idempotencyKey=${encodeURIComponent(body.idempotencyKey)}`);
-  }
-  const url = `${baseUrl}?${queryParts.join('&')}`;
+  const url = `${baseUrl}?sellerId=${userId}`;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -1602,13 +1579,8 @@ export const uploadProductWithImages = async (params: {
   imageUris: string[];
   categoryId?: number; // Add categoryId parameter
   bestSeller?: boolean;
-  idempotencyKey?: string;
 }) => {
-  const qp: string[] = [];
-  if (params.idempotencyKey) {
-    qp.push(`idempotencyKey=${encodeURIComponent(params.idempotencyKey)}`);
-  }
-  const url = `${API_BASE_URL}/api/products/upload${qp.length ? `?${qp.join('&')}` : ''}`;
+  const url = `${API_BASE_URL}/api/products/upload`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userIdRaw = await storage.getItem('userId');
   

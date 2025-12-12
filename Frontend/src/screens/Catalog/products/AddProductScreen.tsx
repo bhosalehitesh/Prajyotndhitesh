@@ -154,11 +154,10 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
     loadCategories();
   }, []);
 
-  // Require at least name, price, one image, and a category. Collections are optional.
+  // Require at least name, price, and one image. Category is optional (backend will auto-assign if not provided).
   const canSubmit = name.trim().length > 0 && 
                     price.trim().length > 0 && 
-                    images.length > 0 &&
-                    !!selectedCategoryId;
+                    images.length > 0;
 
   const requestCameraPermission = async (): Promise<boolean> => {
     try {
@@ -243,9 +242,18 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
   const handleSubmit = async () => {
     if (!canSubmit || isSubmitting) {
+      console.log('Submit blocked:', { canSubmit, isSubmitting, name: name.trim().length, price: price.trim().length, images: images.length });
+      if (!name.trim().length) {
+        Alert.alert('Validation Error', 'Product name is required');
+      } else if (!price.trim().length) {
+        Alert.alert('Validation Error', 'Product price is required');
+      } else if (images.length === 0) {
+        Alert.alert('Validation Error', 'At least one product image is required');
+      }
       return;
     }
     setIsSubmitting(true);
+    console.log('Starting product submission...', { name, price, imagesCount: images.length, selectedCategoryId });
 
     // Generate idempotency key per submission
     const idempotencyKey = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -378,9 +386,19 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       );
     } catch (error) {
       console.error('Add/Update product error', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save product. Please try again.';
+      console.error('Error details:', {
+        message: errorMessage,
+        name,
+        price,
+        imagesCount: images.length,
+        selectedCategoryId,
+        userId: await storage.getItem('userId'),
+      });
       Alert.alert(
         'Error',
-        error instanceof Error ? error.message : 'Failed to save product. Please try again.',
+        errorMessage,
+        [{ text: 'OK' }]
       );
     } finally {
       setIsSubmitting(false);
@@ -499,11 +517,13 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         </TouchableOpacity>
 
         {/* Database Category Selection */}
+        <Text style={styles.sectionHeader}>Database Category <Text style={styles.optional}>(Optional)</Text></Text>
+        <Text style={styles.helperBody}>Select a category from your created categories</Text>
         <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryPickerOpen(true)}>
           <Text style={{color: selectedCategoryId ? '#111827' : '#6c757d'}}>
             {selectedCategoryId 
               ? databaseCategories.find(c => c.category_id === selectedCategoryId)?.categoryName || 'Category Selected'
-              : 'Select Category (from your categories)'}
+              : 'Select Category (Optional)'}
           </Text>
         </TouchableOpacity>
 

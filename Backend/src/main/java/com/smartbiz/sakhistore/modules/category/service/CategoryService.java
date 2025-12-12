@@ -10,10 +10,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.smartbiz.sakhistore.config.CloudinaryHelper;
-import com.smartbiz.sakhistore.modules.category.model.Category;
-import com.smartbiz.sakhistore.modules.category.repository.CategoryRepository;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsRepo;
+import com.smartbiz.sakhistore.modules.category.model.Category;
+import com.smartbiz.sakhistore.modules.category.repository.CategoryRepository;
+import com.smartbiz.sakhistore.modules.collection.model.collection;
+import com.smartbiz.sakhistore.modules.collection.repository.CollectionRepository;
+import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
+import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,6 +31,14 @@ public class CategoryService {
 
     @Autowired
     CloudinaryHelper cloudinaryHelper;
+    
+    @Autowired
+    StoreDetailsRepo storeRepository;
+    
+    @Autowired
+    CollectionRepository collectionRepository;
+    
+    
 
     @Autowired
     private SellerDetailsRepo sellerDetailsRepo;
@@ -144,4 +156,17 @@ public class CategoryService {
     public List<Category> searchCategoriesByBusiness(String businessCategory) {
         return categoryRepository.findByBusinessCategoryContainingIgnoreCase(businessCategory);
     }
+    
+   
+    // ✅ Get Collections by Store Name
+    public List<collection> getCollectionsByStoreName(String storeName) {
+
+        StoreDetails store = storeRepository.findByStoreName(storeName)
+                .orElseThrow(() -> new NoSuchElementException("Store not found"));
+
+        Long sellerId = store.getSeller().getSellerId(); // seller_id exists in store_details
+
+        return collectionRepository.findBySeller_SellerId(sellerId);
+    }
+
 }

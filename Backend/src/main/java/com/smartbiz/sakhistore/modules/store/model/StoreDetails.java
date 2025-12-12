@@ -30,8 +30,27 @@ public class StoreDetails {
     @OneToOne(mappedBy = "storeDetails", cascade = CascadeType.ALL)
     @JsonIgnore
     private BusinessDetails businessDetails;
+    
+    
+    
 
-    // Getters and Setters
+    public StoreDetails() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	public StoreDetails(Long storeId, String storeName, String storeLink, String logoUrl, SellerDetails seller,
+			StoreAddress storeAddress, BusinessDetails businessDetails) {
+		super();
+		this.storeId = storeId;
+		this.storeName = storeName;
+		this.storeLink = storeLink;
+		this.logoUrl = logoUrl;
+		this.seller = seller;
+		this.storeAddress = storeAddress;
+		this.businessDetails = businessDetails;
+	}
+	
+	// Getters and Setters
     public Long getStoreId() { return storeId; }
     public void setStoreId(Long storeId) { this.storeId = storeId; }
 

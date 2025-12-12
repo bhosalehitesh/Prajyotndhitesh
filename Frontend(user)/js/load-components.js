@@ -31,47 +31,34 @@ function appendStoreParamToLinks(rootEl, storeSlug) {
   
   const links = rootEl.querySelectorAll(selectors.join(','));
   links.forEach(link => {
-    const href = link.getAttribute('href');
+    let href = link.getAttribute('href');
     if (!href) return;
+    
+    // Clean up any corrupted hrefs (remove accidentally appended text like "-featured" or "-products")
+    // Pattern: featured.html-featured or products.html-products
+    href = href.replace(/\.html-([a-z]+)$/i, '.html');
     
     // Skip if already has store parameter
     if (href.includes('store=')) return;
     
-    // Skip external links
+    // Skip external links (different hostname)
     if (href.startsWith('http://') || href.startsWith('https://')) {
-      const url = new URL(href);
-      if (url.hostname !== window.location.hostname) return;
-    }
-    
-    // For simple relative paths, manually append store param (more reliable)
-    if (href.includes('.html')) {
-      const separator = href.includes('?') ? '&' : '?';
-      link.setAttribute('href', href + separator + 'store=' + encodeURIComponent(storeSlug));
-    } else if (href === '/' || href === './') {
-      // For root/home links
-      const separator = href.includes('?') ? '&' : '?';
-      link.setAttribute('href', href + separator + 'store=' + encodeURIComponent(storeSlug));
-    } else {
-      // Try URL constructor as fallback
       try {
-        const url = new URL(href, window.location.href);
-        if (url.hostname === window.location.hostname || !href.includes('://')) {
-          url.searchParams.set('store', storeSlug);
-          // Preserve relative path
-          const newHref = href.startsWith('/') 
-            ? url.pathname + url.search
-            : url.pathname.split('/').pop() + url.search;
-          link.setAttribute('href', newHref);
+        const url = new URL(href);
+        if (url.hostname !== window.location.hostname && url.hostname !== '') {
+          return; // Skip external links
         }
       } catch (e) {
-        // If URL constructor fails, try simple append
-        if (href.includes('?')) {
-          link.setAttribute('href', href + '&store=' + encodeURIComponent(storeSlug));
-        } else {
-          link.setAttribute('href', href + '?store=' + encodeURIComponent(storeSlug));
-        }
+        // Invalid URL, skip
+        return;
       }
     }
+    
+    // For all relative paths (including .html files), simply append store parameter
+    // This is the most reliable approach
+    const separator = href.includes('?') ? '&' : '?';
+    const newHref = href + separator + 'store=' + encodeURIComponent(storeSlug);
+    link.setAttribute('href', newHref);
   });
 }
 
@@ -87,9 +74,14 @@ function fixPathsInHTML(html, isInPagesFolder) {
           
           // Fix sidebar links to use relative paths (remove pages/ prefix if exists)
           html = html.replace(/href="(pages\/)?(orders|wishlist|cart|order-tracking|faq)\.html/g, 'href="$2.html');
-          html = html.replace(/href="categories\.html/g, 'href="categories.html');
-          html = html.replace(/href="featured\.html/g, 'href="featured.html');
-          html = html.replace(/href="products\.html/g, 'href="products.html');
+          // Ensure navigation links stay as relative paths (no modification needed, they're already correct)
+          // Remove any accidental modifications that might have added text or hyphens
+          html = html.replace(/href="(categories|featured|products)\.html-[^"]*"/g, 'href="$1.html"');
+          html = html.replace(/href="(categories|featured|products)\.html\?[^"]*"/g, (match) => {
+            // Preserve query params but ensure clean URL
+            const cleanMatch = match.replace(/\.html-[^?]*\?/, '.html?');
+            return cleanMatch;
+          });
         } else {
           // If in root, paths with "../assets/" should be "assets/"
           html = html.replace(/src="\.\.\/assets\//g, 'src="assets/');

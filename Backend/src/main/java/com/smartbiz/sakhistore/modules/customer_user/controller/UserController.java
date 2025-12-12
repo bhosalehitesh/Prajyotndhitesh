@@ -49,10 +49,16 @@ public class UserController {
     @PostMapping("/verify-otp")
     public ResponseEntity<UserAuthResponse> verifyOtp(@RequestBody UserVerifyOtpRequest request) {
 
+        // ⭐ Pass fullName to service using ThreadLocal
+        AuthUserService.USER_FULLNAME.set(request.getFullName());
+
         UserAuthResponse res = authService.verifyOtp(
                 request.getPhone(),
                 request.getCode()
         );
+
+        // ⭐ Clear after use
+        AuthUserService.USER_FULLNAME.remove();
 
         return ResponseEntity.ok(res);
     }
@@ -64,10 +70,16 @@ public class UserController {
     @PostMapping("/verify-otp1")
     public ResponseEntity<UserAuthResponse> verifyOtp1(@RequestBody UserVerifyOtpRequest request) {
 
-        UserAuthResponse res = authService.verifyOtp1(
+        // ⭐ Pass fullName to service for verifyOtp1 as well
+        AuthUserService.USER_FULLNAME.set(request.getFullName());
+
+        UserAuthResponse res = authService.verifyOtp(
                 request.getPhone(),
                 request.getCode()
         );
+
+        // ⭐ Clear after use
+        AuthUserService.USER_FULLNAME.remove();
 
         return ResponseEntity.ok(res);
     }

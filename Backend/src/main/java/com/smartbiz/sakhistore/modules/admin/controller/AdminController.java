@@ -1,5 +1,5 @@
 package com.smartbiz.sakhistore.modules.admin.controller;
-
+/*
 import java.util.Map;
 
 import com.smartbiz.sakhistore.modules.seller.service.SellerDetailsService1;
@@ -122,4 +122,4 @@ public class AdminController {
         ));
     }
 
-}
+}*/
