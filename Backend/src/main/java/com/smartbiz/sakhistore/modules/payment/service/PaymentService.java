@@ -51,10 +51,12 @@ public class PaymentService {
         payment.setStatus(status);
         paymentRepository.save(payment);
 
-        // Also update order payment status
+        // Also update order payment status if order exists
         Orders order = payment.getOrders();
-        order.setPaymentStatus(status);
-        ordersRepository.save(order);
+        if (order != null) {
+            order.setPaymentStatus(status);
+            ordersRepository.save(order);
+        }
 
         return payment;
     }
@@ -68,5 +70,17 @@ public class PaymentService {
 
     public List<Payment> getAllPayments() {
         return paymentRepository.findAll();
+    }
+
+    // ================================
+    // Create Payment Entry (without order - for testing)
+    // ================================
+    public Payment createPaymentWithoutOrder(Double amount, String paymentId) {
+        Payment payment = new Payment();
+        payment.setAmount(amount);
+        payment.setPaymentId(paymentId);
+        payment.setStatus(PaymentStatus.PENDING);
+        // orders can be null for testing purposes
+        return paymentRepository.save(payment);
     }
 }

@@ -36,7 +36,7 @@ public class Payment {
     @Column(nullable = false, unique = true)
     private String paymentId;
 
-    @OneToOne
+    @OneToOne(optional = true)
     Orders orders;
 
     public Double getAmount() {

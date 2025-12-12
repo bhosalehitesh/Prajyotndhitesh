@@ -36,6 +36,8 @@ public class SecurityConfig {
             "/api/auth/verifyOtp",
             "/api/auth/resendOtp",
             "/api/categories",
+            // Payment endpoints
+            "/payment/**",
             // Swagger + docs
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -55,6 +57,8 @@ public class SecurityConfig {
                 // Authorization rules
                 .authorizeHttpRequests(auth -> auth
                                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                                // Explicitly allow all payment endpoints with any method
+                                .requestMatchers("/payment/**").permitAll()
                                 .anyRequest().
                                // authenticated()
                         permitAll()
@@ -65,7 +69,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 );
 
-        // (Optional) disable frame options if you’re testing H2 Console
+        // (Optional) disable frame options if you're testing H2 Console
         http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
 
         return http.build();
