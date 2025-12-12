@@ -132,6 +132,20 @@ public class ProductController {
 		return ResponseEntity.ok(updated);
 	}
 
+	// ✅ Update bestseller status for a product
+	@PutMapping("/{id}/bestseller")
+	public ResponseEntity<Product> updateProductBestsellerStatus(@PathVariable Long id,
+			@RequestBody java.util.Map<String, Boolean> body) {
+		Boolean isBestseller = body.get("isBestseller");
+		if (isBestseller == null) {
+			return ResponseEntity.badRequest().build();
+		}
+		Product product = new Product();
+		product.setIsBestseller(isBestseller);
+		Product updated = productService.updateProduct(id, product);
+		return ResponseEntity.ok(updated);
+	}
+
 	// Get products for a specific seller (with pagination support)
 	@GetMapping("/sellerProducts")
 	public ResponseEntity<?> getProductsForSeller(@RequestParam("sellerId") Long sellerId,
@@ -179,14 +193,6 @@ public class ProductController {
 	@GetMapping("/Find By Product Name")
 	public ResponseEntity<List<Product>> searchProducts(@RequestParam String name) {
 		List<Product> products = productService.searchProductsByName(name);
-		return ResponseEntity.ok(products);
-	}
-
-	// Featured (bestseller) products with optional seller filter
-	@GetMapping("/featured")
-	public ResponseEntity<List<Product>> getFeaturedProducts(
-			@RequestParam(value = "sellerId", required = false) Long sellerId) {
-		List<Product> products = productService.getFeaturedProducts(sellerId);
 		return ResponseEntity.ok(products);
 	}
 
