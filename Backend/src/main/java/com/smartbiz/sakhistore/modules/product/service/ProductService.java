@@ -171,32 +171,20 @@ public class ProductService{
 
     // Backwards-compatible method used from older code paths
     public Product addproduct(Product product){
-        return addproduct(product, null, null);
+        return addproduct(product, null);
     }
 
     public Product addproduct(Product product, Long sellerId){
-        return addproduct(product, sellerId, null);
-    }
-
-    public Product addproduct(Product product, Long sellerId, Long categoryId){
         if (sellerId != null) {
             SellerDetails seller = sellerDetailsRepo.findById(sellerId)
                     .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
             product.setSeller(seller);
         }
-        // Ensure bestseller flag is never null so it persists correctly
-        product.setIsBestseller(product.getIsBestseller() != null ? product.getIsBestseller() : false);
-        // Prefer explicit categoryId parameter if provided
-        if (categoryId != null) {
+        // If product has a category with categoryId, fetch the actual Category entity
+        if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
+            Long categoryId = product.getCategory().getCategory_id();
             Category category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
-            product.setCategory(category);
-        }
-        // Else use category from payload if present
-        else if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
-            Long payloadCategoryId = product.getCategory().getCategory_id();
-            Category category = categoryRepository.findById(payloadCategoryId)
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + payloadCategoryId));
             product.setCategory(category);
         } else {
             // Automatically find category based on productCategory or businessCategory if not provided

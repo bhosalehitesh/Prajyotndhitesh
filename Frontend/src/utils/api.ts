@@ -1439,7 +1439,6 @@ export const createProduct = async (body: {
   size?: string;
   hsnCode?: string;
   bestSeller?: boolean;
-  categoryId?: number; // ensure categoryId can be sent in JSON body
 }) => {
   const baseUrl = `${API_BASE_URL}/api/products/addProduct`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
