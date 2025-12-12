@@ -7,13 +7,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <style>
-    #searchModal,
-    #cartModal {
-      display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
-      height: 0 !important;
-      overflow: hidden !important;
+    #searchModal {
+      display: none;
     }
 
     body {
@@ -2165,27 +2160,49 @@
       }
     }
 
-    if (searchBtn) {
-      searchBtn.addEventListener('click', () => {
-        searchModal.style.display = 'flex';
-        setTimeout(() => searchInput.focus(), 100);
-      });
-    }
-
-    if (searchClose) {
-      searchClose.addEventListener('click', () => {
-        searchModal.style.display = 'none';
+    // Basic open/close handlers for search modal
+    function openSearchModalSimple() {
+      if (!searchModal) return;
+      searchModal.style.display = 'flex';
+      searchModal.style.visibility = 'visible';
+      searchModal.style.opacity = '1';
+      document.body.style.overflow = 'hidden';
+      if (searchInput) {
         searchInput.value = '';
-        searchResults.innerHTML = '';
+        setTimeout(() => searchInput.focus(), 50);
+      }
+    }
+
+    function closeSearchModalSimple() {
+      if (!searchModal) return;
+      searchModal.style.display = 'none';
+      searchModal.style.visibility = 'hidden';
+      searchModal.style.opacity = '0';
+      document.body.style.overflow = '';
+      if (searchInput) searchInput.value = '';
+      if (searchResults) searchResults.innerHTML = '';
+      const autocomplete = document.getElementById('searchAutocomplete');
+      if (autocomplete) autocomplete.classList.remove('active');
+    }
+
+    if (searchBtn && !searchBtn.dataset.handlerAttached) {
+      searchBtn.dataset.handlerAttached = 'true';
+      searchBtn.addEventListener('click', openSearchModalSimple);
+    }
+
+    if (searchClose && !searchClose.dataset.handlerAttached) {
+      searchClose.dataset.handlerAttached = 'true';
+      searchClose.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeSearchModalSimple();
       });
     }
 
-    if (searchModal) {
+    if (searchModal && !searchModal.dataset.handlerAttached) {
+      searchModal.dataset.handlerAttached = 'true';
       searchModal.addEventListener('click', (e) => {
         if (e.target === searchModal) {
-          searchModal.style.display = 'none';
-          searchInput.value = '';
-          searchResults.innerHTML = '';
+          closeSearchModalSimple();
         }
       });
     }
@@ -2331,6 +2348,7 @@
             }
           }
         }
+
       });
     }
 
@@ -2652,4 +2670,5 @@
   </script>
 </body>
 </html>
+
 

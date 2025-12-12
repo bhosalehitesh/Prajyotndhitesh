@@ -186,16 +186,27 @@ public class ProductService{
     }
 
     public Product addproduct(Product product, Long sellerId){
+        return addproduct(product, sellerId, null);
+    }
+
+    public Product addproduct(Product product, Long sellerId, Long categoryId){
         if (sellerId != null) {
             SellerDetails seller = sellerDetailsRepo.findById(sellerId)
                     .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
             product.setSeller(seller);
         }
-        // If product has a category with categoryId, fetch the actual Category entity
-        if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
-            Long categoryId = product.getCategory().getCategory_id();
+        
+        // Link to category - use provided categoryId parameter first, then check product.getCategory()
+        if (categoryId != null) {
+            // Use provided categoryId (preferred method)
             Category category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
+            product.setCategory(category);
+        } else if (product.getCategory() != null && product.getCategory().getCategory_id() != null) {
+            // If product has a category with categoryId, fetch the actual Category entity
+            Long catId = product.getCategory().getCategory_id();
+            Category category = categoryRepository.findById(catId)
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + catId));
             product.setCategory(category);
         } else {
             // Automatically find category based on productCategory or businessCategory if not provided

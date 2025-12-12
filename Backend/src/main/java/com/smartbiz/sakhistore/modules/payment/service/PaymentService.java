@@ -127,6 +127,46 @@ public class PaymentService {
     }
 
     // =============================================================
+    // Create Payment Entry
+    // =============================================================
+    public Payment createPayment(Long orderId, Double amount, String paymentId) {
+        Orders order = ordersRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+        
+        Payment payment = new Payment();
+        payment.setAmount(amount);
+        payment.setPaymentId(paymentId);
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setOrders(order);
+        
+        return paymentRepository.save(payment);
+    }
+
+    // =============================================================
+    // Update Payment Status
+    // =============================================================
+    public void updatePaymentStatus(String paymentId, PaymentStatus status) {
+        Payment payment = paymentRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
+        payment.setStatus(status);
+        paymentRepository.save(payment);
+        
+        // Also update order payment status if order exists
+        Orders order = payment.getOrders();
+        if (order != null) {
+            order.setPaymentStatus(status);
+            ordersRepository.save(order);
+        }
+    }
+
+    // =============================================================
+    // Get Payment by Payment ID
+    // =============================================================
+    public Payment getPayment(String paymentId) {
+        return paymentRepository.findByPaymentId(paymentId);
+    }
+
+    // =============================================================
     // 5️⃣ FINAL CALLBACK HANDLER (VERIFY + UPDATE)
     // =============================================================
     public Payment verifyAndUpdatePayment(RazorpayCallbackRequest callback) {
@@ -185,5 +225,17 @@ public class PaymentService {
         var response = razorpayClient.payments.fetch(razorpayPaymentId);
 
         return response.toString();
+    }
+
+    // ================================
+    // Create Payment Entry (without order - for testing)
+    // ================================
+    public Payment createPaymentWithoutOrder(Double amount, String paymentId) {
+        Payment payment = new Payment();
+        payment.setAmount(amount);
+        payment.setPaymentId(paymentId);
+        payment.setStatus(PaymentStatus.PENDING);
+        // orders can be null for testing purposes
+        return paymentRepository.save(payment);
     }
 }
