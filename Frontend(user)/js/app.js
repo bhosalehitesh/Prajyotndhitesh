@@ -722,9 +722,10 @@
       const storeParam = storeSlug ? `&store=${encodeURIComponent(storeSlug)}` : '';
       
       grid.innerHTML = filtered.map((product, index) => {
-        const productId = product.raw?.productId || product.raw?.id || '';
+        // Use productsId (from backend) or productId or id
+        const productId = product.raw?.productsId || product.raw?.productId || product.raw?.id || product.productsId || product.productId || product.id || '';
         const productUrl = productId 
-          ? `product-detail.html?id=${productId}${storeParam}`
+          ? `product-detail.html?id=${encodeURIComponent(productId)}${storeParam}`
           : `product-detail.html?name=${encodeURIComponent(product.name)}&price=${product.price}&image=${encodeURIComponent(product.image)}${storeParam}`;
         
         return `

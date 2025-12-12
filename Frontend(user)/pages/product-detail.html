@@ -1639,51 +1639,114 @@
   <script src="../js/api.js"></script>
   <script src="../js/app.js"></script>
   <script>
-    // Get product data from URL parameters or API
+    // Get product data from API (requires product ID)
     async function getProductFromURL() {
       const params = new URLSearchParams(window.location.search);
-      const productId = params.get('id');
-      const storeSlug = params.get('store');
+      const productId = params.get('id') || params.get('productId') || params.get('productsId');
+      const storeSlug = params.get('store') || sessionStorage.getItem('currentStoreSlug') || null;
       
       // Store store slug globally for cart/checkout
       if (storeSlug) {
         window.currentStoreSlug = storeSlug;
-      }
-
-      // Try to load from API if product ID is provided
-      if (productId && window.API && window.API.getProductById) {
         try {
-          const product = await window.API.getProductById(productId);
-          if (product) {
-            return {
-              id: product.productId || product.id || productId,
-              name: product.productName || product.name || "Product",
-              price: product.sellingPrice || product.price || 0,
-              originalPrice: product.originalPrice || product.mrp || product.price || 0,
-              image: product.productImages?.[0] || product.image || product.imageUrl || '../assets/products/p1.jpg',
-              images: product.productImages || [product.image || product.imageUrl || '../assets/products/p1.jpg'],
-              brand: product.brand || product.brandName || 'Store',
-              description: product.productDescription || product.description || '',
-              stock: product.stock || product.quantity || 0,
-              variants: product.variants || [],
-              storeSlug: storeSlug
-            };
-          }
-        } catch (e) {
-          console.error('Failed to load product from API:', e);
-        }
+          sessionStorage.setItem('currentStoreSlug', storeSlug);
+        } catch (e) {}
       }
 
-      // Fallback to URL parameters
-      return {
-        name: params.get('name') || "Men's Pure Cotton T-Shirt",
-        price: parseInt(params.get('price')) || 476,
-        originalPrice: parseInt(params.get('originalPrice')) || 1499,
-        image: params.get('image') || '../assets/products/p1.jpg',
-        images: [params.get('image') || '../assets/products/p1.jpg'],
-        brand: params.get('brand') || 'V Store',
-        storeSlug: storeSlug
-      };
+      // Require product ID - fetch from API
+      if (!productId) {
+        console.error('Product ID is required. Please open this page via product list.');
+        return {
+          name: "Product Not Found",
+          price: 0,
+          originalPrice: 0,
+          image: '../assets/products/p1.jpg',
+          images: ['../assets/products/p1.jpg'],
+          brand: 'Store',
+          description: 'Product ID is missing. Please navigate from the product list.',
+          stock: 0,
+          variants: [],
+          storeSlug: storeSlug
+        };
+      }
+
+      // Wait for API to be available
+      let retries = 0;
+      const maxRetries = 50;
+      while (!window.API && retries < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+      }
+
+      if (!window.API || !window.API.getProductById) {
+        console.error('API not available');
+        return {
+          name: "Product Not Found",
+          price: 0,
+          originalPrice: 0,
+          image: '../assets/products/p1.jpg',
+          images: ['../assets/products/p1.jpg'],
+          brand: 'Store',
+          description: 'API not available. Please refresh the page.',
+          stock: 0,
+          variants: [],
+          storeSlug: storeSlug
+        };
+      }
+
+      try {
+        const product = await window.API.getProductById(productId);
+        if (!product) {
+          throw new Error('Product not found');
+        }
+
+        // Build images array from productImages
+        let images = [];
+        if (Array.isArray(product.productImages) && product.productImages.length > 0) {
+          images = product.productImages.filter(img => img && img.trim() !== '');
+        } else if (product.image || product.imageUrl) {
+          images = [product.image || product.imageUrl];
+        } else {
+          images = ['../assets/products/p1.jpg'];
+        }
+
+        const price = product.sellingPrice ?? product.price ?? 0;
+        const originalPrice = product.mrp ?? product.originalPrice ?? product.price ?? price;
+        const stock = product.inventoryQuantity ?? product.stock ?? product.quantity ?? 0;
+
+        return {
+          id: product.productsId || product.productId || product.id || productId,
+          name: product.productName || product.name || "Product",
+          price: price,
+          originalPrice: originalPrice,
+          image: images[0],
+          images: images, // All product images as array
+          brand: product.brand || product.brandName || 'Store',
+          description: product.description || product.productDescription || '',
+          stock: stock,
+          variants: product.variants || [],
+          storeSlug: storeSlug,
+          // Additional fields
+          customSku: product.customSku || '',
+          color: product.color || '',
+          size: product.size || '',
+          hsnCode: product.hsnCode || ''
+        };
+      } catch (e) {
+        console.error('Failed to load product from API:', e);
+        return {
+          name: "Product Not Found",
+          price: 0,
+          originalPrice: 0,
+          image: '../assets/products/p1.jpg',
+          images: ['../assets/products/p1.jpg'],
+          brand: 'Store',
+          description: `Failed to load product: ${e.message}`,
+          stock: 0,
+          variants: [],
+          storeSlug: storeSlug
+        };
+      }
     }
 
     // Update page with product data
@@ -1708,28 +1771,50 @@
       // Set main image
       if (document.getElementById('mainProductImage')) {
         document.getElementById('mainProductImage').src = product.images[0] || product.image;
+        document.getElementById('mainProductImage').alt = product.name;
       }
       
-      // Set thumbnails
-      const thumbnails = document.querySelectorAll('.thumbnail');
-      if (product.images && product.images.length > 0) {
-        thumbnails.forEach((thumb, index) => {
-          if (product.images[index]) {
-            thumb.src = product.images[index];
-            thumb.style.display = 'block';
-          } else {
-            thumb.style.display = 'none';
-          }
+      // Dynamically create thumbnails for all product images
+      const thumbnailContainer = document.querySelector('.product-thumbnails');
+      if (thumbnailContainer && product.images && product.images.length > 0) {
+        // Clear existing thumbnails
+        thumbnailContainer.innerHTML = '';
+        
+        // Create thumbnail for each image
+        product.images.forEach((imgSrc, index) => {
+          const thumbnail = document.createElement('img');
+          thumbnail.src = imgSrc;
+          thumbnail.alt = `${product.name} - Image ${index + 1}`;
+          thumbnail.className = 'thumbnail' + (index === 0 ? ' active' : '');
+          thumbnail.onclick = function() {
+            changeMainImage(this.src);
+            document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+          };
+          thumbnailContainer.appendChild(thumbnail);
         });
-      } else {
-        thumbnails.forEach((thumb, index) => {
-          if (index === 0) {
-            thumb.src = product.image;
-            thumb.style.display = 'block';
-          } else {
-            thumb.style.display = 'none';
-          }
-        });
+      } else if (thumbnailContainer) {
+        // Fallback: show at least one thumbnail
+        const thumbnail = document.createElement('img');
+        thumbnail.src = product.image || '../assets/products/p1.jpg';
+        thumbnail.alt = product.name;
+        thumbnail.className = 'thumbnail active';
+        thumbnail.onclick = function() {
+          changeMainImage(this.src);
+          document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+        };
+        thumbnailContainer.innerHTML = '';
+        thumbnailContainer.appendChild(thumbnail);
+      }
+      
+      // Update stock availability
+      updateStockIndicator(product);
+      
+      // Update description if element exists
+      const descriptionEl = document.getElementById('productDescription');
+      if (descriptionEl && product.description) {
+        descriptionEl.textContent = product.description;
       }
       
       // Update breadcrumb
@@ -1740,6 +1825,25 @@
 
       // Store product data globally for add to cart
       window.currentProduct = product;
+    }
+    
+    // Update stock indicator based on product stock
+    function updateStockIndicator(product) {
+      const stockEl = document.getElementById('stockAvailability');
+      if (!stockEl) return;
+      
+      const stock = product.stock || 0;
+      let stockHtml = '';
+      
+      if (stock > 10) {
+        stockHtml = `<div class="stock-indicator in-stock"><span class="stock-indicator-icon"></span><span>In Stock</span></div>`;
+      } else if (stock > 0) {
+        stockHtml = `<div class="stock-indicator low-stock"><span class="stock-indicator-icon"></span><span>Only ${stock} left!</span></div>`;
+      } else {
+        stockHtml = `<div class="stock-indicator out-of-stock"><span class="stock-indicator-icon"></span><span>Out of Stock</span></div>`;
+      }
+      
+      stockEl.innerHTML = stockHtml;
     }
 
     // Load product data on page load

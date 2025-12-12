@@ -236,7 +236,14 @@
           const mrp = p.mrp || '';
           const img = (p.productImages && p.productImages[0]) || p.socialSharingImage || '../assets/genz/ts.webp';
           const brand = p.businessCategory || 'V Store';
-          const detailUrl = `product-detail.html?name=${encodeURIComponent(name)}&price=${price}&originalPrice=${mrp || price}&image=${encodeURIComponent(img)}&brand=${encodeURIComponent(brand)}`;
+          // Use product ID for API-based product detail page
+          const productId = p.productsId || p.productId || p.id;
+          const urlParams = new URLSearchParams(window.location.search);
+          const storeSlug = urlParams.get('store');
+          const storeParam = storeSlug ? `&store=${encodeURIComponent(storeSlug)}` : '';
+          const detailUrl = productId 
+            ? `product-detail.html?id=${encodeURIComponent(productId)}${storeParam}`
+            : `product-detail.html?name=${encodeURIComponent(name)}&price=${price}&originalPrice=${mrp || price}&image=${encodeURIComponent(img)}&brand=${encodeURIComponent(brand)}${storeParam}`;
           return `
             <div class="ecommerce-product-card" onclick="window.location.href='${detailUrl}'">
               <img src="${img}" alt="${name}" />

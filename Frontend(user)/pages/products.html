@@ -1336,7 +1336,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const storeSlug = urlParams.get('store');
         const storeParam = storeSlug ? `&store=${encodeURIComponent(storeSlug)}` : '';
-        const productUrl = `product-detail.html?name=${encodeURIComponent(product.name)}&price=${product.price}&originalPrice=${product.originalPrice}&image=${encodeURIComponent(product.image)}&brand=${encodeURIComponent(product.brand)}${storeParam}${product.productId ? '&id=' + product.productId : ''}`;
+        // Use product ID (productsId or productId) for API-based product detail page
+        const productId = product.productsId || product.productId || product.id;
+        const productUrl = productId 
+          ? `product-detail.html?id=${encodeURIComponent(productId)}${storeParam}`
+          : `product-detail.html?name=${encodeURIComponent(product.name)}&price=${product.price}&originalPrice=${product.originalPrice}&image=${encodeURIComponent(product.image)}&brand=${encodeURIComponent(product.brand)}${storeParam}`;
         // Determine badge
         let badgeHtml = '';
         if (discountPercent >= 50) {
