@@ -1,6 +1,7 @@
 package com.smartbiz.sakhistore.modules.category.controller;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -97,19 +98,44 @@ public class CategoryController {
     // ✅ Delete category (with seller verification)
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteCategory(@PathVariable Long id, HttpServletRequest httpRequest) {
-        Long sellerId = extractSellerIdFromToken(httpRequest);
-        if (sellerId == null) {
-            return ResponseEntity.status(401).body("Authentication required. Please provide a valid JWT token.");
+        try {
+            Long sellerId = extractSellerIdFromToken(httpRequest);
+            if (sellerId == null) {
+                return ResponseEntity.status(401).body("Authentication required. Please provide a valid JWT token.");
+            }
+            
+            // Verify category belongs to seller
+            Category category = categoryService.findById(id);
+            if (category.getSeller() == null || !category.getSeller().getSellerId().equals(sellerId)) {
+                return ResponseEntity.status(403).body("You can only delete your own categories.");
+            }
+            
+            categoryService.deleteCategory(id);
+            return ResponseEntity.ok("✅ Category with ID " + id + " deleted successfully.");
+        } catch (RuntimeException e) {
+            // Handle business logic errors (e.g., category has products)
+            return ResponseEntity.status(400).body(e.getMessage());
+        } catch (NoSuchElementException e) {
+            // Handle category not found
+            return ResponseEntity.status(404).body("Category not found with ID: " + id);
+        } catch (Exception e) {
+            // Handle other errors - log full stack trace for debugging
+            System.err.println("Error deleting category " + id + ":");
+            e.printStackTrace();
+            
+            // Return detailed error message
+            String errorMessage = e.getMessage();
+            if (errorMessage == null || errorMessage.isEmpty()) {
+                errorMessage = "An unexpected error occurred while deleting the category.";
+            }
+            
+            // Check for common database constraint errors
+            if (errorMessage.contains("foreign key") || errorMessage.contains("constraint")) {
+                return ResponseEntity.status(400).body("Cannot delete category: It has products or other data associated with it. Please remove or reassign them first.");
+            }
+            
+            return ResponseEntity.status(500).body("Failed to delete category: " + errorMessage);
         }
-        
-        // Verify category belongs to seller
-        Category category = categoryService.findById(id);
-        if (category.getSeller() == null || !category.getSeller().getSellerId().equals(sellerId)) {
-            return ResponseEntity.status(403).body("You can only delete your own categories.");
-        }
-        
-        categoryService.deleteCategory(id);
-        return ResponseEntity.ok("✅ Category with ID " + id + " deleted successfully.");
     }
 
     // ✅ Find categories by business category (filtered by authenticated seller)

@@ -18,6 +18,7 @@ import com.smartbiz.sakhistore.modules.collection.model.collection;
 import com.smartbiz.sakhistore.modules.collection.repository.CollectionRepository;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
+import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,6 +43,9 @@ public class CategoryService {
 
     @Autowired
     private SellerDetailsRepo sellerDetailsRepo;
+
+    @Autowired
+    private ProductRepository productRepository;
 
     // ✅ Upload and save Category with images (with seller linking)
     public Category uploadCategoryWithImages(
@@ -141,7 +145,31 @@ public class CategoryService {
     public void deleteCategory(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new NoSuchElementException("Category not found with ID: " + categoryId));
-        categoryRepository.delete(category);
+        
+        try {
+            // Check if category has associated products
+            long productCount = productRepository.countByCategoryId(categoryId);
+            if (productCount > 0) {
+                throw new RuntimeException("Cannot delete category: It has " + productCount + " product(s) associated with it. Please remove or reassign products first.");
+            }
+        } catch (RuntimeException e) {
+            // Re-throw business logic exceptions
+            throw e;
+        } catch (Exception e) {
+            // Log other exceptions but don't fail deletion if count check fails
+            System.err.println("Warning: Could not check product count for category " + categoryId + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        try {
+            categoryRepository.delete(category);
+        } catch (Exception e) {
+            // If deletion fails due to foreign key constraint, provide helpful message
+            if (e.getMessage() != null && e.getMessage().contains("foreign key")) {
+                throw new RuntimeException("Cannot delete category: It has products associated with it. Please remove or reassign products first.");
+            }
+            throw new RuntimeException("Failed to delete category: " + e.getMessage(), e);
+        }
     }
 
     // ✅ Search by business category (filtered by seller)
