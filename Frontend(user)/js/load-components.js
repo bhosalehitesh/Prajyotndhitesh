@@ -8,7 +8,13 @@ function getCurrentStoreSlug() {
   try {
     const params = new URLSearchParams(window.location.search);
     const store = params.get('store');
-    return store ? store.trim() : null;
+    if (store && store.trim()) return store.trim();
+    // Fallback to sessionStorage if query param missing
+    try {
+      const fromSession = sessionStorage.getItem('currentStoreSlug');
+      if (fromSession && fromSession.trim()) return fromSession.trim();
+    } catch (e) {}
+    return null;
   } catch (e) {
     return null;
   }
@@ -17,13 +23,35 @@ function getCurrentStoreSlug() {
 // Function to append store param to navigation links so cross-page navigation preserves store context
 function appendStoreParamToLinks(rootEl, storeSlug) {
   if (!rootEl || !storeSlug) return;
+  const isInPagesFolder = window.location.pathname.includes('/pages/');
+  const navPages = [
+    'categories',
+    'featured',
+    'products',
+    'category',
+    'orders',
+    'wishlist',
+    'cart',
+    'order-tracking',
+    'faq',
+    'login',
+    'search'
+  ];
   
   // Get all links that should preserve store context
   const selectors = [
     'a[href*="index.html"]',
     'a[href*="categories.html"]',
+    'a[href*="category.html"]',
     'a[href*="featured.html"]',
     'a[href*="products.html"]',
+    'a[href*="orders.html"]',
+    'a[href*="wishlist.html"]',
+    'a[href*="cart.html"]',
+    'a[href*="order-tracking.html"]',
+    'a[href*="faq.html"]',
+    'a[href*="login.html"]',
+    'a[href*="search.html"]',
     'a[href="/"]',
     'a[href="./"]',
     'a[data-preserve-store]', // Links with data-preserve-store attribute
@@ -35,11 +63,23 @@ function appendStoreParamToLinks(rootEl, storeSlug) {
     if (!href) return;
     
     // Clean up any corrupted hrefs (remove accidentally appended text like "-featured" or "-products")
-    // Pattern: featured.html-featured or products.html-products
     href = href.replace(/\.html-([a-z]+)$/i, '.html');
+
+    // Normalize navigation targets so root pages always go through /pages/
+    if (!isInPagesFolder) {
+      // strip leading "./" for comparison
+      const cleaned = href.replace(/^\.\//, '');
+      const match = cleaned.match(/^([a-z-]+)\.html(\?|$)/i);
+      if (match && navPages.includes(match[1].toLowerCase())) {
+        href = `pages/${cleaned}`;
+      }
+    }
     
     // Skip if already has store parameter
-    if (href.includes('store=')) return;
+    if (href.includes('store=')) {
+      link.setAttribute('href', href);
+      return;
+    }
     
     // Skip external links (different hostname)
     if (href.startsWith('http://') || href.startsWith('https://')) {
@@ -55,7 +95,6 @@ function appendStoreParamToLinks(rootEl, storeSlug) {
     }
     
     // For all relative paths (including .html files), simply append store parameter
-    // This is the most reliable approach
     const separator = href.includes('?') ? '&' : '?';
     const newHref = href + separator + 'store=' + encodeURIComponent(storeSlug);
     link.setAttribute('href', newHref);
@@ -64,34 +103,35 @@ function appendStoreParamToLinks(rootEl, storeSlug) {
 
 // Function to fix paths in loaded HTML based on current page location
 function fixPathsInHTML(html, isInPagesFolder) {
-        if (isInPagesFolder) {
-          // If in pages folder, paths starting with "assets/" or "pages/" need "../"
-          // But paths already with "../" should stay as is
-          html = html.replace(/src="assets\//g, 'src="../assets/');
-          html = html.replace(/href="pages\//g, 'href="');
-          html = html.replace(/href="\.\.\/pages\//g, 'href="');
-          html = html.replace(/href="index\.html/g, 'href="../index.html');
-          
-          // Fix sidebar links to use relative paths (remove pages/ prefix if exists)
-          html = html.replace(/href="(pages\/)?(orders|wishlist|cart|order-tracking|faq)\.html/g, 'href="$2.html');
-          // Ensure navigation links stay as relative paths (no modification needed, they're already correct)
-          // Remove any accidental modifications that might have added text or hyphens
-          html = html.replace(/href="(categories|featured|products)\.html-[^"]*"/g, 'href="$1.html"');
-          html = html.replace(/href="(categories|featured|products)\.html\?[^"]*"/g, (match) => {
-            // Preserve query params but ensure clean URL
-            const cleanMatch = match.replace(/\.html-[^?]*\?/, '.html?');
-            return cleanMatch;
-          });
-        } else {
-          // If in root, paths with "../assets/" should be "assets/"
-          html = html.replace(/src="\.\.\/assets\//g, 'src="assets/');
-          html = html.replace(/href="\.\.\/pages\//g, 'href="pages/');
-          
-          // Fix sidebar links to use pages/ prefix
-          html = html.replace(/href="(orders|wishlist|cart|order-tracking|faq)\.html"/g, 'href="pages/$1.html"');
-        }
-        return html;
-      }
+  if (isInPagesFolder) {
+    // If in pages folder, paths starting with "assets/" or "pages/" need "../"
+    // But paths already with "../" should stay as is
+    html = html.replace(/src="assets\//g, 'src="../assets/');
+    html = html.replace(/href="pages\//g, 'href="');
+    html = html.replace(/href="\.\.\/pages\//g, 'href="');
+    html = html.replace(/href="index\.html/g, 'href="../index.html');
+    
+    // Fix sidebar links to use relative paths (remove pages/ prefix if exists)
+    html = html.replace(/href="(pages\/)?(orders|wishlist|cart|order-tracking|faq)\.html/g, 'href="$2.html');
+    // Ensure navigation links stay as relative paths (no modification needed, they're already correct)
+    // Remove any accidental modifications that might have added text or hyphens
+    html = html.replace(/href="(categories|featured|products)\.html-[^"]*"/g, 'href="$1.html"');
+    html = html.replace(/href="(categories|featured|products)\.html\?[^"]*"/g, (match) => {
+      // Preserve query params but ensure clean URL
+      const cleanMatch = match.replace(/\.html-[^?]*\?/, '.html?');
+      return cleanMatch;
+    });
+  } else {
+    // If in root, keep nav links pointing to /pages/ (do NOT strip /pages/)
+    html = html.replace(/src="\.\.\/assets\//g, 'src="assets/');
+    // Ensure any links already using ../pages/ keep the pages prefix
+    html = html.replace(/href="\.\.\/pages\//g, 'href="pages/');
+    // Add pages/ prefix to sidebar links when on root
+    html = html.replace(/href="(orders|wishlist|cart|order-tracking|faq)\.html"/g, 'href="pages/$1.html"');
+    // Do not remove "pages/" from nav links when on root
+  }
+  return html;
+}
 
 // Function to load a component file
 async function loadComponent(elementId, filePath) {
@@ -125,7 +165,9 @@ async function loadComponent(elementId, filePath) {
       // Initialize profile sidebar if header was loaded
       if (elementId === 'header-placeholder') {
         // Initialize login modal IMMEDIATELY after header loads
-        setTimeout(() => initializeLoginModalHandlers(), 50);
+        if (typeof initializeLoginModalHandlers === 'function') {
+          setTimeout(() => initializeLoginModalHandlers(), 50);
+        }
         // Disable login modal on non-index and non-login pages
         const isIndexPage = window.location.pathname === '/' || 
                             window.location.pathname.endsWith('index.html') ||

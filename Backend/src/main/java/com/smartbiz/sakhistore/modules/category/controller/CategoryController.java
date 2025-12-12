@@ -113,7 +113,7 @@ public class CategoryController {
             categoryService.deleteCategory(id);
             return ResponseEntity.ok("✅ Category with ID " + id + " deleted successfully.");
         } catch (NoSuchElementException e) {
-            // Handle category not found
+            // Handle category not found (must come before RuntimeException since NoSuchElementException extends RuntimeException)
             return ResponseEntity.status(404).body("Category not found with ID: " + id);
         } catch (RuntimeException e) {
             // Handle business logic errors (e.g., category has products)

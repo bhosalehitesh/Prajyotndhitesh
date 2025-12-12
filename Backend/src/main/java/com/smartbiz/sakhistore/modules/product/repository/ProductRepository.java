@@ -45,9 +45,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // Find products by seller and active status
     List<Product> findBySeller_SellerIdAndIsActive(Long sellerId, Boolean isActive);
 
-    // Featured (best seller) products
-    List<Product> findByIsBestsellerTrueAndIsActiveTrue();
-    List<Product> findBySeller_SellerIdAndIsBestsellerTrueAndIsActiveTrue(Long sellerId);
+    // Featured products (bestsellers) by seller
+    List<Product> findTop20BySeller_SellerIdAndIsBestsellerTrueAndIsActiveTrueOrderByCreatedAtDesc(Long sellerId);
+
+    // Featured products (bestsellers) across all sellers
+    List<Product> findTop20ByIsBestsellerTrueAndIsActiveTrueOrderByCreatedAtDesc();
 
     // Count products in a specific collection
     long countByCollections_CollectionId(Long collectionId);

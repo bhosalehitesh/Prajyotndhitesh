@@ -69,6 +69,38 @@
         console.error('❌ Error hiding default categories:', e);
       }
     })();
+    // Ensure store param is present (pull from referrer or sessionStorage if missing)
+    (function() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.get('store')) {
+          let storeFromRef = null;
+          try {
+            if (document.referrer) {
+              const ref = new URL(document.referrer);
+              storeFromRef = ref.searchParams.get('store');
+            }
+          } catch (e) {}
+          let storeFromSession = null;
+          try {
+            storeFromSession = sessionStorage.getItem('currentStoreSlug');
+          } catch (e) {}
+          const chosen = storeFromRef || storeFromSession;
+          if (chosen) {
+            params.set('store', chosen);
+            const newUrl = window.location.pathname + '?' + params.toString();
+            window.location.replace(newUrl);
+          }
+        } else {
+          // Persist for future pages
+          try {
+            sessionStorage.setItem('currentStoreSlug', params.get('store'));
+          } catch (e) {}
+        }
+      } catch (e) {
+        // swallow
+      }
+    })();
   </script>
   <style>
     body {
