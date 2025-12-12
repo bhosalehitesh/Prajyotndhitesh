@@ -161,6 +161,13 @@ public class ProductController {
 		return ResponseEntity.ok(products);
 	}
 
+    // Featured / Best Seller products (optional sellerId filter)
+    @GetMapping("/featured")
+    public ResponseEntity<List<Product>> getFeaturedProducts(
+            @RequestParam(value = "sellerId", required = false) Long sellerId) {
+        return ResponseEntity.ok(productService.getFeaturedProducts(sellerId));
+    }
+
 	// Endpoint: Get all product categories
 	@GetMapping("/categoriesByProductIDFor Collections")
 	public ResponseEntity<List<String>> getAllProductCategories() {

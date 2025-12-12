@@ -91,6 +91,24 @@ public class PublicStoreController {
     }
 
     /**
+     * Get featured (best seller) products for a store by slug (public endpoint)
+     * Example: GET /api/public/store/brownn_boys/featured
+     */
+    @GetMapping("/{slug}/featured")
+    public ResponseEntity<?> getFeaturedProductsByStore(@PathVariable String slug) {
+        try {
+            List<Product> products = productService.getFeaturedProductsByStoreSlug(slug);
+            return ResponseEntity.ok(products);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            System.err.println("Error fetching featured products for store slug: " + slug);
+            e.printStackTrace();
+            return ResponseEntity.ok(new java.util.ArrayList<>());
+        }
+    }
+
+    /**
      * Get categories for a store by slug (public endpoint)
      * Example: GET /api/public/store/brownn_boys/categories
      */

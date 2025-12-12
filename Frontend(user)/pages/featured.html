@@ -289,13 +289,13 @@
     document.addEventListener('DOMContentLoaded', loadFeaturedProducts);
 
     // Helper function to check if product is in wishlist
-    function isProductInWishlist(productName) {
+    function isProductInWishlist(productName, productId) {
       if (window.WishlistUtils) {
         const wishlist = window.WishlistUtils.getWishlist();
-        return wishlist.some(item => item.name === productName);
+        return wishlist.some(item => item.productId === productId || item.name === productName);
       } else {
         const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-        return wishlist.some(item => item.name === productName);
+        return wishlist.some(item => item.productId === productId || item.name === productName);
       }
     }
 
@@ -321,14 +321,15 @@
       const brand = button.getAttribute('data-brand') || 'V Store';
       const img = button.getAttribute('data-img') || '';
       const originalPrice = parseInt(button.getAttribute('data-original-price')) || price;
+      const productId = button.getAttribute('data-product-id') || null;
       
       // Check if product is already in wishlist
-      const isCurrentlyWishlisted = isProductInWishlist(name);
+      const isCurrentlyWishlisted = isProductInWishlist(name, productId);
       
       if (window.WishlistUtils) {
         if (isCurrentlyWishlisted) {
           // Remove from wishlist
-          window.WishlistUtils.removeItemFromWishlist(name);
+          window.WishlistUtils.removeItemFromWishlist(productId || name);
           updateWishlistButtonIcon(button, false);
           if (window.showToast) {
             showToast(`${name} removed from wishlist`, 'success', 'Wishlist');
@@ -342,7 +343,8 @@
             image: img,
             brand: brand,
             size: 'Default',
-            color: 'Default'
+            color: 'Default',
+            productId: productId || undefined
           });
           
           if (added) {

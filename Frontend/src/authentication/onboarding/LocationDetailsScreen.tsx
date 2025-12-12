@@ -284,7 +284,20 @@ const LocationDetailsScreen: React.FC<LocationDetailsScreenProps> = ({ onNext, o
         setPincodeError('');
         return { valid: true, message: '', details: null };
       }
-      
+
+      // If API says invalid or API call failed, fall back to local range check
+      const pinNum = parseInt(pin, 10);
+      const ranges = STATE_PINCODE_RANGES[selectedState];
+      const localMatch =
+        !isNaN(pinNum) &&
+        ranges &&
+        ranges.some(([min, max]) => pinNum >= min && pinNum <= max);
+
+      if (localMatch) {
+        setPincodeError('');
+        return { valid: true, message: '' };
+      }
+
       return { valid: false, message: 'Pincode does not match the selected state' };
     } catch (error) {
       console.error('Error validating pincode:', error);

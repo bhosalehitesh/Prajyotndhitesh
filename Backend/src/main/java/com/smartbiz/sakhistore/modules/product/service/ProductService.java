@@ -20,6 +20,7 @@ import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
+import com.smartbiz.sakhistore.modules.store.service.StoreDetailsService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,6 +43,9 @@ public class ProductService{
     
     @Autowired
     private StoreDetailsRepo storeRepository;
+
+    @Autowired
+    private StoreDetailsService storeService;
 
 
     public Product uploadProductWithImages(
@@ -232,6 +236,28 @@ public class ProductService{
                 .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
 
         productRepository.delete(product);
+    }
+
+    // =======================
+    // FEATURED / BEST SELLERS
+    // =======================
+    public List<Product> getFeaturedProducts(Long sellerId) {
+        if (sellerId != null) {
+            return productRepository.findBySeller_SellerIdAndIsBestsellerTrueAndIsActiveTrue(sellerId);
+        }
+        return productRepository.findByIsBestsellerTrueAndIsActiveTrue();
+    }
+
+    public List<Product> getFeaturedProductsByStoreSlug(String slug) {
+        if (slug == null || slug.isBlank()) {
+            return productRepository.findByIsBestsellerTrueAndIsActiveTrue();
+        }
+        StoreDetails store = storeService.findBySlug(slug);
+        if (store.getSeller() == null || store.getSeller().getSellerId() == null) {
+            return new ArrayList<>();
+        }
+        Long sellerId = store.getSeller().getSellerId();
+        return productRepository.findBySeller_SellerIdAndIsBestsellerTrueAndIsActiveTrue(sellerId);
     }
 
     // ✅ Update only inventory quantity (stock) for a product

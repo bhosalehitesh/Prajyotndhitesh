@@ -76,6 +76,35 @@
   }
 
   // ====== WISHLIST UTILITIES ======
+  // Backend-aware wishlist: if API_BASE + userId + productId are available,
+  // persist to backend; otherwise fall back to localStorage only.
+
+  function getUserId() {
+    return window.USER_ID || localStorage.getItem('userId') || null;
+  }
+
+  async function backendWishlistAdd(productId) {
+    const userId = getUserId();
+    if (!API_BASE || !userId || !productId) return;
+    try {
+      const res = await fetch(`${API_BASE}/wishlist/add/${userId}/${productId}`, { method: 'POST' });
+      if (!res.ok) console.warn('Wishlist add (backend) failed', res.status);
+    } catch (e) {
+      console.warn('Wishlist add (backend) error', e);
+    }
+  }
+
+  async function backendWishlistRemove(productId) {
+    const userId = getUserId();
+    if (!API_BASE || !userId || !productId) return;
+    try {
+      const res = await fetch(`${API_BASE}/wishlist/remove/${userId}/${productId}`, { method: 'DELETE' });
+      if (!res.ok) console.warn('Wishlist remove (backend) failed', res.status);
+    } catch (e) {
+      console.warn('Wishlist remove (backend) error', e);
+    }
+  }
+
   function getWishlist() {
     try {
       return JSON.parse(localStorage.getItem('wishlist')) || [];
@@ -133,15 +162,16 @@
     );
     
     if (existingIndex === -1) {
-      // Add new item
-      wishlist.push({
+      const entry = {
         ...item,
         addedAt: new Date().toISOString()
-      });
+      };
+      wishlist.push(entry);
       saveWishlist(wishlist);
+      if (entry.productId) backendWishlistAdd(entry.productId);
       return true;
     }
-    
+
     return false; // Item already in wishlist
   }
 
@@ -151,10 +181,12 @@
     const filtered = wishlist.filter(item => {
       // Check if item has an ID and it matches
       if (item.id && item.id === itemIdOrName) {
+        if (item.productId) backendWishlistRemove(item.productId);
         return false; // Remove this item
       }
       // Check if name matches (for backward compatibility)
       if (item.name === itemIdOrName) {
+        if (item.productId) backendWishlistRemove(item.productId);
         return false; // Remove this item
       }
       // Keep this item
