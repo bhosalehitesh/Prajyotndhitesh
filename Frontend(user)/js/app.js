@@ -586,36 +586,32 @@
           } else {
             // Only use getAllProducts() if there's NO store context (admin/internal use)
             console.warn('No store context - using getAllProducts() as fallback (admin/internal use only)');
-          if (window.API.getAllProducts) {
-            try {
-              const allProducts = await window.API.getAllProducts();
-              console.log('Got all products:', allProducts?.length || 0);
-              
-              if (Array.isArray(allProducts) && allProducts.length > 0) {
-                fetched = allProducts.filter(p => {
-                  // Check all possible field name variations
-                  const pid = p.categoryId || 
-                             p.category_id || 
-                             p.category?.category_id || 
-                             p.category?.categoryId ||
-                             p.category?.id ||
-                             (p.category && p.category.category_id) ||
-                             (p.category && p.category.categoryId);
-                  const matches = pid && String(pid) === String(categoryId);
-                  if (matches) {
-                    console.log('✅ Product from allProducts matches categoryId:', p.productName || p.name, 'categoryId:', pid);
-                  }
-                  return matches;
-                });
-                console.log(`Filtered all products by categoryId ${categoryId}: ${fetched.length} products`);
+            if (window.API.getAllProducts) {
+              try {
+                const allProducts = await window.API.getAllProducts();
+                console.log('Got all products:', allProducts?.length || 0);
+                
+                if (Array.isArray(allProducts) && allProducts.length > 0) {
+                  fetched = allProducts.filter(p => {
+                    // Check all possible field name variations
+                    const pid = p.categoryId || 
+                               p.category_id || 
+                               p.category?.category_id || 
+                               p.category?.categoryId ||
+                               p.category?.id ||
+                               (p.category && p.category.category_id) ||
+                               (p.category && p.category.categoryId);
+                    const matches = pid && String(pid) === String(categoryId);
+                    if (matches) {
+                      console.log('✅ Product from allProducts matches categoryId:', p.productName || p.name, 'categoryId:', pid);
+                    }
+                    return matches;
+                  });
+                  console.log(`Filtered all products by categoryId ${categoryId}: ${fetched.length} products`);
                 }
               } catch (e2) {
                 console.error('getAllProducts fallback also failed:', e2);
               }
-            }
-              }
-            } catch (e2) {
-              console.warn('Failed to fetch all products:', e2);
             }
           }
         }

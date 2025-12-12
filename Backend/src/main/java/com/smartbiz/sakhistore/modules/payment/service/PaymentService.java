@@ -146,8 +146,10 @@ public class PaymentService {
     // Update Payment Status
     // =============================================================
     public void updatePaymentStatus(String paymentId, PaymentStatus status) {
-        Payment payment = paymentRepository.findByPaymentId(paymentId)
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
+        Payment payment = paymentRepository.findByPaymentId(paymentId);
+        if (payment == null) {
+            throw new RuntimeException("Payment not found with id: " + paymentId);
+        }
         payment.setStatus(status);
         paymentRepository.save(payment);
         

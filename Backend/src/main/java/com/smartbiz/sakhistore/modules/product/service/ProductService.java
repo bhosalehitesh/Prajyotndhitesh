@@ -177,6 +177,16 @@ public class ProductService{
         return productRepository.save(product);
     }
 
+    /**
+     * Get featured (bestseller) products, optionally filtered by seller
+     */
+    public List<Product> getFeaturedProducts(Long sellerId) {
+        if (sellerId != null) {
+            return productRepository.findTop20BySeller_SellerIdAndIsBestsellerTrueAndIsActiveTrueOrderByCreatedAtDesc(sellerId);
+        }
+        return productRepository.findTop20ByIsBestsellerTrueAndIsActiveTrueOrderByCreatedAtDesc();
+    }
+
 
 
 

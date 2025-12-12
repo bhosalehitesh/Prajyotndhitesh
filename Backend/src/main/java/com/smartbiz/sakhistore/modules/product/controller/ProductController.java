@@ -175,6 +175,14 @@ public class ProductController {
 		return ResponseEntity.ok(products);
 	}
 
+	// Featured (bestseller) products with optional seller filter
+	@GetMapping("/featured")
+	public ResponseEntity<List<Product>> getFeaturedProducts(
+			@RequestParam(value = "sellerId", required = false) Long sellerId) {
+		List<Product> products = productService.getFeaturedProducts(sellerId);
+		return ResponseEntity.ok(products);
+	}
+
 	/*
 	 * // ✅ CREATE Product
 	 * 
