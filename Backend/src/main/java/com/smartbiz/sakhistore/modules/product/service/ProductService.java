@@ -251,24 +251,8 @@ public class ProductService{
     // =======================
     // FEATURED / BEST SELLERS
     // =======================
-    public List<Product> getFeaturedProducts(Long sellerId) {
-        if (sellerId != null) {
-            return productRepository.findBySeller_SellerIdAndIsBestsellerTrueAndIsActiveTrue(sellerId);
-        }
-        return productRepository.findByIsBestsellerTrueAndIsActiveTrue();
-    }
-
-    public List<Product> getFeaturedProductsByStoreSlug(String slug) {
-        if (slug == null || slug.isBlank()) {
-            return productRepository.findByIsBestsellerTrueAndIsActiveTrue();
-        }
-        StoreDetails store = storeService.findBySlug(slug);
-        if (store.getSeller() == null || store.getSeller().getSellerId() == null) {
-            return new ArrayList<>();
-        }
-        Long sellerId = store.getSeller().getSellerId();
-        return productRepository.findBySeller_SellerIdAndIsBestsellerTrueAndIsActiveTrue(sellerId);
-    }
+    // Note: getFeaturedProducts method is already defined above (line 187)
+    // This duplicate has been removed to use the Top20 methods with ordering
 
     // ✅ Update only inventory quantity (stock) for a product
     public Product updateInventoryQuantity(Long productId, Integer inventoryQuantity) {
