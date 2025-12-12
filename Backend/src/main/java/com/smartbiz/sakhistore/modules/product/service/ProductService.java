@@ -282,6 +282,16 @@ public class ProductService{
         existing.setHsnCode(updated.getHsnCode());
         existing.setSeoTitleTag(updated.getSeoTitleTag());
         existing.setSeoMetaDescription(updated.getSeoMetaDescription());
+        
+        // Update bestseller status
+        if (updated.getIsBestseller() != null) {
+            existing.setIsBestseller(updated.getIsBestseller());
+        }
+        
+        // Update active status
+        if (updated.getIsActive() != null) {
+            existing.setIsActive(updated.getIsActive());
+        }
 
         // NOTE: We intentionally do NOT modify productImages, socialSharingImage or seller here.
         // Image updates are handled via the upload endpoint; seller relation stays the same.
