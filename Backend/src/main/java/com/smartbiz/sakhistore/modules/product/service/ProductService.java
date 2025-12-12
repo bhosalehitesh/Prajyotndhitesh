@@ -20,6 +20,7 @@ import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
+import com.smartbiz.sakhistore.modules.store.service.StoreDetailsService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,6 +43,9 @@ public class ProductService{
     
     @Autowired
     private StoreDetailsRepo storeRepository;
+
+    @Autowired
+    private StoreDetailsService storeService;
 
 
     public Product uploadProductWithImages(
@@ -243,6 +247,12 @@ public class ProductService{
 
         productRepository.delete(product);
     }
+
+    // =======================
+    // FEATURED / BEST SELLERS
+    // =======================
+    // Note: getFeaturedProducts method is already defined above (line 187)
+    // This duplicate has been removed to use the Top20 methods with ordering
 
     // ✅ Update only inventory quantity (stock) for a product
     public Product updateInventoryQuantity(Long productId, Integer inventoryQuantity) {

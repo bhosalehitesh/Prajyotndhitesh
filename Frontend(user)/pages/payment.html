@@ -20,7 +20,7 @@
       padding: 20px 0;
       min-height: calc(100vh - 200px);
     }
-    
+
     .payment-container {
       max-width: 1200px;
       margin: 0 auto;
@@ -131,7 +131,7 @@
       grid-template-columns: 1fr 400px;
       gap: 24px;
     }
-    
+
     @media (max-width: 968px) {
       .payment-layout {
         grid-template-columns: 1fr;
@@ -166,7 +166,7 @@
       gap: 12px;
       margin-bottom: 24px;
     }
-    
+
     .payment-method {
       padding: 16px;
       border: 2px solid rgba(0,0,0,0.1);
@@ -178,16 +178,16 @@
       align-items: center;
       gap: 12px;
     }
-    
+
     body.dark-mode .payment-method {
       border-color: rgba(255,255,255,0.1);
     }
-    
+
     .payment-method:hover {
       border-color: #ff6d2e;
       background: rgba(255, 109, 46, 0.05);
     }
-    
+
     .payment-method.active {
       border-color: #ff6d2e;
       background: rgba(255, 109, 46, 0.1);
@@ -205,7 +205,7 @@
       flex-direction: column;
       gap: 4px;
     }
-    
+
     .payment-method-name {
       font-weight: 600;
       color: var(--text-color);
@@ -264,7 +264,7 @@
     .summary-item-value {
       font-weight: 600;
     }
-    
+
     .summary-total {
       display: flex;
       justify-content: space-between;
@@ -342,13 +342,13 @@
       transition: all 0.3s;
       margin-top: 24px;
     }
-    
+
     .pay-button:hover {
       background: #e55a1f;
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(255, 109, 46, 0.3);
     }
-    
+
     .pay-button:disabled {
       background: #ccc;
       cursor: not-allowed;
@@ -406,7 +406,7 @@
           <div class="progress-step">
             <div class="step-circle completed">✓</div>
             <div class="step-label">Cart</div>
-          </div>
+        </div>
           <div class="progress-step">
             <div class="step-circle completed">✓</div>
             <div class="step-label">Checkout</div>
@@ -414,9 +414,9 @@
           <div class="progress-step">
             <div class="step-circle active">3</div>
             <div class="step-label active">Payment</div>
-          </div>
         </div>
       </div>
+    </div>
 
       <div class="payment-layout">
         <!-- Payment Section -->
@@ -442,12 +442,12 @@
                 <div class="payment-method-desc">Pay when you receive your order</div>
               </div>
             </label>
-          </div>
-          
+            </div>
+
           <button id="payButton" class="pay-button" onclick="processPayment()">
             Pay Now
           </button>
-        </div>
+            </div>
 
         <!-- Order Summary -->
         <div class="order-summary">
@@ -455,27 +455,27 @@
           
           <div id="orderItemsContainer" class="order-items-list">
             <!-- Order items will be loaded here -->
-          </div>
-          
+            </div>
+
           <div class="summary-item">
             <span class="summary-item-label">Subtotal</span>
             <span class="summary-item-value" id="subtotal">₹0</span>
-          </div>
-          
+            </div>
+
           <div class="summary-item">
             <span class="summary-item-label">Shipping</span>
             <span class="summary-item-value" id="shipping">Free</span>
           </div>
-          
+
           <div class="summary-total">
             <span>Total</span>
             <span id="totalAmount">₹0</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </main>
-
+    </main>
+  
   <script>
     // Auto-detect backend URL
     function getBackendUrl() {
@@ -556,7 +556,7 @@
             <div class="order-item-name">${item.name}</div>
             <div class="order-item-price">₹${item.price} × ${item.quantity}</div>
           </div>
-        </div>
+          </div>
       `).join('');
       
       // Update totals
@@ -614,7 +614,7 @@
         // Cash on Delivery
         try {
           // Create order in localStorage
-          const order = {
+      const order = {
             id: orderId,
             items: orderData.items,
             total: orderData.total,
@@ -625,18 +625,18 @@
           };
           
           // Save to orders
-          const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+      const orders = JSON.parse(localStorage.getItem('orders') || '[]');
           orders.push(order);
-          localStorage.setItem('orders', JSON.stringify(orders));
-          
-          // Clear cart
-          localStorage.removeItem('cart');
+      localStorage.setItem('orders', JSON.stringify(orders));
+
+      // Clear cart
+      localStorage.removeItem('cart');
           localStorage.removeItem('pendingOrder');
-          
+
           showSuccess('Order placed successfully! You will pay on delivery.');
-          
-          setTimeout(() => {
-            window.location.href = 'orders.html';
+
+      setTimeout(() => {
+        window.location.href = 'orders.html';
           }, 2000);
         } catch (error) {
           console.error('COD error:', error);
