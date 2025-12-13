@@ -18,6 +18,7 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import IconSymbol from '../../components/IconSymbol';
 import {
@@ -27,26 +28,57 @@ import {
   MediaType,
 } from 'react-native-image-picker';
 import {PermissionsAndroid, Platform} from 'react-native';
-import {uploadStoreLogo, getStoreBySellerId} from '../../utils/api';
+import {
+  uploadStoreLogo,
+  getStoreBySellerId,
+  getBannersBySellerId,
+  createBannerWithImage,
+  updateBanner,
+  updateBannerImage,
+  deleteBanner,
+  BannerResponse,
+} from '../../utils/api';
 import {storage} from '../../authentication/storage';
 
 interface StoreAppearanceScreenProps {
   navigation: any;
 }
 
+interface BannerData {
+  imageUri: string | null;
+  title: string;
+  buttonText: string;
+}
+
 const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
   navigation,
 }) => {
   const [uploadLogoModalOpen, setUploadLogoModalOpen] = useState(false);
+  const [editBannerModalOpen, setEditBannerModalOpen] = useState(false);
   const [logoUri, setLogoUri] = useState<string | null>(null);
+  const [bannerData, setBannerData] = useState<BannerData>({
+    imageUri: null,
+    title: 'Discover Our Hand-Knitted Creations',
+    buttonText: 'Shop Now',
+  });
+  const [banners, setBanners] = useState<BannerResponse[]>([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState<number>(0);
   const [hasChanges, setHasChanges] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [loadingBanners, setLoadingBanners] = useState(false);
   const [sellerId, setSellerId] = useState<number | null>(null);
 
-  // Load seller ID and existing logo on mount
+  // Load seller ID and existing logo/banner on mount
   useEffect(() => {
     loadSellerIdAndLogo();
   }, []);
+
+  // Load banners when sellerId is available
+  useEffect(() => {
+    if (sellerId) {
+      loadBanners();
+    }
+  }, [sellerId]);
 
   const loadSellerIdAndLogo = async () => {
     try {
@@ -64,6 +96,64 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
       }
     } catch (error) {
       console.error('Error loading seller ID:', error);
+    }
+  };
+
+  const loadBanners = async () => {
+    if (!sellerId) return;
+    
+    setLoadingBanners(true);
+    try {
+      console.log('Loading banners for sellerId:', sellerId);
+      const fetchedBanners = await getBannersBySellerId(sellerId, false);
+      console.log('Fetched banners:', fetchedBanners);
+      setBanners(fetchedBanners);
+      
+      // Load the first active banner, or first banner if none are active
+      if (fetchedBanners.length > 0) {
+        const activeBanner = fetchedBanners.find(b => b.isActive) || fetchedBanners[0];
+        console.log('Setting banner data:', {
+          bannerId: activeBanner.bannerId,
+          imageUrl: activeBanner.imageUrl,
+          title: activeBanner.title,
+          buttonText: activeBanner.buttonText,
+        });
+        
+        if (activeBanner.imageUrl) {
+          setBannerData({
+            bannerId: activeBanner.bannerId,
+            imageUri: null,
+            imageUrl: activeBanner.imageUrl,
+            title: activeBanner.title || 'Discover Our Hand-Knitted Creations',
+            buttonText: activeBanner.buttonText || 'Shop Now',
+            buttonLink: activeBanner.buttonLink,
+          });
+          setCurrentBannerIndex(fetchedBanners.indexOf(activeBanner));
+        } else {
+          console.warn('Banner found but imageUrl is missing:', activeBanner);
+          setBannerData({
+            bannerId: activeBanner.bannerId,
+            imageUri: null,
+            imageUrl: undefined,
+            title: activeBanner.title || 'Discover Our Hand-Knitted Creations',
+            buttonText: activeBanner.buttonText || 'Shop Now',
+            buttonLink: activeBanner.buttonLink,
+          });
+        }
+      } else {
+        console.log('No banners found for sellerId:', sellerId);
+        // Reset to default if no banners
+        setBannerData({
+          imageUri: null,
+          imageUrl: undefined,
+          title: 'Discover Our Hand-Knitted Creations',
+          buttonText: 'Shop Now',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading banners:', error);
+    } finally {
+      setLoadingBanners(false);
     }
   };
 
@@ -163,43 +253,197 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
     });
   };
 
-  const handleSave = async () => {
-    if (!hasChanges) {
+  const handleBannerImageSelect = async (uri: string | null) => {
+    if (uri) {
+      setBannerData(prev => ({...prev, imageUri: uri}));
+      setHasChanges(true);
+    }
+  };
+
+  const handleBannerTitleChange = (text: string) => {
+    setBannerData(prev => ({...prev, title: text}));
+    setHasChanges(true);
+  };
+
+  const handleBannerButtonTextChange = (text: string) => {
+    setBannerData(prev => ({...prev, buttonText: text}));
+    setHasChanges(true);
+  };
+
+  const handleUploadBannerFromGallery = async () => {
+    const options = {
+      mediaType: 'photo' as MediaType,
+      quality: 0.8,
+      maxWidth: 1600,
+      maxHeight: 461,
+    };
+
+    launchImageLibrary(options, (response: ImagePickerResponse) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.errorCode) {
+        Alert.alert('Error', 'Failed to pick image');
+      } else if (response.assets && response.assets[0]) {
+        const asset = response.assets[0];
+        if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+          Alert.alert('Error', 'Image size should be less than 5MB');
+          return;
+        }
+        handleBannerImageSelect(asset.uri || null);
+        setEditBannerModalOpen(false);
+      }
+    });
+  };
+
+  const handleCaptureBannerFromCamera = async () => {
+    const hasPermission = await requestCameraPermission();
+    if (!hasPermission) {
+      Alert.alert('Permission Denied', 'Camera permission is required');
       return;
     }
 
-    // If logo was selected but not uploaded yet, upload it
-    if (logoUri && sellerId && !logoUri.startsWith('http')) {
-      setUploading(true);
-      try {
+    const options = {
+      mediaType: 'photo' as MediaType,
+      quality: 0.8,
+      maxWidth: 1600,
+      maxHeight: 461,
+    };
+
+    launchCamera(options, (response: ImagePickerResponse) => {
+      if (response.didCancel) {
+        console.log('User cancelled camera');
+      } else if (response.errorCode) {
+        Alert.alert('Error', 'Failed to capture image');
+      } else if (response.assets && response.assets[0]) {
+        const asset = response.assets[0];
+        if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+          Alert.alert('Error', 'Image size should be less than 5MB');
+          return;
+        }
+        handleBannerImageSelect(asset.uri || null);
+        setEditBannerModalOpen(false);
+      }
+    });
+  };
+
+  const handleSave = async () => {
+    if (!hasChanges || !sellerId) {
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Save logo if changed
+      if (logoUri && !logoUri.startsWith('http')) {
         console.log('Uploading logo:', { sellerId, logoUri: logoUri.substring(0, 50) });
         const result = await uploadStoreLogo(sellerId, logoUri);
         console.log('Upload result:', result);
         
         if (result.success && result.logoUrl) {
           setLogoUri(result.logoUrl);
-          // Save logo URL to local storage for persistence
           await storage.setItem('storeLogoUrl', result.logoUrl);
-          Alert.alert('Success', 'Logo uploaded successfully');
-          setHasChanges(false);
         } else {
           const errorMsg = result.message || 'Failed to upload logo. Please try again.';
           console.error('Upload failed:', errorMsg);
           Alert.alert('Error', errorMsg);
+          setUploading(false);
+          return;
         }
-      } catch (error: any) {
-        console.error('Upload exception:', error);
-        Alert.alert('Error', error.message || 'Failed to upload logo. Please check your connection.');
-      } finally {
-        setUploading(false);
       }
-    } else if (logoUri && logoUri.startsWith('http')) {
-      // Logo already uploaded (has http URL), just save
+
+      // Save banner data to API
+      if (bannerData.bannerId) {
+        // Update existing banner
+        if (bannerData.imageUri && !bannerData.imageUri.startsWith('http')) {
+          // Upload new image
+          const imageResult = await updateBannerImage(bannerData.bannerId, bannerData.imageUri);
+          if (!imageResult.success) {
+            Alert.alert('Error', imageResult.message || 'Failed to update banner image');
+            setUploading(false);
+            return;
+          }
+          
+          // Update bannerData with the new imageUrl from server
+          if (imageResult.banner) {
+            setBannerData(prev => ({
+              ...prev,
+              imageUri: null,
+              imageUrl: imageResult.banner!.imageUrl,
+            }));
+          }
+        }
+
+        // Update banner text fields (and imageUrl if image was just uploaded)
+        const updateResult = await updateBanner(bannerData.bannerId, {
+          imageUrl: bannerData.imageUri && !bannerData.imageUri.startsWith('http') 
+            ? undefined // Image was uploaded separately, don't update here
+            : bannerData.imageUrl,
+          title: bannerData.title,
+          buttonText: bannerData.buttonText,
+          buttonLink: bannerData.buttonLink,
+        });
+
+        if (!updateResult.success) {
+          Alert.alert('Error', updateResult.message || 'Failed to update banner');
+          setUploading(false);
+          return;
+        }
+        
+        // Update bannerData with the updated banner's imageUrl if image was uploaded
+        if (bannerData.imageUri && !bannerData.imageUri.startsWith('http') && updateResult.banner) {
+          setBannerData(prev => ({
+            ...prev,
+            imageUri: null,
+            imageUrl: updateResult.banner!.imageUrl,
+          }));
+        } else if (updateResult.banner) {
+          // Update with latest banner data even if image wasn't changed
+          setBannerData(prev => ({
+            ...prev,
+            imageUrl: updateResult.banner!.imageUrl || prev.imageUrl,
+            title: updateResult.banner!.title || prev.title,
+            buttonText: updateResult.banner!.buttonText || prev.buttonText,
+            buttonLink: updateResult.banner!.buttonLink || prev.buttonLink,
+          }));
+        }
+      } else if (bannerData.imageUri) {
+        // Create new banner
+        const createResult = await createBannerWithImage({
+          sellerId,
+          imageUri: bannerData.imageUri,
+          title: bannerData.title,
+          buttonText: bannerData.buttonText,
+          buttonLink: bannerData.buttonLink,
+          displayOrder: 0,
+        });
+
+        if (!createResult.success) {
+          Alert.alert('Error', createResult.message || 'Failed to create banner');
+          setUploading(false);
+          return;
+        }
+        
+        // Update bannerData with the created banner's data
+        if (createResult.banner) {
+          setBannerData(prev => ({
+            ...prev,
+            bannerId: createResult.banner!.bannerId,
+            imageUri: null,
+            imageUrl: createResult.banner!.imageUrl,
+          }));
+        }
+      }
+
+      // Reload banners to get updated data
+      await loadBanners();
+
       Alert.alert('Success', 'Settings saved successfully');
       setHasChanges(false);
-    } else {
-      Alert.alert('Success', 'Settings saved successfully');
-      setHasChanges(false);
+    } catch (error: any) {
+      console.error('Save exception:', error);
+      Alert.alert('Error', error.message || 'Failed to save settings. Please check your connection.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -243,11 +487,19 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
             </View>
           </View>
 
-          <TouchableOpacity
-            onPress={handleViewDemoStore}
-            style={styles.demoLink}>
-            <Text style={styles.demoLinkText}>View Demo Store →</Text>
-          </TouchableOpacity>
+          <View style={styles.demoLinkContainer}>
+            <TouchableOpacity
+              onPress={handleViewDemoStore}
+              style={styles.demoLink}>
+              <Text style={styles.demoLinkText}>View Demo Store →</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setEditBannerModalOpen(true)}
+              style={styles.editBannerButton}>
+              <IconSymbol name="pencil" size={16} color="#e61580" />
+              <Text style={styles.editBannerText}>Edit Banner</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Website Preview */}
           <View style={styles.previewContainer}>
@@ -266,12 +518,38 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
                 </View>
               </View>
               <View style={styles.desktopContent}>
-                <Text style={styles.previewTitle}>
-                  Discover Our Hand-Knitted Creations
-                </Text>
-                <TouchableOpacity style={styles.shopNowButton}>
-                  <Text style={styles.shopNowText}>Shop Now</Text>
-                </TouchableOpacity>
+                {loadingBanners ? (
+                  <ActivityIndicator size="large" color="#e61580" />
+                ) : (bannerData.imageUri || bannerData.imageUrl) ? (
+                  <Image 
+                    source={{uri: bannerData.imageUri || bannerData.imageUrl || ''}} 
+                    style={styles.bannerImage}
+                    resizeMode="cover"
+                    onError={(error) => {
+                      console.error('Error loading banner image:', error);
+                      console.log('Image URI:', bannerData.imageUri);
+                      console.log('Image URL:', bannerData.imageUrl);
+                    }}
+                    onLoad={() => {
+                      console.log('Banner image loaded successfully:', bannerData.imageUri || bannerData.imageUrl);
+                    }}
+                  />
+                ) : (
+                  <View style={styles.bannerPlaceholder} />
+                )}
+                <View style={styles.bannerTextOverlay}>
+                  <TouchableOpacity
+                    style={styles.editTextButton}
+                    onPress={() => setEditBannerModalOpen(true)}>
+                    <IconSymbol name="pencil" size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <Text style={styles.previewTitle}>
+                    {bannerData.title}
+                  </Text>
+                  <TouchableOpacity style={styles.shopNowButton}>
+                    <Text style={styles.shopNowText}>{bannerData.buttonText}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -284,12 +562,31 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
                   </View>
                 </View>
                 <View style={styles.mobileContent}>
-                  <Text style={styles.mobilePreviewTitle}>
-                    Discover Our Hand-Knitted Creations
-                  </Text>
-                  <TouchableOpacity style={styles.mobileShopNowButton}>
-                    <Text style={styles.mobileShopNowText}>Shop Now</Text>
-                  </TouchableOpacity>
+                  {loadingBanners ? (
+                    <ActivityIndicator size="small" color="#e61580" />
+                  ) : (bannerData.imageUri || bannerData.imageUrl) ? (
+                    <Image 
+                      source={{uri: bannerData.imageUri || bannerData.imageUrl || ''}} 
+                      style={styles.mobileBannerImage}
+                      resizeMode="cover"
+                      onError={(error) => {
+                        console.error('Error loading mobile banner image:', error);
+                      }}
+                    />
+                  ) : null}
+                  <View style={styles.mobileBannerTextOverlay}>
+                    <TouchableOpacity
+                      style={styles.editTextButtonSmall}
+                      onPress={() => setEditBannerModalOpen(true)}>
+                      <IconSymbol name="pencil" size={12} color="#FFFFFF" />
+                    </TouchableOpacity>
+                    <Text style={styles.mobilePreviewTitle}>
+                      {bannerData.title}
+                    </Text>
+                    <TouchableOpacity style={styles.mobileShopNowButton}>
+                      <Text style={styles.mobileShopNowText}>{bannerData.buttonText}</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
@@ -401,6 +698,130 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
           </View>
         </View>
       </Modal>
+
+      {/* Edit Banner Modal */}
+      <Modal
+        transparent
+        visible={editBannerModalOpen}
+        animationType="slide"
+        onRequestClose={() => setEditBannerModalOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Banner</Text>
+              <TouchableOpacity onPress={() => setEditBannerModalOpen(false)}>
+                <IconSymbol name="close" size={24} color="#0F172A" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal Body */}
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalDescription}>
+                Customize your website banner. Edit the image (1600x461px), title text, button text, and link.
+              </Text>
+
+              {/* Banner Image Preview */}
+              {(bannerData.imageUri || bannerData.imageUrl) && (
+                <View style={styles.bannerPreviewContainer}>
+                  <Image 
+                    source={{uri: bannerData.imageUri || bannerData.imageUrl || ''}} 
+                    style={styles.bannerPreviewImage}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    style={styles.removeBannerButton}
+                    onPress={() => {
+                      handleBannerImageSelect(null);
+                      setBannerData(prev => ({...prev, imageUrl: undefined}));
+                    }}>
+                    <IconSymbol name="trash" size={16} color="#FFFFFF" />
+                    <Text style={styles.removeBannerText}>Remove Image</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Banner Image Upload */}
+              <Text style={styles.modalSectionTitle}>Banner Image</Text>
+              <Text style={styles.modalInstructions}>
+                Required size: 1600x461px (width x height)
+              </Text>
+              <Text style={styles.modalInstructions}>
+                Maximum file size: 5MB
+              </Text>
+              <Text style={[styles.modalInstructions, {fontStyle: 'italic', color: '#64748B'}]}>
+                For best results, use an image with this exact dimension
+              </Text>
+
+              {!bannerData.imageUri && (
+                <>
+                  <TouchableOpacity
+                    style={styles.modalUploadButton}
+                    onPress={handleUploadBannerFromGallery}>
+                    <Text style={styles.modalUploadButtonText}>
+                      Upload From Gallery
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.modalCameraButton}
+                    onPress={handleCaptureBannerFromCamera}>
+                    <Text style={styles.modalCameraButtonText}>
+                      Capture Using Camera
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* Banner Title */}
+              <Text style={styles.modalSectionTitle}>Banner Title</Text>
+              <Text style={styles.modalInstructions}>
+                This text will appear on your website banner
+              </Text>
+              <TextInput
+                style={styles.modalTextInput}
+                value={bannerData.title}
+                onChangeText={handleBannerTitleChange}
+                placeholder="Enter banner title (e.g., Discover Our Hand-Knitted Creations)"
+                placeholderTextColor="#94A3B8"
+                multiline
+                maxLength={100}
+              />
+
+              {/* Button Text */}
+              <Text style={styles.modalSectionTitle}>Button Text</Text>
+              <Text style={styles.modalInstructions}>
+                Text displayed on the call-to-action button
+              </Text>
+              <TextInput
+                style={styles.modalTextInput}
+                value={bannerData.buttonText}
+                onChangeText={handleBannerButtonTextChange}
+                placeholder="Enter button text (e.g., Shop Now)"
+                placeholderTextColor="#94A3B8"
+                maxLength={30}
+              />
+
+              {/* Button Link (Optional) */}
+              <Text style={styles.modalSectionTitle}>Button Link (Optional)</Text>
+              <Text style={styles.modalInstructions}>
+                URL where the button will navigate (e.g., /products, /collections)
+              </Text>
+              <TextInput
+                style={styles.modalTextInput}
+                value={bannerData.buttonLink || ''}
+                onChangeText={(text) => {
+                  setBannerData(prev => ({...prev, buttonLink: text}));
+                  setHasChanges(true);
+                }}
+                placeholder="Enter link URL (e.g., /products or /collections)"
+                placeholderTextColor="#94A3B8"
+                maxLength={500}
+              />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -490,13 +911,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#D97706',
   },
-  demoLink: {
+  demoLinkContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  demoLink: {
+    flex: 1,
   },
   demoLinkText: {
     fontSize: 14,
     color: '#e61580',
     fontWeight: '500',
+  },
+  editBannerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e61580',
+    backgroundColor: '#FFFFFF',
+  },
+  editBannerText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#e61580',
   },
   previewContainer: {
     position: 'relative',
@@ -542,18 +985,70 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   desktopContent: {
-    padding: 40,
+    padding: 0,
     alignItems: 'center',
+    aspectRatio: 1600 / 461, // Maintain 1600x461 aspect ratio for banner
     minHeight: 200,
     justifyContent: 'center',
     backgroundColor: '#F9FAFB',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  bannerPlaceholder: {
+    width: '100%',
+    aspectRatio: 1600 / 461, // Maintain 1600x461 aspect ratio
+    backgroundColor: '#e61580',
+    minHeight: 200,
+  },
+  bannerTextOverlay: {
+    position: 'relative',
+    zIndex: 1,
+    padding: 40,
+    alignItems: 'center',
+    width: '100%',
+  },
+  editTextButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  editTextButtonSmall: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 16,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
   previewTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginBottom: 16,
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: {width: 0, height: 2},
+    textShadowRadius: 4,
   },
   shopNowButton: {
     backgroundColor: '#e61580',
@@ -599,17 +1094,38 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   mobileContent: {
-    padding: 16,
+    padding: 0,
     alignItems: 'center',
     minHeight: 150,
     justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  mobileBannerImage: {
+    width: '100%',
+    height: 150,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  mobileBannerTextOverlay: {
+    position: 'relative',
+    zIndex: 1,
+    padding: 16,
+    alignItems: 'center',
+    width: '100%',
   },
   mobilePreviewTitle: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: {width: 0, height: 1},
+    textShadowRadius: 2,
   },
   mobileShopNowButton: {
     backgroundColor: '#e61580',
@@ -768,6 +1284,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#e61580',
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  modalTextInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0F172A',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
+    minHeight: 44,
+  },
+  bannerPreviewContainer: {
+    marginBottom: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  bannerPreviewImage: {
+    width: '100%',
+    height: 150,
+    backgroundColor: '#F1F5F9',
+  },
+  removeBannerButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  removeBannerText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FFFFFF',
   },
 });
 

@@ -36,4 +36,22 @@ public class CloudinaryHelper {
             e.printStackTrace();
             return null;
         }
-    }}
+    }
+
+    public String saveImage(MultipartFile image, String folder) {
+        String url = "cloudinary://" + key + ":" + secret + "@" + name;
+
+        Cloudinary cloudinary = new Cloudinary(url);
+
+        try {
+            byte[] picture = new byte[image.getInputStream().available()];
+            image.getInputStream().read(picture);
+
+            return (String) cloudinary.uploader().upload(picture, ObjectUtils.asMap("folder", folder)).get("url");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+}

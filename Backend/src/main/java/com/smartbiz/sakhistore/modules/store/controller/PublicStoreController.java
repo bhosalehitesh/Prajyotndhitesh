@@ -13,6 +13,8 @@ import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.service.ProductService;
 import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.category.service.CategoryService;
+import com.smartbiz.sakhistore.modules.store.model.Banner;
+import com.smartbiz.sakhistore.modules.store.service.BannerService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -29,6 +31,9 @@ public class PublicStoreController {
     
     @Autowired
     private CategoryService categoryService;
+    
+    @Autowired
+    private BannerService bannerService;
 
     /**
      * Get store details by slug (public endpoint)
@@ -146,6 +151,61 @@ public class PublicStoreController {
         } catch (Exception e) {
             // Log error and return empty list instead of error
             System.err.println("Error fetching categories for store slug: " + slug);
+            e.printStackTrace();
+            return ResponseEntity.ok(new java.util.ArrayList<>());
+        }
+    }
+
+    /**
+     * Get banners for a store by slug (public endpoint)
+     * Example: GET /api/public/store/my-store/banners
+     */
+    @GetMapping("/{slug}/banners")
+    public ResponseEntity<?> getStoreBanners(
+            @PathVariable String slug,
+            @RequestParam(value = "activeOnly", defaultValue = "true") Boolean activeOnly) {
+        try {
+            System.out.println("=== Banner API called for slug: " + slug + " ===");
+            
+            // Find store by slug
+            StoreDetails store = storeService.findBySlug(slug);
+            
+            if (store == null) {
+                System.out.println("Store not found for slug: " + slug);
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            System.out.println("Store found: " + store.getStoreName() + ", StoreId: " + store.getStoreId());
+            
+            // Check if store has a seller
+            if (store.getSeller() == null) {
+                System.out.println("Store has no seller");
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            if (store.getSeller().getSellerId() == null) {
+                System.out.println("Store seller has no sellerId");
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            // Get seller ID from store
+            Long sellerId = store.getSeller().getSellerId();
+            System.out.println("SellerId: " + sellerId);
+            
+            // Get banners for seller
+            List<Banner> banners = activeOnly 
+                ? bannerService.getActiveBannersBySellerId(sellerId)
+                : bannerService.getBannersBySellerId(sellerId);
+            
+            System.out.println("Found " + banners.size() + " banners for sellerId: " + sellerId);
+            return ResponseEntity.ok(banners);
+        } catch (Exception e) {
+            if (e instanceof NoSuchElementException) {
+                System.out.println("NoSuchElementException for slug: " + slug);
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            // Log error and return empty list instead of error
+            System.err.println("Error fetching banners for store slug: " + slug);
             e.printStackTrace();
             return ResponseEntity.ok(new java.util.ArrayList<>());
         }

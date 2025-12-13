@@ -942,6 +942,9 @@
         if (descEl) descEl.textContent = desc;
         if (linkEl && link) { linkEl.href = link; linkEl.textContent = link.replace(/^https?:\/\//,''); linkEl.style.display = 'inline-block'; }
         if (logoEl && logo) { logoEl.src = logo; logoEl.alt = storeName; }
+        
+        // Store store data globally for banner loading
+        window.currentStore = store;
       } else {
         if (nameEl) nameEl.textContent = 'Store';
         if (descEl) descEl.textContent = '';
@@ -1775,6 +1778,406 @@
 (function() {
   'use strict';
 
+  let bannerData = []; // Store fetched banner data
+
+  // Helper function to get store slug (similar to load-components.js)
+  function getCurrentStoreSlug() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const store = params.get('store');
+      if (store && store.trim()) return store.trim();
+      // Fallback to sessionStorage if query param missing
+      try {
+        const fromSession = sessionStorage.getItem('currentStoreSlug');
+        if (fromSession && fromSession.trim()) return fromSession.trim();
+      } catch (e) {}
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Load banners from API
+  async function loadBannersFromAPI() {
+    try {
+      console.log('=== Starting banner load ===');
+      
+      // Get store slug from URL params or window variable
+      const params = new URLSearchParams(window.location.search);
+      // Try 'store' parameter first (used by load-components.js), then 'slug', then window variable
+      const slug = params.get('store') || params.get('slug') || window.currentStoreSlug || getCurrentStoreSlug();
+      const sellerId = params.get('sellerId');
+      
+      console.log('Store slug:', slug);
+      console.log('SellerId from URL:', sellerId);
+      console.log('window.currentStoreSlug:', window.currentStoreSlug);
+      console.log('URL params:', window.location.search);
+      
+      // Wait for API to be available (in case api.js loads after app.js)
+      let retries = 0;
+      while (!window.API && retries < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+      }
+      
+      if (!window.API) {
+        console.error('window.API is not available after waiting');
+        return;
+      }
+      
+      // Try to get banners by store slug first (preferred method - doesn't need sellerId)
+      if (slug && window.API.getBannersByStoreSlug) {
+        try {
+          console.log('Attempting to fetch banners by store slug:', slug);
+          bannerData = await window.API.getBannersByStoreSlug(slug, true);
+          console.log('Banners fetched by slug:', bannerData);
+          console.log('Banner count:', bannerData.length);
+          
+          if (bannerData && bannerData.length > 0) {
+            console.log('Populating carousel with', bannerData.length, 'banners');
+            populateBannerCarousel(bannerData);
+            return; // Successfully loaded, exit early
+          } else {
+            console.log('No active banners found for store slug:', slug);
+          }
+        } catch (e) {
+          console.warn('Failed to get banners by store slug:', e);
+          console.error('Error details:', e.message, e.stack);
+        }
+      } else {
+        console.log('Cannot use getBannersByStoreSlug - slug:', slug, 'API available:', !!window.API, 'function available:', !!(window.API && window.API.getBannersByStoreSlug));
+      }
+      
+      // Fallback: Try to get sellerId and fetch by sellerId
+      let finalSellerId = sellerId;
+      
+      // Try to get from window.currentStore if available
+      if (!finalSellerId && window.currentStore) {
+        finalSellerId = window.currentStore.sellerId || window.currentStore.seller?.sellerId;
+        console.log('Got sellerId from window.currentStore:', finalSellerId);
+      }
+
+      // If we have sellerId, fetch banners
+      if (finalSellerId && window.API && window.API.getBannersBySellerId) {
+        try {
+          console.log('Fetching banners for sellerId:', finalSellerId);
+          bannerData = await window.API.getBannersBySellerId(finalSellerId, true);
+          console.log('Banners fetched by sellerId:', bannerData);
+          console.log('Banner count:', bannerData.length);
+          
+          if (bannerData && bannerData.length > 0) {
+            console.log('Populating carousel with', bannerData.length, 'banners');
+            populateBannerCarousel(bannerData);
+          } else {
+            console.log('No active banners found for sellerId:', finalSellerId);
+          }
+        } catch (e) {
+          console.error('Error fetching banners by sellerId:', e);
+        }
+      } else {
+        console.log('Cannot fetch by sellerId - sellerId:', finalSellerId, 'API available:', !!window.API, 'function available:', !!(window.API && window.API.getBannersBySellerId));
+      }
+      
+      console.log('=== Banner load complete ===');
+    } catch (error) {
+      console.error('Error loading banners from API:', error);
+      console.error('Error stack:', error.stack);
+    }
+  }
+
+  // Populate banner carousel with API data
+  function populateBannerCarousel(banners) {
+    console.log('populateBannerCarousel called with', banners.length, 'banners');
+    console.log('Banner data:', banners);
+    
+    if (!banners || banners.length === 0) {
+      console.warn('No banners to populate');
+      return;
+    }
+    
+    const bannerTrack = document.getElementById('bannerCarouselTrack');
+    const bannerIndicators = document.getElementById('bannerIndicators');
+    
+    if (!bannerTrack) {
+      console.error('Banner carousel track element not found (bannerCarouselTrack)');
+      return;
+    }
+    
+    if (!bannerIndicators) {
+      console.error('Banner indicators element not found (bannerIndicators)');
+      return;
+    }
+
+    console.log('Found banner elements, clearing existing content');
+    // Clear existing slides
+    bannerTrack.innerHTML = '';
+    bannerIndicators.innerHTML = '';
+
+    // Store banners globally for edit/delete
+    window.bannerData = banners;
+
+    // Create slides from API data
+    banners.forEach((banner, index) => {
+      // Create slide
+      const slide = document.createElement('div');
+      slide.className = `banner-slide ${index === 0 ? 'active' : ''}`;
+      slide.setAttribute('data-banner-id', banner.bannerId || banner.id);
+      
+      // Create image container
+      const imageContainer = document.createElement('div');
+      imageContainer.style.cssText = 'position: relative; width: 100%; height: 100%;';
+      
+      // Create image
+      const img = document.createElement('img');
+      img.src = banner.imageUrl || '';
+      img.alt = banner.title || `Banner ${index + 1}`;
+      img.className = 'banner-image';
+      img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
+      img.onerror = function() {
+        console.error('Failed to load banner image:', banner.imageUrl);
+        this.style.display = 'none';
+      };
+      
+      // Create admin controls (edit/delete buttons) - only show if user is logged in
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      if (token) {
+        const adminControls = document.createElement('div');
+        adminControls.className = 'banner-admin-controls';
+        adminControls.style.cssText = 'position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 8px;';
+        
+        // Edit button
+        const editBtn = document.createElement('button');
+        editBtn.innerHTML = '✏️';
+        editBtn.title = 'Edit Banner';
+        editBtn.style.cssText = 'background: rgba(0,0,0,0.6); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 16px;';
+        editBtn.onclick = (e) => {
+          e.stopPropagation();
+          openBannerEditModal(banner);
+        };
+        adminControls.appendChild(editBtn);
+        
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '🗑️';
+        deleteBtn.title = 'Delete Banner';
+        deleteBtn.style.cssText = 'background: rgba(220,20,60,0.8); color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 16px;';
+        deleteBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteBannerConfirm(banner);
+        };
+        adminControls.appendChild(deleteBtn);
+        
+        imageContainer.appendChild(adminControls);
+      }
+      
+      imageContainer.appendChild(img);
+      
+      // Create banner content overlay if title exists (button removed)
+      if (banner.title) {
+        const overlay = document.createElement('div');
+        overlay.className = 'banner-content-overlay';
+        overlay.style.cssText = 'position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 2;';
+        
+        const title = document.createElement('h2');
+        title.textContent = banner.title;
+        title.style.cssText = 'color: white; font-size: 2rem; font-weight: bold; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);';
+        overlay.appendChild(title);
+        
+        imageContainer.appendChild(overlay);
+      }
+      
+      slide.style.position = 'relative';
+      slide.appendChild(imageContainer);
+      bannerTrack.appendChild(slide);
+
+      // Create indicator
+      const indicator = document.createElement('span');
+      indicator.className = `banner-indicator ${index === 0 ? 'active' : ''}`;
+      indicator.setAttribute('data-slide', index);
+      indicator.addEventListener('click', () => {
+        if (window.goToBannerSlide) {
+          window.goToBannerSlide(index);
+        }
+      });
+      bannerIndicators.appendChild(indicator);
+    });
+
+    console.log('All banner slides created, reinitializing carousel');
+    // Reinitialize carousel with new slides - give DOM time to update
+    setTimeout(() => {
+      const slides = document.querySelectorAll('.banner-slide');
+      if (slides.length > 0) {
+        console.log('Calling initBannerCarousel with', slides.length, 'slides');
+        initBannerCarousel();
+      } else {
+        console.warn('Banner slides still not found after population, retrying...');
+        setTimeout(() => {
+          initBannerCarousel();
+        }, 300);
+      }
+    }, 200);
+  }
+
+  // Open banner edit modal
+  function openBannerEditModal(banner) {
+    // Create or get modal
+    let modal = document.getElementById('bannerEditModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'bannerEditModal';
+      modal.className = 'modal';
+      modal.style.cssText = 'display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);';
+      
+      const modalContent = document.createElement('div');
+      modalContent.className = 'modal-content';
+      modalContent.style.cssText = 'background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 8px;';
+      
+      modalContent.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="margin: 0;">Edit Banner</h2>
+          <span class="close" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+        </div>
+        <form id="bannerEditForm">
+          <input type="hidden" id="editBannerId" />
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Banner Title:</label>
+            <input type="text" id="editBannerTitle" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Button Text:</label>
+            <input type="text" id="editBannerButtonText" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+          </div>
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Button Link:</label>
+            <input type="text" id="editBannerButtonLink" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" placeholder="https://example.com or /page" />
+          </div>
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Change Image (optional):</label>
+            <input type="file" id="editBannerImage" accept="image/*" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box;" />
+            <small style="color: #666;">Recommended size: 1600x461px</small>
+          </div>
+          <div style="margin-bottom: 15px;">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="editBannerIsActive" />
+              <span>Active (visible on website)</span>
+            </label>
+          </div>
+          <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button type="button" id="cancelEditBanner" style="padding: 10px 20px; background: #ccc; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+            <button type="submit" style="padding: 10px 20px; background: #e61580; color: white; border: none; border-radius: 4px; cursor: pointer;">Save Changes</button>
+          </div>
+        </form>
+      `;
+      
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+      
+      // Close modal handlers
+      const closeBtn = modalContent.querySelector('.close');
+      const cancelBtn = modalContent.querySelector('#cancelEditBanner');
+      const closeModal = () => {
+        modal.style.display = 'none';
+      };
+      
+      closeBtn.onclick = closeModal;
+      cancelBtn.onclick = closeModal;
+      modal.onclick = (e) => {
+        if (e.target === modal) closeModal();
+      };
+      
+      // Form submit handler
+      document.getElementById('bannerEditForm').onsubmit = async (e) => {
+        e.preventDefault();
+        await saveBannerEdit();
+      };
+    }
+    
+    // Populate form with banner data
+    document.getElementById('editBannerId').value = banner.bannerId || banner.id;
+    document.getElementById('editBannerTitle').value = banner.title || '';
+    document.getElementById('editBannerButtonText').value = banner.buttonText || '';
+    document.getElementById('editBannerButtonLink').value = banner.buttonLink || '';
+    document.getElementById('editBannerIsActive').checked = banner.isActive !== false;
+    document.getElementById('editBannerImage').value = '';
+    
+    modal.style.display = 'block';
+  }
+
+  // Save banner edit
+  async function saveBannerEdit() {
+    try {
+      const bannerId = document.getElementById('editBannerId').value;
+      const title = document.getElementById('editBannerTitle').value;
+      const buttonText = document.getElementById('editBannerButtonText').value;
+      const buttonLink = document.getElementById('editBannerButtonLink').value;
+      const isActive = document.getElementById('editBannerIsActive').checked;
+      const imageFile = document.getElementById('editBannerImage').files[0];
+      
+      // Update banner data
+      const bannerData = {
+        title: title,
+        buttonText: buttonText,
+        buttonLink: buttonLink,
+        isActive: isActive
+      };
+      
+      // If image is provided, update image first
+      if (imageFile) {
+        if (window.API && window.API.updateBannerImage) {
+          await window.API.updateBannerImage(bannerId, imageFile);
+        }
+      }
+      
+      // Update banner details
+      if (window.API && window.API.updateBanner) {
+        const result = await window.API.updateBanner(bannerId, bannerData);
+        console.log('Banner updated:', result);
+        
+        // Reload banners
+        await loadBannersFromAPI();
+        
+        // Close modal
+        document.getElementById('bannerEditModal').style.display = 'none';
+        
+        alert('Banner updated successfully!');
+      } else {
+        alert('API not available. Please refresh the page.');
+      }
+    } catch (error) {
+      console.error('Error saving banner edit:', error);
+      alert('Error updating banner: ' + (error.message || 'Unknown error'));
+    }
+  }
+
+  // Delete banner confirmation
+  function deleteBannerConfirm(banner) {
+    if (confirm(`Are you sure you want to delete this banner?\n\nTitle: ${banner.title || 'Untitled'}\n\nThis action cannot be undone.`)) {
+      handleBannerDelete(banner);
+    }
+  }
+
+  // Delete banner handler
+  async function handleBannerDelete(banner) {
+    try {
+      const bannerId = banner.bannerId || banner.id;
+      
+      if (window.API && window.API.deleteBanner) {
+        await window.API.deleteBanner(bannerId);
+        console.log('Banner deleted:', bannerId);
+        
+        // Reload banners
+        await loadBannersFromAPI();
+        
+        alert('Banner deleted successfully!');
+      } else {
+        alert('API not available. Please refresh the page.');
+      }
+    } catch (error) {
+      console.error('Error deleting banner:', error);
+      alert('Error deleting banner: ' + (error.message || 'Unknown error'));
+    }
+  }
+
   function initBannerCarousel() {
     let currentBannerSlide = 0;
     const bannerSlides = document.querySelectorAll('.banner-slide');
@@ -1784,8 +2187,8 @@
     let bannerAutoPlayInterval;
 
     if (bannerSlides.length === 0) {
-      console.log('Banner slides not found - retrying...');
-      setTimeout(initBannerCarousel, 100);
+      // Silently return - don't log anything, just wait for banners to be loaded
+      // This prevents console spam when initBannerCarousel is called before banners are ready
       return;
     }
 
@@ -1818,10 +2221,14 @@
     }
 
     function goToBannerSlide(index) {
+      if (index < 0 || index >= bannerSlides.length) return;
       currentBannerSlide = index;
       showBannerSlide(currentBannerSlide);
       resetBannerAutoPlay();
     }
+    
+    // Expose goToBannerSlide for external use (e.g., from populateBannerCarousel)
+    window.goToBannerSlide = goToBannerSlide;
 
     function startBannerAutoPlay() {
       bannerAutoPlayInterval = setInterval(nextBannerSlide, 5000); // Change slide every 5 seconds
@@ -1905,8 +2312,27 @@
 
   // Initialize banner carousel when DOM is ready
   function startBannerCarousel() {
-    setTimeout(function() {
-      initBannerCarousel();
+    console.log('startBannerCarousel called');
+    // Wait a bit for DOM to be fully ready
+    setTimeout(() => {
+      // Load banners from API only
+      loadBannersFromAPI().then(() => {
+        // If no banners loaded, show empty state
+        if (bannerData.length === 0) {
+          console.log('No banners found. Banner carousel will be empty.');
+          const bannerTrack = document.getElementById('bannerCarouselTrack');
+          if (bannerTrack && bannerTrack.children.length === 0) {
+            bannerTrack.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;">No banners available</div>';
+          }
+        }
+      }).catch((error) => {
+        // On error, show empty state
+        console.error('Error loading banners:', error);
+        const bannerTrack = document.getElementById('bannerCarouselTrack');
+        if (bannerTrack && bannerTrack.children.length === 0) {
+          bannerTrack.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;">Unable to load banners</div>';
+        }
+      });
     }, 100);
   }
 

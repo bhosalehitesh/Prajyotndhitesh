@@ -28,9 +28,13 @@
       ? endpoint 
       : `${API_BASE}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
     
+    // Don't set Content-Type for FormData (browser will set it with boundary)
+    const isFormData = options.body instanceof FormData;
+    const defaultHeaders = isFormData ? {} : { 'Content-Type': 'application/json' };
+    
     const defaultOptions = {
       headers: {
-        'Content-Type': 'application/json',
+        ...defaultHeaders,
         ...options.headers
       },
       ...options
@@ -420,6 +424,116 @@
     });
   }
 
+  /**
+   * Get banners for a seller
+   * @param {Number} sellerId - Seller ID
+   * @param {Boolean} activeOnly - Only return active banners (default: true)
+   */
+  async function getBannersBySellerId(sellerId, activeOnly = true) {
+    try {
+      const result = await apiCall(`/api/banners/seller?sellerId=${sellerId}&activeOnly=${activeOnly}`);
+      console.log('API call result:', result);
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error('Error in getBannersBySellerId:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get banners for a store by slug (public endpoint)
+   * @param {String} slug - Store slug
+   * @param {Boolean} activeOnly - Only return active banners (default: true)
+   */
+  async function getBannersByStoreSlug(slug, activeOnly = true) {
+    try {
+      const result = await apiCall(`/api/public/store/${slug}/banners?activeOnly=${activeOnly}`);
+      console.log('Banners API call result:', result);
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error('Error in getBannersByStoreSlug:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update a banner
+   * @param {Number} bannerId - Banner ID
+   * @param {Object} bannerData - Banner data (title, buttonText, buttonLink, imageUrl, displayOrder, isActive)
+   */
+  async function updateBanner(bannerId, bannerData) {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const result = await apiCall(`/api/banners/${bannerId}`, {
+        method: 'PUT',
+        headers: headers,
+        body: JSON.stringify(bannerData)
+      });
+      return result;
+    } catch (error) {
+      console.error('Error in updateBanner:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a banner
+   * @param {Number} bannerId - Banner ID
+   */
+  async function deleteBanner(bannerId) {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const result = await apiCall(`/api/banners/${bannerId}`, {
+        method: 'DELETE',
+        headers: headers
+      });
+      return result;
+    } catch (error) {
+      console.error('Error in deleteBanner:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update banner image
+   * @param {Number} bannerId - Banner ID
+   * @param {File} imageFile - Image file to upload
+   */
+  async function updateBannerImage(bannerId, imageFile) {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const result = await apiCall(`/api/banners/${bannerId}/upload-image`, {
+        method: 'POST',
+        headers: headers,
+        body: formData
+      });
+      return result;
+    } catch (error) {
+      console.error('Error in updateBannerImage:', error);
+      throw error;
+    }
+  }
+
   // ====== EXPORT API FUNCTIONS ======
   
   window.API = {
@@ -430,6 +544,13 @@
     getStoreProductsBySlug,
     getStoreFeaturedProductsBySlug,
     getAllStores,
+    
+    // Banner APIs
+    getBannersBySellerId,
+    getBannersByStoreSlug,
+    updateBanner,
+    deleteBanner,
+    updateBannerImage,
     
     // Product APIs
     getAllProducts,
