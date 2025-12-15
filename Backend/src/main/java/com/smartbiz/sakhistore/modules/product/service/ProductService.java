@@ -66,7 +66,8 @@ public class ProductService{
             List<MultipartFile> productImages,
             MultipartFile socialSharingImage,
             Long sellerId,
-            Long categoryId
+            Long categoryId,
+            Boolean isBestseller
     ) {
         try {
             List<String> productImageUrls = new ArrayList<>();
@@ -105,6 +106,7 @@ public class ProductService{
             product.setSeoMetaDescription(seoMetaDescription);
             product.setProductImages(productImageUrls);
             product.setSocialSharingImage(socialImageUrl);
+            product.setIsBestseller(isBestseller != null ? isBestseller : false);
 
             // Link to seller if provided
             if (sellerId != null) {
@@ -189,6 +191,70 @@ public class ProductService{
             return productRepository.findTop20BySeller_SellerIdAndIsBestsellerTrueAndIsActiveTrueOrderByCreatedAtDesc(sellerId);
         }
         return productRepository.findTop20ByIsBestsellerTrueAndIsActiveTrueOrderByCreatedAtDesc();
+    }
+
+    /**
+     * PERMANENT SOLUTION: Automatically mark active products as bestseller for a seller
+     * This ensures featured products are always available for any store
+     * 
+     * @param sellerId - Seller ID to mark products for
+     * @param limit - Maximum number of products to mark (default: 10)
+     * @return Number of products marked as bestseller
+     */
+    public int markFeaturedProductsForSeller(Long sellerId, int limit) {
+        if (sellerId == null) {
+            throw new RuntimeException("Seller ID is required");
+        }
+        
+        // Get active products that are not yet marked as bestseller
+        List<Product> activeProducts = productRepository.findBySeller_SellerIdAndIsActive(sellerId, true);
+        
+        // Filter products that are not bestseller and sort by creation date
+        List<Product> productsToMark = activeProducts.stream()
+            .filter(p -> p.getIsBestseller() == null || !p.getIsBestseller())
+            .sorted((p1, p2) -> {
+                if (p1.getCreatedAt() == null && p2.getCreatedAt() == null) return 0;
+                if (p1.getCreatedAt() == null) return 1;
+                if (p2.getCreatedAt() == null) return -1;
+                return p2.getCreatedAt().compareTo(p1.getCreatedAt()); // Newest first
+            })
+            .limit(limit)
+            .toList();
+        
+        // Mark products as bestseller
+        int count = 0;
+        for (Product product : productsToMark) {
+            product.setIsBestseller(true);
+            productRepository.save(product);
+            count++;
+        }
+        
+        System.out.println("✅ [markFeaturedProductsForSeller] Marked " + count + " products as bestseller for seller_id " + sellerId);
+        return count;
+    }
+
+    /**
+     * PERMANENT SOLUTION: Mark featured products for all sellers
+     * Useful for bulk operations or initial setup
+     * 
+     * @param limitPerSeller - Maximum number of products to mark per seller (default: 10)
+     * @return Total number of products marked
+     */
+    public int markFeaturedProductsForAllSellers(int limitPerSeller) {
+        // Get all sellers that have products
+        List<SellerDetails> sellers = sellerDetailsRepo.findAll();
+        
+        int totalMarked = 0;
+        for (SellerDetails seller : sellers) {
+            Long sellerId = seller.getSellerId();
+            if (sellerId != null) {
+                int marked = markFeaturedProductsForSeller(sellerId, limitPerSeller);
+                totalMarked += marked;
+            }
+        }
+        
+        System.out.println("✅ [markFeaturedProductsForAllSellers] Total products marked: " + totalMarked);
+        return totalMarked;
     }
 
 

@@ -36,10 +36,25 @@ const fetchWithTimeout = (url, options = {}, timeout = API_CONFIG.TIMEOUT) => {
  */
 const handleResponse = async (response) => {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      message: `Server error: ${response.status} ${response.statusText}`,
-    }));
-    throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+    try {
+      const error = await response.json();
+      errorMessage = error.message || error.error || errorMessage;
+    } catch (e) {
+      // If response is not JSON, try to get text
+      try {
+        const text = await response.text();
+        if (text) errorMessage = text.substring(0, 200);
+      } catch (e2) {
+        // Keep default error message
+      }
+    }
+    
+    // Add status code to error for better debugging
+    const error = new Error(errorMessage);
+    error.status = response.status;
+    error.statusText = response.statusText;
+    throw error;
   }
   return response.json();
 };
@@ -120,5 +135,348 @@ export const getCategories = async () => {
  */
 export const searchProducts = async (query) => {
   return apiRequest(`/products/search?q=${encodeURIComponent(query)}`);
+};
+
+// ==================== STORE-RELATED FUNCTIONS (SELLER-WISE) ====================
+
+/**
+ * Get store details by slug
+ * @param {string} storeSlug - Store slug (e.g., 'brownn_boys')
+ * @returns {Promise<Object>} Store details with store_id, seller_id, etc.
+ */
+export const getStoreBySlug = async (storeSlug) => {
+  if (!storeSlug || storeSlug.trim() === '') {
+    throw new Error('Store slug is required');
+  }
+  
+  // Normalize slug (backend does this too, but let's be consistent)
+  const normalizedSlug = storeSlug.trim();
+  console.log('📡 [API] Fetching store for slug:', normalizedSlug);
+  
+  try {
+    const store = await apiRequest(`/public/store/${encodeURIComponent(normalizedSlug)}`);
+    console.log('✅ [API] Store fetched successfully:', store?.storeName || store?.name);
+    return store;
+  } catch (error) {
+    console.error('❌ [API] Error fetching store:', {
+      slug: normalizedSlug,
+      error: error.message,
+      status: error.status
+    });
+    throw error;
+  }
+};
+
+/**
+ * Get products for a specific store by slug
+ * @param {string} storeSlug - Store slug
+ * @param {string} category - Optional category filter
+ * @returns {Promise<Array>} Array of products
+ */
+export const getStoreProducts = async (storeSlug, category = null) => {
+  let endpoint = `/public/store/${encodeURIComponent(storeSlug)}/products`;
+  if (category) {
+    endpoint += `?category=${encodeURIComponent(category)}`;
+  }
+  return apiRequest(endpoint);
+};
+
+/**
+ * Get featured (bestseller) products for a store by slug
+ * @param {string} storeSlug - Store slug
+ * @returns {Promise<Array>} Array of featured products
+ */
+export const getStoreFeatured = async (storeSlug) => {
+  if (!storeSlug || storeSlug.trim() === '') {
+    throw new Error('Store slug is required');
+  }
+  const normalizedSlug = storeSlug.trim();
+  const endpoint = `/public/store/${encodeURIComponent(normalizedSlug)}/featured`;
+  const API_BASE = getBackendUrl();
+  const fullUrl = `${API_BASE}${endpoint}`;
+  
+  console.log('📡 [API] Fetching featured products:', {
+    slug: normalizedSlug,
+    endpoint: endpoint,
+    fullUrl: fullUrl
+  });
+  
+  try {
+    const products = await apiRequest(endpoint);
+    console.log('✅ [API] Featured products fetched:', {
+      isArray: Array.isArray(products),
+      count: Array.isArray(products) ? products.length : 0,
+      sample: Array.isArray(products) && products.length > 0 ? products[0] : null
+    });
+    return products;
+  } catch (error) {
+    console.error('❌ [API] Error fetching featured products:', {
+      slug: normalizedSlug,
+      error: error.message,
+      status: error.status,
+      url: fullUrl
+    });
+    throw error;
+  }
+};
+
+/**
+ * Get categories for a specific store by slug
+ * @param {string} storeSlug - Store slug
+ * @returns {Promise<Array>} Array of categories
+ */
+export const getStoreCategories = async (storeSlug) => {
+  if (!storeSlug || storeSlug.trim() === '') {
+    throw new Error('Store slug is required');
+  }
+  const normalizedSlug = storeSlug.trim();
+  const endpoint = `/public/store/${encodeURIComponent(normalizedSlug)}/categories`;
+  const API_BASE = getBackendUrl();
+  const fullUrl = `${API_BASE}${endpoint}`;
+  
+  console.log('📡 [API] Fetching store categories:', {
+    slug: normalizedSlug,
+    endpoint: endpoint,
+    fullUrl: fullUrl
+  });
+  
+  try {
+    const categories = await apiRequest(endpoint);
+    console.log('✅ [API] Store categories fetched:', {
+      isArray: Array.isArray(categories),
+      count: Array.isArray(categories) ? categories.length : 0,
+      sample: Array.isArray(categories) && categories.length > 0 ? categories[0] : null
+    });
+    return categories;
+  } catch (error) {
+    console.error('❌ [API] Error fetching store categories:', {
+      slug: normalizedSlug,
+      error: error.message,
+      status: error.status,
+      url: fullUrl
+    });
+    throw error;
+  }
+};
+
+// ==================== CART FUNCTIONS ====================
+
+/**
+ * Get user's cart from backend
+ * @param {number} userId - User ID
+ * @returns {Promise<Array>} Array of cart items
+ */
+export const getCart = async (userId) => {
+  return apiRequest(`/cart/${userId}`);
+};
+
+/**
+ * Add item to cart (backend)
+ * @param {object} cartItem - Cart item data { userId, productId, quantity, ... }
+ * @returns {Promise<Object>} Updated cart item
+ */
+export const addToCartAPI = async (cartItem) => {
+  return apiRequest('/cart/add', {
+    method: 'POST',
+    body: JSON.stringify(cartItem),
+  });
+};
+
+/**
+ * Update cart item (backend)
+ * @param {object} cartItem - Updated cart item data
+ * @returns {Promise<Object>} Updated cart item
+ */
+export const updateCartAPI = async (cartItem) => {
+  return apiRequest('/cart/update', {
+    method: 'PUT',
+    body: JSON.stringify(cartItem),
+  });
+};
+
+/**
+ * Remove item from cart (backend)
+ * @param {object} cartItem - Cart item to remove { userId, productId }
+ * @returns {Promise<void>}
+ */
+export const removeFromCartAPI = async (cartItem) => {
+  return apiRequest('/cart/remove', {
+    method: 'DELETE',
+    body: JSON.stringify(cartItem),
+  });
+};
+
+/**
+ * Clear user's cart (backend)
+ * @param {number} userId - User ID
+ * @returns {Promise<void>}
+ */
+export const clearCartAPI = async (userId) => {
+  return apiRequest(`/cart/clear/${userId}`, {
+    method: 'DELETE',
+  });
+};
+
+// ==================== WISHLIST FUNCTIONS ====================
+
+/**
+ * Get user's wishlist from backend
+ * @param {number} userId - User ID
+ * @returns {Promise<Array>} Array of wishlist items
+ */
+export const getWishlist = async (userId) => {
+  return apiRequest(`/wishlist/all/${userId}`);
+};
+
+/**
+ * Add product to wishlist (backend)
+ * @param {number} userId - User ID
+ * @param {number} productId - Product ID
+ * @returns {Promise<Object>} Wishlist item
+ */
+export const addToWishlistAPI = async (userId, productId) => {
+  return apiRequest(`/wishlist/add/${userId}/${productId}`, {
+    method: 'POST',
+  });
+};
+
+/**
+ * Remove product from wishlist (backend)
+ * @param {number} userId - User ID
+ * @param {number} productId - Product ID
+ * @returns {Promise<void>}
+ */
+export const removeFromWishlistAPI = async (userId, productId) => {
+  return apiRequest(`/wishlist/remove/${userId}/${productId}`, {
+    method: 'DELETE',
+  });
+};
+
+/**
+ * Move wishlist item to cart (backend)
+ * @param {number} userId - User ID
+ * @param {number} productId - Product ID
+ * @returns {Promise<Object>} Cart item
+ */
+export const moveWishlistToCartAPI = async (userId, productId) => {
+  return apiRequest(`/wishlist/move-to-cart/${userId}/${productId}`, {
+    method: 'POST',
+  });
+};
+
+// ==================== ORDER FUNCTIONS ====================
+
+/**
+ * Place an order (MUST include store_id and seller_id)
+ * @param {object} orderData - Order data { 
+ *   userId, 
+ *   storeId,      // REQUIRED: Store ID
+ *   sellerId,    // REQUIRED: Seller ID
+ *   items, 
+ *   totalAmount, 
+ *   shippingAddress, 
+ *   ... 
+ * }
+ * @returns {Promise<Object>} Created order
+ */
+export const placeOrder = async (orderData) => {
+  // Validate required fields
+  if (!orderData.storeId || !orderData.sellerId) {
+    throw new Error('storeId and sellerId are required for placing orders');
+  }
+  
+  return apiRequest('/orders/place', {
+    method: 'POST',
+    body: JSON.stringify(orderData),
+  });
+};
+
+/**
+ * Get order by ID
+ * @param {number} orderId - Order ID
+ * @returns {Promise<Object>} Order details
+ */
+export const getOrder = async (orderId) => {
+  return apiRequest(`/orders/${orderId}`);
+};
+
+/**
+ * Get user's orders
+ * @param {number} userId - User ID
+ * @returns {Promise<Array>} Array of orders
+ */
+export const getUserOrders = async (userId) => {
+  return apiRequest(`/orders/user/${userId}`);
+};
+
+/**
+ * Update order status
+ * @param {number} orderId - Order ID
+ * @param {string} status - New status
+ * @returns {Promise<Object>} Updated order
+ */
+export const updateOrderStatus = async (orderId, status) => {
+  return apiRequest(`/orders/update-status/${orderId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
+};
+
+// ==================== PAYMENT FUNCTIONS ====================
+
+/**
+ * Create payment
+ * @param {object} paymentData - Payment data
+ * @returns {Promise<Object>} Payment details
+ */
+export const createPayment = async (paymentData) => {
+  return apiRequest('/payment/create', {
+    method: 'POST',
+    body: JSON.stringify(paymentData),
+  });
+};
+
+/**
+ * Create Razorpay order
+ * @param {object} orderData - Order data for Razorpay { amount, currency, ... }
+ * @returns {Promise<Object>} Razorpay order details
+ */
+export const createRazorpayOrder = async (orderData) => {
+  return apiRequest('/payment/create-razorpay-order', {
+    method: 'POST',
+    body: JSON.stringify(orderData),
+  });
+};
+
+/**
+ * Capture payment
+ * @param {object} paymentData - Payment capture data { paymentId, ... }
+ * @returns {Promise<Object>} Payment confirmation
+ */
+export const capturePayment = async (paymentData) => {
+  return apiRequest('/payment/capture', {
+    method: 'POST',
+    body: JSON.stringify(paymentData),
+  });
+};
+
+// ==================== PINCODE FUNCTIONS ====================
+
+/**
+ * Validate pincode
+ * @param {string} pincode - Pincode to validate
+ * @returns {Promise<Object>} Pincode validation result
+ */
+export const validatePincode = async (pincode) => {
+  return apiRequest(`/pincode/validate?pincode=${encodeURIComponent(pincode)}`);
+};
+
+/**
+ * Get pincode details
+ * @param {string} pincode - Pincode
+ * @returns {Promise<Object>} Pincode details (state, district, city)
+ */
+export const getPincodeDetails = async (pincode) => {
+  return apiRequest(`/pincode/${encodeURIComponent(pincode)}`);
 };
 

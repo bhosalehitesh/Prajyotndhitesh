@@ -1,24 +1,105 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BANNERS, CATEGORIES, DEALS, FEATURES, ROUTES, STORAGE_KEYS } from '../constants';
+import { useStore } from '../contexts/StoreContext';
+import { getStoreFeatured } from '../utils/api';
+import { transformProducts } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/ui/Loading';
+import StoreError from '../components/StoreError';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { slug } = useParams(); // Get slug from route params
+  const { storeSlug, currentStore, loading: storeLoading } = useStore();
   const [currentBanner, setCurrentBanner] = useState(0);
   const [currentProductSlide, setCurrentProductSlide] = useState(0);
   const [flashSaleTime, setFlashSaleTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [loading, setLoading] = useState(false);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  
+  // Determine the actual store slug (from route params or context)
+  const actualSlug = slug || storeSlug || currentStore?.slug;
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('🏠 [HOME] Route params slug:', slug);
+    console.log('🏠 [HOME] Context storeSlug:', storeSlug);
+    console.log('🏠 [HOME] Current store slug:', currentStore?.slug);
+    console.log('🏠 [HOME] Actual slug being used:', actualSlug);
+  }, [slug, storeSlug, currentStore, actualSlug]);
 
-  const featuredProducts = [
-    { id: 1, name: "Men's Pure Cotton T-Shirt", price: 476, originalPrice: 1499, image: '/assets/products/p1.jpg', brand: 'V Store' },
-    { id: 2, name: "Men's Casual T-Shirt", price: 499, originalPrice: 1099, image: '/assets/products/p2.jpg', brand: 'V Store' },
-    { id: 3, name: "Men's Formal Shirt", price: 699, originalPrice: 1299, image: '/assets/products/p3.jpg', brand: 'V Store' },
-    { id: 4, name: "Men's Polo T-Shirt", price: 479, originalPrice: 999, image: '/assets/products/p4.jpg', brand: 'V Store' },
-    { id: 5, name: "Men's Cotton Shirt", price: 619, originalPrice: 1199, image: '/assets/products/p5.jpg', brand: 'V Store' },
-    { id: 6, name: "Men's Printed T-Shirt", price: 404, originalPrice: 899, image: '/assets/products/p6.jpg', brand: 'V Store' }
-  ];
+  // Fetch featured products for the store
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      // Wait for store to load if we have a slug but no store yet
+      if (!actualSlug) {
+        console.log('🏠 [HOME] No slug available, skipping product fetch');
+        setFeaturedProducts([]);
+        return;
+      }
+
+      // If store is still loading, wait a bit
+      if (storeLoading) {
+        console.log('🏠 [HOME] Store still loading, waiting...');
+        return;
+      }
+
+      // Wait for store to be loaded (should have sellerId)
+      if (!currentStore || !currentStore.sellerId) {
+        console.log('🏠 [HOME] Store not loaded or missing sellerId, waiting...', {
+          hasStore: !!currentStore,
+          sellerId: currentStore?.sellerId
+        });
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const slugToUse = actualSlug;
+        console.log('🏠 [HOME] Fetching featured products for slug:', slugToUse);
+        console.log('🏠 [HOME] Store info:', {
+          storeId: currentStore.storeId,
+          sellerId: currentStore.sellerId,
+          storeName: currentStore.name
+        });
+        
+        const products = await getStoreFeatured(slugToUse);
+        console.log('🏠 [HOME] API Response:', {
+          isArray: Array.isArray(products),
+          length: Array.isArray(products) ? products.length : 'N/A',
+          firstProduct: Array.isArray(products) && products.length > 0 ? products[0] : null
+        });
+        
+        if (Array.isArray(products) && products.length > 0) {
+          // Transform backend product format to frontend format using utility
+          const transformedProducts = transformProducts(products, currentStore?.name || 'Store');
+          console.log('🏠 [HOME] Transformed products:', {
+            count: transformedProducts.length,
+            firstTransformed: transformedProducts[0]
+          });
+          setFeaturedProducts(transformedProducts);
+        } else {
+          console.warn('⚠️ [HOME] No products returned for slug:', slugToUse);
+          console.warn('⚠️ [HOME] Check backend API: http://localhost:8080/api/public/store/' + slugToUse + '/featured');
+          console.warn('⚠️ [HOME] Verify products are marked as bestseller in database for seller_id:', currentStore.sellerId);
+          setFeaturedProducts([]);
+        }
+      } catch (error) {
+        console.error('❌ [HOME] Error fetching featured products:', error);
+        console.error('❌ [HOME] Error details:', {
+          message: error.message,
+          stack: error.stack,
+          slug: actualSlug
+        });
+        setFeaturedProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, [actualSlug, storeLoading, currentStore]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -70,8 +151,12 @@ const Home = () => {
     setCurrentBanner((prev) => (prev - 1 + BANNERS.length) % BANNERS.length);
   };
 
+  // Show 4 products at a time
+  const PRODUCTS_PER_SLIDE = 4;
+  
   const nextProductSlide = () => {
-    setCurrentProductSlide((prev) => Math.min(prev + 1, featuredProducts.length - 4));
+    const maxSlides = Math.max(0, featuredProducts.length - PRODUCTS_PER_SLIDE);
+    setCurrentProductSlide((prev) => Math.min(prev + 1, maxSlides));
   };
 
   const prevProductSlide = () => {
@@ -79,14 +164,16 @@ const Home = () => {
   };
 
   const handleProductClick = (product) => {
+    const basePath = actualSlug ? `/${actualSlug}` : '';
     const params = new URLSearchParams({
+      id: product.id || product.productId,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice,
       image: product.image,
       brand: product.brand
     });
-    navigate(`/product/detail?${params.toString()}`);
+    navigate(`${basePath}/product/detail?${params.toString()}`);
   };
 
 
@@ -99,12 +186,18 @@ const Home = () => {
     }
   };
 
-  if (loading) {
-    return <Loading fullScreen text="Loading products..." />;
+  // Build navigation paths with store slug
+  const getNavPath = (path) => {
+    return actualSlug ? `/${actualSlug}${path}` : path;
+  };
+
+  if (storeLoading || loading) {
+    return <Loading fullScreen text="Loading store..." />;
   }
 
   return (
     <div className="home-page">
+      <StoreError />
       {/* Banner Carousel */}
       <section className="banner-carousel-section">
         <div className="banner-carousel-container">
@@ -138,17 +231,49 @@ const Home = () => {
       <section className="carousel-section">
         <div className="carousel-container container">
           <h2 className="carousel-title">Featured Products</h2>
-          <div className="carousel">
-            <button className="carousel-btn prev" onClick={prevProductSlide} disabled={currentProductSlide === 0}>&#10094;</button>
-            
-            <div className="carousel-track" style={{transform: `translateX(-${currentProductSlide * 25}%)`}}>
-              {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+          {featuredProducts.length === 0 && !loading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+              <p style={{ fontSize: '1.1rem', fontWeight: '500', marginBottom: '8px' }}>
+                No featured products available.
+              </p>
+              <p style={{ fontSize: '14px', marginTop: '10px', color: '#888' }}>
+                Only products marked as <strong>bestseller</strong> are shown here.
+                <br />
+                Check console for details or mark products as bestseller in the seller app.
+              </p>
             </div>
+          ) : (
+            <div className="carousel">
+              <button 
+                className="carousel-btn prev" 
+                onClick={prevProductSlide} 
+                disabled={currentProductSlide === 0}
+                aria-label="Previous products"
+              >
+                &#10094;
+              </button>
+              
+              <div 
+                className="carousel-track" 
+                style={{
+                  transform: `translateX(-${currentProductSlide * (100 / PRODUCTS_PER_SLIDE)}%)`
+                }}
+              >
+                {featuredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
 
-            <button className="carousel-btn next" onClick={nextProductSlide} disabled={currentProductSlide >= featuredProducts.length - 4}>&#10095;</button>
-          </div>
+              <button 
+                className="carousel-btn next" 
+                onClick={nextProductSlide} 
+                disabled={currentProductSlide >= Math.max(0, featuredProducts.length - PRODUCTS_PER_SLIDE)}
+                aria-label="Next products"
+              >
+                &#10095;
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -158,7 +283,7 @@ const Home = () => {
           <h2 className="section-title">Trending Categories</h2>
           <div className="trending-grid">
             {CATEGORIES.slice(0, 2).map((category) => (
-              <div key={category.id} className="category-card" onClick={() => navigate(ROUTES.CATEGORIES)}>
+              <div key={category.id} className="category-card" onClick={() => navigate(getNavPath(ROUTES.CATEGORIES))}>
                 <img src={category.image} alt={category.name} />
                 <p>{category.name}</p>
               </div>
@@ -173,7 +298,7 @@ const Home = () => {
           <h2 className="section-title">BIGGEST DEALS ON TOP DRIPS</h2>
           <div className="deals-grid">
             {DEALS.map((deal) => (
-              <div key={deal.id} className="deal-card" onClick={() => navigate(ROUTES.PRODUCTS)}>
+              <div key={deal.id} className="deal-card" onClick={() => navigate(getNavPath(ROUTES.PRODUCTS))}>
                 <div className="image-wrapper">
                   <img src={deal.image} alt={deal.name} />
                   <div className="overlay">
@@ -221,7 +346,7 @@ const Home = () => {
                 <span className="timer-label">Seconds</span>
               </div>
             </div>
-            <button className="flash-sale-button" onClick={() => navigate(ROUTES.PRODUCTS)}>Shop Now</button>
+            <button className="flash-sale-button" onClick={() => navigate(getNavPath(ROUTES.PRODUCTS))}>Shop Now</button>
           </div>
         </div>
       </section>

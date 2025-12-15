@@ -4,6 +4,7 @@ import { useCart } from '../contexts/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useStore } from '../contexts/StoreContext';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const Header = () => {
   const { wishlist } = useWishlist();
   const { user, sendOTP, verifyOTP, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+  const { storeSlug, currentStore } = useStore();
   
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showOTPForm, setShowOTPForm] = useState(false);
@@ -96,9 +98,24 @@ const Header = () => {
             </div>
             <div className="divider"></div>
             <nav className="main-nav" aria-label="Main">
-              <Link to="/categories" className={`nav-item ${location.pathname === '/categories' ? 'active' : ''}`}>Categories</Link>
-              <Link to="/featured" className={`nav-item ${location.pathname === '/featured' ? 'active' : ''}`}>Featured</Link>
-              <Link to="/products" className={`nav-item ${location.pathname === '/products' ? 'active' : ''}`}>Products</Link>
+              <Link 
+                to={storeSlug ? `/store/${storeSlug}/categories` : '/categories'} 
+                className={`nav-item ${location.pathname.includes('/categories') ? 'active' : ''}`}
+              >
+                Categories
+              </Link>
+              <Link 
+                to={storeSlug ? `/store/${storeSlug}/featured` : '/featured'} 
+                className={`nav-item ${location.pathname.includes('/featured') ? 'active' : ''}`}
+              >
+                Featured
+              </Link>
+              <Link 
+                to={storeSlug ? `/store/${storeSlug}/products` : '/products'} 
+                className={`nav-item ${location.pathname.includes('/products') ? 'active' : ''}`}
+              >
+                Products
+              </Link>
             </nav>
           </div>
           <div className="right-group">
@@ -202,46 +219,46 @@ const Header = () => {
 
             <nav className="mobile-sidebar-nav">
               <Link 
-                to="/" 
-                className={`mobile-sidebar-nav-item ${location.pathname === '/' ? 'active' : ''}`}
+                to={storeSlug ? `/store/${storeSlug}` : '/'} 
+                className={`mobile-sidebar-nav-item ${location.pathname === '/' || location.pathname === `/store/${storeSlug}` ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {location.pathname === '/' && <span className="mobile-nav-indicator"></span>}
+                {(location.pathname === '/' || location.pathname === `/store/${storeSlug}`) && <span className="mobile-nav-indicator"></span>}
                 <span>Homepage</span>
               </Link>
               <Link 
-                to="/featured" 
-                className={`mobile-sidebar-nav-item ${location.pathname === '/featured' ? 'active' : ''}`}
+                to={storeSlug ? `/store/${storeSlug}/featured` : '/featured'} 
+                className={`mobile-sidebar-nav-item ${location.pathname.includes('/featured') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {location.pathname === '/featured' && <span className="mobile-nav-indicator"></span>}
+                {location.pathname.includes('/featured') && <span className="mobile-nav-indicator"></span>}
                 <span>Featured Products</span>
               </Link>
               <Link 
-                to="/products" 
-                className={`mobile-sidebar-nav-item ${location.pathname === '/products' ? 'active' : ''}`}
+                to={storeSlug ? `/store/${storeSlug}/products` : '/products'} 
+                className={`mobile-sidebar-nav-item ${location.pathname.includes('/products') && !location.pathname.includes('/product/detail') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {location.pathname === '/products' && <span className="mobile-nav-indicator"></span>}
+                {location.pathname.includes('/products') && !location.pathname.includes('/product/detail') && <span className="mobile-nav-indicator"></span>}
                 <span>All Products</span>
               </Link>
               <Link 
-                to="/categories" 
-                className={`mobile-sidebar-nav-item ${location.pathname === '/categories' ? 'active' : ''}`}
+                to={storeSlug ? `/store/${storeSlug}/categories` : '/categories'} 
+                className={`mobile-sidebar-nav-item ${location.pathname.includes('/categories') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {location.pathname === '/categories' && <span className="mobile-nav-indicator"></span>}
+                {location.pathname.includes('/categories') && <span className="mobile-nav-indicator"></span>}
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
                 <span>Categories</span>
               </Link>
               <Link 
-                to="/collections" 
-                className={`mobile-sidebar-nav-item ${location.pathname === '/collections' ? 'active' : ''}`}
+                to={storeSlug ? `/store/${storeSlug}/collections` : '/collections'} 
+                className={`mobile-sidebar-nav-item ${location.pathname.includes('/collections') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {location.pathname === '/collections' && <span className="mobile-nav-indicator"></span>}
+                {location.pathname.includes('/collections') && <span className="mobile-nav-indicator"></span>}
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>

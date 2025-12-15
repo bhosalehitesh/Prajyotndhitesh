@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
 
 @Entity
@@ -71,4 +72,16 @@ public class StoreDetails {
 
     public BusinessDetails getBusinessDetails() { return businessDetails; }
     public void setBusinessDetails(BusinessDetails businessDetails) { this.businessDetails = businessDetails; }
+
+    /**
+     * Get seller ID for JSON serialization (seller object is @JsonIgnore)
+     * This allows frontend to access sellerId without exposing full seller object
+     */
+    @JsonProperty("sellerId")
+    public Long getSellerId() {
+        if (seller != null) {
+            return seller.getSellerId();
+        }
+        return null;
+    }
 }

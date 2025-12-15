@@ -70,11 +70,12 @@ public class ProductController {
 			@RequestParam("productImages") List<MultipartFile> productImages,
 			@RequestParam("socialSharingImage") MultipartFile socialSharingImage,
 			@RequestParam(value = "sellerId", required = false) Long sellerId,
-			@RequestParam(value = "categoryId", required = false) Long categoryId) {
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            @RequestParam(value = "isBestseller", required = false, defaultValue = "false") Boolean isBestseller) {
 		try {
 			Product product = productService.uploadProductWithImages(productName, description, mrp, sellingPrice,
 					businessCategory, productCategory, inventoryQuantity, customSku, color, size, variant, hsnCode,
-					seoTitleTag, seoMetaDescription, productImages, socialSharingImage, sellerId, categoryId);
+                    seoTitleTag, seoMetaDescription, productImages, socialSharingImage, sellerId, categoryId, isBestseller);
 			return ResponseEntity.ok(product);
 		} catch (Exception e) {
 			return ResponseEntity.status(500).body("Upload failed: " + e.getMessage());
@@ -180,6 +181,57 @@ public class ProductController {
     public ResponseEntity<List<Product>> getFeaturedProducts(
             @RequestParam(value = "sellerId", required = false) Long sellerId) {
         return ResponseEntity.ok(productService.getFeaturedProducts(sellerId));
+    }
+
+    /**
+     * PERMANENT SOLUTION: Mark active products as bestseller for a specific seller
+     * This ensures featured products are always available for any store
+     * 
+     * Usage: POST /api/products/mark-featured?sellerId=11&limit=10
+     */
+    @PostMapping("/mark-featured")
+    public ResponseEntity<Map<String, Object>> markFeaturedProducts(
+            @RequestParam(value = "sellerId", required = true) Long sellerId,
+            @RequestParam(value = "limit", defaultValue = "10") int limit) {
+        try {
+            int count = productService.markFeaturedProductsForSeller(sellerId, limit);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("sellerId", sellerId);
+            response.put("productsMarked", count);
+            response.put("message", "Successfully marked " + count + " products as bestseller for seller " + sellerId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * PERMANENT SOLUTION: Mark featured products for ALL sellers
+     * Useful for bulk operations or initial setup
+     * 
+     * Usage: POST /api/products/mark-featured-all?limitPerSeller=10
+     */
+    @PostMapping("/mark-featured-all")
+    public ResponseEntity<Map<String, Object>> markFeaturedProductsForAll(
+            @RequestParam(value = "limitPerSeller", defaultValue = "10") int limitPerSeller) {
+        try {
+            int totalMarked = productService.markFeaturedProductsForAllSellers(limitPerSeller);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("totalProductsMarked", totalMarked);
+            response.put("limitPerSeller", limitPerSeller);
+            response.put("message", "Successfully marked " + totalMarked + " products as bestseller across all sellers");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
 	// Endpoint: Get all product categories

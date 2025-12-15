@@ -508,7 +508,8 @@ export interface ProductDto {
   size?: string;
   hsnCode?: string;
   isActive?: boolean;
-  bestSeller?: boolean;
+  isBestseller?: boolean;
+  bestSeller?: boolean; // legacy name, keep for backward compatibility
   variants?: Array<{
     id?: string | number;
     title?: string;
@@ -1480,7 +1481,8 @@ export const updateProduct = async (
     color?: string;
     size?: string;
     hsnCode?: string;
-    bestSeller?: boolean;
+    isBestseller?: boolean; // backend expects isBestseller
+    bestSeller?: boolean; // legacy support
   },
 ): Promise<ProductDto> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
@@ -1493,7 +1495,11 @@ export const updateProduct = async (
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      ...body,
+      isBestseller: body.isBestseller ?? body.bestSeller ?? undefined,
+      bestSeller: undefined,
+    }),
   });
 
   const payload = await parseJsonOrText(response);
@@ -1555,7 +1561,8 @@ export const createProduct = async (body: {
   color?: string;
   size?: string;
   hsnCode?: string;
-  bestSeller?: boolean;
+  isBestseller?: boolean; // backend expects isBestseller
+  bestSeller?: boolean; // legacy support
   categoryId?: number; // ensure categoryId can be sent in JSON body
 }) => {
   const baseUrl = `${API_BASE_URL}/api/products/addProduct`;
@@ -1589,7 +1596,12 @@ export const createProduct = async (body: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      ...body,
+      // ensure correct flag name
+      isBestseller: body.isBestseller ?? body.bestSeller ?? false,
+      bestSeller: undefined,
+    }),
   });
 
   const payload = await parseJsonOrText(response);
@@ -1625,7 +1637,8 @@ export const uploadProductWithImages = async (params: {
   seoMetaDescription?: string;
   imageUris: string[];
   categoryId?: number; // Add categoryId parameter
-  bestSeller?: boolean;
+  isBestseller?: boolean; // backend expects isBestseller
+  bestSeller?: boolean; // legacy support
 }) => {
   const url = `${API_BASE_URL}/api/products/upload`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
@@ -1664,7 +1677,8 @@ export const uploadProductWithImages = async (params: {
   form.append('size', params.size ?? '');
   form.append('variant', ''); // not used for now
   form.append('hsnCode', params.hsnCode ?? '');
-  form.append('bestSeller', String(params.bestSeller ?? false));
+  // backend expects isBestseller flag
+  form.append('isBestseller', String(params.isBestseller ?? params.bestSeller ?? false));
   form.append('seoTitleTag', params.seoTitleTag ?? params.productName);
   form.append('seoMetaDescription', params.seoMetaDescription ?? params.description ?? '');
   form.append('sellerId', userId);

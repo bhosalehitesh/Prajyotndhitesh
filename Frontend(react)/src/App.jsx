@@ -25,6 +25,7 @@ import Collections from './pages/Collections';
 
 // Components
 import ErrorBoundary from './components/ErrorBoundary';
+import CartStoreSync from './components/CartStoreSync';
 
 // Import CSS
 import './styles.css';
@@ -37,9 +38,25 @@ function App() {
           <AuthProvider>
             <StoreProvider>
               <CartProvider>
+                <CartStoreSync />
                 <WishlistProvider>
                   <Layout>
                     <Routes>
+                      {/* PRIMARY: Store-specific routes - /store/:slug/* */}
+                      <Route path="/store/:slug" element={<Home />} />
+                      <Route path="/store/:slug/categories" element={<Categories />} />
+                      <Route path="/store/:slug/featured" element={<Featured />} />
+                      <Route path="/store/:slug/products" element={<Products />} />
+                      <Route path="/store/:slug/collections" element={<Collections />} />
+                      <Route path="/store/:slug/product/detail" element={<ProductDetail />} />
+                      <Route path="/store/:slug/search" element={<Search />} />
+                      <Route path="/store/:slug/cart" element={<Cart />} />
+                      <Route path="/store/:slug/wishlist" element={<Wishlist />} />
+                      <Route path="/store/:slug/orders" element={<Orders />} />
+                      <Route path="/store/:slug/order-tracking" element={<OrderTracking />} />
+                      <Route path="/store/:slug/faq" element={<FAQ />} />
+                      
+                      {/* Fallback: Root-level routes (non-store) */}
                       <Route path="/" element={<Home />} />
                       <Route path="/categories" element={<Categories />} />
                       <Route path="/featured" element={<Featured />} />

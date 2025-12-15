@@ -13,8 +13,6 @@ import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.service.ProductService;
 import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.category.service.CategoryService;
-import com.smartbiz.sakhistore.modules.store.model.Banner;
-import com.smartbiz.sakhistore.modules.store.service.BannerService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,9 +29,6 @@ public class PublicStoreController {
     
     @Autowired
     private CategoryService categoryService;
-    
-    @Autowired
-    private BannerService bannerService;
 
     /**
      * Get store details by slug (public endpoint)
@@ -82,9 +77,28 @@ public class PublicStoreController {
                 return ResponseEntity.ok(new java.util.ArrayList<>());
             }
             
-            // Get products by seller
-            List<Product> products = productService.allProductForSeller(sellerId);
-            System.out.println("📦 [DEBUG] Found " + products.size() + " products for seller " + sellerId);
+            // Get products by seller (all products)
+            List<Product> allProducts = productService.allProductForSeller(sellerId);
+            System.out.println("📦 [DEBUG] Found " + allProducts.size() + " total products for seller " + sellerId);
+            
+            // Filter to only active products (public endpoint should only show active products)
+            List<Product> products = allProducts.stream()
+                .filter(p -> p.getIsActive() != null && p.getIsActive())
+                .toList();
+            
+            int inactiveCount = allProducts.size() - products.size();
+            if (inactiveCount > 0) {
+                System.out.println("⚠️ [DEBUG] Filtered out " + inactiveCount + " inactive products (only showing active products)");
+            }
+            System.out.println("📦 [DEBUG] " + products.size() + " active products after filtering");
+            
+            // Log products without images (they might not display properly)
+            long productsWithoutImages = products.stream()
+                .filter(p -> p.getProductImages() == null || p.getProductImages().isEmpty())
+                .count();
+            if (productsWithoutImages > 0) {
+                System.out.println("⚠️ [DEBUG] " + productsWithoutImages + " products have no images (may not display properly)");
+            }
             
             // Filter by category if provided
             if (category != null && !category.isEmpty()) {
@@ -111,6 +125,7 @@ public class PublicStoreController {
 
     /**
      * Get featured (bestseller) products for a store by slug (public endpoint)
+     * Only returns products marked as bestseller (is_bestseller = true AND is_active = true)
      * Example: GET /api/public/store/my-store/featured
      */
     @GetMapping("/{slug}/featured")
@@ -127,8 +142,17 @@ public class PublicStoreController {
 
             Long sellerId = store.getSeller().getSellerId();
             System.out.println("📦 [DEBUG] Seller ID: " + sellerId);
+            
+            // Get only bestseller products (is_bestseller = true AND is_active = true)
             List<Product> products = productService.getFeaturedProducts(sellerId);
-            System.out.println("✅ [DEBUG] Returning " + products.size() + " featured products for slug: " + slug);
+            System.out.println("📦 [DEBUG] Found " + products.size() + " bestseller products for seller " + sellerId);
+            
+            if (products == null || products.isEmpty()) {
+                System.out.println("⚠️ [DEBUG] No bestseller products found - returning empty list");
+                System.out.println("⚠️ [DEBUG] To show products here, mark them as bestseller in database: UPDATE products SET is_bestseller = 1 WHERE seller_id = " + sellerId + " AND is_active = 1");
+            }
+            
+            System.out.println("✅ [DEBUG] Returning " + products.size() + " featured (bestseller) products for slug: " + slug);
             return ResponseEntity.ok(products);
         } catch (NoSuchElementException e) {
             System.err.println("❌ [DEBUG] Store not found with slug: " + slug);
@@ -171,61 +195,6 @@ public class PublicStoreController {
         } catch (Exception e) {
             // Log error and return empty list instead of error
             System.err.println("Error fetching categories for store slug: " + slug);
-            e.printStackTrace();
-            return ResponseEntity.ok(new java.util.ArrayList<>());
-        }
-    }
-
-    /**
-     * Get banners for a store by slug (public endpoint)
-     * Example: GET /api/public/store/my-store/banners
-     */
-    @GetMapping("/{slug}/banners")
-    public ResponseEntity<?> getStoreBanners(
-            @PathVariable String slug,
-            @RequestParam(value = "activeOnly", defaultValue = "true") Boolean activeOnly) {
-        try {
-            System.out.println("=== Banner API called for slug: " + slug + " ===");
-            
-            // Find store by slug
-            StoreDetails store = storeService.findBySlug(slug);
-            
-            if (store == null) {
-                System.out.println("Store not found for slug: " + slug);
-                return ResponseEntity.ok(new java.util.ArrayList<>());
-            }
-            
-            System.out.println("Store found: " + store.getStoreName() + ", StoreId: " + store.getStoreId());
-            
-            // Check if store has a seller
-            if (store.getSeller() == null) {
-                System.out.println("Store has no seller");
-                return ResponseEntity.ok(new java.util.ArrayList<>());
-            }
-            
-            if (store.getSeller().getSellerId() == null) {
-                System.out.println("Store seller has no sellerId");
-                return ResponseEntity.ok(new java.util.ArrayList<>());
-            }
-            
-            // Get seller ID from store
-            Long sellerId = store.getSeller().getSellerId();
-            System.out.println("SellerId: " + sellerId);
-            
-            // Get banners for seller
-            List<Banner> banners = activeOnly 
-                ? bannerService.getActiveBannersBySellerId(sellerId)
-                : bannerService.getBannersBySellerId(sellerId);
-            
-            System.out.println("Found " + banners.size() + " banners for sellerId: " + sellerId);
-            return ResponseEntity.ok(banners);
-        } catch (Exception e) {
-            if (e instanceof NoSuchElementException) {
-                System.out.println("NoSuchElementException for slug: " + slug);
-                return ResponseEntity.ok(new java.util.ArrayList<>());
-            }
-            // Log error and return empty list instead of error
-            System.err.println("Error fetching banners for store slug: " + slug);
             e.printStackTrace();
             return ResponseEntity.ok(new java.util.ArrayList<>());
         }

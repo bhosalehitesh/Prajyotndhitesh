@@ -108,7 +108,10 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
   const [hsn, setHsn] = useState(existing?.hsnCode || '');
 
-  const [bestSeller, setBestSeller] = useState(existing?.bestSeller || false);
+  // Backend expects "isBestseller" flag; support both legacy bestSeller/isBestseller fields
+  const [bestSeller, setBestSeller] = useState(
+    existing?.isBestseller ?? existing?.bestSeller ?? false,
+  );
 
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -502,7 +505,8 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
         hsnCode: hsn || undefined,
 
-        bestSeller: bestSeller,
+        // IMPORTANT: backend expects isBestseller
+        isBestseller: bestSeller,
         categoryId: selectedCategoryId || undefined, // Add categoryId from database category selection
       };
 

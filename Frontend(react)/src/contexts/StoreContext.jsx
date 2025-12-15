@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
+import { getStoreBySlug } from '../utils/api';
 
 const StoreContext = createContext();
 
@@ -11,131 +13,145 @@ export const useStore = () => {
 };
 
 export const StoreProvider = ({ children }) => {
+  const location = useLocation();
+  const params = useParams();
   const [currentStore, setCurrentStore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [storeSlug, setStoreSlug] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Get store slug from URL
-  const getStoreSlugFromPath = () => {
-    const path = window.location.pathname;
-    const match = path.match(/\/store\/([^/]+)/);
-    return match ? match[1] : null;
+  // Get store slug from URL - prioritize /store/:slug format
+  const getStoreSlugFromPath = (path, routeParams) => {
+    // First check route params (from React Router)
+    if (routeParams?.slug) {
+      console.log('✅ [SLUG] Found slug from route params:', routeParams.slug);
+      return routeParams.slug;
+    }
+    
+    // Then check /store/:slug pattern
+    let match = path.match(/\/store\/([^/]+)/);
+    if (match) {
+      const slug = match[1];
+      console.log('✅ [SLUG] Found slug from /store/:slug pattern:', slug);
+      return slug;
+    }
+    
+    // Finally check /:slug (root level slug)
+    match = path.match(/^\/([^/]+)(?:\/|$)/);
+    if (match && match[1] !== '') {
+      const slug = match[1];
+      // Exclude known routes
+      const excludedRoutes = ['categories', 'featured', 'products', 'collections', 'cart', 'wishlist', 'orders', 'order-tracking', 'faq', 'search', 'product'];
+      if (!excludedRoutes.includes(slug)) {
+        console.log('✅ [SLUG] Found slug from /:slug pattern:', slug);
+        return slug;
+      }
+    }
+    
+    console.log('❌ [SLUG] No slug found in path:', path);
+    return null;
   };
 
+  // Listen for route changes
   useEffect(() => {
-    const slug = getStoreSlugFromPath();
+    const slug = getStoreSlugFromPath(location.pathname, params);
     setStoreSlug(slug);
     
     if (slug) {
       loadStore(slug);
     } else {
+      setCurrentStore(null);
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location.pathname, params?.slug]);
 
   const loadStore = async (slug) => {
     setLoading(true);
+    setError(null);
     try {
-      // Auto-detect backend URL
-      const getBackendUrl = () => {
-        const hostname = window.location.hostname;
-        const protocol = window.location.protocol;
-        
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          return 'http://localhost:8080/api';
-        }
-        
-        return `${protocol}//${hostname}:8080/api`;
-      };
-
-      const API_BASE = getBackendUrl();
+      console.log('🔍 [StoreContext] Loading store for slug:', slug);
+      const store = await getStoreBySlug(slug);
       
-      // Try multiple API endpoints
-      const endpoints = [
-        `${API_BASE}/stores/slug/${encodeURIComponent(slug)}`,
-        `${API_BASE}/stores?slug=${encodeURIComponent(slug)}`,
-        `${API_BASE}/store/${encodeURIComponent(slug)}`
-      ];
-
-      let store = null;
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(endpoint);
-          if (response.ok) {
-            const data = await response.json();
-            store = Array.isArray(data) ? data[0] : data;
-            if (store) break;
-          }
-        } catch (e) {
-          console.warn(`Failed to fetch from ${endpoint}:`, e);
-        }
-      }
-
       if (store) {
+        // Log full store object for debugging
+        console.log('📦 [StoreContext] Full store response:', JSON.stringify(store, null, 2));
+        console.log('✅ [StoreContext] Store found:', store.storeName || store.name, 'storeId:', store.storeId, 'sellerId:', store.sellerId);
+        
+        // Validate store has required data
+        if (!store.storeId && !store.id) {
+          console.warn('⚠️ [StoreContext] Store found but missing storeId');
+        }
+        if (!store.sellerId) {
+          console.error('❌ [StoreContext] CRITICAL: Store missing sellerId - products will NOT load!');
+          console.error('❌ [StoreContext] Store object keys:', Object.keys(store));
+          console.error('❌ [StoreContext] Check database: store_id =', store.storeId, 'should have seller_id linked');
+          console.error('❌ [StoreContext] Run SQL: SELECT store_id, store_name, seller_id FROM store_details WHERE store_id =', store.storeId);
+        } else {
+          console.log('✅ [StoreContext] sellerId found:', store.sellerId, '- products should load');
+        }
+        
         setCurrentStore({
-          id: store.storeId || store.id || store._id,
+          id: store.storeId || store.id,
+          storeId: store.storeId || store.id, // Explicit storeId
           name: store.storeName || store.name || store.shopName || 'Store',
           slug: store.slug || slug,
           logo: store.logoUrl || store.logo || '',
           description: store.businessDetails?.businessDescription || store.description || '',
           address: store.address || '',
           phone: store.phone || '',
-          sellerId: store.sellerId || store.seller?.id
+          sellerId: store.sellerId, // Should now be available from backend after fix
+          storeLink: store.storeLink, // Keep original storeLink for debugging
         });
+        setError(null);
       } else {
-        // Fallback: create a basic store object from slug
-        setCurrentStore({
-          id: null,
-          name: slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-          slug: slug,
-          logo: '',
-          description: '',
-          address: '',
-          phone: '',
-          sellerId: null
-        });
+        throw new Error('Store not found - API returned null/undefined');
       }
     } catch (error) {
-      console.error('Error loading store:', error);
-      // Fallback store
-      setCurrentStore({
-        id: null,
-        name: slug ? slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : 'Store',
+      console.error('❌ [StoreContext] Error loading store:', error);
+      console.error('❌ [StoreContext] Error details:', {
+        message: error.message,
         slug: slug,
-        logo: '',
-        description: '',
-        address: '',
-        phone: '',
-        sellerId: null
+        url: `${window.location.origin}/store/${slug}`
       });
+      
+      // Set detailed error message
+      let errorMessage = 'Store not found';
+      if (error.message.includes('404') || error.message.includes('not found')) {
+        errorMessage = `Store with slug "${slug}" not found. Please check:\n1. Store exists in database\n2. Store's store_link field contains the slug\n3. Backend is running`;
+      } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+        errorMessage = 'Network error. Please check if backend is running on http://localhost:8080';
+      } else {
+        errorMessage = error.message || 'Unknown error loading store';
+      }
+      
+      setError({
+        message: errorMessage,
+        slug: slug,
+        type: error.message.includes('404') ? 'NOT_FOUND' : 'NETWORK_ERROR'
+      });
+      setCurrentStore(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const getApiBase = () => {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:8080/api';
-    }
-    
-    return `${protocol}//${hostname}:8080/api`;
+  const getStoreId = () => {
+    return currentStore?.storeId || currentStore?.id;
   };
 
-  const getStoreId = () => {
-    return currentStore?.id || currentStore?.sellerId;
+  const getSellerId = () => {
+    return currentStore?.sellerId;
   };
 
   const value = {
     currentStore,
     storeSlug,
     loading,
+    error,
     loadStore,
-    getApiBase,
-    getStoreId
+    getStoreId,
+    getSellerId,
   };
 
   return (
