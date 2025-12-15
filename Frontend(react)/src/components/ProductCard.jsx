@@ -16,19 +16,30 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
   const { currentStore, storeSlug } = useStore();
 
   const handleProductClick = () => {
+    // Derive slug from context, storeLink, or current URL to ensure store-scoped routing
+    const slugFromStoreLink = currentStore?.storeLink
+      ? currentStore.storeLink.split('/').filter(Boolean).pop()
+      : null;
+    const slugFromUrl = (() => {
+      const path = window.location?.pathname || '';
+      const match = path.match(/\/store\/([^/]+)/);
+      return match ? match[1] : null;
+    })();
+    const slugToUse = storeSlug || slugFromStoreLink || slugFromUrl;
+
+    // Keep minimal params for faster load; include name/price/image as fallback
     const params = new URLSearchParams({
       id: product.id,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice || product.price,
       image: product.image,
-      brand: product.brand || 'V Store',
+      brand: product.brand || currentStore?.name || 'Store',
       category: product.category
     });
 
-    // Prefer store-scoped detail route when slug is known
-    const detailPath = storeSlug
-      ? `/store/${storeSlug}/product/detail`
+    const detailPath = slugToUse
+      ? `/store/${slugToUse}/product/detail`
       : '/product/detail';
 
     navigate(`${detailPath}?${params.toString()}`);

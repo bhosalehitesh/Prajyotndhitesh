@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams, useParams } from 'react-router-dom';
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useStore } from '../contexts/StoreContext';
 import { getStoreProducts } from '../utils/api';
@@ -11,7 +11,8 @@ import ErrorMessage from '../components/ui/ErrorMessage';
 const ProductDetail = () => {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
-  const { addToCart } = useCart();
+  const navigate = useNavigate();
+  const { cart, addToCart, updateQuantity } = useCart();
   const { storeSlug, currentStore } = useStore();
 
   const actualSlug = slug || storeSlug;
@@ -75,6 +76,18 @@ const ProductDetail = () => {
   const productCategory = backend.productCategory || backend.businessCategory;
   const seoTitle = backend.seoTitleTag;
   const seoDescription = backend.seoMetaDescription;
+
+  // Resolve slug for navigation (storeSlug -> storeLink -> URL fallback)
+  const resolvedSlug = useMemo(() => {
+    if (storeSlug) return storeSlug;
+    if (currentStore?.storeLink) {
+      const parts = currentStore.storeLink.split('/').filter(Boolean);
+      if (parts.length > 0) return parts.pop();
+    }
+    const path = window.location?.pathname || '';
+    const match = path.match(/\/store\/([^/]+)/);
+    return match ? match[1] : null;
+  }, [storeSlug, currentStore?.storeLink]);
 
   // Build image gallery
   const imageList = useMemo(() => {
@@ -146,6 +159,13 @@ const ProductDetail = () => {
       ? Math.round(((Number(originalPriceToShow) - Number(priceToShow)) / Number(originalPriceToShow)) * 100)
       : 0;
 
+  // Find cart item for this product
+  const cartItem = useMemo(() => {
+    const productId = productIdParam || currentProduct?.id;
+    if (!productId) return null;
+    return cart.find(item => String(item.id) === String(productId) || String(item.productId) === String(productId));
+  }, [cart, productIdParam, currentProduct?.id]);
+
   const handleAddToCart = () => {
     const productToAdd = currentProduct || {
       name: fallbackName,
@@ -167,7 +187,26 @@ const ProductDetail = () => {
       currentStore?.storeId || currentStore?.id,
       currentStore?.sellerId
     );
-    alert('Added to cart!');
+  };
+
+  const handleQuantityChange = (newQuantity) => {
+    if (!cartItem) return;
+    // Use cartItem.id directly - this is the actual ID stored in the cart
+    const quantity = Math.max(0, newQuantity);
+    updateQuantity(cartItem.id, quantity);
+  };
+
+  const handleViewCart = () => {
+    const cartPath = resolvedSlug ? `/store/${resolvedSlug}/cart` : '/cart';
+    navigate(cartPath);
+  };
+
+  const handleBuyNow = () => {
+    if (!cartItem) {
+      handleAddToCart();
+    }
+    const cartPath = resolvedSlug ? `/store/${resolvedSlug}/cart` : '/cart';
+    navigate(cartPath);
   };
 
   const relatedProducts = useMemo(() => {
@@ -339,22 +378,128 @@ const ProductDetail = () => {
           </div>
           <p style={{ color: '#888', marginTop: '-0.5rem' }}>Inclusive of all taxes</p>
 
-          <button
-            onClick={handleAddToCart}
-            style={{
-              padding: '1rem 2rem',
-              fontSize: '1.1rem',
-              background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
-              marginBottom: '1rem'
-            }}
-          >
-            Add to Cart
-          </button>
+          {cartItem ? (
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: '2px solid #f97316', borderRadius: '8px', padding: '0.5rem 0.75rem', background: '#fff' }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleQuantityChange(Math.max(0, cartItem.quantity - 1));
+                  }}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    border: 'none',
+                    background: 'transparent',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    fontSize: '1.2rem',
+                    color: '#f97316',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  value={cartItem.quantity}
+                  onChange={(e) => {
+                    const qty = parseInt(e.target.value);
+                    if (!isNaN(qty) && qty >= 0) {
+                      handleQuantityChange(qty);
+                    }
+                  }}
+                  style={{
+                    width: '50px',
+                    textAlign: 'center',
+                    border: 'none',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: '#f97316'
+                  }}
+                  min="0"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleQuantityChange(cartItem.quantity + 1);
+                  }}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    border: 'none',
+                    background: 'transparent',
+                    borderRadius: '50%',
+                    cursor: 'pointer',
+                    fontSize: '1.2rem',
+                    color: '#f97316',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  +
+                </button>
+              </div>
+              <button
+                onClick={handleViewCart}
+                style={{
+                  padding: '1rem 2rem',
+                  fontSize: '1.05rem',
+                  background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                View Cart
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleAddToCart}
+                style={{
+                  padding: '1rem 2rem',
+                  fontSize: '1.05rem',
+                  background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)'
+                }}
+              >
+                Add to Cart
+              </button>
+              <button
+                onClick={handleBuyNow}
+                style={{
+                  padding: '1rem 2rem',
+                  fontSize: '1.05rem',
+                  background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)'
+                }}
+              >
+                Buy Now
+              </button>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
             <DetailItem label="SKU" value={sku} />
