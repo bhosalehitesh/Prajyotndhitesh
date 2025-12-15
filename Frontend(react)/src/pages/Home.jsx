@@ -127,7 +127,8 @@ const Home = () => {
         });
 
         if (Array.isArray(result) && result.length > 0) {
-          setBanners(result.map((b, idx) => ({
+          const trimmed = result.slice(0, 3);
+          setBanners(trimmed.map((b, idx) => ({
             id: b.bannerId || b.id || idx,
             image: b.imageUrl,
             alt: b.title || `Banner ${idx + 1}`,
