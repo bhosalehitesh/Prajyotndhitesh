@@ -100,10 +100,12 @@ public class StoreDetailsService {
     public StoreDetails findBySlug(String slug) {
         // Normalize the input slug (lowercase, remove special chars)
         String normalizedSlug = slug.toLowerCase().trim();
+        System.out.println("🔍 [findBySlug] Looking for slug: '" + normalizedSlug + "' (original: '" + slug + "')");
         
         // Get all stores and find the one whose storeLink contains the slug
         // StoreLink format: domain/slug or domain/slug/
         List<StoreDetails> allStores = storeRepository.findAll();
+        System.out.println("📦 [findBySlug] Total stores in database: " + allStores.size());
         
         for (StoreDetails store : allStores) {
             String storeLink = store.getStoreLink();
@@ -113,8 +115,12 @@ public class StoreDetailsService {
                 // Remove trailing slash if present
                 linkSlug = linkSlug.replaceAll("/$", "").toLowerCase();
                 
+                System.out.println("  🔎 [findBySlug] Checking store: " + store.getStoreName() + 
+                    " | storeLink: '" + storeLink + "' | extracted slug: '" + linkSlug + "'");
+                
                 // Try exact match first
                 if (linkSlug.equals(normalizedSlug)) {
+                    System.out.println("  ✅ [findBySlug] EXACT MATCH found: " + store.getStoreName());
                     return store;
                 }
                 
@@ -122,6 +128,7 @@ public class StoreDetailsService {
                 String linkSlugNoHyphen = linkSlug.replaceAll("-", "");
                 String normalizedSlugNoHyphen = normalizedSlug.replaceAll("-", "");
                 if (linkSlugNoHyphen.equals(normalizedSlugNoHyphen)) {
+                    System.out.println("  ✅ [findBySlug] NO-HYPHEN MATCH found: " + store.getStoreName());
                     return store;
                 }
                 
@@ -129,11 +136,15 @@ public class StoreDetailsService {
                 String linkSlugClean = linkSlug.replaceAll("[^a-z0-9]", "");
                 String normalizedSlugClean = normalizedSlug.replaceAll("[^a-z0-9]", "");
                 if (linkSlugClean.equals(normalizedSlugClean) && !linkSlugClean.isEmpty()) {
+                    System.out.println("  ✅ [findBySlug] CLEAN MATCH found: " + store.getStoreName());
                     return store;
                 }
+            } else {
+                System.out.println("  ⚠️ [findBySlug] Store '" + store.getStoreName() + "' has NULL storeLink");
             }
         }
         
+        System.out.println("❌ [findBySlug] Store not found with slug: '" + normalizedSlug + "'");
         throw new NoSuchElementException("Store not found with slug: " + slug);
     }
 
