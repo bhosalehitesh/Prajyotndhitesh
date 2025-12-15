@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
     PRODUCTS: (slug) => `/public/store/${encodeURIComponent(slug)}/products`,
     CATEGORIES: (slug) => `/public/store/${encodeURIComponent(slug)}/categories`,
     FEATURED: (slug) => `/public/store/${encodeURIComponent(slug)}/featured`,
+    BANNERS: (slug) => `/public/store/${encodeURIComponent(slug)}/banners`,
     // Legacy endpoints (fallback)
     BY_QUERY: (slug) => `/stores?slug=${encodeURIComponent(slug)}`,
     BY_ID: (slug) => `/stores/slug/${encodeURIComponent(slug)}`,

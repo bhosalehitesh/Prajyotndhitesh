@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BANNERS, CATEGORIES, DEALS, FEATURES, ROUTES, STORAGE_KEYS } from '../constants';
 import { useStore } from '../contexts/StoreContext';
-import { getStoreFeatured } from '../utils/api';
+import { getStoreFeatured, getStoreBanners } from '../utils/api';
 import { transformProducts } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/ui/Loading';
@@ -13,6 +13,7 @@ const Home = () => {
   const { slug } = useParams(); // Get slug from route params
   const { storeSlug, currentStore, loading: storeLoading } = useStore();
   const [currentBanner, setCurrentBanner] = useState(0);
+  const [banners, setBanners] = useState(BANNERS); // default to static banners as fallback
   const [currentProductSlide, setCurrentProductSlide] = useState(0);
   const [flashSaleTime, setFlashSaleTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [loading, setLoading] = useState(false);
@@ -101,12 +102,58 @@ const Home = () => {
     fetchFeaturedProducts();
   }, [actualSlug, storeLoading, currentStore]);
 
+  // Fetch banners for the store (public endpoint). Fallback to static BANNERS if none.
   useEffect(() => {
+    const fetchBanners = async () => {
+      if (!actualSlug) {
+        console.log('🏠 [HOME] No slug available, using static banners');
+        setBanners(BANNERS);
+        return;
+      }
+
+      // Wait for store to be available (optional, but keeps logging consistent)
+      if (storeLoading) {
+        console.log('🏠 [HOME] Store still loading, waiting to fetch banners...');
+        return;
+      }
+
+      console.log('🏠 [HOME] Fetching banners for slug:', actualSlug);
+      try {
+        const result = await getStoreBanners(actualSlug, true);
+        console.log('🏠 [HOME] Banners API response:', {
+          isArray: Array.isArray(result),
+          length: Array.isArray(result) ? result.length : 'N/A',
+          first: Array.isArray(result) && result.length > 0 ? result[0] : null,
+        });
+
+        if (Array.isArray(result) && result.length > 0) {
+          setBanners(result.map((b, idx) => ({
+            id: b.bannerId || b.id || idx,
+            image: b.imageUrl,
+            alt: b.title || `Banner ${idx + 1}`,
+          })));
+          // Reset current banner index to 0 when new data arrives
+          setCurrentBanner(0);
+        } else {
+          console.warn('⚠️ [HOME] No banners returned for slug:', actualSlug, 'falling back to static BANNERS');
+          setBanners(BANNERS);
+        }
+      } catch (error) {
+        console.error('❌ [HOME] Error fetching banners:', error);
+        setBanners(BANNERS);
+      }
+    };
+
+    fetchBanners();
+  }, [actualSlug, storeLoading]);
+
+  useEffect(() => {
+    const total = banners.length || 1;
     const interval = setInterval(() => {
-      setCurrentBanner((prev) => (prev + 1) % BANNERS.length);
+      setCurrentBanner((prev) => (prev + 1) % total);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [banners]);
 
   useEffect(() => {
     // Flash sale timer
@@ -140,15 +187,18 @@ const Home = () => {
   }, []);
 
   const goToBanner = (index) => {
-    setCurrentBanner(index);
+    if (banners.length === 0) return;
+    setCurrentBanner(index % banners.length);
   };
 
   const nextBanner = () => {
-    setCurrentBanner((prev) => (prev + 1) % BANNERS.length);
+    if (banners.length === 0) return;
+    setCurrentBanner((prev) => (prev + 1) % banners.length);
   };
 
   const prevBanner = () => {
-    setCurrentBanner((prev) => (prev - 1 + BANNERS.length) % BANNERS.length);
+    if (banners.length === 0) return;
+    setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length);
   };
 
   // Show 4 products at a time
@@ -205,7 +255,7 @@ const Home = () => {
             <button className="banner-carousel-btn banner-prev" onClick={prevBanner} aria-label="Previous banner">&#10094;</button>
             
             <div className="banner-carousel-track">
-              {BANNERS.map((banner, index) => (
+              {banners.map((banner, index) => (
                 <div key={banner.id} className={`banner-slide ${index === currentBanner ? 'active' : ''}`}>
                   <img src={banner.image} alt={banner.alt} className="banner-image" />
                 </div>
@@ -216,7 +266,7 @@ const Home = () => {
           </div>
           
           <div className="banner-indicators">
-            {BANNERS.map((banner, index) => (
+            {banners.map((banner, index) => (
               <span 
                 key={banner.id}
                 className={`banner-indicator ${index === currentBanner ? 'active' : ''}`}
