@@ -117,6 +117,14 @@ export const getProducts = async (params = {}) => {
 };
 
 /**
+ * Get banners for a store by slug (public endpoint)
+ */
+export const getStoreBanners = async (slug, activeOnly = true) => {
+  if (!slug) return [];
+  return apiRequest(`/public/store/${encodeURIComponent(slug)}/banners?activeOnly=${activeOnly}`);
+};
+
+/**
  * Get product by ID
  */
 export const getProductById = async (id) => {
