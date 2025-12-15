@@ -237,6 +237,12 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
   const cleanPhone = phone.replace(/\D/g, '');
 
   try {
+    console.log('Login OTP attempt:', { phone: cleanPhone, url });
+    
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -245,7 +251,11 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
       body: JSON.stringify({
         phone: cleanPhone,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
+    console.log('Login OTP response received:', { status: response.status, statusText: response.statusText });
 
     const payload = await parseJsonOrText(response);
 
@@ -266,6 +276,15 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
 
     return '';
   } catch (error: any) {
+    // Handle abort/timeout errors
+    if (error.name === 'AbortError') {
+      console.error('Login OTP request timed out');
+      throw new Error(
+        `Request timed out. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
+      );
+    }
+    
+    // Handle network errors with detailed diagnostics
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
       console.error('Network error during sendLoginOtp:', error);
       console.error('Connection diagnostics:', {
@@ -2091,6 +2110,342 @@ export const getStoreBySellerId = async (sellerId: number): Promise<StoreDetails
   } catch (error) {
     console.error('Error fetching store:', error);
     return null;
+  }
+};
+
+/**
+ * Banner API Functions
+ */
+
+export interface BannerResponse {
+  bannerId: number;
+  seller?: any;
+  imageUrl: string;
+  title: string;
+  buttonText: string;
+  buttonLink?: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Get all banners for a seller
+ * Backend: GET /api/banners/seller?sellerId={sellerId}&activeOnly={activeOnly}
+ */
+export const getBannersBySellerId = async (
+  sellerId: number,
+  activeOnly: boolean = false,
+): Promise<BannerResponse[]> => {
+  try {
+    const token = await storage.getItem(AUTH_TOKEN_KEY);
+    const response = await fetch(
+      `${API_BASE_URL}/api/banners/seller?sellerId=${sellerId}&activeOnly=${activeOnly}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      },
+    );
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      console.error('Error fetching banners:', payload);
+      return [];
+    }
+
+    return Array.isArray(payload) ? payload : [];
+  } catch (error) {
+    console.error('Error fetching banners:', error);
+    return [];
+  }
+};
+
+/**
+ * Get a specific banner by ID
+ * Backend: GET /api/banners/{bannerId}
+ */
+export const getBannerById = async (bannerId: number): Promise<BannerResponse | null> => {
+  try {
+    const token = await storage.getItem(AUTH_TOKEN_KEY);
+    const response = await fetch(`${API_BASE_URL}/api/banners/${bannerId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      console.error('Error fetching banner:', payload);
+      return null;
+    }
+
+    return payload as BannerResponse;
+  } catch (error) {
+    console.error('Error fetching banner:', error);
+    return null;
+  }
+};
+
+/**
+ * Create a new banner with image upload
+ * Backend: POST /api/banners/upload
+ */
+export interface CreateBannerRequest {
+  sellerId: number;
+  imageUri: string; // Local file URI
+  title: string;
+  buttonText: string;
+  buttonLink?: string;
+  displayOrder?: number;
+}
+
+export interface CreateBannerResponse {
+  success: boolean;
+  message: string;
+  banner?: BannerResponse;
+}
+
+export const createBannerWithImage = async (
+  data: CreateBannerRequest,
+): Promise<CreateBannerResponse> => {
+  try {
+    const token = await storage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication required. Please log in.',
+      };
+    }
+
+    // Create FormData for multipart/form-data
+    const formData = new FormData();
+    formData.append('sellerId', data.sellerId.toString());
+    formData.append('title', data.title);
+    formData.append('buttonText', data.buttonText);
+    if (data.buttonLink) {
+      formData.append('buttonLink', data.buttonLink);
+    }
+    if (data.displayOrder !== undefined) {
+      formData.append('displayOrder', data.displayOrder.toString());
+    }
+
+    // Append image file
+    const imageUri = data.imageUri;
+    const fileExtension = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
+    let mimeType = 'image/jpeg';
+    if (fileExtension === 'png') {
+      mimeType = 'image/png';
+    } else if (fileExtension === 'gif') {
+      mimeType = 'image/gif';
+    } else if (fileExtension === 'webp') {
+      mimeType = 'image/webp';
+    }
+
+    formData.append('image', {
+      uri: imageUri,
+      type: mimeType,
+      name: `banner_${Date.now()}.${fileExtension}`,
+    } as any);
+
+    const response = await fetch(`${API_BASE_URL}/api/banners/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Don't set Content-Type - let fetch set it with boundary automatically
+      },
+      body: formData,
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const errorMessage = payload?.message || payload?.error || `Server error: ${response.status}`;
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+
+    return payload as CreateBannerResponse;
+  } catch (error: any) {
+    console.error('Error creating banner:', error);
+    return {
+      success: false,
+      message: error.message || 'Network error. Please check your connection.',
+    };
+  }
+};
+
+/**
+ * Update a banner
+ * Backend: PUT /api/banners/{bannerId}
+ */
+export interface UpdateBannerRequest {
+  imageUrl?: string;
+  title?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateBannerResponse {
+  success: boolean;
+  message: string;
+  banner?: BannerResponse;
+}
+
+export const updateBanner = async (
+  bannerId: number,
+  data: UpdateBannerRequest,
+): Promise<UpdateBannerResponse> => {
+  try {
+    const token = await storage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication required. Please log in.',
+      };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/banners/${bannerId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const errorMessage = payload?.message || payload?.error || `Server error: ${response.status}`;
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+
+    return payload as UpdateBannerResponse;
+  } catch (error: any) {
+    console.error('Error updating banner:', error);
+    return {
+      success: false,
+      message: error.message || 'Network error. Please check your connection.',
+    };
+  }
+};
+
+/**
+ * Update banner image
+ * Backend: POST /api/banners/{bannerId}/upload-image
+ */
+export const updateBannerImage = async (
+  bannerId: number,
+  imageUri: string,
+): Promise<UpdateBannerResponse> => {
+  try {
+    const token = await storage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication required. Please log in.',
+      };
+    }
+
+    const formData = new FormData();
+    const fileExtension = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
+    let mimeType = 'image/jpeg';
+    if (fileExtension === 'png') {
+      mimeType = 'image/png';
+    } else if (fileExtension === 'gif') {
+      mimeType = 'image/gif';
+    } else if (fileExtension === 'webp') {
+      mimeType = 'image/webp';
+    }
+
+    formData.append('image', {
+      uri: imageUri,
+      type: mimeType,
+      name: `banner_${Date.now()}.${fileExtension}`,
+    } as any);
+
+    const response = await fetch(`${API_BASE_URL}/api/banners/${bannerId}/upload-image`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const errorMessage = payload?.message || payload?.error || `Server error: ${response.status}`;
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+
+    return payload as UpdateBannerResponse;
+  } catch (error: any) {
+    console.error('Error updating banner image:', error);
+    return {
+      success: false,
+      message: error.message || 'Network error. Please check your connection.',
+    };
+  }
+};
+
+/**
+ * Delete a banner
+ * Backend: DELETE /api/banners/{bannerId}
+ */
+export const deleteBanner = async (bannerId: number): Promise<{ success: boolean; message: string }> => {
+  try {
+    const token = await storage.getItem(AUTH_TOKEN_KEY);
+    if (!token) {
+      return {
+        success: false,
+        message: 'Authentication required. Please log in.',
+      };
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/banners/${bannerId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const errorMessage = payload?.message || payload?.error || `Server error: ${response.status}`;
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+
+    return payload as { success: boolean; message: string };
+  } catch (error: any) {
+    console.error('Error deleting banner:', error);
+    return {
+      success: false,
+      message: error.message || 'Network error. Please check your connection.',
+    };
   }
 };
 
