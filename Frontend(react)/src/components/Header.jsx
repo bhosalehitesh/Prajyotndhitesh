@@ -14,6 +14,7 @@ const Header = () => {
   const { user, sendOTP, verifyOTP, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const { storeSlug, currentStore } = useStore();
+  const logoUrl = currentStore?.logo;
   
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showOTPForm, setShowOTPForm] = useState(false);
@@ -92,8 +93,37 @@ const Header = () => {
               </svg>
             </div>
             <div className="avatar desktop-avatar" aria-hidden="true">
-              <Link to="/" style={{textDecoration:'none',color:'inherit',display:'flex',alignItems:'center',justifyContent:'center',width:'100%',height:'100%'}}>
-                <span>V</span>
+              <Link 
+                to={storeSlug ? `/store/${storeSlug}` : '/'} 
+                style={{
+                  textDecoration:'none',
+                  color:'inherit',
+                  display:'flex',
+                  alignItems:'center',
+                  justifyContent:'center',
+                  width:'100%',
+                  height:'100%',
+                }}
+              >
+                {logoUrl ? (
+                  <img 
+                    src={logoUrl} 
+                    alt={currentStore?.storeName || 'Store logo'}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <span>
+                    {(currentStore?.storeName || 'V').charAt(0).toUpperCase()}
+                  </span>
+                )}
               </Link>
             </div>
             <div className="divider"></div>

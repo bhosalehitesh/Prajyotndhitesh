@@ -1,6 +1,5 @@
 package com.smartbiz.sakhistore.modules.store.controller;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -158,6 +157,12 @@ public class BannerController {
                 "message", "Banner created successfully",
                 "banner", banner
             ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", "Banner Limit Reached",
+                "message", e.getMessage()
+            ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
@@ -199,6 +204,12 @@ public class BannerController {
                 "success", true,
                 "message", "Banner created successfully",
                 "banner", banner
+            ));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", "Banner Limit Reached",
+                "message", e.getMessage()
             ));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(

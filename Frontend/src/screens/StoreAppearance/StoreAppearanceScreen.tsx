@@ -45,14 +45,18 @@ interface StoreAppearanceScreenProps {
 }
 
 interface BannerData {
+  bannerId?: number;
   imageUri: string | null;
+  imageUrl?: string;
   title: string;
   buttonText: string;
+  buttonLink?: string;
 }
 
 const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
   navigation,
 }) => {
+  const MAX_BANNERS = 3;
   const [uploadLogoModalOpen, setUploadLogoModalOpen] = useState(false);
   const [editBannerModalOpen, setEditBannerModalOpen] = useState(false);
   const [logoUri, setLogoUri] = useState<string | null>(null);
@@ -67,6 +71,42 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
   const [uploading, setUploading] = useState(false);
   const [loadingBanners, setLoadingBanners] = useState(false);
   const [sellerId, setSellerId] = useState<number | null>(null);
+  const isAtBannerLimit = banners.length >= MAX_BANNERS;
+  const disableNewBannerUpload = isAtBannerLimit && !bannerData.bannerId;
+
+  const selectBanner = (index: number) => {
+    if (index < 0 || index >= banners.length) {
+      return;
+    }
+    const b = banners[index];
+    setBannerData({
+      bannerId: b.bannerId,
+      imageUri: null,
+      imageUrl: b.imageUrl,
+      title: b.title || 'Discover Our Hand-Knitted Creations',
+      buttonText: b.buttonText || 'Shop Now',
+      buttonLink: b.buttonLink,
+    });
+    setCurrentBannerIndex(index);
+    setEditBannerModalOpen(true);
+  };
+
+  const startNewBanner = () => {
+    if (isAtBannerLimit) {
+      Alert.alert('Limit reached', `You can only have ${MAX_BANNERS} banners. Delete one to add a new banner.`);
+      return;
+    }
+    setBannerData({
+      bannerId: undefined,
+      imageUri: null,
+      imageUrl: undefined,
+      title: 'Discover Our Hand-Knitted Creations',
+      buttonText: 'Shop Now',
+      buttonLink: undefined,
+    } as any);
+    setCurrentBannerIndex(banners.length);
+    setEditBannerModalOpen(true);
+  };
 
   // Load seller ID and existing logo/banner on mount
   useEffect(() => {
@@ -107,7 +147,7 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
       console.log('Loading banners for sellerId:', sellerId);
       const fetchedBanners = await getBannersBySellerId(sellerId, false);
       console.log('Fetched banners:', fetchedBanners);
-      setBanners(fetchedBanners);
+      setBanners(fetchedBanners.slice(0, MAX_BANNERS));
       
       // Load the first active banner, or first banner if none are active
       if (fetchedBanners.length > 0) {
@@ -144,11 +184,12 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
         console.log('No banners found for sellerId:', sellerId);
         // Reset to default if no banners
         setBannerData({
+          bannerId: undefined,
           imageUri: null,
           imageUrl: undefined,
           title: 'Discover Our Hand-Knitted Creations',
           buttonText: 'Shop Now',
-        });
+        } as BannerData);
       }
     } catch (error) {
       console.error('Error loading banners:', error);
@@ -407,6 +448,12 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
           }));
         }
       } else if (bannerData.imageUri) {
+        if (isAtBannerLimit) {
+          Alert.alert('Limit reached', `You can only have ${MAX_BANNERS} banners. Please delete an existing banner before adding a new one.`);
+          setUploading(false);
+          return;
+        }
+
         // Create new banner
         const createResult = await createBannerWithImage({
           sellerId,
@@ -493,6 +540,14 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
               style={styles.demoLink}>
               <Text style={styles.demoLinkText}>View Demo Store →</Text>
             </TouchableOpacity>
+            {!isAtBannerLimit && (
+              <TouchableOpacity
+                onPress={startNewBanner}
+                style={[styles.editBannerButton, {marginRight: 8}]}>
+                <IconSymbol name="add" size={16} color="#e61580" />
+                <Text style={styles.editBannerText}>Add Banner</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={() => setEditBannerModalOpen(true)}
               style={styles.editBannerButton}>
@@ -721,6 +776,34 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
                 Customize your website banner. Edit the image (1600x461px), title text, button text, and link.
               </Text>
 
+              {banners.length > 0 && (
+                <View style={{marginBottom: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8}}>
+                  {banners.map((b, idx) => (
+                    <TouchableOpacity
+                      key={b.bannerId}
+                      style={[
+                        styles.bannerChip,
+                        idx === currentBannerIndex && styles.bannerChipActive,
+                      ]}
+                      onPress={() => selectBanner(idx)}>
+                      <Text style={[
+                        styles.bannerChipText,
+                        idx === currentBannerIndex && styles.bannerChipTextActive,
+                      ]}>
+                        Banner {idx + 1}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                  {!isAtBannerLimit && (
+                    <TouchableOpacity
+                      style={[styles.bannerChip, {borderStyle: 'dashed'}]}
+                      onPress={startNewBanner}>
+                      <Text style={styles.bannerChipText}>+ New</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
               {/* Banner Image Preview */}
               {(bannerData.imageUri || bannerData.imageUrl) && (
                 <View style={styles.bannerPreviewContainer}>
@@ -752,20 +835,45 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
               <Text style={[styles.modalInstructions, {fontStyle: 'italic', color: '#64748B'}]}>
                 For best results, use an image with this exact dimension
               </Text>
+              {disableNewBannerUpload && (
+                <Text style={[styles.modalInstructions, {color: '#DC2626', fontWeight: '600'}]}>
+                  You already have 3 banners. Delete one to add a new banner.
+                </Text>
+              )}
 
               {!bannerData.imageUri && (
                 <>
                   <TouchableOpacity
-                    style={styles.modalUploadButton}
-                    onPress={handleUploadBannerFromGallery}>
+                    style={[
+                      styles.modalUploadButton,
+                      disableNewBannerUpload && {backgroundColor: '#FCE4EC', borderColor: '#FBCFE8'},
+                    ]}
+                    onPress={() => {
+                      if (disableNewBannerUpload) {
+                        Alert.alert('Limit reached', `You can only have ${MAX_BANNERS} banners. Delete one to add a new banner.`);
+                        return;
+                      }
+                      handleUploadBannerFromGallery();
+                    }}
+                    disabled={disableNewBannerUpload}>
                     <Text style={styles.modalUploadButtonText}>
                       Upload From Gallery
                     </Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.modalCameraButton}
-                    onPress={handleCaptureBannerFromCamera}>
+                    style={[
+                      styles.modalCameraButton,
+                      disableNewBannerUpload && {borderColor: '#FBCFE8'},
+                    ]}
+                    onPress={() => {
+                      if (disableNewBannerUpload) {
+                        Alert.alert('Limit reached', `You can only have ${MAX_BANNERS} banners. Delete one to add a new banner.`);
+                        return;
+                      }
+                      handleCaptureBannerFromCamera();
+                    }}
+                    disabled={disableNewBannerUpload}>
                     <Text style={styles.modalCameraButtonText}>
                       Capture Using Camera
                     </Text>
@@ -1331,6 +1439,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: '#FFFFFF',
+  },
+  bannerChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginRight: 8,
+    marginBottom: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  bannerChipActive: {
+    borderColor: '#e61580',
+    backgroundColor: '#FEF3F7',
+  },
+  bannerChipText: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  bannerChipTextActive: {
+    color: '#e61580',
   },
 });
 

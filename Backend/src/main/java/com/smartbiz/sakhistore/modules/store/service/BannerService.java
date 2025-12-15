@@ -2,7 +2,6 @@ package com.smartbiz.sakhistore.modules.store.service;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,6 +51,8 @@ public class BannerService {
         SellerDetails seller = sellerRepository.findById(sellerId)
                 .orElseThrow(() -> new NoSuchElementException("Seller not found with ID: " + sellerId));
 
+        ensureSellerHasCapacity(sellerId);
+
         Banner banner = new Banner(seller, imageUrl, title, buttonText, buttonLink, displayOrder);
         return bannerRepository.save(banner);
     }
@@ -59,6 +60,9 @@ public class BannerService {
     // Upload banner image and create banner
     public Banner uploadBannerImageAndCreate(Long sellerId, MultipartFile imageFile, String title, String buttonText, String buttonLink, Integer displayOrder) {
         try {
+            // Prevent needless uploads if seller is already at the limit
+            ensureSellerHasCapacity(sellerId);
+
             // Upload image to Cloudinary
             String imageUrl = cloudinaryHelper.saveImage(imageFile, "banners");
             
@@ -115,6 +119,14 @@ public class BannerService {
     public void deleteBanner(Long bannerId, Long sellerId) {
         Banner banner = getBannerById(bannerId, sellerId);
         bannerRepository.delete(banner);
+    }
+
+    // Guardrail: max 3 banners per seller
+    private void ensureSellerHasCapacity(Long sellerId) {
+        long count = bannerRepository.countBySeller_SellerId(sellerId);
+        if (count >= 3) {
+            throw new IllegalStateException("You can only have up to 3 banners. Please delete an existing banner first.");
+        }
     }
 
     // Toggle banner active status
