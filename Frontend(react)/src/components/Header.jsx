@@ -200,13 +200,7 @@ const Header = () => {
               {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
             </button>
 
-            <button className="icon-btn" onClick={() => setProfileSidebarOpen(true)} title="Profile">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-            </button>
-            <button className="mobile-login-btn" onClick={() => setShowLoginModal(true)}>Login</button>
+            {/* Profile icon removed as requested */}
           </div>
         </div>
       </header>
