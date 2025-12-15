@@ -85,6 +85,8 @@ export const transformProduct = (backendProduct, storeName = 'Store') => {
     image: getImage(),
     category: backendProduct.productCategory || backendProduct.businessCategory || backendProduct.category || 'CLOTHING',
     brand: backendProduct.brand || storeName,
+    // Keep bestseller flag for UI badges (supports multiple backend key variants)
+    isBestseller: backendProduct.isBestseller ?? backendProduct.bestSeller ?? backendProduct.bestseller ?? false,
     product: backendProduct // Keep full product object for detail page
   };
 };

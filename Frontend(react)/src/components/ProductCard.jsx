@@ -17,13 +17,21 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
 
   const handleProductClick = () => {
     const params = new URLSearchParams({
+      id: product.id,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice || product.price,
       image: product.image,
       brand: product.brand || 'V Store',
+      category: product.category
     });
-    navigate(`/product/detail?${params.toString()}`);
+
+    // Prefer store-scoped detail route when slug is known
+    const detailPath = storeSlug
+      ? `/store/${storeSlug}/product/detail`
+      : '/product/detail';
+
+    navigate(`${detailPath}?${params.toString()}`);
   };
 
   const handleAddToCart = (e) => {
@@ -78,6 +86,14 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
   return (
     <Card className="product-card" hover onClick={handleProductClick}>
       <div className="product-card-image-wrapper">
+        {product.isBestseller && (
+          <div
+            className="product-badge bestseller"
+            style={{ position: 'absolute', top: '14px', left: '14px' }}
+          >
+            Bestseller
+          </div>
+        )}
         <img src={product.image} alt={product.name} className="product-card-image" />
       </div>
       <div className="product-card-content">
