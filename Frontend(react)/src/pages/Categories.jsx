@@ -89,11 +89,7 @@ const Categories = () => {
           <p>No categories found for this store.</p>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-          gap: '1.5rem'
-        }}>
+        <div className="trending-grid">
           {categories.map((category, index) => {
             const categoryName =
               category.categoryName ||
@@ -114,36 +110,13 @@ const Categories = () => {
               <div
                 key={category.categoryId || category.id || index}
                 onClick={() => handleCategoryClick(category)}
-                style={{
-                  cursor: 'pointer',
-                  padding: '1.5rem',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '8px',
-                  textAlign: 'center',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  backgroundColor: '#fff'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-5px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
+                className="category-card"
               >
                 <img
                   src={categoryImage}
                   alt={categoryName}
-                  style={{
-                    width: '100%',
-                    height: '150px',
-                    objectFit: 'cover',
-                    borderRadius: '4px',
-                    marginBottom: '1rem'
-                  }}
                 />
-                <h3 style={{margin: 0, fontSize: '1.1rem', color: '#333'}}>{categoryName}</h3>
+                <p>{categoryName}</p>
               </div>
             );
           })}
