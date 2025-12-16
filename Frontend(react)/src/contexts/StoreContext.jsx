@@ -102,6 +102,8 @@ export const StoreProvider = ({ children }) => {
           phone: store.phone || '',
           sellerId: store.sellerId, // Should now be available from backend after fix
           storeLink: store.storeLink, // Keep original storeLink for debugging
+          storeAddress: store.storeAddress || null, // Store address object with all fields
+          businessAddress: store.businessDetails?.businessAddress || '',
         });
         setError(null);
       } else {
