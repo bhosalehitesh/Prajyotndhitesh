@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Address Endpoint</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Test Address Endpoint</h1>
+    
+    <div class="section">
+        <h2>1. Test Backend Health</h2>
+        <button onclick="testHealth()">Test /api/health</button>
+        <pre id="healthResult"></pre>
+    </div>
+    
+    <div class="section">
+        <h2>2. Get User by Phone</h2>
+        <input type="text" id="phoneInput" placeholder="Enter phone number (e.g., 9403697908)" value="9403697908">
+        <button onclick="getUserByPhone()">Get User</button>
+        <pre id="getUserResult"></pre>
+    </div>
+    
+    <div class="section">
+        <h2>3. Update Address by Phone</h2>
+        <div>
+            <input type="text" id="updatePhone" placeholder="Phone" value="9403697908"><br>
+            <input type="text" id="fullName" placeholder="Full Name" value="Test User"><br>
+            <input type="text" id="pincode" placeholder="Pincode" value="123456"><br>
+            <input type="text" id="houseNo" placeholder="House Number" value="123"><br>
+            <input type="text" id="areaStreet" placeholder="Area/Street" value="Test Area"><br>
+            <input type="text" id="city" placeholder="City" value="Test City"><br>
+            <input type="text" id="state" placeholder="State" value="Test State"><br>
+            <input type="text" id="landmark" placeholder="Landmark (optional)"><br>
+            <input type="text" id="email" placeholder="Email (optional)"><br>
+        </div>
+        <button onclick="updateAddress()">Update Address</button>
+        <pre id="updateResult"></pre>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                document.getElementById('healthResult').textContent = 
+                    `Status: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                document.getElementById('healthResult').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function getUserByPhone() {
+            const phone = document.getElementById('phoneInput').value;
+            try {
+                const response = await fetch(`${API_BASE}/user/phone/${phone}`);
+                const data = await response.json();
+                document.getElementById('getUserResult').textContent = 
+                    `Status: ${response.status}\nResponse: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                document.getElementById('getUserResult').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function updateAddress() {
+            const phone = document.getElementById('updatePhone').value;
+            const addressData = {
+                fullName: document.getElementById('fullName').value,
+                phone: phone,
+                email: document.getElementById('email').value || null,
+                pincode: document.getElementById('pincode').value,
+                flatOrHouseNo: document.getElementById('houseNo').value,
+                areaOrStreet: document.getElementById('areaStreet').value,
+                landmark: document.getElementById('landmark').value || null,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                addressType: 'Other',
+                whatsappUpdates: true
+            };
+            
+            try {
+                console.log('Sending request to:', `${API_BASE}/user/update-address-by-phone/${phone}`);
+                console.log('Request body:', addressData);
+                
+                const response = await fetch(`${API_BASE}/user/update-address-by-phone/${phone}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(addressData)
+                });
+                
+                const data = await response.json();
+                document.getElementById('updateResult').textContent = 
+                    `Status: ${response.status} ${response.statusText}\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+                    
+                if (response.ok) {
+                    console.log('✅ Success! Address updated:', data);
+                } else {
+                    console.error('❌ Error:', data);
+                }
+            } catch (error) {
+                document.getElementById('updateResult').textContent = 
+                    `Error: ${error.message}\n\nCheck browser console for details.`;
+                console.error('❌ Request failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>
+

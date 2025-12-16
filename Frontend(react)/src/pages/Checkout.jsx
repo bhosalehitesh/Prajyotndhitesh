@@ -4,7 +4,7 @@ import { useStore } from '../contexts/StoreContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
-import { updateUserAddress, getUserById } from '../utils/api';
+import { updateUserAddress, getUserById, getUserByPhone, updateUserAddressByPhone } from '../utils/api';
 
 // Hook for responsive design
 const useMediaQuery = (query) => {
@@ -95,56 +95,88 @@ const Checkout = () => {
   // Load saved address from database or localStorage
   useEffect(() => {
     const loadAddress = async () => {
-      // First try to load from database if user is authenticated
-      if (isAuthenticated && user) {
-        try {
-          const token = user.token || localStorage.getItem('authToken');
-          const userData = await getUserById(user.id || user.userId, token);
-          
-          // If user has address data in database, use it
-          if (userData.pincode || userData.flatOrHouseNo || userData.areaOrStreet) {
-            setFormData({
-              customerName: userData.fullName || userData.full_name || '',
-              mobileNumber: userData.phone || '',
-              pincode: userData.pincode || '',
-              houseNumber: userData.flatOrHouseNo || userData.flat_or_house_no || '',
-              areaStreet: userData.areaOrStreet || userData.area_or_street || '',
-              landmark: userData.landmark || '',
-              city: userData.city || '',
-              state: userData.state || '',
-              addressType: userData.addressType || userData.address_type || 'Other',
-              emailId: userData.email || '',
-            });
-            setIsAddressSaved(true);
-            return; // Don't load from localStorage if we got data from DB
-          }
-        } catch (error) {
-          console.error('Error loading user address from database:', error);
-          // Fall through to localStorage
+      // Only load address if user is authenticated
+      if (!isAuthenticated || !user) {
+        console.log('User not authenticated, skipping address load');
+        return;
+      }
+
+      const token = user.token || localStorage.getItem('authToken');
+      const userPhone = user.phone;
+      
+      if (!userPhone) {
+        console.warn('User phone number not available');
+        return;
+      }
+
+      try {
+        // Get user data by phone number (most reliable)
+        const userData = await getUserByPhone(userPhone, token);
+        console.log('Loaded user data by phone:', userData);
+        
+        // Verify phone number matches logged-in user
+        if (userData.phone !== userPhone) {
+          console.warn('Phone number mismatch! Database:', userData.phone, 'Logged in:', userPhone);
+          alert('Phone number mismatch detected. Please login again.');
+          return;
         }
+        
+        // If user has address data in database, use it
+        if (userData && (userData.pincode || userData.flatOrHouseNo || userData.areaOrStreet)) {
+          setFormData({
+            customerName: userData.fullName || '',
+            mobileNumber: userData.phone || userPhone,
+            pincode: userData.pincode || '',
+            houseNumber: userData.flatOrHouseNo || '',
+            areaStreet: userData.areaOrStreet || '',
+            landmark: userData.landmark || '',
+            city: userData.city || '',
+            state: userData.state || '',
+            addressType: userData.addressType || 'Other',
+            emailId: userData.email || '',
+          });
+          setIsAddressSaved(true);
+          return; // Don't load from localStorage if we got data from DB
+        }
+      } catch (error) {
+        console.error('Error loading user address from database:', error);
+        // Don't fall through to localStorage - only use DB data
       }
       
-      // Fallback to localStorage
+      // Fallback to localStorage ONLY if phone number matches
       const savedAddress = localStorage.getItem('selectedAddress');
       if (savedAddress) {
         try {
           const address = JSON.parse(savedAddress);
-          setFormData({
-            customerName: address.customerName || '',
-            mobileNumber: address.mobileNumber || '',
-            pincode: address.pincode || '',
-            houseNumber: address.houseNumber || '',
-            areaStreet: address.areaStreet || '',
-            landmark: address.landmark || '',
-            city: address.city || '',
-            state: address.state || '',
-            addressType: address.addressType || 'Other',
-            emailId: address.emailId || '',
-          });
-          if (address.deliveryOption) {
-            setDeliveryOption(address.deliveryOption);
+          
+          // CRITICAL: Only use address if phone number matches logged-in user
+          if (address.mobileNumber && address.mobileNumber !== userPhone) {
+            console.warn('Saved address phone number does not match logged-in user. Ignoring saved address.');
+            console.log('Saved address phone:', address.mobileNumber, 'Logged in phone:', userPhone);
+            // Clear the mismatched address from localStorage
+            localStorage.removeItem('selectedAddress');
+            return;
           }
-          setIsAddressSaved(true);
+          
+          // Only load if phone matches or if no phone in saved address (legacy data)
+          if (!address.mobileNumber || address.mobileNumber === userPhone) {
+            setFormData({
+              customerName: address.customerName || '',
+              mobileNumber: userPhone, // Always use logged-in user's phone
+              pincode: address.pincode || '',
+              houseNumber: address.houseNumber || '',
+              areaStreet: address.areaStreet || '',
+              landmark: address.landmark || '',
+              city: address.city || '',
+              state: address.state || '',
+              addressType: address.addressType || 'Other',
+              emailId: address.emailId || '',
+            });
+            if (address.deliveryOption) {
+              setDeliveryOption(address.deliveryOption);
+            }
+            setIsAddressSaved(true);
+          }
         } catch (e) {
           console.error('Error loading address from localStorage:', e);
         }
@@ -173,11 +205,33 @@ const Checkout = () => {
 
   const handleMobileNumberChange = (e) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+    const userPhone = user?.phone;
+    
+    // If user is logged in, prevent changing phone number
+    if (userPhone && value !== userPhone) {
+      alert(`Phone number cannot be changed. Your registered phone number is ${userPhone}.`);
+      setFormData(prev => ({
+        ...prev,
+        mobileNumber: userPhone
+      }));
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       mobileNumber: value
     }));
   };
+
+  // Auto-fill phone number when user logs in
+  useEffect(() => {
+    if (isAuthenticated && user?.phone && !formData.mobileNumber) {
+      setFormData(prev => ({
+        ...prev,
+        mobileNumber: user.phone
+      }));
+    }
+  }, [isAuthenticated, user?.phone]);
 
   const handlePincodeChange = (e) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 6);
@@ -212,54 +266,134 @@ const Checkout = () => {
     // Check if user is authenticated
     if (!isAuthenticated || !user) {
       alert('Please login to save your address');
-      // Optionally redirect to login
+      return;
+    }
+
+    const userPhone = user.phone;
+    if (!userPhone) {
+      alert('User phone number not found. Please login again.');
+      return;
+    }
+
+    // CRITICAL: Verify phone number matches logged-in user
+    if (formData.mobileNumber && formData.mobileNumber !== userPhone) {
+      alert(`Phone number mismatch! The entered phone number (${formData.mobileNumber}) does not match your logged-in phone number (${userPhone}). Please use your registered phone number.`);
+      // Auto-fill with logged-in user's phone
+      setFormData(prev => ({
+        ...prev,
+        mobileNumber: userPhone
+      }));
       return;
     }
 
     setIsSaving(true);
 
     try {
-      // Map form data to database fields
+      // Map form data to database fields (matching database schema)
+      // All fields match the backend User model exactly
       const addressData = {
         fullName: formData.customerName,
-        phone: formData.mobileNumber,
+        phone: userPhone, // Always use logged-in user's phone
         email: formData.emailId || null,
         pincode: formData.pincode,
-        flatOrHouseNo: formData.houseNumber,
-        areaOrStreet: formData.areaStreet,
+        flatOrHouseNo: formData.houseNumber, // Maps to flat_or_house_no column in DB
+        areaOrStreet: formData.areaStreet, // Maps to area_or_street column in DB
         landmark: formData.landmark || null,
         city: formData.city,
         state: formData.state,
-        addressType: formData.addressType || 'Other',
+        addressType: formData.addressType || 'Other', // Maps to address_type column in DB
         whatsappUpdates: true // Default to true for order updates
       };
 
-      // Save to database
+      // Save to database using logged-in user's phone number
       const token = user.token || localStorage.getItem('authToken');
-      const updatedUser = await updateUserAddress(user.id || user.userId, addressData, token);
+      
+      console.log('=== SAVING ADDRESS TO DATABASE ===');
+      console.log('User Phone:', userPhone);
+      console.log('Has Token:', !!token);
+      console.log('Address Data to Save:', JSON.stringify(addressData, null, 2));
+      console.log('Fields being saved:', {
+        fullName: addressData.fullName,
+        phone: addressData.phone,
+        email: addressData.email,
+        pincode: addressData.pincode,
+        flatOrHouseNo: addressData.flatOrHouseNo,
+        areaOrStreet: addressData.areaOrStreet,
+        landmark: addressData.landmark,
+        city: addressData.city,
+        state: addressData.state,
+        addressType: addressData.addressType,
+        whatsappUpdates: addressData.whatsappUpdates
+      });
+      
+      let updatedUser = null;
+      let dbSaveSuccess = false;
+      try {
+        // Save by phone number (most reliable identifier)
+        console.log('Attempting to save to database...');
+        updatedUser = await updateUserAddressByPhone(userPhone, addressData, token);
+        console.log('✅ Address saved to database successfully:', updatedUser);
+        dbSaveSuccess = true;
+      } catch (apiError) {
+        console.error('❌ Failed to save address to database:', apiError);
+        console.error('Error type:', typeof apiError);
+        console.error('Error message:', apiError.message);
+        console.error('Error stack:', apiError.stack);
+        console.error('Phone used:', userPhone);
+        console.error('Token present:', !!token);
+        console.error('Address data sent:', addressData);
+        
+        // Check if it's a network error or server error
+        const errorMsg = apiError.message || 'Database error';
+        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('Network error') || errorMsg.includes('timeout')) {
+          console.warn('⚠️ Network error detected - will save to localStorage only');
+          // Don't throw - allow localStorage save
+        } else if (errorMsg.includes('404') || errorMsg.includes('Not Found')) {
+          console.error('❌ API endpoint not found. Check backend routes.');
+          throw new Error('Backend endpoint not found. Please check server configuration.');
+        } else if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
+          console.warn('⚠️ Got 401 response. Endpoint is public, so this might be a token issue.');
+          console.warn('⚠️ Continuing anyway - endpoint should work without authentication.');
+          // Don't throw - endpoint is public, allow localStorage save
+          // The error might be from invalid token, but endpoint should work without auth
+        } else {
+          // For other errors, still allow localStorage save but show the error
+          console.warn('⚠️ Database save failed:', errorMsg);
+          // Don't throw - allow localStorage save
+        }
+      }
 
-      // Also save to localStorage for quick access
+      // Also save to localStorage for quick access (only if phone matches)
       const address = {
         ...formData,
+        mobileNumber: userPhone, // Ensure phone matches logged-in user
         deliveryOption,
         userId: user.id || user.userId,
+        userPhone: userPhone, // Store phone for verification
         storeId: currentStore?.storeId || currentStore?.id,
         storeSlug: storeSlug
       };
 
+      // Save to localStorage - filter out any addresses with mismatched phone numbers
       const addresses = JSON.parse(localStorage.getItem('addresses') || '[]');
+      
+      // Remove any addresses that don't match current user's phone
+      const filteredAddresses = addresses.filter(
+        addr => !addr.userPhone || addr.userPhone === userPhone || addr.mobileNumber === userPhone
+      );
+      
       // Check if address already exists for this user and store
-      const existingIndex = addresses.findIndex(
-        addr => addr.userId === address.userId && addr.storeId === address.storeId
+      const existingIndex = filteredAddresses.findIndex(
+        addr => (addr.userId === address.userId || addr.userPhone === userPhone) && addr.storeId === address.storeId
       );
       
       if (existingIndex !== -1) {
-        addresses[existingIndex] = address;
+        filteredAddresses[existingIndex] = address;
       } else {
-        addresses.push(address);
+        filteredAddresses.push(address);
       }
       
-      localStorage.setItem('addresses', JSON.stringify(addresses));
+      localStorage.setItem('addresses', JSON.stringify(filteredAddresses));
       localStorage.setItem('selectedAddress', JSON.stringify(address));
 
       // Update user in localStorage if needed
@@ -272,7 +406,28 @@ const Checkout = () => {
       }
 
       setIsAddressSaved(true);
-      alert('Address saved successfully!');
+      
+      // Show appropriate success message
+      if (dbSaveSuccess) {
+        alert('✅ Address saved successfully to database!');
+      } else {
+        // Show error but still allow user to proceed
+        const retry = confirm('⚠️ Could not connect to database.\n\nYour address has been saved locally.\n\nWould you like to try saving to database again?\n\n(Click OK to retry, Cancel to continue)');
+        if (retry) {
+          // Retry saving to database
+          try {
+            updatedUser = await updateUserAddressByPhone(userPhone, addressData, token);
+            console.log('✅ Address saved to database on retry:', updatedUser);
+            alert('✅ Address saved successfully to database!');
+            dbSaveSuccess = true;
+          } catch (retryError) {
+            console.error('❌ Retry also failed:', retryError);
+            alert('Still unable to connect to database. Your address is saved locally. Please check:\n\n1. Backend server is running on port 8080\n2. Your internet connection\n3. Browser console for details (F12)');
+          }
+        } else {
+          alert('Address saved to local storage. You can proceed with checkout, but the address will only be available for this session.');
+        }
+      }
 
       // Navigate to payment page
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
@@ -280,7 +435,22 @@ const Checkout = () => {
       navigate(paymentPath);
     } catch (error) {
       console.error('Error saving address:', error);
-      alert(`Failed to save address: ${error.message || 'Unknown error'}`);
+      let errorMessage = error.message || 'Unknown error';
+      
+      // Provide more helpful error messages
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('Network error')) {
+        errorMessage = 'Unable to connect to server. Please check:\n' +
+          '1. Backend server is running on port 8080\n' +
+          '2. Your internet connection\n' +
+          '3. CORS settings if running locally';
+      } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        // Endpoint is public, so 401 shouldn't block the save
+        errorMessage = 'Got authentication error, but endpoint is public. Address saved locally.';
+      } else if (errorMessage.includes('404')) {
+        errorMessage = 'Server endpoint not found. Please check backend configuration.';
+      }
+      
+      alert(`Failed to save address: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -506,6 +676,7 @@ const Checkout = () => {
                   required
                   pattern="[0-9]{10}"
                   maxLength="10"
+                  readOnly={isAuthenticated && user?.phone ? true : false}
                   style={{
                     flex: 1,
                     padding: '12px',
@@ -513,14 +684,31 @@ const Checkout = () => {
                     borderLeft: 'none',
                     borderRadius: '0 8px 8px 0',
                     fontSize: '0.95rem',
-                    background: isDarkMode ? '#0e0e0e' : '#fff',
+                    background: isAuthenticated && user?.phone 
+                      ? (isDarkMode ? 'rgba(255,255,255,0.05)' : '#f0f0f0')
+                      : (isDarkMode ? '#0e0e0e' : '#fff'),
                     color: isDarkMode ? '#f5f5f5' : '#111',
-                    transition: 'border-color 0.2s'
+                    transition: 'border-color 0.2s',
+                    cursor: isAuthenticated && user?.phone ? 'not-allowed' : 'text'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#ff6d2e'}
+                  onFocus={(e) => {
+                    if (!(isAuthenticated && user?.phone)) {
+                      e.target.style.borderColor = '#ff6d2e';
+                    }
+                  }}
                   onBlur={(e) => e.target.style.borderColor = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)'}
                 />
               </div>
+              {isAuthenticated && user?.phone && (
+                <small style={{
+                  fontSize: '0.8rem',
+                  color: '#ff6d2e',
+                  fontStyle: 'italic',
+                  marginTop: '4px'
+                }}>
+                  Phone number is locked to your registered number: {user.phone}
+                </small>
+              )}
               <small style={{
                 fontSize: '0.85rem',
                 color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
