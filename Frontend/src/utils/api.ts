@@ -293,8 +293,15 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
         errorType: error.constructor.name,
         errorMessage: error.message,
       });
+      
+      // Provide more actionable error message with troubleshooting steps
+      const isLocalhost = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
+      const troubleshootingSteps = isLocalhost
+        ? `\n\nTroubleshooting:\n1. If using a mobile device/emulator, localhost won't work. Use your computer's IP address instead.\n2. Check apiConfig.ts and set USE_IP_ADDRESS=true with your computer's IP.\n3. Ensure backend is running on port 8080.\n4. Verify device and computer are on the same WiFi network.\n5. Check firewall settings.`
+        : `\n\nTroubleshooting:\n1. Verify backend is running on ${API_BASE_URL}\n2. Check device can reach this IP address\n3. Ensure same WiFi network\n4. Check firewall settings\n5. Try accessing ${url} in a browser to test connectivity`;
+      
       throw new Error(
-        `Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
+        `Network request failed. Backend URL: ${API_BASE_URL}${troubleshootingSteps}`,
       );
     }
     throw error;
