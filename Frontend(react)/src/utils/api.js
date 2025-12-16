@@ -109,6 +109,38 @@ export const verifyOTP = async (phone, code) => {
 };
 
 /**
+ * Get user by ID
+ * @param {number} userId - User ID
+ * @param {string} token - JWT token (optional)
+ * @returns {Promise<Object>} User data
+ */
+export const getUserById = async (userId, token = null) => {
+  return apiRequest(`/user/${userId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    },
+  });
+};
+
+/**
+ * Get user by phone number
+ * @param {string} phone - Phone number
+ * @param {string} token - JWT token (optional)
+ * @returns {Promise<Object>} User data
+ */
+export const getUserByPhone = async (phone, token = null) => {
+  return apiRequest(`/user/phone/${phone}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    },
+  });
+};
+
+/**
  * Get products
  */
 export const getProducts = async (params = {}) => {
@@ -311,6 +343,96 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
  */
 export const getOrder = async (orderId) => {
   return apiRequest(`/orders/${orderId}`);
+};
+
+/**
+ * Update user address
+ * @param {number} userId - User ID
+ * @param {object} addressData - Address data
+ * @param {string} token - JWT token
+ * @returns {Promise<Object>} Updated user
+ */
+export const updateUserAddress = async (userId, addressData, token) => {
+  const API_BASE = getBackendUrl();
+  const url = `${API_BASE}/user/update-address/${userId}`;
+  
+  console.log('updateUserAddress - Full URL:', url);
+  console.log('updateUserAddress - Request body:', addressData);
+  console.log('updateUserAddress - Has token:', !!token);
+  
+  return apiRequest(`/user/update-address/${userId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    },
+    body: JSON.stringify(addressData),
+  });
+};
+
+/**
+ * Update user address by phone number
+ * @param {string} phone - Phone number
+ * @param {object} addressData - Address data
+ * @param {string} token - JWT token (optional)
+ * @returns {Promise<Object>} Updated user
+ */
+export const updateUserAddressByPhone = async (phone, addressData, token = null) => {
+  const API_BASE = getBackendUrl();
+  const url = `${API_BASE}/user/update-address-by-phone/${phone}`;
+  
+  console.log('updateUserAddressByPhone - Full URL:', url);
+  console.log('updateUserAddressByPhone - Phone:', phone);
+  console.log('updateUserAddressByPhone - Address Data:', JSON.stringify(addressData, null, 2));
+  console.log('updateUserAddressByPhone - Has token:', !!token);
+  
+  try {
+    // Since endpoint is public, try with token first if available, but don't require it
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Only add Authorization header if token exists and is valid
+    if (token && token.trim() !== '') {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const result = await apiRequest(`/user/update-address-by-phone/${phone}`, {
+      method: 'PUT',
+      headers: headers,
+      body: JSON.stringify(addressData),
+    });
+    console.log('updateUserAddressByPhone - Success:', result);
+    return result;
+  } catch (error) {
+    // If 401 and we had a token, try again without token (endpoint is public)
+    if (error.status === 401 && token) {
+      console.warn('⚠️ Got 401 with token, retrying without token (endpoint is public)...');
+      try {
+        const result = await apiRequest(`/user/update-address-by-phone/${phone}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(addressData),
+        });
+        console.log('✅ updateUserAddressByPhone - Success without token:', result);
+        return result;
+      } catch (retryError) {
+        console.error('❌ updateUserAddressByPhone - Retry also failed:', retryError);
+        throw retryError;
+      }
+    }
+    
+    console.error('updateUserAddressByPhone - Error:', error);
+    console.error('updateUserAddressByPhone - Error URL:', url);
+    console.error('updateUserAddressByPhone - Error details:', {
+      message: error.message,
+      status: error.status,
+      stack: error.stack
+    });
+    throw error;
+  }
 };
 
 // ==================== PAYMENT FUNCTIONS ====================

@@ -126,5 +126,144 @@ public class AuthUserService {
         return userRepo.save(user);
     }
 
+    // ===========================================================
+    // ⭐ GET USER BY ID
+    // ===========================================================
+    public User getUserById(Long id) {
+        return userRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    // ===========================================================
+    // ⭐ UPDATE USER ADDRESS
+    // ===========================================================
+    public User updateUserAddress(Long id, java.util.Map<String, Object> addressData) {
+        User user = userRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Update full name if provided
+        if (addressData.containsKey("fullName")) {
+            user.setFullName((String) addressData.get("fullName"));
+        }
+
+        // Update phone if provided
+        if (addressData.containsKey("phone")) {
+            user.setPhone((String) addressData.get("phone"));
+        }
+
+        // Update email if provided
+        if (addressData.containsKey("email")) {
+            user.setEmail((String) addressData.get("email"));
+        }
+
+        // Update address fields
+        if (addressData.containsKey("pincode")) {
+            user.setPincode((String) addressData.get("pincode"));
+        }
+
+        if (addressData.containsKey("flatOrHouseNo")) {
+            user.setFlatOrHouseNo((String) addressData.get("flatOrHouseNo"));
+        }
+
+        if (addressData.containsKey("areaOrStreet")) {
+            user.setAreaOrStreet((String) addressData.get("areaOrStreet"));
+        }
+
+        if (addressData.containsKey("landmark")) {
+            user.setLandmark((String) addressData.get("landmark"));
+        }
+
+        if (addressData.containsKey("city")) {
+            user.setCity((String) addressData.get("city"));
+        }
+
+        if (addressData.containsKey("state")) {
+            user.setState((String) addressData.get("state"));
+        }
+
+        if (addressData.containsKey("addressType")) {
+            user.setAddressType((String) addressData.get("addressType"));
+        }
+
+        if (addressData.containsKey("whatsappUpdates")) {
+            user.setWhatsappUpdates((Boolean) addressData.get("whatsappUpdates"));
+        }
+
+        return userRepo.save(user);
+    }
+
+    // ===========================================================
+    // ⭐ GET USER BY PHONE NUMBER
+    // ===========================================================
+    public User getUserByPhone(String phone) {
+        return userRepo.findByPhone(phone)
+                .orElseThrow(() -> new RuntimeException("User not found with phone: " + phone));
+    }
+
+    // ===========================================================
+    // ⭐ UPDATE USER ADDRESS BY PHONE NUMBER
+    // ===========================================================
+    public User updateUserAddressByPhone(String phone, java.util.Map<String, Object> addressData) {
+        User user = userRepo.findByPhone(phone)
+                .orElseThrow(() -> new RuntimeException("User not found with phone: " + phone));
+
+        // Update full name if provided
+        if (addressData.containsKey("fullName")) {
+            user.setFullName((String) addressData.get("fullName"));
+        }
+
+        // Update phone if provided (validate it matches)
+        if (addressData.containsKey("phone")) {
+            String newPhone = (String) addressData.get("phone");
+            if (!phone.equals(newPhone)) {
+                // If phone is being changed, check if new phone already exists
+                if (userRepo.existsByPhone(newPhone)) {
+                    throw new RuntimeException("Phone number already exists: " + newPhone);
+                }
+                user.setPhone(newPhone);
+            }
+        }
+
+        // Update email if provided
+        if (addressData.containsKey("email")) {
+            user.setEmail((String) addressData.get("email"));
+        }
+
+        // Update address fields
+        if (addressData.containsKey("pincode")) {
+            user.setPincode((String) addressData.get("pincode"));
+        }
+
+        if (addressData.containsKey("flatOrHouseNo")) {
+            user.setFlatOrHouseNo((String) addressData.get("flatOrHouseNo"));
+        }
+
+        if (addressData.containsKey("areaOrStreet")) {
+            user.setAreaOrStreet((String) addressData.get("areaOrStreet"));
+        }
+
+        if (addressData.containsKey("landmark")) {
+            user.setLandmark((String) addressData.get("landmark"));
+        }
+
+        if (addressData.containsKey("city")) {
+            user.setCity((String) addressData.get("city"));
+        }
+
+        if (addressData.containsKey("state")) {
+            user.setState((String) addressData.get("state"));
+        }
+
+        if (addressData.containsKey("addressType")) {
+            user.setAddressType((String) addressData.get("addressType"));
+        }
+
+        if (addressData.containsKey("whatsappUpdates")) {
+            user.setWhatsappUpdates((Boolean) addressData.get("whatsappUpdates"));
+        }
+
+        return userRepo.save(user);
+    }
+
 	
 }

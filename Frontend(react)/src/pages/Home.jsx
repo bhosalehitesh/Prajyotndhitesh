@@ -7,6 +7,7 @@ import { transformProducts } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/ui/Loading';
 import StoreError from '../components/StoreError';
+import FloatingLoginButton from '../components/FloatingLoginButton';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -249,6 +250,9 @@ const Home = () => {
   return (
     <div className="home-page">
       <StoreError />
+      
+      {/* Floating Login Button Component */}
+      <FloatingLoginButton />
       {/* Banner Carousel */}
       <section className="banner-carousel-section">
         <div className="banner-carousel-container">

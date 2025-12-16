@@ -2216,23 +2216,63 @@ body.dark-mode .profile-sidebar-item.active {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* ===== Floating Login Button - Hidden on all pages except index/home ===== */
-/* Hide floating login button on ALL pages by default */
-.floating-login-btn,
-#floatingLoginBtn {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* Only show on home page (index.html) - index.html has inline styles that override this */
-body.home-page .floating-login-btn,
-body.home-page #floatingLoginBtn {
+/* ===== Floating Login Button ===== */
+.floating-login-btn {
+  position: fixed !important;
+  bottom: 30px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
   display: flex !important;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #ff6b35 !important; /* Orange color matching the image */
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+  z-index: 9999 !important;
+  transition: all 0.3s ease;
+  font-family: inherit;
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+}
+
+.floating-login-btn:hover {
+  background: #ff5722;
+  box-shadow: 0 6px 16px rgba(255, 107, 53, 0.5);
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.floating-login-btn:active {
+  transform: translateX(-50%) translateY(0);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+
+.floating-login-icon {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .floating-login-btn {
+    bottom: 20px;
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+  
+  .floating-login-icon {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .profile-sidebar-item svg {
