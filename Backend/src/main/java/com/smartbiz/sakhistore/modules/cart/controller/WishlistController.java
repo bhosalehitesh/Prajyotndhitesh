@@ -7,10 +7,9 @@ import org.springframework.web.bind.annotation.*;
 
 import com.smartbiz.sakhistore.modules.cart.model.WishlistItem;
 import com.smartbiz.sakhistore.modules.cart.service.WishlistService;
-import com.smartbiz.sakhistore.modules.customer_user.model.User;
 
 @RestController
-@RequestMapping("/wishlist")
+@RequestMapping("/api/wishlist")
 @CrossOrigin("*")
 public class WishlistController {
 
@@ -20,34 +19,26 @@ public class WishlistController {
     // GET ALL WISHLIST ITEMS
     @GetMapping("/all/{userId}")
     public List<WishlistItem> getAll(@PathVariable Long userId) {
-        User user = new User();
-        user.setId(userId);
-        return wishlistService.getWishlist(user);
+        return wishlistService.getWishlist(userId);
     }
 
     // ADD TO WISHLIST
     @PostMapping("/add/{userId}/{productId}")
     public WishlistItem add(@PathVariable Long userId, @PathVariable Long productId) {
-        User user = new User();
-        user.setId(userId);
-        return wishlistService.addToWishlist(user, productId);
+        return wishlistService.addToWishlist(userId, productId);
     }
 
     // REMOVE
     @DeleteMapping("/remove/{userId}/{productId}")
     public String remove(@PathVariable Long userId, @PathVariable Long productId) {
-        User user = new User();
-        user.setId(userId);
-        wishlistService.removeFromWishlist(user, productId);
+        wishlistService.removeFromWishlist(userId, productId);
         return "Removed";
     }
 
     // MOVE TO CART
     @PostMapping("/move-to-cart/{userId}/{productId}")
     public String move(@PathVariable Long userId, @PathVariable Long productId) {
-        User user = new User();
-        user.setId(userId);
-        wishlistService.moveToCart(user, productId);
+        wishlistService.moveToCart(userId, productId);
         return "Moved to cart";
     }
 }

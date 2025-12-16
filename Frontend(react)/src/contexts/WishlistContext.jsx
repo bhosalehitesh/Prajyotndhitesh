@@ -30,16 +30,19 @@ export const WishlistProvider = ({ children }) => {
           
           // Transform backend wishlist items to frontend format
           if (Array.isArray(backendWishlist)) {
-            const transformedWishlist = backendWishlist.map(item => ({
-              id: item.id || item.wishlistItemId || item.product?.productsId,
-              productId: item.product?.productsId || item.productId,
-              name: item.product?.productName || item.name || 'Product',
-              price: item.product?.sellingPrice || item.price || 0,
-              originalPrice: item.product?.mrp || item.originalPrice,
-              image: item.product?.productImages?.[0] || item.image || '/assets/products/p1.jpg',
-              brand: item.product?.brand || 'Store',
-              addedAt: item.createdAt || item.addedAt || new Date().toISOString()
-            }));
+            const transformedWishlist = backendWishlist.map(item => {
+              const productId = item.product?.productsId || item.productId || item.id;
+              return {
+                id: item.wishlistItemId || item.id || productId,
+                productId: productId, // Always ensure productId is set
+                name: item.product?.productName || item.name || 'Product',
+                price: item.product?.sellingPrice || item.price || 0,
+                originalPrice: item.product?.mrp || item.originalPrice,
+                image: item.product?.productImages?.[0] || item.image || '/assets/products/p1.jpg',
+                brand: item.product?.brand || 'Store',
+                addedAt: item.createdAt || item.addedAt || new Date().toISOString()
+              };
+            });
             setWishlist(transformedWishlist);
           } else {
             setWishlist([]);
@@ -89,35 +92,64 @@ export const WishlistProvider = ({ children }) => {
   const addToWishlist = async (item) => {
     const productId = item.productId || item.id;
 
+    // Optimistically update UI immediately for instant feedback
+    const optimisticItem = {
+      id: item.id || productId,
+      productId: productId,
+      name: item.name || item.productName || 'Product',
+      price: item.price || item.sellingPrice || 0,
+      originalPrice: item.originalPrice || item.mrp,
+      image: item.image || item.productImages?.[0] || '/assets/products/p1.jpg',
+      brand: item.brand || 'Store',
+      addedAt: new Date().toISOString()
+    };
+    
+    // Update UI immediately
+    setWishlist(prevWishlist => {
+      const exists = prevWishlist.some(w => 
+        String(w.productId) === String(productId) || String(w.id) === String(productId)
+      );
+      if (exists) return prevWishlist;
+      return [...prevWishlist, optimisticItem];
+    });
+
     if (isAuthenticated && user?.userId && productId) {
-      // Sync to backend
+      // Sync to backend in background
       try {
-        console.log('❤️ [Wishlist] Adding to backend wishlist:', { userId: user.userId, productId });
-        await addToWishlistAPI(user.userId, productId);
+        console.log('💾 [Wishlist] Saving to backend - userId:', user.userId, 'productId:', productId);
+        const result = await addToWishlistAPI(user.userId, productId);
+        console.log('✅ [Wishlist] Successfully saved to backend:', result);
         
-        // Reload wishlist from backend
-        const backendWishlist = await getWishlist(user.userId);
-        if (Array.isArray(backendWishlist)) {
-          const transformedWishlist = backendWishlist.map(wishlistItem => ({
-            id: wishlistItem.wishlistItemId || wishlistItem.id || wishlistItem.product?.productsId,
-            productId: wishlistItem.product?.productsId || wishlistItem.productId,
-            name: wishlistItem.product?.productName || wishlistItem.name || 'Product',
-            price: wishlistItem.product?.sellingPrice || wishlistItem.price || 0,
-            originalPrice: wishlistItem.product?.mrp || wishlistItem.originalPrice,
-            image: wishlistItem.product?.productImages?.[0] || wishlistItem.image || '/assets/products/p1.jpg',
-            brand: wishlistItem.product?.brand || 'Store',
-            addedAt: wishlistItem.addedAt || new Date().toISOString()
-          }));
-          setWishlist(transformedWishlist);
-        }
+        // Optionally refresh to get server-generated ID, but don't block UI
+        getWishlist(user.userId).then(backendWishlist => {
+          console.log('🔄 [Wishlist] Refreshed from backend:', backendWishlist);
+          if (Array.isArray(backendWishlist)) {
+            const transformedWishlist = backendWishlist.map(wishlistItem => ({
+              id: wishlistItem.wishlistItemId || wishlistItem.id || wishlistItem.product?.productsId,
+              productId: wishlistItem.product?.productsId || wishlistItem.productId || wishlistItem.productId,
+              name: wishlistItem.product?.productName || wishlistItem.name || 'Product',
+              price: wishlistItem.product?.sellingPrice || wishlistItem.price || 0,
+              originalPrice: wishlistItem.product?.mrp || wishlistItem.originalPrice,
+              image: wishlistItem.product?.productImages?.[0] || wishlistItem.image || '/assets/products/p1.jpg',
+              brand: wishlistItem.product?.brand || 'Store',
+              addedAt: wishlistItem.createdAt || wishlistItem.addedAt || new Date().toISOString()
+            }));
+            setWishlist(transformedWishlist);
+          }
+        }).catch(err => console.error('❌ [Wishlist] Background refresh error:', err));
       } catch (error) {
         console.error('❌ [Wishlist] Error adding to backend wishlist:', error);
-        // Fallback to local state update
-        addToWishlistLocal(item);
+        console.error('❌ [Wishlist] Error details:', {
+          message: error.message,
+          userId: user.userId,
+          productId: productId,
+          stack: error.stack
+        });
+        // Revert optimistic update on error
+        setWishlist(prevWishlist => 
+          prevWishlist.filter(w => String(w.productId) !== String(productId) && String(w.id) !== String(productId))
+        );
       }
-    } else {
-      // Guest user - update local state only
-      addToWishlistLocal(item);
     }
   };
 
@@ -149,42 +181,62 @@ export const WishlistProvider = ({ children }) => {
   };
 
   const removeFromWishlist = async (itemId) => {
-    const item = wishlist.find(i => i.id === itemId || i.productId === itemId);
+    const item = wishlist.find(i => String(i.id) === String(itemId) || String(i.productId) === String(itemId));
     const productId = item?.productId || itemId;
+
+    // Optimistically update UI immediately
+    const previousWishlist = [...wishlist];
+    setWishlist(prevWishlist => 
+      prevWishlist.filter(i => String(i.id) !== String(itemId) && String(i.productId) !== String(itemId))
+    );
 
     if (isAuthenticated && user?.userId && productId) {
       try {
-        console.log('❤️ [Wishlist] Removing from backend wishlist:', { userId: user.userId, productId });
+        console.log('🗑️ [Wishlist] Removing from backend - userId:', user.userId, 'productId:', productId);
         await removeFromWishlistAPI(user.userId, productId);
+        console.log('✅ [Wishlist] Successfully removed from backend');
         
-        // Reload wishlist from backend
-        const backendWishlist = await getWishlist(user.userId);
-        if (Array.isArray(backendWishlist)) {
-          const transformedWishlist = backendWishlist.map(wishlistItem => ({
-            id: wishlistItem.wishlistItemId || wishlistItem.id || wishlistItem.product?.productsId,
-            productId: wishlistItem.product?.productsId || wishlistItem.productId,
-            name: wishlistItem.product?.productName || wishlistItem.name || 'Product',
-            price: wishlistItem.product?.sellingPrice || wishlistItem.price || 0,
-            originalPrice: wishlistItem.product?.mrp || wishlistItem.originalPrice,
-            image: wishlistItem.product?.productImages?.[0] || wishlistItem.image || '/assets/products/p1.jpg',
-            brand: wishlistItem.product?.brand || 'Store',
-            addedAt: wishlistItem.addedAt || new Date().toISOString()
-          }));
-          setWishlist(transformedWishlist);
-        } else {
-          setWishlist([]);
-        }
+        // Optionally refresh in background, but don't block UI
+        getWishlist(user.userId).then(backendWishlist => {
+          console.log('🔄 [Wishlist] Refreshed from backend after removal:', backendWishlist);
+          if (Array.isArray(backendWishlist)) {
+            const transformedWishlist = backendWishlist.map(wishlistItem => ({
+              id: wishlistItem.wishlistItemId || wishlistItem.id || wishlistItem.product?.productsId,
+              productId: wishlistItem.product?.productsId || wishlistItem.productId || wishlistItem.productId,
+              name: wishlistItem.product?.productName || wishlistItem.name || 'Product',
+              price: wishlistItem.product?.sellingPrice || wishlistItem.price || 0,
+              originalPrice: wishlistItem.product?.mrp || wishlistItem.originalPrice,
+              image: wishlistItem.product?.productImages?.[0] || wishlistItem.image || '/assets/products/p1.jpg',
+              brand: wishlistItem.product?.brand || 'Store',
+              addedAt: wishlistItem.createdAt || wishlistItem.addedAt || new Date().toISOString()
+            }));
+            setWishlist(transformedWishlist);
+          } else {
+            setWishlist([]);
+          }
+        }).catch(err => console.error('❌ [Wishlist] Background refresh error:', err));
       } catch (error) {
         console.error('❌ [Wishlist] Error removing from backend wishlist:', error);
-        setWishlist(prevWishlist => prevWishlist.filter(i => i.id !== itemId && i.productId !== productId));
+        console.error('❌ [Wishlist] Error details:', {
+          message: error.message,
+          userId: user.userId,
+          productId: productId,
+          stack: error.stack
+        });
+        // Revert optimistic update on error
+        setWishlist(previousWishlist);
       }
-    } else {
-      setWishlist(prevWishlist => prevWishlist.filter(i => i.id !== itemId));
     }
   };
 
   const isInWishlist = (itemId) => {
-    return wishlist.some(item => item.id === itemId || item.productId === itemId);
+    if (!itemId) return false;
+    const checkId = String(itemId);
+    return wishlist.some(item => 
+      String(item.id) === checkId || 
+      String(item.productId) === checkId ||
+      (item.productId && String(item.productId) === checkId)
+    );
   };
 
   const value = {
