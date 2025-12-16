@@ -109,6 +109,36 @@ export const verifyOTP = async (phone, code) => {
 };
 
 /**
+ * Get user by ID
+ * @param {number} userId - User ID
+ * @param {string} token - JWT token (optional)
+ * @returns {Promise<Object>} User data
+ */
+export const getUserById = async (userId, token = null) => {
+  const API_BASE = getBackendUrl();
+  const url = `${API_BASE}/user/${userId}`;
+  
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers,
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch user: ${response.statusText}`);
+  }
+  
+  return response.json();
+};
+
+/**
  * Get products
  */
 export const getProducts = async (params = {}) => {
@@ -415,6 +445,50 @@ export const getOrder = async (orderId) => {
  */
 export const getUserOrders = async (userId) => {
   return apiRequest(`/orders/user/${userId}`);
+};
+
+/**
+ * Update user address
+ * @param {number} userId - User ID
+ * @param {object} addressData - Address data
+ * @param {string} token - JWT token
+ * @returns {Promise<Object>} Updated user
+ */
+export const updateUserAddress = async (userId, addressData, token) => {
+  const API_BASE = getBackendUrl();
+  const url = `${API_BASE}/user/update-address/${userId}`;
+  
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(addressData),
+  });
+  
+  if (!response.ok) {
+    let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+    try {
+      const error = await response.json();
+      errorMessage = error.message || error.error || errorMessage;
+    } catch (e) {
+      try {
+        const text = await response.text();
+        if (text) errorMessage = text.substring(0, 200);
+      } catch (e2) {
+        // Keep default error message
+      }
+    }
+    throw new Error(errorMessage);
+  }
+  
+  return response.json();
 };
 
 /**

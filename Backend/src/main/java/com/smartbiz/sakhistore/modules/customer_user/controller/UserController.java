@@ -128,4 +128,33 @@ public class UserController {
 
         return ResponseEntity.ok(updated);
     }
+
+    // ======================================================
+    // ⭐ GET USER BY ID
+    // ======================================================
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        try {
+            User user = authUserService.getUserById(id);
+            return ResponseEntity.ok(user);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ======================================================
+    // ⭐ UPDATE USER ADDRESS
+    // ======================================================
+    @PutMapping("/update-address/{id}")
+    public ResponseEntity<?> updateUserAddress(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> addressData) {
+
+        try {
+            User updated = authUserService.updateUserAddress(id, addressData);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

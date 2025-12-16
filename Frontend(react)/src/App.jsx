@@ -17,6 +17,7 @@ import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import Search from './pages/Search';
 import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
 import Wishlist from './pages/Wishlist';
 import Orders from './pages/Orders';
 import OrderTracking from './pages/OrderTracking';
@@ -51,6 +52,7 @@ function App() {
                       <Route path="/store/:slug/product/detail" element={<ProductDetail />} />
                       <Route path="/store/:slug/search" element={<Search />} />
                       <Route path="/store/:slug/cart" element={<Cart />} />
+                      <Route path="/store/:slug/checkout" element={<Checkout />} />
                       <Route path="/store/:slug/wishlist" element={<Wishlist />} />
                       <Route path="/store/:slug/orders" element={<Orders />} />
                       <Route path="/store/:slug/order-tracking" element={<OrderTracking />} />
@@ -65,6 +67,7 @@ function App() {
                       <Route path="/product/detail" element={<ProductDetail />} />
                       <Route path="/search" element={<Search />} />
                       <Route path="/cart" element={<Cart />} />
+                      <Route path="/checkout" element={<Checkout />} />
                       <Route path="/wishlist" element={<Wishlist />} />
                       <Route path="/orders" element={<Orders />} />
                       <Route path="/order-tracking" element={<OrderTracking />} />
