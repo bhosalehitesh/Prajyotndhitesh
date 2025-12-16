@@ -191,6 +191,28 @@ body.dark-mode .avatar {
   color: #fff;
   border: 2px solid rgba(0,0,0,0.1);
 }
+
+/* Store logo image styling - ensures logos display properly without cropping */
+.store-logo-img {
+  object-fit: contain !important;
+  border-radius: 8px;
+  background: transparent;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* When avatar contains a logo, adjust background and shape */
+.avatar.has-logo {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 12px !important;
+  padding: 4px;
+  border: 2px solid rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .avatar.has-logo {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
 .divider {
   width: 2px;
   height: 36px;

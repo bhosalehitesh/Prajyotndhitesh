@@ -4,16 +4,34 @@ import { useStore } from '../contexts/StoreContext';
 import { useNavigate } from 'react-router-dom';
 
 const Cart = () => {
-  const { cart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
+  const { cart, removeFromCart, updateQuantity, getCartTotal, clearCart, cartStoreId, getCartStoreId } = useCart();
   const { storeSlug, currentStore } = useStore();
   const navigate = useNavigate();
 
-  const itemTotal = getCartTotal();
+  // Filter cart items by current store
+  const currentStoreId = currentStore?.storeId || currentStore?.id;
+  const filteredCart = currentStoreId 
+    ? cart.filter(item => String(item.storeId) === String(currentStoreId))
+    : cart; // If no store context, show all (fallback)
+
+  // Recalculate totals for filtered cart
+  const itemTotal = filteredCart.reduce((sum, item) => {
+    return sum + ((item.price || 0) * (item.quantity || 1));
+  }, 0);
   const deliveryFee = 0; // Free delivery
   const codCharges = 10; // Cash on Delivery charges
   const orderTotal = itemTotal + deliveryFee + codCharges;
 
   const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
+
+  // Redirect if no store context but cart has store-specific items
+  React.useEffect(() => {
+    if (!currentStore && cart.length > 0 && cartStoreId) {
+      // If cart has items from a specific store but we're not on a store page, redirect to home
+      console.warn('Cart has store-specific items but no store context. Redirecting...');
+      navigate('/');
+    }
+  }, [currentStore, cart, cartStoreId, navigate]);
 
   const handleProceedToCheckout = () => {
     // Navigate to checkout/address page
@@ -43,11 +61,35 @@ const Cart = () => {
         </div>
       </div>
 
-      <h1 style={{ marginBottom: '2rem', fontSize: '1.8rem', fontWeight: '700' }}>Confirm Order</h1>
+      <h1 style={{ marginBottom: '2rem', fontSize: '1.8rem', fontWeight: '700' }}>
+        {currentStore?.name ? `${currentStore.name} - Cart` : 'Shopping Cart'}
+      </h1>
 
-      {cart.length === 0 ? (
+      {filteredCart.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ fontSize: '1.2rem', color: '#666' }}>Your cart is empty</p>
+          <p style={{ fontSize: '1.2rem', color: '#666' }}>
+            {currentStore?.name 
+              ? `Your cart is empty for ${currentStore.name}. Add items to continue.`
+              : 'Your cart is empty'}
+          </p>
+          {currentStore && (
+            <button
+              onClick={() => navigate(`/store/${storeSlug}/products`)}
+              style={{
+                marginTop: '1rem',
+                padding: '0.75rem 1.5rem',
+                background: '#f97316',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '600'
+              }}
+            >
+              Browse Products
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem', alignItems: 'flex-start' }}>
@@ -55,11 +97,11 @@ const Cart = () => {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '700' }}>Order Items</h2>
-              <span style={{ color: '#666', fontSize: '0.95rem' }}>{cart.length} {cart.length === 1 ? 'Item' : 'Items'}</span>
+              <span style={{ color: '#666', fontSize: '0.95rem' }}>{filteredCart.length} {filteredCart.length === 1 ? 'Item' : 'Items'}</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '600px', overflowY: 'auto', paddingRight: '0.5rem' }}>
-              {cart.map((item) => {
+              {filteredCart.map((item) => {
                 const itemSubtotal = item.price * item.quantity;
                 const originalPrice = item.originalPrice || item.price;
                 const discount = originalPrice > item.price ? Math.round(((originalPrice - item.price) / originalPrice) * 100) : 0;

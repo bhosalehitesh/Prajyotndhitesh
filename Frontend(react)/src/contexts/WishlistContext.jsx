@@ -32,6 +32,8 @@ export const WishlistProvider = ({ children }) => {
           if (Array.isArray(backendWishlist)) {
             const transformedWishlist = backendWishlist.map(item => {
               const productId = item.product?.productsId || item.productId || item.id;
+              // Extract sellerId from product (product.seller.sellerId or product.sellerId)
+              const sellerId = item.product?.seller?.sellerId || item.product?.sellerId || item.sellerId;
               return {
                 id: item.wishlistItemId || item.id || productId,
                 productId: productId, // Always ensure productId is set
@@ -40,6 +42,7 @@ export const WishlistProvider = ({ children }) => {
                 originalPrice: item.product?.mrp || item.originalPrice,
                 image: item.product?.productImages?.[0] || item.image || '/assets/products/p1.jpg',
                 brand: item.product?.brand || 'Store',
+                sellerId: sellerId, // Add sellerId for store filtering
                 addedAt: item.createdAt || item.addedAt || new Date().toISOString()
               };
             });
@@ -101,6 +104,7 @@ export const WishlistProvider = ({ children }) => {
       originalPrice: item.originalPrice || item.mrp,
       image: item.image || item.productImages?.[0] || '/assets/products/p1.jpg',
       brand: item.brand || 'Store',
+      sellerId: item.sellerId || item.seller?.sellerId, // Include sellerId for filtering
       addedAt: new Date().toISOString()
     };
     
@@ -124,16 +128,20 @@ export const WishlistProvider = ({ children }) => {
         getWishlist(user.userId).then(backendWishlist => {
           console.log('🔄 [Wishlist] Refreshed from backend:', backendWishlist);
           if (Array.isArray(backendWishlist)) {
-            const transformedWishlist = backendWishlist.map(wishlistItem => ({
-              id: wishlistItem.wishlistItemId || wishlistItem.id || wishlistItem.product?.productsId,
-              productId: wishlistItem.product?.productsId || wishlistItem.productId || wishlistItem.productId,
-              name: wishlistItem.product?.productName || wishlistItem.name || 'Product',
-              price: wishlistItem.product?.sellingPrice || wishlistItem.price || 0,
-              originalPrice: wishlistItem.product?.mrp || wishlistItem.originalPrice,
-              image: wishlistItem.product?.productImages?.[0] || wishlistItem.image || '/assets/products/p1.jpg',
-              brand: wishlistItem.product?.brand || 'Store',
-              addedAt: wishlistItem.createdAt || wishlistItem.addedAt || new Date().toISOString()
-            }));
+            const transformedWishlist = backendWishlist.map(wishlistItem => {
+              const sellerId = wishlistItem.product?.seller?.sellerId || wishlistItem.product?.sellerId || wishlistItem.sellerId;
+              return {
+                id: wishlistItem.wishlistItemId || wishlistItem.id || wishlistItem.product?.productsId,
+                productId: wishlistItem.product?.productsId || wishlistItem.productId || wishlistItem.productId,
+                name: wishlistItem.product?.productName || wishlistItem.name || 'Product',
+                price: wishlistItem.product?.sellingPrice || wishlistItem.price || 0,
+                originalPrice: wishlistItem.product?.mrp || wishlistItem.originalPrice,
+                image: wishlistItem.product?.productImages?.[0] || wishlistItem.image || '/assets/products/p1.jpg',
+                brand: wishlistItem.product?.brand || 'Store',
+                sellerId: sellerId, // Add sellerId for store filtering
+                addedAt: wishlistItem.createdAt || wishlistItem.addedAt || new Date().toISOString()
+              };
+            });
             setWishlist(transformedWishlist);
           }
         }).catch(err => console.error('❌ [Wishlist] Background refresh error:', err));
@@ -200,16 +208,20 @@ export const WishlistProvider = ({ children }) => {
         getWishlist(user.userId).then(backendWishlist => {
           console.log('🔄 [Wishlist] Refreshed from backend after removal:', backendWishlist);
           if (Array.isArray(backendWishlist)) {
-            const transformedWishlist = backendWishlist.map(wishlistItem => ({
-              id: wishlistItem.wishlistItemId || wishlistItem.id || wishlistItem.product?.productsId,
-              productId: wishlistItem.product?.productsId || wishlistItem.productId || wishlistItem.productId,
-              name: wishlistItem.product?.productName || wishlistItem.name || 'Product',
-              price: wishlistItem.product?.sellingPrice || wishlistItem.price || 0,
-              originalPrice: wishlistItem.product?.mrp || wishlistItem.originalPrice,
-              image: wishlistItem.product?.productImages?.[0] || wishlistItem.image || '/assets/products/p1.jpg',
-              brand: wishlistItem.product?.brand || 'Store',
-              addedAt: wishlistItem.createdAt || wishlistItem.addedAt || new Date().toISOString()
-            }));
+            const transformedWishlist = backendWishlist.map(wishlistItem => {
+              const sellerId = wishlistItem.product?.seller?.sellerId || wishlistItem.product?.sellerId || wishlistItem.sellerId;
+              return {
+                id: wishlistItem.wishlistItemId || wishlistItem.id || wishlistItem.product?.productsId,
+                productId: wishlistItem.product?.productsId || wishlistItem.productId || wishlistItem.productId,
+                name: wishlistItem.product?.productName || wishlistItem.name || 'Product',
+                price: wishlistItem.product?.sellingPrice || wishlistItem.price || 0,
+                originalPrice: wishlistItem.product?.mrp || wishlistItem.originalPrice,
+                image: wishlistItem.product?.productImages?.[0] || wishlistItem.image || '/assets/products/p1.jpg',
+                brand: wishlistItem.product?.brand || 'Store',
+                sellerId: sellerId, // Add sellerId for store filtering
+                addedAt: wishlistItem.createdAt || wishlistItem.addedAt || new Date().toISOString()
+              };
+            });
             setWishlist(transformedWishlist);
           } else {
             setWishlist([]);
@@ -239,12 +251,27 @@ export const WishlistProvider = ({ children }) => {
     );
   };
 
+  /**
+   * Get wishlist count filtered by sellerId (for store-specific badge count)
+   * @param {number|string} sellerId - Seller ID to filter by
+   * @returns {number} Count of wishlist items for the given seller
+   */
+  const getWishlistCountBySeller = (sellerId) => {
+    if (!sellerId) return wishlist.length; // If no sellerId, return total count
+    return wishlist.filter(item => {
+      const itemSellerId = item.sellerId;
+      if (!itemSellerId) return false; // Exclude items without sellerId
+      return String(itemSellerId) === String(sellerId);
+    }).length;
+  };
+
   const value = {
     wishlist,
     loading,
     addToWishlist,
     removeFromWishlist,
-    isInWishlist
+    isInWishlist,
+    getWishlistCountBySeller
   };
 
   return (

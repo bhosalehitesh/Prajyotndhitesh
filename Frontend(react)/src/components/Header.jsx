@@ -10,7 +10,7 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { getCartItemCount } = useCart();
-  const { wishlist } = useWishlist();
+  const { wishlist, getWishlistCountBySeller } = useWishlist();
   const { user, sendOTP, verifyOTP, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const { storeSlug, currentStore } = useStore();
@@ -26,7 +26,10 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const cartCount = getCartItemCount();
-  const wishlistCount = wishlist.length;
+  // Get wishlist count filtered by current store's sellerId
+  const wishlistCount = currentStore?.sellerId 
+    ? getWishlistCountBySeller(currentStore.sellerId)
+    : wishlist.length; // Fallback to total count if no store context
 
   useEffect(() => {
     // Check if user should see login modal on home page
@@ -92,7 +95,7 @@ const Header = () => {
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
             </div>
-            <div className="avatar desktop-avatar" aria-hidden="true">
+            <div className={`avatar desktop-avatar ${logoUrl ? 'has-logo' : ''}`} aria-hidden="true">
               <Link 
                 to={storeSlug ? `/store/${storeSlug}` : '/'} 
                 style={{
@@ -108,20 +111,22 @@ const Header = () => {
                 {logoUrl ? (
                   <img 
                     src={logoUrl} 
-                    alt={currentStore?.storeName || 'Store logo'}
+                    alt={currentStore?.name || currentStore?.storeName || 'Store logo'}
+                    className="store-logo-img"
                     style={{
                       width: '100%',
                       height: '100%',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
+                      objectFit: 'contain',
+                      padding: '4px',
                     }}
                     onError={(e) => {
+                      console.error('Failed to load store logo:', logoUrl);
                       e.target.style.display = 'none';
                     }}
                   />
                 ) : (
                   <span>
-                    {(currentStore?.storeName || 'V').charAt(0).toUpperCase()}
+                    {(currentStore?.name || currentStore?.storeName || 'V').charAt(0).toUpperCase()}
                   </span>
                 )}
               </Link>
@@ -184,14 +189,22 @@ const Header = () => {
               </svg>
             </button>
 
-            <button className="icon-btn" onClick={() => navigate('/wishlist')} title="Wishlist">
+            <button 
+              className="icon-btn" 
+              onClick={() => navigate(storeSlug ? `/store/${storeSlug}/wishlist` : '/wishlist')} 
+              title="Wishlist"
+            >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeWidth="1.5" strokeLinejoin="round"></path>
               </svg>
               {wishlistCount > 0 && <span className="wishlist-count">{wishlistCount}</span>}
             </button>
 
-            <button className="icon-btn" onClick={() => navigate('/cart')} title="Cart">
+            <button 
+              className="icon-btn" 
+              onClick={() => navigate(storeSlug ? `/store/${storeSlug}/cart` : '/cart')} 
+              title="Cart"
+            >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
                 <path d="M6 6h15l-1.5 9h-12z" strokeWidth="1.5" strokeLinejoin="round"></path>
                 <circle cx="10" cy="20" r="1.4" strokeWidth="1.5"></circle>
@@ -400,13 +413,21 @@ const Header = () => {
                   </svg>
                   <span>My Orders</span>
                 </Link>
-                <Link to="/wishlist" className="profile-sidebar-item" onClick={() => setProfileSidebarOpen(false)}>
+                <Link 
+                  to={storeSlug ? `/store/${storeSlug}/wishlist` : '/wishlist'} 
+                  className="profile-sidebar-item" 
+                  onClick={() => setProfileSidebarOpen(false)}
+                >
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                   </svg>
                   <span>My Wishlist</span>
                 </Link>
-                <Link to="/cart" className="profile-sidebar-item" onClick={() => setProfileSidebarOpen(false)}>
+                <Link 
+                  to={storeSlug ? `/store/${storeSlug}/cart` : '/cart'} 
+                  className="profile-sidebar-item" 
+                  onClick={() => setProfileSidebarOpen(false)}
+                >
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <circle cx="9" cy="21" r="1"></circle>
                     <circle cx="20" cy="21" r="1"></circle>
