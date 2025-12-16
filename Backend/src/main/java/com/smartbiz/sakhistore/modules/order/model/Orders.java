@@ -56,6 +56,10 @@ public class Orders {
     @ManyToOne
     private User user;
 
+    // Store and Seller IDs for seller app visibility
+    private Long storeId;
+    private Long sellerId;
+
     @OneToMany(mappedBy = "orders", cascade = CascadeType.ALL)
     private List<OrderItems> orderItems;
 
@@ -144,5 +148,21 @@ public class Orders {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public Long getStoreId() {
+        return storeId;
+    }
+
+    public void setStoreId(Long storeId) {
+        this.storeId = storeId;
+    }
+
+    public Long getSellerId() {
+        return sellerId;
+    }
+
+    public void setSellerId(Long sellerId) {
+        this.sellerId = sellerId;
     }
 }

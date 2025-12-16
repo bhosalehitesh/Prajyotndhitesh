@@ -33,7 +33,7 @@ public class OrdersService {
     // ===============================
     // Create Order From Cart
     // ===============================
-    public Orders placeOrder(User user, String address, Long mobile) {
+    public Orders placeOrder(User user, String address, Long mobile, Long storeId, Long sellerId) {
 
         Cart cart = cartRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Cart not found for user"));
@@ -46,6 +46,8 @@ public class OrdersService {
         order.setPaymentStatus(PaymentStatus.PENDING);
 
         double total = 0.0;
+        Long extractedSellerId = sellerId;
+        Long extractedStoreId = storeId;
 
         // Move cart items → order items
         for (OrderItems item : cart.getItems()) {
@@ -57,9 +59,16 @@ public class OrdersService {
 
             total += item.getPrice() * item.getQuantity();
             order.getOrderItems().add(newOrderItem);
+
+            // Extract sellerId from product if not provided
+            if (extractedSellerId == null && item.getProduct() != null && item.getProduct().getSeller() != null) {
+                extractedSellerId = item.getProduct().getSeller().getSellerId();
+            }
         }
 
         order.setTotalAmount(total);
+        order.setSellerId(extractedSellerId);
+        order.setStoreId(extractedStoreId);
 
         // Save order (+ items)
         Orders savedOrder = ordersRepository.save(order);

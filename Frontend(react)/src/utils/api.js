@@ -298,153 +298,49 @@ export const getStoreCategories = async (storeSlug) => {
 };
 
 // ==================== CART FUNCTIONS ====================
-
-/**
- * Get user's cart from backend
- * @param {number} userId - User ID
- * @returns {Promise<Array>} Array of cart items
- */
-export const getCart = async (userId) => {
-  return apiRequest(`/cart/${userId}`);
-};
-
-/**
- * Add item to cart (backend)
- * @param {object} cartItem - Cart item data { userId, productId, quantity, ... }
- * @returns {Promise<Object>} Updated cart item
- */
-export const addToCartAPI = async (cartItem) => {
-  return apiRequest('/cart/add', {
-    method: 'POST',
-    body: JSON.stringify(cartItem),
-  });
-};
-
-/**
- * Update cart item (backend)
- * @param {object} cartItem - Updated cart item data
- * @returns {Promise<Object>} Updated cart item
- */
-export const updateCartAPI = async (cartItem) => {
-  return apiRequest('/cart/update', {
-    method: 'PUT',
-    body: JSON.stringify(cartItem),
-  });
-};
-
-/**
- * Remove item from cart (backend)
- * @param {object} cartItem - Cart item to remove { userId, productId }
- * @returns {Promise<void>}
- */
-export const removeFromCartAPI = async (cartItem) => {
-  return apiRequest('/cart/remove', {
-    method: 'DELETE',
-    body: JSON.stringify(cartItem),
-  });
-};
-
-/**
- * Clear user's cart (backend)
- * @param {number} userId - User ID
- * @returns {Promise<void>}
- */
-export const clearCartAPI = async (userId) => {
-  return apiRequest(`/cart/clear/${userId}`, {
-    method: 'DELETE',
-  });
-};
-
-// ==================== WISHLIST FUNCTIONS ====================
-
-/**
- * Get user's wishlist from backend
- * @param {number} userId - User ID
- * @returns {Promise<Array>} Array of wishlist items
- */
-export const getWishlist = async (userId) => {
-  return apiRequest(`/wishlist/all/${userId}`);
-};
-
-/**
- * Add product to wishlist (backend)
- * @param {number} userId - User ID
- * @param {number} productId - Product ID
- * @returns {Promise<Object>} Wishlist item
- */
-export const addToWishlistAPI = async (userId, productId) => {
-  return apiRequest(`/wishlist/add/${userId}/${productId}`, {
-    method: 'POST',
-  });
-};
-
-/**
- * Remove product from wishlist (backend)
- * @param {number} userId - User ID
- * @param {number} productId - Product ID
- * @returns {Promise<void>}
- */
-export const removeFromWishlistAPI = async (userId, productId) => {
-  return apiRequest(`/wishlist/remove/${userId}/${productId}`, {
-    method: 'DELETE',
-  });
-};
-
-/**
- * Move wishlist item to cart (backend)
- * @param {number} userId - User ID
- * @param {number} productId - Product ID
- * @returns {Promise<Object>} Cart item
- */
-export const moveWishlistToCartAPI = async (userId, productId) => {
-  return apiRequest(`/wishlist/move-to-cart/${userId}/${productId}`, {
-    method: 'POST',
-  });
-};
+// (Functions moved below to match backend API format)
 
 // ==================== ORDER FUNCTIONS ====================
 
 /**
- * Place an order (MUST include store_id and seller_id)
- * @param {object} orderData - Order data { 
- *   userId, 
- *   storeId,      // REQUIRED: Store ID
- *   sellerId,    // REQUIRED: Seller ID
- *   items, 
- *   totalAmount, 
- *   shippingAddress, 
- *   ... 
- * }
+ * Place an order from cart
+ * @param {number} userId - User ID
+ * @param {string} address - Shipping address
+ * @param {number} mobile - Mobile number
+ * @param {number} storeId - Store ID (optional, will be extracted from cart if not provided)
+ * @param {number} sellerId - Seller ID (optional, will be extracted from cart if not provided)
  * @returns {Promise<Object>} Created order
  */
-export const placeOrder = async (orderData) => {
-  // Validate required fields
-  if (!orderData.storeId || !orderData.sellerId) {
-    throw new Error('storeId and sellerId are required for placing orders');
+export const placeOrder = async (userId, address, mobile, storeId = null, sellerId = null) => {
+  if (!userId || !address || !mobile) {
+    throw new Error('userId, address, and mobile are required for placing orders');
   }
   
-  return apiRequest('/orders/place', {
-    method: 'POST',
-    body: JSON.stringify(orderData),
+  const params = new URLSearchParams({
+    userId: String(userId),
+    address: address,
+    mobile: String(mobile)
+  });
+  
+  if (storeId) {
+    params.append('storeId', String(storeId));
+  }
+  if (sellerId) {
+    params.append('sellerId', String(sellerId));
+  }
+  
+  return apiRequest(`/orders/place?${params.toString()}`, {
+    method: 'POST'
   });
 };
 
 /**
- * Get order by ID
+ * Get order by ID (legacy function name, use getOrderById instead)
  * @param {number} orderId - Order ID
  * @returns {Promise<Object>} Order details
  */
 export const getOrder = async (orderId) => {
   return apiRequest(`/orders/${orderId}`);
-};
-
-/**
- * Get user's orders
- * @param {number} userId - User ID
- * @returns {Promise<Array>} Array of orders
- */
-export const getUserOrders = async (userId) => {
-  return apiRequest(`/orders/user/${userId}`);
 };
 
 /**
@@ -489,19 +385,6 @@ export const updateUserAddress = async (userId, addressData, token) => {
   }
   
   return response.json();
-};
-
-/**
- * Update order status
- * @param {number} orderId - Order ID
- * @param {string} status - New status
- * @returns {Promise<Object>} Updated order
- */
-export const updateOrderStatus = async (orderId, status) => {
-  return apiRequest(`/orders/update-status/${orderId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ status }),
-  });
 };
 
 // ==================== PAYMENT FUNCTIONS ====================
@@ -560,5 +443,168 @@ export const validatePincode = async (pincode) => {
  */
 export const getPincodeDetails = async (pincode) => {
   return apiRequest(`/pincode/${encodeURIComponent(pincode)}`);
+};
+
+// ==================== CART FUNCTIONS ====================
+
+/**
+ * Get user's cart
+ * @param {number} userId - User ID
+ * @returns {Promise<Object>} Cart object with items
+ */
+export const getCart = async (userId) => {
+  if (!userId) throw new Error('User ID is required');
+  return apiRequest(`/cart/${userId}`);
+};
+
+/**
+ * Add product to cart
+ * @param {number} userId - User ID
+ * @param {number} productId - Product ID
+ * @param {number} quantity - Quantity to add
+ * @returns {Promise<Object>} Updated cart
+ */
+export const addToCartAPI = async (userId, productId, quantity = 1) => {
+  if (!userId || !productId) throw new Error('User ID and Product ID are required');
+  const params = new URLSearchParams({
+    userId: String(userId),
+    productId: String(productId),
+    quantity: String(quantity)
+  });
+  return apiRequest(`/cart/add?${params.toString()}`, {
+    method: 'POST'
+  });
+};
+
+/**
+ * Update cart item quantity
+ * @param {number} userId - User ID
+ * @param {number} productId - Product ID
+ * @param {number} quantity - New quantity
+ * @returns {Promise<Object>} Updated cart
+ */
+export const updateCartQuantity = async (userId, productId, quantity) => {
+  if (!userId || !productId) throw new Error('User ID and Product ID are required');
+  const params = new URLSearchParams({
+    userId: String(userId),
+    productId: String(productId),
+    quantity: String(quantity)
+  });
+  return apiRequest(`/cart/update?${params.toString()}`, {
+    method: 'PUT'
+  });
+};
+
+/**
+ * Remove product from cart
+ * @param {number} userId - User ID
+ * @param {number} productId - Product ID
+ * @returns {Promise<Object>} Updated cart
+ */
+export const removeFromCartAPI = async (userId, productId) => {
+  if (!userId || !productId) throw new Error('User ID and Product ID are required');
+  const params = new URLSearchParams({
+    userId: String(userId),
+    productId: String(productId)
+  });
+  return apiRequest(`/cart/remove?${params.toString()}`, {
+    method: 'DELETE'
+  });
+};
+
+/**
+ * Clear user's cart
+ * @param {number} userId - User ID
+ * @returns {Promise<string>} Success message
+ */
+export const clearCartAPI = async (userId) => {
+  if (!userId) throw new Error('User ID is required');
+  return apiRequest(`/cart/clear/${userId}`, {
+    method: 'DELETE'
+  });
+};
+
+// ==================== WISHLIST FUNCTIONS ====================
+
+/**
+ * Get user's wishlist
+ * @param {number} userId - User ID
+ * @returns {Promise<Array>} Array of wishlist items
+ */
+export const getWishlist = async (userId) => {
+  if (!userId) throw new Error('User ID is required');
+  return apiRequest(`/wishlist/all/${userId}`);
+};
+
+/**
+ * Add product to wishlist
+ * @param {number} userId - User ID
+ * @param {number} productId - Product ID
+ * @returns {Promise<Object>} Wishlist item
+ */
+export const addToWishlistAPI = async (userId, productId) => {
+  if (!userId || !productId) throw new Error('User ID and Product ID are required');
+  return apiRequest(`/wishlist/add/${userId}/${productId}`, {
+    method: 'POST'
+  });
+};
+
+/**
+ * Remove product from wishlist
+ * @param {number} userId - User ID
+ * @param {number} productId - Product ID
+ * @returns {Promise<string>} Success message
+ */
+export const removeFromWishlistAPI = async (userId, productId) => {
+  if (!userId || !productId) throw new Error('User ID and Product ID are required');
+  return apiRequest(`/wishlist/remove/${userId}/${productId}`, {
+    method: 'DELETE'
+  });
+};
+
+// ==================== ORDER FUNCTIONS ====================
+
+/**
+ * Get user's orders
+ * @param {number} userId - User ID
+ * @returns {Promise<Array>} Array of orders
+ */
+export const getUserOrders = async (userId) => {
+  if (!userId) throw new Error('User ID is required');
+  return apiRequest(`/orders/user/${userId}`);
+};
+
+/**
+ * Get order by ID
+ * @param {number} orderId - Order ID
+ * @returns {Promise<Object>} Order details
+ */
+export const getOrderById = async (orderId) => {
+  if (!orderId) throw new Error('Order ID is required');
+  return apiRequest(`/orders/${orderId}`);
+};
+
+/**
+ * Get orders for a seller (for seller app)
+ * @param {number} sellerId - Seller ID
+ * @returns {Promise<Array>} Array of orders for this seller
+ */
+export const getSellerOrders = async (sellerId) => {
+  if (!sellerId) throw new Error('Seller ID is required');
+  return apiRequest(`/orders/seller/${sellerId}`);
+};
+
+/**
+ * Update order status
+ * @param {number} orderId - Order ID
+ * @param {string} status - New order status (PLACED, CONFIRMED, SHIPPED, DELIVERED, CANCELLED)
+ * @returns {Promise<Object>} Updated order
+ */
+export const updateOrderStatus = async (orderId, status) => {
+  if (!orderId || !status) throw new Error('Order ID and status are required');
+  const params = new URLSearchParams({ status });
+  return apiRequest(`/orders/update-status/${orderId}?${params.toString()}`, {
+    method: 'PUT'
+  });
 };
 

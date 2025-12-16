@@ -400,7 +400,14 @@ const ProductDetail = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    outline: 'none',
+                    boxShadow: 'none',
+                    transition: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   −
@@ -443,7 +450,14 @@ const ProductDetail = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    outline: 'none',
+                    boxShadow: 'none',
+                    transition: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   +

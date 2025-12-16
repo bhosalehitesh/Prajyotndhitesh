@@ -24,12 +24,14 @@ public class OrdersController {
     public Orders placeOrder(
             @RequestParam Long userId,
             @RequestParam String address,
-            @RequestParam Long mobile
+            @RequestParam Long mobile,
+            @RequestParam(required = false) Long storeId,
+            @RequestParam(required = false) Long sellerId
     ) {
         User user = new User();
         user.setId(userId);
 
-        return ordersService.placeOrder(user, address, mobile);
+        return ordersService.placeOrder(user, address, mobile, storeId, sellerId);
     }
 
     // ===============================
