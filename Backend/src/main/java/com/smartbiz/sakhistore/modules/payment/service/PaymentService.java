@@ -58,7 +58,9 @@ public class PaymentService {
     public CreateRazorpayOrderResponse createRazorpayOrder(CreateRazorpayOrderRequest req)
             throws RazorpayException {
 
-        Orders order = ordersRepository.findById(req.getOrderId())
+        Long requestedOrderId = java.util.Objects.requireNonNull(req.getOrderId(), "Order id is required");
+
+        Orders order = ordersRepository.findById(requestedOrderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         Double amount = req.getAmount(); // Or calculate from order
@@ -130,6 +132,12 @@ public class PaymentService {
     // Create Payment Entry
     // =============================================================
     public Payment createPayment(Long orderId, Double amount, String paymentId) {
+        if (orderId == null) {
+            throw new RuntimeException("orderId is required to create payment");
+        }
+        if (paymentId == null) {
+            throw new RuntimeException("paymentId is required to create payment");
+        }
         Orders order = ordersRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
         
@@ -229,14 +237,49 @@ public class PaymentService {
         return response.toString();
     }
 
+    // =============================================================
+    // 9️⃣ Mark payment PAID and store Razorpay details
+    // =============================================================
+    public Payment markPaymentPaidWithRazorpayDetails(String razorpayPaymentId, String razorpayOrderId, String razorpaySignature) {
+        if (razorpayPaymentId == null || razorpayOrderId == null || razorpaySignature == null) {
+            throw new RuntimeException("Missing Razorpay identifiers while marking payment paid");
+        }
+        Payment payment = paymentRepository.findByPaymentId(razorpayPaymentId);
+        if (payment == null) {
+            throw new RuntimeException("Payment not found with id: " + razorpayPaymentId);
+        }
+
+        payment.setRazorpayOrderId(razorpayOrderId);
+        payment.setRazorpayPaymentId(razorpayPaymentId);
+        payment.setRazorpaySignature(razorpaySignature);
+        payment.setStatus(PaymentStatus.PAID);
+
+        paymentRepository.save(payment);
+
+        Orders order = payment.getOrders();
+        if (order != null) {
+            order.setPaymentStatus(PaymentStatus.PAID);
+            ordersRepository.save(order);
+        }
+
+        return payment;
+    }
+
     // ================================
     // Create Payment Entry (without order - for testing)
     // ================================
-    public Payment createPaymentWithoutOrder(Double amount, String paymentId) {
+    public Payment createPaymentWithoutOrder(Double amount, String razorpayPaymentId, String razorpayOrderId, String razorpaySignature) {
+        if (razorpayPaymentId == null || razorpayOrderId == null || razorpaySignature == null) {
+            throw new RuntimeException("Missing Razorpay identifiers for payment creation");
+        }
         Payment payment = new Payment();
         payment.setAmount(amount);
-        payment.setPaymentId(paymentId);
-        payment.setStatus(PaymentStatus.PENDING);
+        // Use Razorpay payment id as our internal paymentId for test flows
+        payment.setPaymentId(razorpayPaymentId);
+        payment.setRazorpayPaymentId(razorpayPaymentId);
+        payment.setRazorpayOrderId(razorpayOrderId);
+        payment.setRazorpaySignature(razorpaySignature);
+        payment.setStatus(PaymentStatus.PAID);
         // orders can be null for testing purposes
         return paymentRepository.save(payment);
     }
