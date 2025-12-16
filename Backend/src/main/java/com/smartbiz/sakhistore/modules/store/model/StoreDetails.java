@@ -24,12 +24,12 @@ public class StoreDetails {
     @JsonIgnore
     private SellerDetails seller;
 
-    @OneToOne(mappedBy = "storeDetails", cascade = CascadeType.ALL)
-    @JsonIgnore
+    @OneToOne(mappedBy = "storeDetails", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JsonProperty("storeAddress")
     private StoreAddress storeAddress;
 
-    @OneToOne(mappedBy = "storeDetails", cascade = CascadeType.ALL)
-    @JsonIgnore
+    @OneToOne(mappedBy = "storeDetails", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JsonProperty("businessDetails")
     private BusinessDetails businessDetails;
     
     
@@ -81,6 +81,30 @@ public class StoreDetails {
     public Long getSellerId() {
         if (seller != null) {
             return seller.getSellerId();
+        }
+        return null;
+    }
+    
+    /**
+     * Get seller phone for JSON serialization (seller object is @JsonIgnore)
+     * This allows frontend to access seller phone without exposing full seller object
+     */
+    @JsonProperty("sellerPhone")
+    public String getSellerPhone() {
+        if (seller != null) {
+            return seller.getPhone();
+        }
+        return null;
+    }
+    
+    /**
+     * Get seller full name for JSON serialization (seller object is @JsonIgnore)
+     * This allows frontend to access seller name without exposing full seller object
+     */
+    @JsonProperty("sellerFullName")
+    public String getSellerFullName() {
+        if (seller != null) {
+            return seller.getFullName();
         }
         return null;
     }

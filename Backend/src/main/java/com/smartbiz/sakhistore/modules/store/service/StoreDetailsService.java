@@ -2,6 +2,7 @@ package com.smartbiz.sakhistore.modules.store.service;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -90,10 +91,19 @@ public class StoreDetailsService {
 
     // ✅ Find store by Seller ID (assumes one store per seller)
     public StoreDetails findBySellerId(Long sellerId) {
-        return storeRepository.findBySeller_SellerId(sellerId)
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new NoSuchElementException("Store not found for sellerId: " + sellerId));
+        List<StoreDetails> stores = storeRepository.findBySeller_SellerId(sellerId);
+        if (stores.isEmpty()) {
+            throw new NoSuchElementException("Store not found for sellerId: " + sellerId);
+        }
+        StoreDetails store = stores.get(0);
+        // Ensure relationships are loaded by fetching with relations
+        if (store.getStoreId() != null) {
+            Optional<StoreDetails> storeWithRelations = storeRepository.findByIdWithRelations(store.getStoreId());
+            if (storeWithRelations.isPresent()) {
+                return storeWithRelations.get();
+            }
+        }
+        return store;
     }
     
     // ✅ Find store by slug (extracted from storeLink)
@@ -102,9 +112,9 @@ public class StoreDetailsService {
         String normalizedSlug = slug.toLowerCase().trim();
         System.out.println("🔍 [findBySlug] Looking for slug: '" + normalizedSlug + "' (original: '" + slug + "')");
         
-        // Get all stores and find the one whose storeLink contains the slug
+        // Get all stores WITH relationships loaded (JOIN FETCH) and find the one whose storeLink contains the slug
         // StoreLink format: domain/slug or domain/slug/
-        List<StoreDetails> allStores = storeRepository.findAll();
+        List<StoreDetails> allStores = storeRepository.findAllWithRelations();
         System.out.println("📦 [findBySlug] Total stores in database: " + allStores.size());
         
         for (StoreDetails store : allStores) {

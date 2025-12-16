@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../contexts/StoreContext';
 
@@ -7,40 +7,64 @@ const Footer = () => {
 
   const storeName = currentStore?.name || 'Store';
   
-  // Get store address from storeAddress object (if available)
+  // Get store address from storeAddress object (if available) - this comes from the profile/database
   const storeAddressObj = currentStore?.storeAddress || {};
   
-  // Build formatted address from storeAddress fields
+  // Debug: Log address data to verify it's being loaded from profile
+  useEffect(() => {
+    if (currentStore?.storeAddress) {
+      console.log('📍 [Footer] Store address loaded from profile:', currentStore.storeAddress);
+    } else {
+      console.log('⚠️ [Footer] No storeAddress found in currentStore, using fallback');
+    }
+  }, [currentStore?.storeAddress]);
+  
+  // Build formatted address from storeAddress fields (matches mobile app format)
   const formatStoreAddress = () => {
-    if (!storeAddressObj || Object.keys(storeAddressObj).length === 0) {
-      // Fallback to simple address string if available
-      return currentStore?.businessAddress ||
-             currentStore?.address ||
-             currentStore?.shopAddress ||
-             'Shraddha Garden, Gawade Colony, Chinchwad, Maharashtra, 411019';
+    // First try to use storeAddress object from profile/database
+    if (storeAddressObj && Object.keys(storeAddressObj).length > 0) {
+      console.log('📍 [Footer] Raw storeAddress from DB:', JSON.stringify(storeAddressObj, null, 2));
+      
+      const parts = [];
+      
+      // Build address in the same format as mobile app: "Building, Area, Landmark (optional), City, State, Pincode"
+      // Order matches database: shopNoBuildingCompanyApartment, areaStreetSectorVillage, landmark, townCity, state, pincode
+      if (storeAddressObj.shopNoBuildingCompanyApartment) {
+        parts.push(storeAddressObj.shopNoBuildingCompanyApartment.trim());
+      }
+      if (storeAddressObj.areaStreetSectorVillage) {
+        parts.push(storeAddressObj.areaStreetSectorVillage.trim());
+      }
+      // Include landmark only if it exists and is not empty (optional field)
+      if (storeAddressObj.landmark && storeAddressObj.landmark.trim()) {
+        parts.push(storeAddressObj.landmark.trim());
+      }
+      if (storeAddressObj.townCity) {
+        parts.push(storeAddressObj.townCity.trim());
+      }
+      if (storeAddressObj.state) {
+        parts.push(storeAddressObj.state.trim());
+      }
+      if (storeAddressObj.pincode) {
+        parts.push(storeAddressObj.pincode.trim());
+      }
+      
+      const formattedAddress = parts.join(', ');
+      console.log('✅ [Footer] Formatted address from DB:', formattedAddress);
+      console.log('📋 [Footer] Address parts:', parts);
+      
+      // Join with comma and space, matching mobile app format
+      if (parts.length > 0) {
+        return formattedAddress;
+      }
     }
     
-    const parts = [];
-    if (storeAddressObj.shopNoBuildingCompanyApartment) {
-      parts.push(storeAddressObj.shopNoBuildingCompanyApartment);
-    }
-    if (storeAddressObj.areaStreetSectorVillage) {
-      parts.push(storeAddressObj.areaStreetSectorVillage);
-    }
-    if (storeAddressObj.landmark) {
-      parts.push(storeAddressObj.landmark);
-    }
-    if (storeAddressObj.townCity) {
-      parts.push(storeAddressObj.townCity);
-    }
-    if (storeAddressObj.state) {
-      parts.push(storeAddressObj.state);
-    }
-    if (storeAddressObj.pincode) {
-      parts.push(storeAddressObj.pincode);
-    }
-    
-    return parts.length > 0 ? parts.join(', ') : 'Shraddha Garden, Gawade Colony, Chinchwad, Maharashtra, 411019';
+    // Fallback to simple address string if storeAddress object is not available
+    console.log('⚠️ [Footer] No storeAddress object, using fallback');
+    return currentStore?.businessAddress ||
+           currentStore?.address ||
+           currentStore?.shopAddress ||
+           'Shraddha Garden, Gawade Colony, Chinchwad, Maharashtra, 411019';
   };
   
   const storeAddress = formatStoreAddress();

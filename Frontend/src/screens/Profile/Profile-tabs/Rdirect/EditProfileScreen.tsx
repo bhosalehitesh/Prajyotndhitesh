@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, Alert, ActivityIndicator } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { storage, AUTH_TOKEN_KEY } from '../../../authentication/storage';
+import { getCurrentSellerStoreDetails, saveStoreAddress } from '../../../utils/api';
 
 export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
   const [hideAddress, setHideAddress] = useState(false);
   const [supportOption, setSupportOption] = useState('other');
   const [supportNumber, setSupportNumber] = useState('8766408154');
   const loginNumber = '8766408154';
+  const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
     legalName: 'Girnai',
     phone: '8766408154',
@@ -15,8 +18,115 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
     address: 'Thirumala , Hinjewadi, Pune, Maharashtra, 411057',
   });
 
-  const handleSave = () => {
-    Alert.alert('Success', 'Profile updated successfully!', [{ text: 'OK', onPress: onBack }]);
+  // Load existing store address when component mounts
+  useEffect(() => {
+    loadStoreAddress();
+  }, []);
+
+  const loadStoreAddress = async () => {
+    try {
+      const storeDetails = await getCurrentSellerStoreDetails();
+      console.log('📦 [EditProfile] Loaded storeDetails:', JSON.stringify(storeDetails, null, 2));
+      if (storeDetails && storeDetails.storeAddress) {
+        const addr = storeDetails.storeAddress;
+        console.log('📍 [EditProfile] Store address from DB:', JSON.stringify(addr, null, 2));
+        
+        // Format address from database fields (matching Footer format exactly)
+        // Order: shopNoBuildingCompanyApartment, areaStreetSectorVillage, landmark (optional), townCity, state, pincode
+        // This matches the database column order and Footer display format
+        const parts = [];
+        if (addr.shopNoBuildingCompanyApartment) parts.push(addr.shopNoBuildingCompanyApartment.trim());
+        if (addr.areaStreetSectorVillage) parts.push(addr.areaStreetSectorVillage.trim());
+        // Include landmark only if it exists and is not empty (optional field)
+        if (addr.landmark && addr.landmark.trim()) parts.push(addr.landmark.trim());
+        if (addr.townCity) parts.push(addr.townCity.trim());
+        if (addr.state) parts.push(addr.state.trim());
+        if (addr.pincode) parts.push(addr.pincode.trim());
+        
+        const formattedAddress = parts.join(', ');
+        console.log('📋 [EditProfile] Address parts:', parts);
+        console.log('✅ [EditProfile] Formatted address (should match DB):', formattedAddress);
+        
+        if (parts.length > 0) {
+          setProfileData(prev => ({ ...prev, address: formattedAddress }));
+        }
+      } else {
+        console.log('⚠️ [EditProfile] No storeAddress found in storeDetails');
+      }
+    } catch (error) {
+      console.error('❌ [EditProfile] Error loading store address:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      console.log('💾 [EditProfile] Saving address:', profileData.address);
+      // Parse the address string into individual components
+      // Format: "Building, Area, Landmark (optional), City, State, Pincode"
+      // Or: "Building, Area, City, State, Pincode" (without landmark)
+      const addressParts = profileData.address.split(',').map(p => p.trim()).filter(p => p.length > 0);
+      console.log('🔍 [EditProfile] Parsed address parts:', addressParts);
+      
+      // Extract components - handle both with and without landmark
+      // Last part is always pincode, second last is state, third last is city
+      let pincode = '';
+      let state = '';
+      let city = '';
+      let landmark = '';
+      let area = '';
+      let building = '';
+      
+      const numParts = addressParts.length;
+      
+      if (numParts >= 1) {
+        building = addressParts[0] || '';
+      }
+      if (numParts >= 2) {
+        area = addressParts[1] || '';
+      }
+      
+      // Determine if landmark exists by checking if we have 6 parts (with landmark) or 5 parts (without)
+      if (numParts === 6) {
+        // Format: Building, Area, Landmark, City, State, Pincode
+        landmark = addressParts[2] || '';
+        city = addressParts[3] || '';
+        state = addressParts[4] || '';
+        pincode = addressParts[5] || '';
+      } else if (numParts === 5) {
+        // Format: Building, Area, City, State, Pincode (no landmark)
+        city = addressParts[2] || '';
+        state = addressParts[3] || '';
+        pincode = addressParts[4] || '';
+      } else if (numParts >= 3) {
+        // Fallback: assume last 3 are city, state, pincode
+        city = addressParts[numParts - 3] || '';
+        state = addressParts[numParts - 2] || '';
+        pincode = addressParts[numParts - 1] || '';
+      }
+
+      const addressData = {
+        addressLine1: building || 'Thirumala',
+        addressLine2: area || 'Hinjewadi',
+        landmark: landmark || undefined,
+        city: city || 'Pune',
+        state: state || 'Maharashtra',
+        pincode: pincode || '411057',
+      };
+      
+      console.log('📤 [EditProfile] Sending address data to backend:', JSON.stringify(addressData, null, 2));
+
+      // Save address to backend
+      const result = await saveStoreAddress(addressData);
+      console.log('✅ [EditProfile] Address saved successfully:', JSON.stringify(result, null, 2));
+
+      Alert.alert('Success', 'Profile updated successfully!', [{ text: 'OK', onPress: onBack }]);
+    } catch (error) {
+      console.error('❌ [EditProfile] Error saving address:', error);
+      Alert.alert('Error', 'Failed to save address. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -141,8 +251,16 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save</Text>
+        <TouchableOpacity 
+          style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -244,6 +362,10 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     padding: 15,
     alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
   },
   saveButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
 });

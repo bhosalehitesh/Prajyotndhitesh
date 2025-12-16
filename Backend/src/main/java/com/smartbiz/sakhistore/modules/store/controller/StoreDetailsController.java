@@ -143,6 +143,19 @@ public class StoreDetailsController {
         try {
             StoreDetails store = storeService.findBySellerId(sellerId);
             
+            // Log storeAddress for debugging
+            if (store.getStoreAddress() != null) {
+                System.out.println("📍 [getStoreBySeller] StoreAddress found for sellerId " + sellerId + ":");
+                System.out.println("   - shopNoBuildingCompanyApartment: " + store.getStoreAddress().getShopNoBuildingCompanyApartment());
+                System.out.println("   - areaStreetSectorVillage: " + store.getStoreAddress().getAreaStreetSectorVillage());
+                System.out.println("   - landmark: " + store.getStoreAddress().getLandmark());
+                System.out.println("   - townCity: " + store.getStoreAddress().getTownCity());
+                System.out.println("   - state: " + store.getStoreAddress().getState());
+                System.out.println("   - pincode: " + store.getStoreAddress().getPincode());
+            } else {
+                System.out.println("⚠️ [getStoreBySeller] No StoreAddress found for sellerId: " + sellerId);
+            }
+            
             // Try to get logo from store_logos table first (new table)
             try {
                 com.smartbiz.sakhistore.modules.store.model.StoreLogo activeLogo = 

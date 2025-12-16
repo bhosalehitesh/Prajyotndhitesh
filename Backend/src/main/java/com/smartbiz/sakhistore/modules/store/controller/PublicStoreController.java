@@ -45,6 +45,20 @@ public class PublicStoreController {
         try {
             StoreDetails store = storeService.findBySlug(slug);
             System.out.println("✅ [getStoreBySlug] Store found: " + store.getStoreName() + " (ID: " + store.getStoreId() + ")");
+            
+            // Log storeAddress for debugging
+            if (store.getStoreAddress() != null) {
+                System.out.println("📍 [getStoreBySlug] StoreAddress found for slug '" + slug + "':");
+                System.out.println("   - shopNoBuildingCompanyApartment: " + store.getStoreAddress().getShopNoBuildingCompanyApartment());
+                System.out.println("   - areaStreetSectorVillage: " + store.getStoreAddress().getAreaStreetSectorVillage());
+                System.out.println("   - landmark: " + store.getStoreAddress().getLandmark());
+                System.out.println("   - townCity: " + store.getStoreAddress().getTownCity());
+                System.out.println("   - state: " + store.getStoreAddress().getState());
+                System.out.println("   - pincode: " + store.getStoreAddress().getPincode());
+            } else {
+                System.out.println("⚠️ [getStoreBySlug] No StoreAddress found for slug: " + slug);
+            }
+            
             return ResponseEntity.ok(store);
         } catch (NoSuchElementException e) {
             System.err.println("❌ [getStoreBySlug] Store not found: " + e.getMessage());

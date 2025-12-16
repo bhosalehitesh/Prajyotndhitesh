@@ -99,6 +99,13 @@ export const StoreProvider = ({ children }) => {
           console.log('✅ [StoreContext] sellerId found:', store.sellerId, '- products should load');
         }
         
+        // Log storeAddress for debugging
+        if (store.storeAddress) {
+          console.log('📦 [StoreContext] StoreAddress from API:', JSON.stringify(store.storeAddress, null, 2));
+        } else {
+          console.log('⚠️ [StoreContext] No storeAddress in API response');
+        }
+        
         setCurrentStore({
           id: store.storeId || store.id,
           storeId: store.storeId || store.id, // Explicit storeId
@@ -107,11 +114,13 @@ export const StoreProvider = ({ children }) => {
           logo: store.logoUrl || store.logo || '',
           description: store.businessDetails?.businessDescription || store.description || '',
           address: store.address || '',
-          phone: store.phone || '',
+          phone: store.sellerPhone || store.phone || '', // Use seller phone from backend
           sellerId: store.sellerId, // Should now be available from backend after fix
+          sellerFullName: store.sellerFullName || '', // Seller's full name
           storeLink: store.storeLink, // Keep original storeLink for debugging
-          storeAddress: store.storeAddress || null, // Store address object with all fields
+          storeAddress: store.storeAddress || null, // Store address object with all fields (from DB)
           businessAddress: store.businessDetails?.businessAddress || '',
+          businessEmail: store.businessDetails?.businessEmail || '', // Business email if available
         });
         setError(null);
       } else {
