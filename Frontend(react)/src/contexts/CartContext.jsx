@@ -69,7 +69,11 @@ export const CartProvider = ({ children }) => {
               setCartSellerId(String(extractedSellerId));
             }
           } else {
+            // No items in backend cart -> fully reset cart state
+            console.log('🛒 [Cart] Backend cart is empty. Resetting cart, storeId and sellerId.');
             setCart([]);
+            setCartStoreId(null);
+            setCartSellerId(null);
           }
         } else {
           // Guest user - load from localStorage
@@ -267,7 +271,11 @@ export const CartProvider = ({ children }) => {
           }));
           setCart(transformedCart);
         } else {
+          // Backend cart is now empty after removal -> reset store/seller lock
+          console.log('🛒 [Cart] Backend cart empty after removal. Resetting cart, storeId and sellerId.');
           setCart([]);
+          setCartStoreId(null);
+          setCartSellerId(null);
         }
       } catch (error) {
         console.error('❌ [Cart] Error removing from backend cart:', error);

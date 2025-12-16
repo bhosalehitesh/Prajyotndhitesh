@@ -10,6 +10,7 @@ import com.smartbiz.sakhistore.modules.cart.model.WishlistItem;
 import com.smartbiz.sakhistore.modules.cart.repository.CartRepository;
 import com.smartbiz.sakhistore.modules.cart.repository.WishlistRepository;
 import com.smartbiz.sakhistore.modules.customer_user.model.User;
+import com.smartbiz.sakhistore.modules.customer_user.repository.UserRepository;
 import com.smartbiz.sakhistore.modules.order.model.OrderItems;
 import com.smartbiz.sakhistore.modules.order.repository.OrderItemsRepository;
 import com.smartbiz.sakhistore.modules.product.model.Product;
@@ -33,17 +34,25 @@ public class WishlistService {
     @Autowired
     private OrderItemsRepository orderItemsRepo;
 
+    @Autowired
+    private UserRepository userRepo;
+
     // -----------------------------------------------------
     // GET ALL WISHLIST ITEMS
     // -----------------------------------------------------
-    public List<WishlistItem> getWishlist(User user) {
+    public List<WishlistItem> getWishlist(Long userId) {
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         return wishlistRepo.findByUser(user);
     }
 
     // -----------------------------------------------------
     // ADD PRODUCT TO WISHLIST
     // -----------------------------------------------------
-    public WishlistItem addToWishlist(User user, Long productId) {
+    public WishlistItem addToWishlist(Long userId, Long productId) {
+        // Fetch User entity from database
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         Product product = productRepo.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -62,7 +71,10 @@ public class WishlistService {
     // -----------------------------------------------------
     // REMOVE PRODUCT FROM WISHLIST
     // -----------------------------------------------------
-    public void removeFromWishlist(User user, Long productId) {
+    public void removeFromWishlist(Long userId, Long productId) {
+        // Fetch User entity from database
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         Product product = productRepo.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -73,7 +85,10 @@ public class WishlistService {
     // -----------------------------------------------------
     // MOVE PRODUCT FROM WISHLIST → CART
     // -----------------------------------------------------
-    public void moveToCart(User user, Long productId) {
+    public void moveToCart(Long userId, Long productId) {
+        // Fetch User entity from database
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         Product product = productRepo.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));

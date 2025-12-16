@@ -87,6 +87,17 @@ const Checkout = () => {
   });
 
   const [isAddressSaved, setIsAddressSaved] = useState(false);
+  const navigateToPayment = () => {
+    const path = storeSlug ? `/store/${storeSlug}/checkout/payment` : '/checkout/payment';
+    const payload = {
+      amount: orderTotal,
+      orderId: Date.now(), // simple unique ID for test flow
+      itemTotal,
+      deliveryFee,
+      currency: 'INR',
+    };
+    navigate(path, { state: payload });
+  };
 
   const itemTotal = getCartTotal();
   const deliveryFee = 0; // Free delivery
@@ -241,7 +252,7 @@ const Checkout = () => {
     }));
   };
 
-  const handleSaveAddress = async (e) => {
+  const handleSaveAddress = async (e, navigateAfterSave = false) => {
     e.preventDefault();
 
     // Validate required fields
@@ -406,6 +417,9 @@ const Checkout = () => {
       }
 
       setIsAddressSaved(true);
+      if (navigateAfterSave) {
+        navigateToPayment();
+      }
       
       // Show appropriate success message
       if (dbSaveSuccess) {
@@ -1069,7 +1083,13 @@ const Checkout = () => {
           </div>
           <button
             type="button"
-            onClick={handleSaveAddress}
+            onClick={(e) => {
+              if (isAddressSaved) {
+                navigateToPayment();
+              } else {
+                handleSaveAddress(e, true);
+              }
+            }}
             disabled={isSaving}
             style={{
               width: '100%',

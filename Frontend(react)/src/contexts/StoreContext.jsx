@@ -41,14 +41,22 @@ export const StoreProvider = ({ children }) => {
     if (match && match[1] !== '') {
       const slug = match[1];
       // Exclude known routes
-      const excludedRoutes = ['categories', 'featured', 'products', 'collections', 'cart', 'wishlist', 'orders', 'order-tracking', 'faq', 'search', 'product'];
+      const excludedRoutes = ['categories', 'featured', 'products', 'collections', 'cart', 'wishlist', 'orders', 'order-tracking', 'faq', 'search', 'product', 'checkout'];
       if (!excludedRoutes.includes(slug)) {
         console.log('✅ [SLUG] Found slug from /:slug pattern:', slug);
         return slug;
+      } else {
+        // This is an excluded route, return null silently (no error)
+        return null;
       }
     }
     
-    console.log('❌ [SLUG] No slug found in path:', path);
+    // Only log error if path doesn't match any pattern and isn't root or an excluded route
+    const excludedRoutes = ['categories', 'featured', 'products', 'collections', 'cart', 'wishlist', 'orders', 'order-tracking', 'faq', 'search', 'product', 'checkout'];
+    const firstSegment = path.split('/').filter(Boolean)[0];
+    if (path !== '/' && path !== '' && !excludedRoutes.includes(firstSegment)) {
+      console.log('❌ [SLUG] No slug found in path:', path);
+    }
     return null;
   };
 
@@ -102,6 +110,8 @@ export const StoreProvider = ({ children }) => {
           phone: store.phone || '',
           sellerId: store.sellerId, // Should now be available from backend after fix
           storeLink: store.storeLink, // Keep original storeLink for debugging
+          storeAddress: store.storeAddress || null, // Store address object with all fields
+          businessAddress: store.businessDetails?.businessAddress || '',
         });
         setError(null);
       } else {

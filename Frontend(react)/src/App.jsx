@@ -23,6 +23,7 @@ import Orders from './pages/Orders';
 import OrderTracking from './pages/OrderTracking';
 import FAQ from './pages/FAQ';
 import Collections from './pages/Collections';
+import RazorpayTest from './pages/RazorpayTest';
 
 // Components
 import ErrorBoundary from './components/ErrorBoundary';
@@ -53,6 +54,7 @@ function App() {
                       <Route path="/store/:slug/search" element={<Search />} />
                       <Route path="/store/:slug/cart" element={<Cart />} />
                       <Route path="/store/:slug/checkout" element={<Checkout />} />
+                      <Route path="/store/:slug/checkout/payment" element={<RazorpayTest />} />
                       <Route path="/store/:slug/wishlist" element={<Wishlist />} />
                       <Route path="/store/:slug/orders" element={<Orders />} />
                       <Route path="/store/:slug/order-tracking" element={<OrderTracking />} />
@@ -68,6 +70,12 @@ function App() {
                       <Route path="/search" element={<Search />} />
                       <Route path="/cart" element={<Cart />} />
                       <Route path="/checkout" element={<Checkout />} />
+                      {/* Payment test page (root-level) */}
+                      <Route path="/checkout/payment" element={<RazorpayTest />} />
+
+                      {/* Extra fallback for store checkout without slug (e.g. /store/checkout/payment) */}
+                      <Route path="/store/checkout" element={<Checkout />} />
+                      <Route path="/store/checkout/payment" element={<RazorpayTest />} />
                       <Route path="/wishlist" element={<Wishlist />} />
                       <Route path="/orders" element={<Orders />} />
                       <Route path="/order-tracking" element={<OrderTracking />} />

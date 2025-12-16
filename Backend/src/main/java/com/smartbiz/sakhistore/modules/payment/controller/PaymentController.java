@@ -7,11 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.razorpay.RazorpayException;
-import com.smartbiz.sakhistore.modules.payment.dto.CreateRazorpayOrderRequest;
-import com.smartbiz.sakhistore.modules.payment.dto.CreateRazorpayOrderResponse;
-import com.smartbiz.sakhistore.modules.payment.dto.RazorpayCallbackRequest;
 import com.smartbiz.sakhistore.modules.payment.model.Payment;
-import com.smartbiz.sakhistore.modules.payment.model.PaymentStatus;
 import com.smartbiz.sakhistore.modules.payment.service.PaymentService;
 import com.smartbiz.sakhistore.modules.payment.service.RazorpayService;
 import com.smartbiz.sakhistore.modules.order.repository.OrdersRepository;
@@ -129,6 +125,14 @@ public class PaymentController {
         try {
             System.out.println("Received Razorpay callback: " + request);
             
+            // Validate required fields
+            if (request.get("razorpay_order_id") == null || request.get("razorpay_payment_id") == null || request.get("razorpay_signature") == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing Razorpay identifiers in callback"));
+            }
+            if (request.get("orderId") == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing orderId in callback"));
+            }
+
             String razorpayOrderId = request.get("razorpay_order_id").toString();
             String razorpayPaymentId = request.get("razorpay_payment_id").toString();
             String razorpaySignature = request.get("razorpay_signature").toString();
@@ -142,12 +146,12 @@ public class PaymentController {
                 return ResponseEntity.status(400).body(Map.of("error", "Invalid payment signature"));
             }
 
-            // Check if payment already exists
+            // Check if payment already exists (by our internal paymentId, which we map to Razorpay payment id in test flow)
             Payment existingPayment = paymentService.getPayment(razorpayPaymentId);
             
             if (existingPayment != null) {
-                // Update existing payment status to PAID
-                paymentService.updatePaymentStatus(razorpayPaymentId, PaymentStatus.PAID);
+                // Update existing payment with Razorpay details and status
+                paymentService.markPaymentPaidWithRazorpayDetails(razorpayPaymentId, razorpayOrderId, razorpaySignature);
             } else {
                 // Get order to get amount (or use 0.0 if order doesn't exist for testing)
                 Double amount = 0.0;
@@ -163,9 +167,10 @@ public class PaymentController {
                 }
                 
                 // Create payment - with order if exists, without if not (for testing)
-                Payment payment;
                 if (order != null) {
-                    payment = paymentService.createPayment(orderId, amount, razorpayPaymentId);
+                    paymentService.createPayment(orderId, amount, razorpayPaymentId);
+                    // Now mark as paid and store Razorpay fields
+                    paymentService.markPaymentPaidWithRazorpayDetails(razorpayPaymentId, razorpayOrderId, razorpaySignature);
                 } else {
                     // For testing: create payment without order requirement
                     // Get amount from request if available
@@ -177,11 +182,8 @@ public class PaymentController {
                     } catch (Exception e) {
                         // Use default 0.0
                     }
-                    payment = paymentService.createPaymentWithoutOrder(amount, razorpayPaymentId);
+                    paymentService.createPaymentWithoutOrder(amount, razorpayPaymentId, razorpayOrderId, razorpaySignature);
                 }
-                
-                // Update status to PAID
-                paymentService.updatePaymentStatus(razorpayPaymentId, PaymentStatus.PAID);
             }
 
             return ResponseEntity.ok(Map.of(

@@ -16,13 +16,14 @@
 export const API_BASE_URL_DEV = 'http://localhost:8080';
 
 // Use IP address (only if USE_IP_ADDRESS is true)
-export const API_BASE_URL_DEV_IP = 'http://192.168.1.11:8080'; // Change this to your IP if needed
+// Updated to current machine IP (detected): 192.168.1.33
+export const API_BASE_URL_DEV_IP = 'http://192.168.1.33:8080'; // Change this to your IP if needed
 
 // Production URL
 export const API_BASE_URL_PROD = 'https://your-production-api.com';
 
-// Default: use localhost (requires ADB reverse port forwarding)
-let USE_IP_ADDRESS_DEFAULT = false;
+// Default: use IP address for mobile/emulator (set true to avoid localhost issues)
+let USE_IP_ADDRESS_DEFAULT = true;
 let API_BASE_URL_DEV_IP_OVERRIDE = API_BASE_URL_DEV_IP;
 
 // Try to import local config (if it exists, it will override the defaults)
