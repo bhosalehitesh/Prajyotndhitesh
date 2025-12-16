@@ -107,11 +107,7 @@ const Products = () => {
           <p>No products found for this store.</p>
         </div>
       ) : (
-        <div className="products-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
-          gap: '2.5rem'
-        }}>
+        <div className="products-grid">
           {products.map((product) => (
             <div key={product.id} onClick={() => handleProductClick(product)} style={{cursor: 'pointer'}}>
               <ProductCard product={product} />
