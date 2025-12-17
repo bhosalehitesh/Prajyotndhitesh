@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../contexts/StoreContext';
 import { getStoreProducts } from '../utils/api';
 import { transformProducts } from '../utils/format';
@@ -13,6 +14,7 @@ const ProductDetail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { cart, addToCart, updateQuantity } = useCart();
+  const { isDarkMode } = useTheme();
   const { storeSlug, currentStore, loading: storeLoading } = useStore();
   
   // Get slug from route params first (most reliable), then from store context
@@ -274,37 +276,15 @@ const ProductDetail = () => {
   const displayImage = selectedImage || fallbackImage || '/assets/products/p1.jpg';
 
   return (
-    <div className="container" style={{ padding: '2rem 0' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '2rem', alignItems: 'flex-start' }}>
-        <div style={{ background: '#fafafa', borderRadius: '10px', padding: '1.2rem', position: 'relative' }}>
+    <div className="container product-detail-page" style={{ padding: '2rem 0' }}>
+      <div className="product-detail-grid">
+        <div className="product-detail-media">
           {displayImage && (
-            <div
-              style={{
-                position: 'relative',
-                width: '100%',
-                maxWidth: '460px',
-                aspectRatio: '4 / 5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: '#f6f7fb',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                margin: '0 auto',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.06)'
-              }}
-            >
+            <div className="product-detail-image-frame">
               <img
                 src={displayImage}
                 alt={displayName}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain',
-                  padding: '8px'
-                }}
+                className="product-detail-image"
               />
               {imageList.length > 1 && (
                 <>
@@ -316,8 +296,8 @@ const ProductDetail = () => {
                       top: '50%',
                       left: '12px',
                       transform: 'translateY(-50%)',
-                      border: '1px solid #e5e7eb',
-                      background: '#fff',
+                      border: isDarkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                      background: 'var(--card-bg)',
                       borderRadius: '999px',
                       width: '36px',
                       height: '36px',
@@ -338,8 +318,8 @@ const ProductDetail = () => {
                       top: '50%',
                       right: '12px',
                       transform: 'translateY(-50%)',
-                      border: '1px solid #e5e7eb',
-                      background: '#fff',
+                      border: isDarkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #e5e7eb',
+                      background: 'var(--card-bg)',
                       borderRadius: '999px',
                       width: '36px',
                       height: '36px',
@@ -357,70 +337,26 @@ const ProductDetail = () => {
             </div>
           )}
           {imageList.length > 1 && (
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+            <div className="product-detail-thumbs">
               {imageList.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentImageIndex(idx)}
-                  style={{
-                    border: currentImageIndex === idx ? '2px solid #f97316' : '1px solid #e0e0e0',
-                    borderRadius: '8px',
-                    padding: '6px',
-                    background: '#fff',
-                    cursor: 'pointer'
-                  }}
+                  className={`product-detail-thumb-btn ${currentImageIndex === idx ? 'active' : ''}`}
                 >
                   <img
                     src={img}
                     alt="thumb"
-                    style={{
-                      width: '68px',
-                      height: '68px',
-                      objectFit: 'contain',
-                      borderRadius: '6px',
-                      background: '#f8fafc'
-                    }}
+                    className="product-detail-thumb-img"
                   />
                 </button>
               ))}
             </div>
           )}
-        </div>
-
-        <div>
-          <h1 style={{ marginBottom: '0.5rem' }}>{displayName}</h1>
-          {brandToShow && <p style={{ color: '#666', marginBottom: '0.5rem' }}>Brand: {brandToShow}</p>}
-          {categoryToShow && <p style={{ color: '#888', marginBottom: '0.5rem' }}>Category: {categoryToShow}</p>}
-
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-            {isBestseller && (
-              <span className="product-badge bestseller" style={{ position: 'relative' }}>
-                Bestseller
-              </span>
-            )}
-            {!isActive && (
-              <span className="product-badge sale" style={{ position: 'relative' }}>
-                Inactive
-              </span>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '1.8rem', fontWeight: '700' }}>₹{Number(priceToShow).toLocaleString('en-IN')}</span>
-            {originalPriceToShow && Number(originalPriceToShow) > Number(priceToShow) && (
-              <span style={{ textDecoration: 'line-through', color: '#999' }}>
-                ₹{Number(originalPriceToShow).toLocaleString('en-IN')}
-              </span>
-          )}
-            {discountPct > 0 && (
-              <span style={{ color: '#16a34a', fontWeight: 700 }}>{discountPct}% Off</span>
-            )}
-          </div>
-          <p style={{ color: '#888', marginTop: '-0.5rem' }}>Inclusive of all taxes</p>
 
           {cartItem ? (
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: '2px solid #f97316', borderRadius: '8px', padding: '0.5rem 0.75rem', background: '#fff' }}>
+            <div className="product-detail-actions">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: '2px solid #f97316', borderRadius: '8px', padding: '0.5rem 0.75rem', background: 'var(--card-bg)' }}>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -467,7 +403,8 @@ const ProductDetail = () => {
                     border: 'none',
                     fontSize: '1rem',
                     fontWeight: '600',
-                    color: '#f97316'
+                    color: '#f97316',
+                    background: 'transparent'
                   }}
                   min="0"
                 />
@@ -506,8 +443,9 @@ const ProductDetail = () => {
               <button
                 onClick={handleViewCart}
                 style={{
-                  padding: '1rem 2rem',
-                  fontSize: '1.05rem',
+                  width: '100%',
+                  padding: '0.9rem 1rem',
+                  fontSize: '1rem',
                   background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
                   color: '#fff',
                   border: 'none',
@@ -521,41 +459,77 @@ const ProductDetail = () => {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <div className="product-detail-actions-row">
               <button
                 onClick={handleAddToCart}
                 style={{
-                  padding: '1rem 2rem',
-                  fontSize: '1.05rem',
+                  flex: 1,
+                  padding: '0.9rem 1rem',
+                  fontSize: '1rem',
                   background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '10px',
                   cursor: 'pointer',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)'
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                  whiteSpace: 'nowrap'
                 }}
               >
-            Add to Cart
-          </button>
+                Add to Cart
+              </button>
               <button
                 onClick={handleBuyNow}
                 style={{
-                  padding: '1rem 2rem',
-                  fontSize: '1.05rem',
+                  flex: 1,
+                  padding: '0.9rem 1rem',
+                  fontSize: '1rem',
                   background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '10px',
                   cursor: 'pointer',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)'
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 Buy Now
               </button>
             </div>
           )}
+        </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
+        <div style={{ paddingTop: '0.15rem' }}>
+          <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>{displayName}</h1>
+          {brandToShow && <p style={{ color: isDarkMode ? 'rgba(245,245,245,0.72)' : '#666', marginBottom: '0.5rem' }}>Brand: {brandToShow}</p>}
+          {categoryToShow && <p style={{ color: isDarkMode ? 'rgba(245,245,245,0.6)' : '#888', marginBottom: '0.5rem' }}>Category: {categoryToShow}</p>}
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            {isBestseller && (
+              <span className="product-badge bestseller" style={{ position: 'relative' }}>
+                Bestseller
+              </span>
+            )}
+            {!isActive && (
+              <span className="product-badge sale" style={{ position: 'relative' }}>
+                Inactive
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '1.8rem', fontWeight: '700' }}>₹{Number(priceToShow).toLocaleString('en-IN')}</span>
+            {originalPriceToShow && Number(originalPriceToShow) > Number(priceToShow) && (
+              <span style={{ textDecoration: 'line-through', color: '#999' }}>
+                ₹{Number(originalPriceToShow).toLocaleString('en-IN')}
+              </span>
+          )}
+            {discountPct > 0 && (
+              <span style={{ color: '#16a34a', fontWeight: 700 }}>{discountPct}% Off</span>
+            )}
+          </div>
+          <p style={{ color: '#888', marginTop: '-0.5rem' }}>Inclusive of all taxes</p>
+
+          <div className="product-detail-info-grid">
             <DetailItem label="SKU" value={sku} />
             <DetailItem label="HSN" value={hsnCode} />
             <DetailItem label="Color" value={color} />
@@ -580,13 +554,13 @@ const ProductDetail = () => {
           </div>
 
           {description && (
-            <div style={{ marginTop: '1.5rem', color: '#444', lineHeight: 1.6 }}>
+            <div style={{ marginTop: '1.5rem', color: isDarkMode ? 'rgba(245,245,245,0.75)' : '#444', lineHeight: 1.6 }}>
               <h3 style={{ marginBottom: '0.5rem' }}>Product Description</h3>
               <p>{description}</p>
             </div>
           )}
 
-          <div style={{ marginTop: '1.5rem', color: '#555', lineHeight: 1.6 }}>
+          <div style={{ marginTop: '1.5rem', color: isDarkMode ? 'rgba(245,245,245,0.72)' : '#555', lineHeight: 1.6 }}>
             <h3 style={{ marginBottom: '0.5rem' }}>Delivery & Returns</h3>
             <ul style={{ paddingLeft: '1.2rem', margin: 0 }}>
               <li>Delivered in 3-5 days (varies by pincode)</li>
@@ -595,15 +569,7 @@ const ProductDetail = () => {
             </ul>
           </div>
 
-          <div
-            style={{
-              marginTop: '1.5rem',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: '0.75rem',
-              alignItems: 'center'
-            }}
-          >
+          <div className="product-detail-feature-grid">
             <FeaturePill icon="💳" label="Secure Payments" />
             <FeaturePill icon="🏅" label="Assured Quality" />
             <FeaturePill icon="🧵" label="Made in India" />
@@ -615,9 +581,9 @@ const ProductDetail = () => {
       <div style={{ marginTop: '3rem' }}>
         <h2 style={{ marginBottom: '1rem' }}>You may also like</h2>
         {relatedProducts.length === 0 ? (
-          <p style={{ color: '#666' }}>No related products found.</p>
+          <p style={{ color: isDarkMode ? 'rgba(245,245,245,0.72)' : '#666' }}>No related products found.</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.5rem' }}>
+          <div className="product-detail-related-grid">
             {relatedProducts.map((prod) => (
               <ProductCard key={prod.id} product={prod} />
             ))}
@@ -632,42 +598,46 @@ export default ProductDetail;
 
 const DetailItem = ({ label, value, highlight = false }) => {
   if (!value) return null;
+  const { isDarkMode } = useTheme();
   return (
     <div
       style={{
-        background: '#f9fafb',
-        border: '1px solid #eef0f2',
+        background: 'var(--card-bg)',
+        border: isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #eef0f2',
         borderRadius: '8px',
-        padding: '0.75rem 0.9rem',
-        minHeight: '64px',
+        padding: '0.6rem 0.75rem',
+        minHeight: '54px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center'
       }}
     >
-      <span style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '0.25rem' }}>{label}</span>
-      <span style={{ fontWeight: 600, color: highlight ? '#16a34a' : '#111827' }}>{value}</span>
+      <span style={{ fontSize: '0.78rem', color: isDarkMode ? 'rgba(245,245,245,0.6)' : '#6b7280', marginBottom: '0.18rem' }}>{label}</span>
+      <span style={{ fontWeight: 600, fontSize: '0.95rem', color: highlight ? '#16a34a' : (isDarkMode ? 'var(--text-color)' : '#111827'), overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{value}</span>
     </div>
   );
 };
 
-const FeaturePill = ({ icon, label }) => (
-  <div
-    style={{
-      background: '#f9fafb',
-      border: '1px solid #eef0f2',
-      borderRadius: '10px',
-      padding: '0.9rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.65rem',
-      fontWeight: 600,
-      color: '#111827',
-      minHeight: '52px'
-    }}
-  >
-    <span style={{ fontSize: '1.2rem' }}>{icon}</span>
-    <span>{label}</span>
-  </div>
-);
+const FeaturePill = ({ icon, label }) => {
+  const { isDarkMode } = useTheme();
+  return (
+    <div
+      style={{
+        background: 'var(--card-bg)',
+        border: isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #eef0f2',
+        borderRadius: '10px',
+        padding: '0.9rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.65rem',
+        fontWeight: 600,
+        color: isDarkMode ? 'var(--text-color)' : '#111827',
+        minHeight: '52px'
+      }}
+    >
+      <span style={{ fontSize: '1.2rem' }}>{icon}</span>
+      <span>{label}</span>
+    </div>
+  );
+};
 
