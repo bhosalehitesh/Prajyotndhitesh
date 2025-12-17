@@ -356,7 +356,7 @@ const ProductDetail = () => {
 
           {cartItem ? (
             <div className="product-detail-actions">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: '2px solid #f97316', borderRadius: '8px', padding: '0.5rem 0.75rem', background: 'var(--card-bg)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: `2px solid var(--vibrant-pink)`, borderRadius: '12px', padding: '0.5rem 0.75rem', background: isDarkMode ? 'var(--nav-bg)' : 'var(--white-content)' }}>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -372,18 +372,22 @@ const ProductDetail = () => {
                     borderRadius: '50%',
                     cursor: 'pointer',
                     fontSize: '1.2rem',
-                    color: '#f97316',
+                    color: 'var(--vibrant-pink)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 'bold',
                     outline: 'none',
                     boxShadow: 'none',
-                    transition: 'none'
+                    transition: 'color 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'transparent';
                     e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.color = 'var(--vibrant-pink-alt)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--vibrant-pink)';
                   }}
                 >
                   −
@@ -403,7 +407,7 @@ const ProductDetail = () => {
                     border: 'none',
                     fontSize: '1rem',
                     fontWeight: '600',
-                    color: '#f97316',
+                    color: 'var(--vibrant-pink)',
                     background: 'transparent'
                   }}
                   min="0"
@@ -423,18 +427,22 @@ const ProductDetail = () => {
                     borderRadius: '50%',
                     cursor: 'pointer',
                     fontSize: '1.2rem',
-                    color: '#f97316',
+                    color: 'var(--vibrant-pink)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontWeight: 'bold',
                     outline: 'none',
                     boxShadow: 'none',
-                    transition: 'none'
+                    transition: 'color 0.2s'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'transparent';
                     e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.color = 'var(--vibrant-pink-alt)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = 'var(--vibrant-pink)';
                   }}
                 >
                   +
@@ -446,13 +454,24 @@ const ProductDetail = () => {
                   width: '100%',
                   padding: '0.9rem 1rem',
                   fontSize: '1rem',
-                  background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
+                  background: 'var(--vibrant-pink)',
                   color: '#fff',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '50px',
                   cursor: 'pointer',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
-                  whiteSpace: 'nowrap'
+                  boxShadow: '0 4px 12px rgba(232, 59, 143, 0.3)',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--vibrant-pink-alt)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(232, 59, 143, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--vibrant-pink)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(232, 59, 143, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
                 View Cart
@@ -466,13 +485,24 @@ const ProductDetail = () => {
                   flex: 1,
                   padding: '0.9rem 1rem',
                   fontSize: '1rem',
-                  background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
+                  background: 'var(--vibrant-pink)',
                   color: '#fff',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '50px',
                   cursor: 'pointer',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
-                  whiteSpace: 'nowrap'
+                  boxShadow: '0 4px 12px rgba(232, 59, 143, 0.3)',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--vibrant-pink-alt)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(232, 59, 143, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--vibrant-pink)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(232, 59, 143, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
                 Add to Cart
@@ -483,13 +513,24 @@ const ProductDetail = () => {
                   flex: 1,
                   padding: '0.9rem 1rem',
                   fontSize: '1rem',
-                  background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
+                  background: 'var(--vibrant-pink)',
                   color: '#fff',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '50px',
                   cursor: 'pointer',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
-                  whiteSpace: 'nowrap'
+                  boxShadow: '0 4px 12px rgba(232, 59, 143, 0.3)',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--vibrant-pink-alt)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(232, 59, 143, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--vibrant-pink)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(232, 59, 143, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
                 Buy Now
@@ -500,7 +541,7 @@ const ProductDetail = () => {
 
         <div style={{ paddingTop: '0.15rem' }}>
           <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>{displayName}</h1>
-          {brandToShow && <p style={{ color: isDarkMode ? 'rgba(245,245,245,0.72)' : '#666', marginBottom: '0.5rem' }}>Brand: {brandToShow}</p>}
+          {brandToShow && <p style={{ color: isDarkMode ? 'rgba(245,245,245,0.72)' : '#666', marginBottom: '0.5rem' }}>{currentStore?.name || 'Store'} - {brandToShow}</p>}
           {categoryToShow && <p style={{ color: isDarkMode ? 'rgba(245,245,245,0.6)' : '#888', marginBottom: '0.5rem' }}>Category: {categoryToShow}</p>}
 
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
@@ -524,7 +565,7 @@ const ProductDetail = () => {
               </span>
           )}
             {discountPct > 0 && (
-              <span style={{ color: '#16a34a', fontWeight: 700 }}>{discountPct}% Off</span>
+              <span style={{ color: 'var(--vibrant-pink)', fontWeight: 700 }}>{discountPct}% Off</span>
             )}
           </div>
           <p style={{ color: '#888', marginTop: '-0.5rem' }}>Inclusive of all taxes</p>
@@ -602,18 +643,19 @@ const DetailItem = ({ label, value, highlight = false }) => {
   return (
     <div
       style={{
-        background: 'var(--card-bg)',
-        border: isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #eef0f2',
-        borderRadius: '8px',
+        background: isDarkMode ? 'var(--nav-bg)' : 'var(--white-content)',
+        border: isDarkMode ? '1px solid var(--muted-white)' : '1px solid var(--light-pink)',
+        borderRadius: '12px',
         padding: '0.6rem 0.75rem',
         minHeight: '54px',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        boxShadow: isDarkMode ? '0 2px 8px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.08)'
       }}
     >
-      <span style={{ fontSize: '0.78rem', color: isDarkMode ? 'rgba(245,245,245,0.6)' : '#6b7280', marginBottom: '0.18rem' }}>{label}</span>
-      <span style={{ fontWeight: 600, fontSize: '0.95rem', color: highlight ? '#16a34a' : (isDarkMode ? 'var(--text-color)' : '#111827'), overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{value}</span>
+      <span style={{ fontSize: '0.78rem', color: isDarkMode ? 'var(--text-secondary)' : '#6b7280', marginBottom: '0.18rem' }}>{label}</span>
+      <span style={{ fontWeight: 600, fontSize: '0.95rem', color: highlight ? 'var(--vibrant-pink)' : (isDarkMode ? 'var(--text-color)' : '#111827'), overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{value}</span>
     </div>
   );
 };
@@ -623,16 +665,17 @@ const FeaturePill = ({ icon, label }) => {
   return (
     <div
       style={{
-        background: 'var(--card-bg)',
-        border: isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #eef0f2',
-        borderRadius: '10px',
+        background: isDarkMode ? 'var(--nav-bg)' : 'var(--white-content)',
+        border: isDarkMode ? '1px solid var(--muted-white)' : '1px solid var(--light-pink)',
+        borderRadius: '12px',
         padding: '0.9rem',
         display: 'flex',
         alignItems: 'center',
         gap: '0.65rem',
         fontWeight: 600,
         color: isDarkMode ? 'var(--text-color)' : '#111827',
-        minHeight: '52px'
+        minHeight: '52px',
+        boxShadow: isDarkMode ? '0 2px 8px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.08)'
       }}
     >
       <span style={{ fontSize: '1.2rem' }}>{icon}</span>

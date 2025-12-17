@@ -269,23 +269,6 @@ const Cart = () => {
 
           {/* Payment & Bill Details - Right */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Payment Method */}
-            <div style={{ padding: '1.5rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem' }}>Payment Method</h3>
-              <div style={{ padding: '1rem', background: '#fef3c7', borderRadius: '8px', marginTop: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <input type="radio" checked readOnly style={{ accentColor: '#f97316' }} />
-                  <div>
-                    <div style={{ fontWeight: '600' }}>Pay with Cash</div>
-                    <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.25rem' }}>Cash on Delivery</div>
-                  </div>
-                </div>
-                <div style={{ marginTop: '0.75rem', fontSize: '0.9rem', fontWeight: '600', color: '#92400e' }}>
-                  Pay ₹{orderTotal.toLocaleString('en-IN')}
-                </div>
-              </div>
-            </div>
-
             {/* Bill Details */}
             <div style={{ padding: '1.5rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem' }}>Bill Details</h3>
