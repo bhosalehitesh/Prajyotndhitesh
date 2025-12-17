@@ -44,6 +44,14 @@ function App() {
                 <WishlistProvider>
                   <Layout>
                     <Routes>
+                      {/* 
+                        ROUTING STRUCTURE:
+                        - PRIMARY: Store-specific routes use /store/:slug/* pattern
+                        - FALLBACK: Root-level routes (non-store) for general access
+                        - All navigation should use: storeSlug ? `/store/${storeSlug}/cart` : '/cart'
+                        - Cart routes: /store/:slug/cart (store-specific) and /cart (root-level)
+                      */}
+                      
                       {/* PRIMARY: Store-specific routes - /store/:slug/* */}
                       <Route path="/store/:slug" element={<Home />} />
                       <Route path="/store/:slug/categories" element={<Categories />} />
@@ -72,6 +80,10 @@ function App() {
                       <Route path="/checkout" element={<Checkout />} />
                       {/* Payment test page (root-level) */}
                       <Route path="/checkout/payment" element={<RazorpayTest />} />
+                      
+                      {/* Support for /:slug/product/detail pattern (legacy/compatibility) */}
+                      {/* This handles cases where navigation might use /:slug/product/detail instead of /store/:slug/product/detail */}
+                      <Route path="/:slug/product/detail" element={<ProductDetail />} />
 
                       {/* Extra fallback for store checkout without slug (e.g. /store/checkout/payment) */}
                       <Route path="/store/checkout" element={<Checkout />} />

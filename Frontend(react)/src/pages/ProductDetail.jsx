@@ -13,9 +13,18 @@ const ProductDetail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { cart, addToCart, updateQuantity } = useCart();
-  const { storeSlug, currentStore } = useStore();
-
+  const { storeSlug, currentStore, loading: storeLoading } = useStore();
+  
+  // Get slug from route params first (most reliable), then from store context
+  // The slug param can come from either /store/:slug/product/detail or /:slug/product/detail
   const actualSlug = slug || storeSlug;
+  
+  console.log('📦 [ProductDetail] Route params:', {
+    slugFromParams: slug,
+    storeSlug,
+    actualSlug,
+    currentPath: window.location?.pathname
+  });
   const productIdParam = searchParams.get('id');
   const fallbackName = searchParams.get('name');
   const fallbackPrice = searchParams.get('price');
@@ -31,13 +40,27 @@ const ProductDetail = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      if (!actualSlug) {
-        setLoading(false);
+      // Wait for store to load if we have a slug from route but store context is still loading
+      if (storeLoading && !slug) {
+        console.log('⏳ [ProductDetail] Waiting for store context to load...');
         return;
       }
+
+      // If no slug available at all, show fallback data from URL params
+      if (!actualSlug) {
+        console.log('⚠️ [ProductDetail] No slug available, using fallback data from URL params');
+        setLoading(false);
+        setError(null); // Don't show error if we have fallback data
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
       try {
+        console.log('📡 [ProductDetail] Fetching products for slug:', actualSlug);
         const backendProducts = await getStoreProducts(actualSlug);
         const transformed = transformProducts(backendProducts, currentStore?.name || 'Store');
+        console.log('✅ [ProductDetail] Loaded products:', transformed.length);
         setProducts(transformed);
       } catch (err) {
         console.error('❌ [ProductDetail] Error fetching products for detail page', err);
@@ -47,7 +70,7 @@ const ProductDetail = () => {
       }
     };
     fetchProducts();
-  }, [actualSlug, currentStore?.name]);
+  }, [actualSlug, currentStore?.name, storeLoading, slug]);
 
   const currentProduct = useMemo(() => {
     if (!products || products.length === 0) return null;
@@ -89,7 +112,7 @@ const ProductDetail = () => {
     return match ? match[1] : null;
   }, [storeSlug, currentStore?.storeLink]);
 
-  // Build image gallery
+  // Build image gallery - always include fallback image if available
   const imageList = useMemo(() => {
     const rawImages = currentProduct?.product?.productImages;
     let normalizedImages = [];
@@ -110,7 +133,7 @@ const ProductDetail = () => {
         return img.imageUrl || img.url || img;
       }) || [];
 
-    // Primary: prefer first uploaded image, fall back to transformed image, then placeholder
+    // Primary: prefer first uploaded image, fall back to transformed image, then fallback from URL params, then placeholder
     const primary = imgs.length > 0
       ? imgs[0]
       : currentProduct?.image || fallbackImage || '/assets/products/p1.jpg';
@@ -121,8 +144,9 @@ const ProductDetail = () => {
     }
 
     // Use all images in order, de-duped
-    const uniqueImages = Array.from(new Set([primary, ...imgs].filter(Boolean)));
-    // Deduplicate
+    // Always include fallback image if we don't have product images yet
+    const imagesToUse = imgs.length > 0 ? imgs : (fallbackImage ? [fallbackImage] : [primary]);
+    const uniqueImages = Array.from(new Set([primary, ...imagesToUse].filter(Boolean)));
     return uniqueImages;
   }, [currentProduct, fallbackImage, backend.sizeChartImage]);
 
@@ -132,7 +156,8 @@ const ProductDetail = () => {
     }
   }, [imageList]);
 
-  const selectedImage = imageList[currentImageIndex] || null;
+  // Ensure selectedImage always has a value - use fallback if needed
+  const selectedImage = imageList[currentImageIndex] || fallbackImage || '/assets/products/p1.jpg';
 
   const handlePrevImage = () => {
     if (!imageList.length) return;
@@ -221,23 +246,38 @@ const ProductDetail = () => {
       .slice(0, 4);
   }, [products, currentProduct, categoryToShow]);
 
-  if (loading) {
+  // Show loading only if we're actually fetching AND we don't have fallback data to show
+  if (loading && actualSlug && !fallbackName) {
     return <Loading fullScreen text="Loading product..." />;
   }
 
-  if (error) {
+  // Show error only if we have an actual error and no fallback data
+  if (error && !fallbackName && !currentProduct) {
     return <ErrorMessage message={error} />;
   }
 
+  // If no product found and no fallback data, show error
   if (!currentProduct && !fallbackName) {
+    // If we're still loading, show loading instead of error
+    if (loading || storeLoading) {
+      return <Loading fullScreen text="Loading product..." />;
+    }
     return <ErrorMessage message="Product not found." />;
   }
+
+  // If we have fallback data, render the page immediately (even while loading full product data)
+  // This prevents the blank page issue
+
+  // Ensure we always have something to render - use fallback data if currentProduct is not loaded yet
+  const displayName = currentProduct?.name || fallbackName || 'Product';
+  const displayPrice = currentProduct?.price || fallbackPrice || 0;
+  const displayImage = selectedImage || fallbackImage || '/assets/products/p1.jpg';
 
   return (
     <div className="container" style={{ padding: '2rem 0' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '2rem', alignItems: 'flex-start' }}>
         <div style={{ background: '#fafafa', borderRadius: '10px', padding: '1.2rem', position: 'relative' }}>
-          {selectedImage && (
+          {displayImage && (
             <div
               style={{
                 position: 'relative',
@@ -255,8 +295,8 @@ const ProductDetail = () => {
               }}
             >
               <img
-                src={selectedImage}
-                alt={currentProduct?.name || fallbackName}
+                src={displayImage}
+                alt={displayName}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -348,7 +388,7 @@ const ProductDetail = () => {
         </div>
 
         <div>
-          <h1 style={{ marginBottom: '0.5rem' }}>{currentProduct?.name || fallbackName}</h1>
+          <h1 style={{ marginBottom: '0.5rem' }}>{displayName}</h1>
           {brandToShow && <p style={{ color: '#666', marginBottom: '0.5rem' }}>Brand: {brandToShow}</p>}
           {categoryToShow && <p style={{ color: '#888', marginBottom: '0.5rem' }}>Category: {categoryToShow}</p>}
 
@@ -371,7 +411,7 @@ const ProductDetail = () => {
               <span style={{ textDecoration: 'line-through', color: '#999' }}>
                 ₹{Number(originalPriceToShow).toLocaleString('en-IN')}
               </span>
-            )}
+          )}
             {discountPct > 0 && (
               <span style={{ color: '#16a34a', fontWeight: 700 }}>{discountPct}% Off</span>
             )}
@@ -495,8 +535,8 @@ const ProductDetail = () => {
                   boxShadow: '0 8px 20px rgba(0,0,0,0.12)'
                 }}
               >
-                Add to Cart
-              </button>
+            Add to Cart
+          </button>
               <button
                 onClick={handleBuyNow}
                 style={{

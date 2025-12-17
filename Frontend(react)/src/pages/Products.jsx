@@ -62,16 +62,20 @@ const Products = () => {
   }, [actualSlug, selectedCategory, storeLoading, currentStore]);
 
   const handleProductClick = (product) => {
-    const basePath = actualSlug ? `/${actualSlug}` : '';
+    // ALWAYS use /store/:slug/product/detail pattern for consistency
+    const basePath = actualSlug ? `/store/${actualSlug}` : '';
     const params = new URLSearchParams({
       id: product.id || product.productId,
       name: product.name,
       price: product.price,
       originalPrice: product.originalPrice,
       image: product.image,
-      brand: product.brand
+      brand: product.brand,
+      category: product.category
     });
-    navigate(`${basePath}/product/detail?${params.toString()}`);
+    const detailPath = basePath ? `${basePath}/product/detail` : '/product/detail';
+    console.log('🛍️ [Products] Navigating to product detail:', detailPath);
+    navigate(`${detailPath}?${params.toString()}`);
   };
 
   if (storeLoading || loading) {
