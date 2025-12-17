@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
@@ -14,6 +14,9 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
   const { addToCart, cartStoreId } = useCart();
   const { wishlist, addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { currentStore, storeSlug } = useStore();
+
+  const [slideIndex, setSlideIndex] = useState(0);
+  const slideIntervalRef = useRef(null);
 
   const handleProductClick = () => {
     // Derive slug from context, storeLink, or current URL to ensure store-scoped routing
@@ -94,8 +97,56 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
     ? calculateDiscount(product.originalPrice, product.price)
     : 0;
 
+  const images = useMemo(() => {
+    const rawImages = Array.isArray(product?.product?.productImages)
+      ? product.product.productImages
+      : [];
+
+    const candidates = [product?.image, ...rawImages].filter(Boolean);
+    const unique = [];
+    const seen = new Set();
+    for (const src of candidates) {
+      const key = String(src);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(src);
+      if (unique.length >= 8) break;
+    }
+    return unique;
+  }, [product]);
+
+  const stopImageSlide = () => {
+    if (slideIntervalRef.current) {
+      clearInterval(slideIntervalRef.current);
+      slideIntervalRef.current = null;
+    }
+    setSlideIndex(0);
+  };
+
+  const startImageSlide = () => {
+    if (!images || images.length <= 1) return;
+    if (slideIntervalRef.current) return;
+    slideIntervalRef.current = setInterval(() => {
+      setSlideIndex((prev) => (prev + 1) % images.length);
+    }, 1100);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (slideIntervalRef.current) {
+        clearInterval(slideIntervalRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <Card className="product-card" hover onClick={handleProductClick}>
+    <Card
+      className="product-card"
+      hover
+      onClick={handleProductClick}
+      onMouseEnter={startImageSlide}
+      onMouseLeave={stopImageSlide}
+    >
       <div className="product-card-image-wrapper">
         {product.isBestseller && (
           <div
@@ -105,7 +156,20 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
             Bestseller
           </div>
         )}
-        <img src={product.image} alt={product.name} className="product-card-image" />
+        {images.length > 1 ? (
+          <div
+            className="product-card-image-track"
+            style={{ transform: `translateX(-${slideIndex * 100}%)` }}
+          >
+            {images.map((src, idx) => (
+              <div className="product-card-image-slide" key={`${product.id}_${idx}`}> 
+                <img src={src} alt={product.name} className="product-card-image" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <img src={product.image} alt={product.name} className="product-card-image" />
+        )}
       </div>
       <div className="product-card-content">
         {product.category && (

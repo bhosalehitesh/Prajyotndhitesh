@@ -91,7 +91,7 @@ const Products = () => {
     <div className="container" style={{padding: '2rem 0'}}>
       <StoreError />
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
-        <h1>{currentStore ? `${currentStore.name} - Products` : 'All Products'}</h1>
+        <h1>Products</h1>
         {selectedCategory && (
           <button 
             onClick={() => setSelectedCategory('')}
