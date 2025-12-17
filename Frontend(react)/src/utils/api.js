@@ -56,7 +56,18 @@ const handleResponse = async (response) => {
     error.statusText = response.statusText;
     throw error;
   }
-  return response.json();
+  // Parse JSON response with error handling
+  try {
+    const text = await response.text();
+    if (!text || text.trim().length === 0) {
+      throw new Error('Empty response from server');
+    }
+    return JSON.parse(text);
+  } catch (parseError) {
+    console.error('JSON parsing error:', parseError);
+    console.error('Response text (first 500 chars):', (await response.text()).substring(0, 500));
+    throw new Error(`Invalid JSON response from server: ${parseError.message}`);
+  }
 };
 
 /**
@@ -331,9 +342,105 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
     params.append('sellerId', String(sellerId));
   }
   
-  return apiRequest(`/orders/place?${params.toString()}`, {
-    method: 'POST'
-  });
+  // Backend endpoint is at /orders/place (not /api/orders/place)
+  // So we need to call it directly without the /api prefix
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  const baseUrl = (hostname === 'localhost' || hostname === '127.0.0.1') 
+    ? 'http://localhost:8080' 
+    : `${protocol}//${hostname}:8080`;
+  
+  const url = `${baseUrl}/orders/place?${params.toString()}`;
+  console.log('Placing order at:', url);
+  console.log('Order parameters:', { userId, address, mobile, storeId, sellerId });
+  
+  try {
+    // Backend uses @RequestParam, so we send query parameters
+    // Don't set Content-Type: application/json for query params
+    const response = await fetchWithTimeout(url, {
+      method: 'POST',
+      // No Content-Type header needed for query parameters
+      // Spring will parse @RequestParam from query string
+    });
+    
+    if (!response.ok) {
+      let errorText = '';
+      try {
+        errorText = await response.text();
+      } catch (e) {
+        errorText = response.statusText || 'Unknown error';
+      }
+      
+      console.error('Order placement failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText,
+        url: url
+      });
+      
+      // Parse error message from response
+      let errorMessage = 'Failed to place order';
+      let errorDetails = '';
+      
+      try {
+        if (errorText) {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+          errorDetails = errorJson.details || errorJson.trace || '';
+          
+          // Log full error for debugging
+          console.error('Backend error details:', {
+            message: errorMessage,
+            details: errorDetails,
+            timestamp: errorJson.timestamp,
+            path: errorJson.path
+          });
+        }
+      } catch (e) {
+        // If not JSON, use the text as is
+        if (errorText && errorText.length > 0) {
+          errorMessage = errorText.substring(0, 200); // Limit length
+        }
+      }
+      
+      // Provide user-friendly error messages
+      if (response.status === 500) {
+        // Check for specific error patterns
+        if (errorMessage.includes('Cart not found') || errorMessage.includes('cart')) {
+          throw new Error('Your cart is empty or not found. Please add items to cart and try again.');
+        }
+        if (errorMessage.includes('NullPointerException') || errorMessage.includes('null')) {
+          throw new Error('Server error: Missing required data. Please try refreshing the page and placing the order again.');
+        }
+        if (errorMessage.includes('LazyInitializationException') || errorMessage.includes('could not initialize')) {
+          throw new Error('Server error: Data loading issue. Please try again.');
+        }
+        
+        // Show the actual error message from backend
+        const userMessage = errorMessage.length > 100 
+          ? errorMessage.substring(0, 100) + '...' 
+          : errorMessage;
+        throw new Error(`Server error: ${userMessage}. Please check backend logs for details.`);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    return handleResponse(response);
+  } catch (error) {
+    console.error('Error in placeOrder:', error);
+    
+    // Handle connection errors
+    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('ERR_CONNECTION_REFUSED'))) {
+      throw new Error('Cannot connect to server. Please ensure the backend server is running on port 8080.');
+    }
+    
+    // Re-throw with better message if it's already our custom error
+    if (error.message && (error.message.includes('Cart not found') || error.message.includes('cart'))) {
+      throw new Error('Your cart is empty. Please add items to cart before placing an order.');
+    }
+    throw error; // Re-throw the error as-is (it already has a good message)
+  }
 };
 
 /**

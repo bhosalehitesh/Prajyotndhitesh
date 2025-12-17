@@ -18,6 +18,8 @@ import ProductDetail from './pages/ProductDetail';
 import Search from './pages/Search';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import ConfirmOrder from './pages/ConfirmOrder';
+import OrderSuccess from './pages/OrderSuccess';
 import Wishlist from './pages/Wishlist';
 import Orders from './pages/Orders';
 import OrderTracking from './pages/OrderTracking';
@@ -54,7 +56,9 @@ function App() {
                       <Route path="/store/:slug/search" element={<Search />} />
                       <Route path="/store/:slug/cart" element={<Cart />} />
                       <Route path="/store/:slug/checkout" element={<Checkout />} />
+                      <Route path="/store/:slug/checkout/confirm" element={<ConfirmOrder />} />
                       <Route path="/store/:slug/checkout/payment" element={<RazorpayTest />} />
+                      <Route path="/store/:slug/order/success" element={<OrderSuccess />} />
                       <Route path="/store/:slug/wishlist" element={<Wishlist />} />
                       <Route path="/store/:slug/orders" element={<Orders />} />
                       <Route path="/store/:slug/order-tracking" element={<OrderTracking />} />
@@ -70,8 +74,10 @@ function App() {
                       <Route path="/search" element={<Search />} />
                       <Route path="/cart" element={<Cart />} />
                       <Route path="/checkout" element={<Checkout />} />
+                      <Route path="/checkout/confirm" element={<ConfirmOrder />} />
                       {/* Payment test page (root-level) */}
                       <Route path="/checkout/payment" element={<RazorpayTest />} />
+                      <Route path="/order/success" element={<OrderSuccess />} />
 
                       {/* Extra fallback for store checkout without slug (e.g. /store/checkout/payment) */}
                       <Route path="/store/checkout" element={<Checkout />} />

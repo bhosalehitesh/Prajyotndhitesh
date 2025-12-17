@@ -41,7 +41,22 @@ export const StoreProvider = ({ children }) => {
     if (match && match[1] !== '') {
       const slug = match[1];
       // Exclude known routes
-      const excludedRoutes = ['categories', 'featured', 'products', 'collections', 'cart', 'wishlist', 'orders', 'order-tracking', 'faq', 'search', 'product', 'checkout'];
+      const excludedRoutes = [
+        'categories',
+        'featured',
+        'products',
+        'collections',
+        'cart',
+        'wishlist',
+        'orders',
+        'order',
+        'order-tracking',
+        'order-success',
+        'faq',
+        'search',
+        'product',
+        'checkout'
+      ];
       if (!excludedRoutes.includes(slug)) {
         console.log('✅ [SLUG] Found slug from /:slug pattern:', slug);
         return slug;
@@ -52,7 +67,22 @@ export const StoreProvider = ({ children }) => {
     }
     
     // Only log error if path doesn't match any pattern and isn't root or an excluded route
-    const excludedRoutes = ['categories', 'featured', 'products', 'collections', 'cart', 'wishlist', 'orders', 'order-tracking', 'faq', 'search', 'product', 'checkout'];
+    const excludedRoutes = [
+      'categories',
+      'featured',
+      'products',
+      'collections',
+      'cart',
+      'wishlist',
+      'orders',
+      'order',
+      'order-tracking',
+      'order-success',
+      'faq',
+      'search',
+      'product',
+      'checkout'
+    ];
     const firstSegment = path.split('/').filter(Boolean)[0];
     if (path !== '/' && path !== '' && !excludedRoutes.includes(firstSegment)) {
       console.log('❌ [SLUG] No slug found in path:', path);

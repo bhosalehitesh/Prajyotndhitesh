@@ -729,6 +729,8 @@ export const getCurrentSellerStoreDetails = async (): Promise<StoreDetailsRespon
     storeName: payload.storeName ?? '',
     storeLink: payload.storeLink ?? '',
     logoUrl: payload.logoUrl ?? undefined,
+    storeAddress: payload.storeAddress ?? null, // Include store address from backend
+    businessDetails: payload.businessDetails ?? null, // Include business details
   };
   
   // Log for debugging
@@ -738,6 +740,7 @@ export const getCurrentSellerStoreDetails = async (): Promise<StoreDetailsRespon
       storeName: result.storeName,
       hasLogoUrl: !!result.logoUrl,
       logoUrl: result.logoUrl || 'None',
+      hasStoreAddress: !!result.storeAddress,
     });
   }
   
