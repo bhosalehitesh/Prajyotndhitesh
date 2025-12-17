@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCart } from '../contexts/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
 import { useStore } from '../contexts/StoreContext';
 import { formatPrice, calculateDiscount } from '../utils/format';
@@ -10,6 +11,7 @@ import Card from './ui/Card';
  */
 const ProductCard = ({ product, showQuickAdd = true }) => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const { wishlist, addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { currentStore, storeSlug } = useStore();
 
@@ -86,6 +88,24 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
         sellerId: currentStore?.sellerId, // Include sellerId for filtering
       });
     }
+  };
+
+  const handleAddToBag = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    addToCart(
+      {
+        name: product.name,
+        price: parseFloat(product.price),
+        image: product.image,
+        brand: product.brand || currentStore?.name || 'Store',
+        quantity: 1,
+        productId: product.id,
+      },
+      currentStore?.storeId || currentStore?.id || product.storeId || product?.product?.storeId,
+      currentStore?.sellerId || product.sellerId || product?.product?.sellerId || product?.product?.seller?.sellerId
+    );
   };
 
   const discount = product.originalPrice
@@ -186,6 +206,9 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
         </div>
         {showQuickAdd && (
           <div className="product-card-actions">
+            <button className="product-card-add-btn" onClick={handleAddToBag}>
+              Add to Bag
+            </button>
             <button
               className="product-card-wishlist-btn"
               onClick={handleWishlistToggle}
