@@ -85,14 +85,12 @@ function App() {
                       <Route path="/checkout/confirm" element={<ConfirmOrder />} />
                       {/* Payment test page (root-level) */}
                       <Route path="/checkout/payment" element={<RazorpayTest />} />
-<<<<<<< HEAD
+                      {/* Root-level order success page */}
                       <Route path="/order/success" element={<OrderSuccess />} />
-=======
                       
                       {/* Support for /:slug/product/detail pattern (legacy/compatibility) */}
                       {/* This handles cases where navigation might use /:slug/product/detail instead of /store/:slug/product/detail */}
                       <Route path="/:slug/product/detail" element={<ProductDetail />} />
->>>>>>> 5a85075ea726802414d5fb8d0f8fd5105dd358a8
 
                       {/* Extra fallback for store checkout without slug (e.g. /store/checkout/payment) */}
                       <Route path="/store/checkout" element={<Checkout />} />
