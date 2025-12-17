@@ -1,7 +1,6 @@
 package com.smartbiz.sakhistore.modules.order.service;
 
 import com.smartbiz.sakhistore.modules.cart.model.Cart;
-import com.smartbiz.sakhistore.modules.customer_user.model.*;
 import com.smartbiz.sakhistore.modules.order.repository.OrdersRepository;
 import com.smartbiz.sakhistore.modules.order.repository.OrderItemsRepository;
 import com.smartbiz.sakhistore.modules.cart.repository.CartRepository;
@@ -12,6 +11,8 @@ import org.springframework.stereotype.Service;
 import com.smartbiz.sakhistore.modules.order.model.OrderStatus;
 import com.smartbiz.sakhistore.modules.order.model.OrderItems;
 import com.smartbiz.sakhistore.modules.payment.model.PaymentStatus;
+import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
+import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 
 
 
@@ -44,13 +45,24 @@ public class OrdersService {
         order.setMobile(mobile);
         order.setOrderStatus(OrderStatus.PLACED);
         order.setPaymentStatus(PaymentStatus.PENDING);
+        
+        // Initialize orderItems list to avoid NullPointerException
+        order.setOrderItems(new java.util.ArrayList<>());
 
         double total = 0.0;
         Long extractedSellerId = sellerId;
         Long extractedStoreId = storeId;
 
         // Move cart items → order items
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            throw new RuntimeException("Cart is empty. Cannot place order with no items.");
+        }
+        
         for (OrderItems item : cart.getItems()) {
+            if (item == null || item.getProduct() == null) {
+                throw new RuntimeException("Cart contains invalid item. Product is missing.");
+            }
+            
             OrderItems newOrderItem = new OrderItems();
             newOrderItem.setProduct(item.getProduct());
             newOrderItem.setQuantity(item.getQuantity());
@@ -64,6 +76,33 @@ public class OrdersService {
             if (extractedSellerId == null && item.getProduct() != null && item.getProduct().getSeller() != null) {
                 extractedSellerId = item.getProduct().getSeller().getSellerId();
             }
+            
+            // Extract storeId from product's seller's store if not provided
+            if (extractedStoreId == null && item.getProduct() != null && item.getProduct().getSeller() != null) {
+                try {
+                    Long productSellerId = item.getProduct().getSeller().getSellerId();
+                    if (productSellerId != null) {
+                        // Find store by sellerId
+                        java.util.List<StoreDetails> stores = storeDetailsRepo.findBySeller_SellerId(productSellerId);
+                        if (stores != null && !stores.isEmpty()) {
+                            extractedStoreId = stores.get(0).getStoreId();
+                            System.out.println("✅ [OrdersService] Extracted storeId " + extractedStoreId + " from product's seller (sellerId: " + productSellerId + ")");
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("⚠️ [OrdersService] Could not extract storeId from product's seller: " + e.getMessage());
+                    // Continue - we'll validate storeId later
+                }
+            }
+        }
+        
+        if (order.getOrderItems().isEmpty()) {
+            throw new RuntimeException("No valid items found in cart to place order.");
+        }
+
+        // Validate storeId is not null
+        if (extractedStoreId == null) {
+            throw new RuntimeException("Store ID is required but could not be determined. Please ensure products belong to a valid store.");
         }
 
         order.setTotalAmount(total);

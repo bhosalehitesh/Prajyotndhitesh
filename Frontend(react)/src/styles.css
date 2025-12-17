@@ -194,24 +194,24 @@ body.dark-mode .avatar {
 
 /* Store logo image styling - ensures logos display properly without cropping */
 .store-logo-img {
-  object-fit: contain !important;
-  border-radius: 8px;
+  object-fit: cover !important;
+  border-radius: 50%;
   background: transparent;
   max-width: 100%;
   max-height: 100%;
 }
 
-/* When avatar contains a logo, adjust background and shape */
+/* When avatar contains a logo, keep it circular but give a subtle white ring */
 .avatar.has-logo {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-radius: 12px !important;
-  padding: 4px;
-  border: 2px solid rgba(0, 0, 0, 0.05);
+  background: transparent !important;
+  border-radius: 50% !important;
+  padding: 3px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
 }
 
 body.dark-mode .avatar.has-logo {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: transparent !important;
+  border: 2px solid rgba(255, 255, 255, 0.7);
 }
 .divider {
   width: 2px;
@@ -733,6 +733,12 @@ body > .page-wrapper > .site-footer {
   font-size: 16px;
   color: #fff;
   margin-bottom: 10px;
+}
+.footer-avatar .footer-logo-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 .address, .phone {
   font-size: 11px;

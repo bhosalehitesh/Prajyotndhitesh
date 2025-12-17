@@ -88,15 +88,22 @@ const Checkout = () => {
 
   const [isAddressSaved, setIsAddressSaved] = useState(false);
   const navigateToPayment = () => {
-    const path = storeSlug ? `/store/${storeSlug}/checkout/payment` : '/checkout/payment';
-    const payload = {
-      amount: orderTotal,
-      orderId: Date.now(), // simple unique ID for test flow
-      itemTotal,
-      deliveryFee,
-      currency: 'INR',
+    const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
+    const path = resolvedSlug ? `/store/${resolvedSlug}/checkout/confirm` : '/checkout/confirm';
+    // Pass address data to confirm order page
+    const address = {
+      customerName: formData.customerName,
+      mobileNumber: formData.mobileNumber,
+      pincode: formData.pincode,
+      houseNumber: formData.houseNumber,
+      areaStreet: formData.areaStreet,
+      landmark: formData.landmark,
+      city: formData.city,
+      state: formData.state,
+      addressType: formData.addressType,
+      emailId: formData.emailId
     };
-    navigate(path, { state: payload });
+    navigate(path, { state: { address } });
   };
 
   const itemTotal = getCartTotal();
@@ -443,10 +450,11 @@ const Checkout = () => {
         }
       }
 
-      // Navigate to payment page
+      // Navigate to confirm order page
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const paymentPath = resolvedSlug ? `/store/${resolvedSlug}/payment` : '/payment';
-      navigate(paymentPath);
+      const confirmPath = resolvedSlug ? `/store/${resolvedSlug}/checkout/confirm` : '/checkout/confirm';
+      // Reuse the address variable already created above (line 385)
+      navigate(confirmPath, { state: { address } });
     } catch (error) {
       console.error('Error saving address:', error);
       let errorMessage = error.message || 'Unknown error';
