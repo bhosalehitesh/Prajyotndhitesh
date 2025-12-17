@@ -5835,6 +5835,7 @@ body.dark-mode .product-card-discount-text {
   display: flex;
   gap: 10px;
   align-items: center;
+  justify-content: flex-end;
   margin-top: auto;
 }
 

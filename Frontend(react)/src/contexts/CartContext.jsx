@@ -78,20 +78,20 @@ export const CartProvider = ({ children }) => {
         } else {
           // Guest user - load from localStorage
           console.log('🛒 [Cart] Loading cart from localStorage (guest user)');
-          const savedCart = localStorage.getItem('cart');
-          const savedStoreId = localStorage.getItem('cartStoreId');
+    const savedCart = localStorage.getItem('cart');
+    const savedStoreId = localStorage.getItem('cartStoreId');
           const savedSellerId = localStorage.getItem('cartSellerId');
-          if (savedCart) {
-            try {
-              setCart(JSON.parse(savedCart));
-            } catch (e) {
-              console.error('Error loading cart:', e);
-              setCart([]);
-            }
-          }
-          if (savedStoreId) {
-            setCartStoreId(savedStoreId);
-          }
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        console.error('Error loading cart:', e);
+        setCart([]);
+      }
+    }
+    if (savedStoreId) {
+      setCartStoreId(savedStoreId);
+    }
           if (savedSellerId) {
             setCartSellerId(savedSellerId);
           }
@@ -125,12 +125,12 @@ export const CartProvider = ({ children }) => {
       console.log('🛒 [Cart] Cart state updated (will sync on next operation)');
     } else {
       // Guest user - save to localStorage
-      localStorage.setItem('cart', JSON.stringify(cart));
-      if (cartStoreId) {
-        localStorage.setItem('cartStoreId', cartStoreId);
-      } else {
-        localStorage.removeItem('cartStoreId');
-      }
+    localStorage.setItem('cart', JSON.stringify(cart));
+    if (cartStoreId) {
+      localStorage.setItem('cartStoreId', cartStoreId);
+    } else {
+      localStorage.removeItem('cartStoreId');
+    }
       if (cartSellerId) {
         localStorage.setItem('cartSellerId', cartSellerId);
       } else {
@@ -146,7 +146,7 @@ export const CartProvider = ({ children }) => {
    * @param {number|string} sellerId - Seller ID (REQUIRED for store locking)
    */
   const addToCart = async (item, storeId = null, sellerId = null) => {
-    // CART LOCKING RULE: Cart is locked to one seller/store
+      // CART LOCKING RULE: Cart is locked to one seller/store
     if (cartStoreId && storeId && cartStoreId !== String(storeId)) {
       console.warn('⚠️ Different store detected. Clearing cart and starting fresh.');
       if (isAuthenticated && user?.userId) {
@@ -211,7 +211,7 @@ export const CartProvider = ({ children }) => {
     } else {
       // Guest user - update local state only
       addToCartLocal(item, storeId, sellerId);
-    }
+      }
   };
 
   const addToCartLocal = (item, storeId = null, sellerId = null) => {
@@ -231,7 +231,7 @@ export const CartProvider = ({ children }) => {
       const existingIndex = prevCart.findIndex(cartItem => 
         cartItem.productId === item.productId || 
         (cartItem.name === item.name && 
-         cartItem.size === (item.size || 'default') &&
+        cartItem.size === (item.size || 'default') &&
          (cartItem.color || 'default') === (item.color || 'default'))
       );
 
@@ -323,11 +323,11 @@ export const CartProvider = ({ children }) => {
         );
       }
     } else {
-      setCart(prevCart =>
+    setCart(prevCart =>
         prevCart.map(i =>
           i.id === itemId ? { ...i, quantity } : i
-        )
-      );
+      )
+    );
     }
   };
 

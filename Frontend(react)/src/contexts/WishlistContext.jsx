@@ -21,9 +21,15 @@ export const WishlistProvider = ({ children }) => {
   useEffect(() => {
     const loadWishlist = async () => {
       setLoading(true);
+      
+      // Clear localStorage for authenticated users to avoid stale data
+      if (isAuthenticated && user?.userId) {
+        localStorage.removeItem('wishlist');
+      }
+      
       try {
         if (isAuthenticated && user?.userId) {
-          // Fetch wishlist from backend
+          // Always fetch fresh data from backend for authenticated users
           console.log('❤️ [Wishlist] Loading wishlist from backend for user:', user.userId);
           const backendWishlist = await getWishlist(user.userId);
           console.log('❤️ [Wishlist] Backend wishlist response:', backendWishlist);
@@ -46,9 +52,12 @@ export const WishlistProvider = ({ children }) => {
                 addedAt: item.createdAt || item.addedAt || new Date().toISOString()
               };
             });
+            // Immediately update state with backend data
             setWishlist(transformedWishlist);
+            console.log('✅ [Wishlist] Wishlist updated from backend:', transformedWishlist.length, 'items');
           } else {
             setWishlist([]);
+            console.log('✅ [Wishlist] Backend wishlist is empty');
           }
         } else {
           // Guest user - load from localStorage
@@ -56,22 +65,32 @@ export const WishlistProvider = ({ children }) => {
           const savedWishlist = localStorage.getItem('wishlist');
           if (savedWishlist) {
             try {
-              setWishlist(JSON.parse(savedWishlist));
+              const parsedWishlist = JSON.parse(savedWishlist);
+              setWishlist(parsedWishlist);
+              console.log('✅ [Wishlist] Loaded from localStorage:', parsedWishlist.length, 'items');
             } catch (e) {
               console.error('Error loading wishlist:', e);
               setWishlist([]);
             }
+          } else {
+            setWishlist([]);
           }
         }
       } catch (error) {
         console.error('❌ [Wishlist] Error loading wishlist:', error);
-        // Fallback to localStorage on error
-        const savedWishlist = localStorage.getItem('wishlist');
-        if (savedWishlist) {
-          try {
-            setWishlist(JSON.parse(savedWishlist));
-          } catch (e) {
-            setWishlist([]);
+        // For authenticated users, don't fallback to localStorage - keep empty
+        if (isAuthenticated && user?.userId) {
+          setWishlist([]);
+          console.log('⚠️ [Wishlist] Backend error - cleared wishlist for authenticated user');
+        } else {
+          // Guest user - fallback to localStorage on error
+          const savedWishlist = localStorage.getItem('wishlist');
+          if (savedWishlist) {
+            try {
+              setWishlist(JSON.parse(savedWishlist));
+            } catch (e) {
+              setWishlist([]);
+            }
           }
         }
       } finally {
@@ -192,21 +211,22 @@ export const WishlistProvider = ({ children }) => {
     const item = wishlist.find(i => String(i.id) === String(itemId) || String(i.productId) === String(itemId));
     const productId = item?.productId || itemId;
 
-    // Optimistically update UI immediately
+    // IMMEDIATELY update UI - remove from state synchronously for instant feedback
     const previousWishlist = [...wishlist];
     setWishlist(prevWishlist => 
       prevWishlist.filter(i => String(i.id) !== String(itemId) && String(i.productId) !== String(itemId))
     );
 
+    // Sync to backend in background (non-blocking)
     if (isAuthenticated && user?.userId && productId) {
-      try {
-        console.log('🗑️ [Wishlist] Removing from backend - userId:', user.userId, 'productId:', productId);
-        await removeFromWishlistAPI(user.userId, productId);
-        console.log('✅ [Wishlist] Successfully removed from backend');
-        
-        // Optionally refresh in background, but don't block UI
-        getWishlist(user.userId).then(backendWishlist => {
-          console.log('🔄 [Wishlist] Refreshed from backend after removal:', backendWishlist);
+      // Don't await - let it run in background for instant UI response
+      removeFromWishlistAPI(user.userId, productId)
+        .then(() => {
+          console.log('✅ [Wishlist] Successfully removed from backend');
+          // Optionally refresh in background, but don't block UI
+          return getWishlist(user.userId);
+        })
+        .then(backendWishlist => {
           if (Array.isArray(backendWishlist)) {
             const transformedWishlist = backendWishlist.map(wishlistItem => {
               const sellerId = wishlistItem.product?.seller?.sellerId || wishlistItem.product?.sellerId || wishlistItem.sellerId;
@@ -226,18 +246,12 @@ export const WishlistProvider = ({ children }) => {
           } else {
             setWishlist([]);
           }
-        }).catch(err => console.error('❌ [Wishlist] Background refresh error:', err));
-      } catch (error) {
-        console.error('❌ [Wishlist] Error removing from backend wishlist:', error);
-        console.error('❌ [Wishlist] Error details:', {
-          message: error.message,
-          userId: user.userId,
-          productId: productId,
-          stack: error.stack
+        })
+        .catch(error => {
+          console.error('❌ [Wishlist] Error removing from backend wishlist:', error);
+          // Revert optimistic update on error
+          setWishlist(previousWishlist);
         });
-        // Revert optimistic update on error
-        setWishlist(previousWishlist);
-      }
     }
   };
 
