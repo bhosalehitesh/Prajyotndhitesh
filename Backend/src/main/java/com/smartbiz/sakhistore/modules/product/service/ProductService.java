@@ -1,7 +1,9 @@
 package com.smartbiz.sakhistore.modules.product.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +19,9 @@ import com.smartbiz.sakhistore.modules.auth.sellerauth.repository.SellerDetailsR
 import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.category.repository.CategoryRepository;
 import com.smartbiz.sakhistore.modules.product.model.Product;
+import com.smartbiz.sakhistore.modules.product.model.ProductVariant;
 import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
+import com.smartbiz.sakhistore.modules.product.repository.ProductVariantRepository;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
 import com.smartbiz.sakhistore.modules.store.service.StoreDetailsService;
@@ -46,6 +50,9 @@ public class ProductService{
 
     @Autowired
     private StoreDetailsService storeService;
+
+    @Autowired
+    private ProductVariantRepository productVariantRepository;
 
 
     public Product uploadProductWithImages(
@@ -115,22 +122,50 @@ public class ProductService{
                 product.setSeller(seller);
             }
 
-            // Link to category - automatically find if not provided
+            // Link to category - MANDATORY (SmartBiz rule)
+            Category category = null;
             if (categoryId != null) {
                 // Use provided categoryId
-                Category category = categoryRepository.findById(categoryId)
+                category = categoryRepository.findById(categoryId)
                         .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
-                product.setCategory(category);
             } else {
                 // Automatically find category based on productCategory or businessCategory
-                Category category = findOrCreateCategoryForProduct(productCategory, businessCategory);
-                if (category != null) {
-                    product.setCategory(category);
+                category = findOrCreateCategoryForProduct(productCategory, businessCategory);
+                if (category == null) {
+                    throw new RuntimeException("Category is required. Please provide categoryId or ensure categories exist in database.");
                 }
             }
+            product.setCategory(category);
 
-            // ✅ Save in database
-            return productRepository.save(product);
+            // Generate slug from product name (SmartBiz: SEO slug)
+            String slug = generateSlug(productName);
+            product.setSlug(slug);
+
+            // Determine product type: SINGLE (no variants) or MULTI_VARIANT (has color/size)
+            String productType = (color != null && !color.trim().isEmpty()) || (size != null && !size.trim().isEmpty()) 
+                ? "MULTI_VARIANT" 
+                : "SINGLE";
+            product.setProductType(productType);
+
+            // ✅ Save product first (needed for variant creation)
+            product = productRepository.save(product);
+
+            // ✅ SMARTBIZ RULE: Auto-create variant for single products
+            // If SINGLE product → create 1 implicit variant
+            // If MULTI_VARIANT → create variant with attributes
+            ProductVariant productVariant = createVariantForProduct(
+                product,
+                customSku,
+                mrp,
+                sellingPrice,
+                inventoryQuantity,
+                color,
+                size,
+                hsnCode
+            );
+            productVariantRepository.save(productVariant);
+
+            return product;
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -320,34 +355,63 @@ public class ProductService{
     // Note: getFeaturedProducts method is already defined above (line 187)
     // This duplicate has been removed to use the Top20 methods with ordering
 
-    // ✅ Update only inventory quantity (stock) for a product
+    // ✅ Update inventory quantity (stock) for a variant (SmartBiz: stock is on variant, not product)
+    public ProductVariant updateVariantStock(Long variantId, Integer stock) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new NoSuchElementException("Variant not found with ID: " + variantId));
+        variant.setStock(stock);
+        // Auto-disable if stock = 0 (SmartBiz rule)
+        if (stock == 0) {
+            variant.setIsActive(false);
+        }
+        return productVariantRepository.save(variant);
+    }
+
+    // Legacy wrapper: update stock by product ID (used by existing controllers)
+    // For now, update the first active variant for the product.
     public Product updateInventoryQuantity(Long productId, Integer inventoryQuantity) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
+
+        // Update legacy field for backward compatibility
         product.setInventoryQuantity(inventoryQuantity);
+
+        // Also try to update a variant if it exists
+        List<ProductVariant> variants = productVariantRepository.findByProduct_ProductsId(productId);
+        if (!variants.isEmpty()) {
+            ProductVariant primary = variants.get(0);
+            primary.setStock(inventoryQuantity);
+            if (inventoryQuantity == 0) {
+                primary.setIsActive(false);
+            }
+            productVariantRepository.save(primary);
+        }
+
         return productRepository.save(product);
     }
 
-    // ✅ Update all editable fields of a product (without changing seller or images)
+    // ✅ Update all editable fields of a product (SmartBiz: price/stock on variants, not product)
     public Product updateProduct(Long productId, Product updated) {
         Product existing = productRepository.findById(productId)
                 .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
 
-        // Basic fields
+        // Basic product fields (no price/stock - those are on variants)
         existing.setProductName(updated.getProductName());
         existing.setDescription(updated.getDescription());
-        existing.setMrp(updated.getMrp());
-        existing.setSellingPrice(updated.getSellingPrice());
-        existing.setInventoryQuantity(updated.getInventoryQuantity());
         existing.setBusinessCategory(updated.getBusinessCategory());
         existing.setProductCategory(updated.getProductCategory());
-        existing.setCustomSku(updated.getCustomSku());
-        existing.setColor(updated.getColor());
-        existing.setSize(updated.getSize());
-        existing.setVariant(updated.getVariant());
-        existing.setHsnCode(updated.getHsnCode());
+        existing.setSizeChartImage(updated.getSizeChartImage());
         existing.setSeoTitleTag(updated.getSeoTitleTag());
         existing.setSeoMetaDescription(updated.getSeoMetaDescription());
+        existing.setSlug(updated.getSlug() != null ? updated.getSlug() : generateSlug(updated.getProductName()));
+        existing.setProductType(updated.getProductType());
+        
+        // Update category if provided
+        if (updated.getCategory() != null && updated.getCategory().getCategory_id() != null) {
+            Category category = categoryRepository.findById(updated.getCategory().getCategory_id())
+                    .orElseThrow(() -> new RuntimeException("Category not found"));
+            existing.setCategory(category);
+        }
         
         // Update bestseller status
         if (updated.getIsBestseller() != null) {
@@ -359,6 +423,7 @@ public class ProductService{
             existing.setIsActive(updated.getIsActive());
         }
 
+        // NOTE: Price/Stock updates are handled via variant update methods.
         // NOTE: We intentionally do NOT modify productImages, socialSharingImage or seller here.
         // Image updates are handled via the upload endpoint; seller relation stays the same.
 
@@ -476,6 +541,180 @@ public class ProductService{
         Long sellerId = store.getSeller().getSellerId();
 
         return productRepository.findBySeller_SellerId(sellerId);
+    }
+
+    // =======================
+    // SMARTBIZ VARIANT METHODS
+    // =======================
+
+    /**
+     * Create a variant for a product (SmartBiz architecture)
+     * Auto-creates variant for SINGLE products, creates variant with attributes for MULTI_VARIANT
+     */
+    private ProductVariant createVariantForProduct(
+            Product product,
+            String sku,
+            Double mrp,
+            Double sellingPrice,
+            Integer stock,
+            String color,
+            String size,
+            String hsnCode
+    ) {
+        ProductVariant variant = new ProductVariant();
+        variant.setProduct(product);
+        variant.setSku(sku != null && !sku.trim().isEmpty() ? sku : generateSku(product));
+        variant.setMrp(mrp != null ? mrp : 0.0);
+        variant.setSellingPrice(sellingPrice != null ? sellingPrice : 0.0);
+        variant.setStock(stock != null ? stock : 0);
+        variant.setHsnCode(hsnCode);
+
+        // Set attributes if color/size provided (for MULTI_VARIANT products)
+        if (color != null || size != null) {
+            Map<String, String> attributes = new HashMap<>();
+            if (color != null && !color.trim().isEmpty()) {
+                attributes.put("color", color.trim());
+            }
+            if (size != null && !size.trim().isEmpty()) {
+                attributes.put("size", size.trim());
+            }
+            variant.setAttributes(attributes);
+        }
+
+        // Auto-disable if stock = 0 (SmartBiz rule)
+        if (variant.getStock() == 0) {
+            variant.setIsActive(false);
+        }
+
+        return variant;
+    }
+
+    /**
+     * Generate SKU for variant (if not provided)
+     */
+    private String generateSku(Product product) {
+        return "SKU-" + product.getProductsId() + "-" + System.currentTimeMillis();
+    }
+
+    /**
+     * Generate slug from product name (SmartBiz: URL-friendly identifier)
+     */
+    private String generateSlug(String productName) {
+        if (productName == null || productName.trim().isEmpty()) {
+            return "product-" + System.currentTimeMillis();
+        }
+        // Convert to lowercase, replace spaces/special chars with hyphens
+        return productName.toLowerCase()
+            .replaceAll("[^a-z0-9]+", "-")
+            .replaceAll("^-+|-+$", "");
+    }
+
+    /**
+     * Create product with multiple variants (SmartBiz: MULTI_VARIANT product)
+     * Used when seller defines multiple variants (e.g., different sizes/colors)
+     */
+    public Product createProductWithVariants(
+            String productName,
+            String description,
+            Long categoryId,
+            Long sellerId,
+            List<MultipartFile> productImages,
+            MultipartFile socialSharingImage,
+            List<ProductVariantData> variantDataList,
+            String seoTitleTag,
+            String seoMetaDescription,
+            Boolean isBestseller
+    ) {
+        // Upload images
+        List<String> productImageUrls = new ArrayList<>();
+        if (productImages != null && !productImages.isEmpty()) {
+            for (MultipartFile image : productImages) {
+                String imageUrl = cloudinaryHelper.saveImage(image);
+                if (imageUrl != null) {
+                    productImageUrls.add(imageUrl);
+                }
+            }
+        }
+
+        String socialImageUrl = null;
+        if (socialSharingImage != null && !socialSharingImage.isEmpty()) {
+            socialImageUrl = cloudinaryHelper.saveImage(socialSharingImage);
+        }
+
+        // Create product
+        Product product = new Product();
+        product.setProductName(productName);
+        product.setDescription(description);
+        product.setProductImages(productImageUrls);
+        product.setSocialSharingImage(socialImageUrl);
+        product.setSeoTitleTag(seoTitleTag);
+        product.setSeoMetaDescription(seoMetaDescription);
+        product.setIsBestseller(isBestseller != null ? isBestseller : false);
+        product.setProductType("MULTI_VARIANT");
+        product.setSlug(generateSlug(productName));
+
+        // Link seller
+        if (sellerId != null) {
+            SellerDetails seller = sellerDetailsRepo.findById(sellerId)
+                    .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
+            product.setSeller(seller);
+        }
+
+        // Link category (MANDATORY)
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
+        product.setCategory(category);
+
+        // Save product
+        product = productRepository.save(product);
+
+        // Create variants
+        List<ProductVariant> variants = new ArrayList<>();
+        for (ProductVariantData variantData : variantDataList) {
+            ProductVariant variant = new ProductVariant();
+            variant.setProduct(product);
+            variant.setSku(variantData.getSku());
+            variant.setMrp(variantData.getMrp());
+            variant.setSellingPrice(variantData.getSellingPrice());
+            variant.setStock(variantData.getStock());
+            variant.setHsnCode(variantData.getHsnCode());
+            variant.setAttributes(variantData.getAttributes());
+            
+            if (variant.getStock() == 0) {
+                variant.setIsActive(false);
+            }
+            
+            variants.add(variant);
+        }
+
+        productVariantRepository.saveAll(variants);
+        return product;
+    }
+
+    /**
+     * Inner class for variant data (used in createProductWithVariants)
+     */
+    public static class ProductVariantData {
+        private String sku;
+        private Double mrp;
+        private Double sellingPrice;
+        private Integer stock;
+        private String hsnCode;
+        private Map<String, String> attributes;
+
+        // Getters and setters
+        public String getSku() { return sku; }
+        public void setSku(String sku) { this.sku = sku; }
+        public Double getMrp() { return mrp; }
+        public void setMrp(Double mrp) { this.mrp = mrp; }
+        public Double getSellingPrice() { return sellingPrice; }
+        public void setSellingPrice(Double sellingPrice) { this.sellingPrice = sellingPrice; }
+        public Integer getStock() { return stock; }
+        public void setStock(Integer stock) { this.stock = stock; }
+        public String getHsnCode() { return hsnCode; }
+        public void setHsnCode(String hsnCode) { this.hsnCode = hsnCode; }
+        public Map<String, String> getAttributes() { return attributes; }
+        public void setAttributes(Map<String, String> attributes) { this.attributes = attributes; }
     }
 
 }

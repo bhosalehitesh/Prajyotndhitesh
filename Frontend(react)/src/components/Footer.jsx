@@ -6,6 +6,7 @@ const Footer = () => {
   const { currentStore } = useStore();
 
   const storeName = currentStore?.name || 'Store';
+  const logoUrl = currentStore?.logo;
   
   // Get store address from storeAddress object (if available) - this comes from the profile/database
   const storeAddressObj = currentStore?.storeAddress || {};
@@ -74,7 +75,22 @@ const Footer = () => {
     <footer className="site-footer">
       <div className="footer-container container">
         <div className="footer-column contact-info">
-          <div className="footer-avatar">V</div>
+          <div className="footer-avatar">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={storeName}
+                className="footer-logo-img"
+                onError={(e) => {
+                  console.error('Failed to load footer logo:', logoUrl);
+                  e.target.style.display = 'none';
+                  e.target.closest('.footer-avatar').textContent = storeName.charAt(0).toUpperCase();
+                }}
+              />
+            ) : (
+              storeName.charAt(0).toUpperCase()
+            )}
+          </div>
           <div className="address">
             <p><strong>{storeName}</strong></p>
             <p>{storeAddress}</p>

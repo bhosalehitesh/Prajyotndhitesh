@@ -6,7 +6,8 @@ import com.smartbiz.sakhistore.modules.payment.model.PaymentStatus;
 import com.smartbiz.sakhistore.modules.payment.model.Payment;
 import com.smartbiz.sakhistore.modules.customer_user.model.User;
 
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -54,6 +55,7 @@ public class Orders {
     private String address;
 
     @ManyToOne
+    @JsonIgnore  // Prevent circular reference with User
     private User user;
 
     // Store and Seller IDs for seller app visibility
@@ -61,9 +63,11 @@ public class Orders {
     private Long sellerId;
 
     @OneToMany(mappedBy = "orders", cascade = CascadeType.ALL)
+    @JsonManagedReference  // Parent side - serialize this
     private List<OrderItems> orderItems;
 
     @OneToOne(mappedBy = "orders", cascade = CascadeType.ALL)
+    @JsonIgnore  // Prevent circular reference with Payment
     private Payment payment;
 
     public Payment getPayment() {

@@ -1,6 +1,7 @@
 package com.smartbiz.sakhistore.modules.order.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.smartbiz.sakhistore.modules.cart.model.Cart;
 import com.smartbiz.sakhistore.modules.product.model.Product;
 
@@ -27,6 +28,7 @@ public class OrderItems {
 
 
     @ManyToOne
+    @JsonBackReference  // Child side - don't serialize this to prevent circular reference
     private Orders orders;
 
     @ManyToOne
