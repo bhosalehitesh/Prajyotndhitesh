@@ -284,5 +284,10 @@ public class Product {
         this.seller = seller;
     }
 
+    // Getter for sellerId to include in JSON response (for filtering wishlist/cart by store)
+    public Long getSellerId() {
+        return seller != null ? seller.getSellerId() : null;
+    }
+
     public Product() {}
 }
