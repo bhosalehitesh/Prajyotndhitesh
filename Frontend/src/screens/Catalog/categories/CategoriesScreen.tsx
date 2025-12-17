@@ -50,23 +50,57 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
       const mapped: Category[] = apiCategories.map(cat => {
         const catName = (cat.categoryName || '').toLowerCase().trim();
         const catBusiness = (cat.businessCategory || '').toLowerCase().trim();
+        const catId = cat.category_id;
 
         const count = apiProducts.filter(p => {
-          const pBusiness = (p.businessCategory || '').toLowerCase().trim();
-          const pCat = (p.productCategory || '').toLowerCase().trim();
+          const product = p as any;
+          
+          // Try multiple possible field names for category ID
+          const pCategoryId =
+            product.categoryId ??
+            product.category_id ??
+            product.category?.category_id ??
+            product.category?.categoryId ??
+            null;
 
-          // Prefer matching by businessCategory (business details)
-          if (catBusiness) {
-            return pBusiness === catBusiness;
+          // Primary: Match by category ID (strongest relationship)
+          if (pCategoryId != null && catId != null) {
+            const matches = Number(pCategoryId) === Number(catId);
+            if (matches) {
+              return true;
+            }
           }
 
-          // Fallback: match productCategory to categoryName
-          if (catName) {
-            return pCat === catName;
+          // Fallback 1: Match by businessCategory (if both exist)
+          const pBusiness = (product.businessCategory || '').toLowerCase().trim();
+          if (catBusiness && pBusiness && pBusiness === catBusiness) {
+            return true;
+          }
+
+          // Fallback 2: Match productCategory text to categoryName
+          const pCat = (product.productCategory || '').toLowerCase().trim();
+          if (catName && pCat && pCat === catName) {
+            return true;
           }
 
           return false;
         }).length;
+
+        // Debug logging for first category
+        if (catId === apiCategories[0]?.category_id) {
+          console.log('🔍 [CategoriesScreen] Counting products for category:', {
+            categoryId: catId,
+            categoryName: cat.categoryName,
+            totalProducts: apiProducts.length,
+            matchedCount: count,
+            sampleProduct: apiProducts[0] ? {
+              productId: (apiProducts[0] as any).productsId,
+              categoryId: (apiProducts[0] as any).categoryId ?? (apiProducts[0] as any).category_id ?? (apiProducts[0] as any).category?.category_id ?? 'not found',
+              businessCategory: (apiProducts[0] as any).businessCategory,
+              productCategory: (apiProducts[0] as any).productCategory,
+            } : null,
+          });
+        }
 
         return {
           id: String(cat.category_id),
@@ -245,16 +279,18 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
                   <Image source={{uri: category.image}} style={styles.categoryImage} />
                 ) : (
                   <View style={styles.categoryImagePlaceholder}>
-                    <IconSymbol name="image" size={24} color="#9CA3AF" />
+                    <IconSymbol name="image-outline" size={32} color="#9CA3AF" />
                   </View>
                 )}
               </View>
               <View style={styles.categoryInfo}>
-                <Text style={styles.categoryName}>{category.name}</Text>
+                <Text style={styles.categoryName} numberOfLines={1}>
+                  {category.name}
+                </Text>
                 <Text style={styles.categoryCount}>
                   {category.productCount === 0
-                    ? 'No products'
-                    : `${category.productCount} product${category.productCount > 1 ? 's' : ''}`}
+                    ? 'No product listed'
+                    : `${category.productCount} product${category.productCount > 1 ? 's' : ''} listed`}
                 </Text>
               </View>
               <TouchableOpacity
@@ -344,12 +380,12 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF4FA',
+    backgroundColor: '#F5F5F5',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#374151',
+    backgroundColor: '#1E3A8A',
     paddingHorizontal: 16,
     paddingVertical: 12,
     height: 56,
@@ -376,10 +412,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
@@ -392,7 +435,8 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 100,
+    paddingBottom: 120,
+    paddingTop: 8,
   },
   emptyText: {
     textAlign: 'center',
@@ -407,23 +451,33 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   categoryImageContainer: {
     marginRight: 12,
   },
   categoryImagePlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: '#f8f9fa',
+    width: 70,
+    height: 70,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   categoryImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
+    width: 70,
+    height: 70,
+    borderRadius: 10,
     resizeMode: 'cover',
   },
   categoryInfo: {
@@ -433,24 +487,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   categoryCount: {
-    fontSize: 14,
-    color: '#6c757d',
+    fontSize: 13,
+    color: '#6B7280',
   },
   menuButton: {
     padding: 8,
+    marginLeft: 8,
   },
   addButton: {
     position: 'absolute',
     bottom: 80,
     left: 16,
     right: 16,
-    backgroundColor: '#e61580',
-    paddingVertical: 14,
+    backgroundColor: '#1E3A8A',
+    paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   addButtonText: {
     color: '#FFFFFF',

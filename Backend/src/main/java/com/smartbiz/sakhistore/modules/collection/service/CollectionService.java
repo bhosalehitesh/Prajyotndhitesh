@@ -74,6 +74,13 @@ public class CollectionService {
             newCollection.setDescription(description);
             newCollection.setSeoTitleTag(seoTitleTag);
             newCollection.setSeoMetaDescription(seoMetaDescription);
+            // Default: collection is ACTIVE when created (SmartBiz: same as Category)
+            newCollection.setIsActive(true);
+            // Generate unique slug from collection name (SmartBiz: URL-friendly identifier - same as Category)
+            String slug = generateUniqueSlug(collectionName, sellerId);
+            newCollection.setSlug(slug);
+            // Default order index is 0 (SmartBiz: same as Category)
+            newCollection.setOrderIndex(0);
 
             // Save first image as main collectionImage (if available)
             if (!collectionImageUrls.isEmpty()) {
@@ -118,6 +125,23 @@ public class CollectionService {
                     .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
             col.setSeller(seller);
         }
+        
+        // SmartBiz: Generate slug if not set (same as Category)
+        if (col.getSlug() == null || col.getSlug().trim().isEmpty()) {
+            String slug = generateUniqueSlug(col.getCollectionName(), sellerId);
+            col.setSlug(slug);
+        }
+        
+        // SmartBiz: Ensure isActive is set (default to true - same as Category)
+        if (col.getIsActive() == null) {
+            col.setIsActive(true);
+        }
+        
+        // SmartBiz: Ensure orderIndex is set (default to 0 - same as Category)
+        if (col.getOrderIndex() == null) {
+            col.setOrderIndex(0);
+        }
+        
         return collectionRepository.save(col);
     }
     
@@ -285,5 +309,58 @@ public class CollectionService {
 
         productRepository.save(product);
         return collectionRepository.save(col);
+    }
+
+    // =======================
+    // SLUG GENERATION (SmartBiz: same as Category)
+    // =======================
+    /**
+     * Generate slug from collection name (SmartBiz: URL-friendly identifier)
+     * Ensures uniqueness per seller by appending number if needed
+     */
+    private String generateSlug(String collectionName) {
+        if (collectionName == null || collectionName.trim().isEmpty()) {
+            return "collection-" + System.currentTimeMillis();
+        }
+        // Convert to lowercase, replace spaces/special chars with hyphens
+        String baseSlug = collectionName.toLowerCase()
+            .replaceAll("[^a-z0-9]+", "-")
+            .replaceAll("^-+|-+$", "");
+        return baseSlug;
+    }
+
+    /**
+     * Generate unique slug for collection (ensures uniqueness per seller)
+     * Made public for use in controllers (SmartBiz: same as Category)
+     */
+    public String generateUniqueSlug(String collectionName, Long sellerId) {
+        String baseSlug = generateSlug(collectionName);
+        if (sellerId == null) {
+            return baseSlug;
+        }
+        
+        // Check if slug already exists for this seller
+        String candidateSlug = baseSlug;
+        int counter = 1;
+        while (collectionRepository.findBySlugAndSeller_SellerId(candidateSlug, sellerId) != null) {
+            candidateSlug = baseSlug + "-" + counter;
+            counter++;
+        }
+        return candidateSlug;
+    }
+
+    /**
+     * Find collection by slug and seller ID (for public store API - same as Category)
+     */
+    public collection findBySlugAndSellerId(String slug, Long sellerId) {
+        if (slug == null || slug.isEmpty() || sellerId == null) {
+            return null;
+        }
+        try {
+            return collectionRepository.findBySlugAndSeller_SellerId(slug, sellerId);
+        } catch (Exception e) {
+            // Return null if not found (don't throw exception)
+            return null;
+        }
     }
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
 import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.collection.model.collection;
@@ -23,6 +24,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.validation.constraints.NotNull;
 
 /**
@@ -129,6 +131,13 @@ public class Product {
     @NotNull(message = "Category is required")
     @JsonIgnore
     private Category category;
+
+    // =======================
+    // TRANSIENT: categoryId from JSON (for deserialization)
+    // Used when frontend sends categoryId directly instead of nested category object
+    // =======================
+    @Transient
+    private Long categoryId;
 
     // =======================
     // 🔗 PRODUCT → VARIANTS (One Product → Many Variants)
@@ -392,9 +401,41 @@ public class Product {
 
     /**
      * Get category ID for JSON response (avoid lazy loading issues)
+     * Checks transient field first (from JSON deserialization), then category relationship
+     * Always returns a value if category exists (even if lazy-loaded)
      */
+    @JsonProperty("categoryId")
     public Long getCategoryId() {
-        return category != null ? category.getCategory_id() : null;
+        // First check transient field (set during JSON deserialization)
+        if (this.categoryId != null) {
+            return this.categoryId;
+        }
+        // Fallback to category relationship (for existing entities)
+        // Try to access category safely to trigger lazy loading if needed
+        try {
+            if (category != null) {
+                Long catId = category.getCategory_id();
+                // If we successfully got the ID, cache it in transient field for next access
+                if (catId != null) {
+                    this.categoryId = catId;
+                }
+                return catId;
+            }
+        } catch (Exception e) {
+            // If lazy loading fails (e.g., session closed), return null
+            // This shouldn't happen with JOIN FETCH, but handle gracefully
+            System.err.println("Warning: Could not access category for product " + productsId + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Set category ID from JSON (for deserialization)
+     * This allows frontend to send categoryId directly instead of nested category object
+     */
+    @com.fasterxml.jackson.annotation.JsonSetter("categoryId")
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
     }
 
     /**

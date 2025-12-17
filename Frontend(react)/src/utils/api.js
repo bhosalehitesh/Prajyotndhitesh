@@ -619,7 +619,26 @@ export const getCart = async (userId) => {
 };
 
 /**
- * Add product to cart
+ * Add variant to cart (SmartBiz: preferred method)
+ * @param {number} userId - User ID
+ * @param {number} variantId - Variant ID
+ * @param {number} quantity - Quantity to add
+ * @returns {Promise<Object>} Updated cart
+ */
+export const addVariantToCartAPI = async (userId, variantId, quantity = 1) => {
+  if (!userId || !variantId) throw new Error('User ID and Variant ID are required');
+  const params = new URLSearchParams({
+    userId: String(userId),
+    variantId: String(variantId),
+    quantity: String(quantity)
+  });
+  return apiRequest(`/cart/add-variant?${params.toString()}`, {
+    method: 'POST'
+  });
+};
+
+/**
+ * Add product to cart (LEGACY - auto-selects first variant)
  * @param {number} userId - User ID
  * @param {number} productId - Product ID
  * @param {number} quantity - Quantity to add
@@ -638,7 +657,26 @@ export const addToCartAPI = async (userId, productId, quantity = 1) => {
 };
 
 /**
- * Update cart item quantity
+ * Update variant quantity in cart (SmartBiz: preferred method)
+ * @param {number} userId - User ID
+ * @param {number} variantId - Variant ID
+ * @param {number} quantity - New quantity
+ * @returns {Promise<Object>} Updated cart
+ */
+export const updateVariantCartQuantity = async (userId, variantId, quantity) => {
+  if (!userId || !variantId) throw new Error('User ID and Variant ID are required');
+  const params = new URLSearchParams({
+    userId: String(userId),
+    variantId: String(variantId),
+    quantity: String(quantity)
+  });
+  return apiRequest(`/cart/update-variant?${params.toString()}`, {
+    method: 'PUT'
+  });
+};
+
+/**
+ * Update cart item quantity (LEGACY - updates first variant of product)
  * @param {number} userId - User ID
  * @param {number} productId - Product ID
  * @param {number} quantity - New quantity
@@ -657,7 +695,24 @@ export const updateCartQuantity = async (userId, productId, quantity) => {
 };
 
 /**
- * Remove product from cart
+ * Remove variant from cart (SmartBiz: preferred method)
+ * @param {number} userId - User ID
+ * @param {number} variantId - Variant ID
+ * @returns {Promise<Object>} Updated cart
+ */
+export const removeVariantFromCartAPI = async (userId, variantId) => {
+  if (!userId || !variantId) throw new Error('User ID and Variant ID are required');
+  const params = new URLSearchParams({
+    userId: String(userId),
+    variantId: String(variantId)
+  });
+  return apiRequest(`/cart/remove-variant?${params.toString()}`, {
+    method: 'DELETE'
+  });
+};
+
+/**
+ * Remove product from cart (LEGACY - removes all variants of product)
  * @param {number} userId - User ID
  * @param {number} productId - Product ID
  * @returns {Promise<Object>} Updated cart

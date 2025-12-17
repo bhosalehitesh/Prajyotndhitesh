@@ -4,12 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.smartbiz.sakhistore.modules.cart.model.Cart;
 import com.smartbiz.sakhistore.modules.product.model.Product;
+import com.smartbiz.sakhistore.modules.product.model.ProductVariant;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,13 +28,20 @@ public class OrderItems {
 
     private Double price;
 
+    // =======================
+    // VARIANT SUPPORT (SmartBiz: cart uses variants, not products)
+    // =======================
+    @ManyToOne
+    @JoinColumn(name = "variant_id")
+    @JsonIgnore  // Prevent circular references in JSON
+    private ProductVariant variant;
 
     @ManyToOne
     @JsonBackReference  // Child side - don't serialize this to prevent circular reference
     private Orders orders;
 
     @ManyToOne
-    private Product product;
+    private Product product;  // Keep for backward compatibility, but prefer variant
 
     @ManyToOne
     @JsonIgnore

@@ -181,7 +181,8 @@ public class ProductService{
         if (sellerId == null) {
             return productRepository.findAll();
         }
-        return productRepository.findBySeller_SellerId(sellerId);
+        // Use query with JOIN FETCH to ensure category is loaded (needed for categoryId in JSON)
+        return productRepository.findBySeller_SellerIdWithRelations(sellerId);
     }
 
     /**
@@ -395,21 +396,73 @@ public class ProductService{
         Product existing = productRepository.findById(productId)
                 .orElseThrow(() -> new NoSuchElementException("Product not found with ID: " + productId));
 
-        // Basic product fields (no price/stock - those are on variants)
-        existing.setProductName(updated.getProductName());
-        existing.setDescription(updated.getDescription());
-        existing.setBusinessCategory(updated.getBusinessCategory());
-        existing.setProductCategory(updated.getProductCategory());
-        existing.setSizeChartImage(updated.getSizeChartImage());
-        existing.setSeoTitleTag(updated.getSeoTitleTag());
-        existing.setSeoMetaDescription(updated.getSeoMetaDescription());
-        existing.setSlug(updated.getSlug() != null ? updated.getSlug() : generateSlug(updated.getProductName()));
-        existing.setProductType(updated.getProductType());
+        // Basic product fields
+        if (updated.getProductName() != null) {
+            existing.setProductName(updated.getProductName());
+        }
+        if (updated.getDescription() != null) {
+            existing.setDescription(updated.getDescription());
+        }
+        if (updated.getBusinessCategory() != null) {
+            existing.setBusinessCategory(updated.getBusinessCategory());
+        }
+        if (updated.getProductCategory() != null) {
+            existing.setProductCategory(updated.getProductCategory());
+        }
+        if (updated.getSizeChartImage() != null) {
+            existing.setSizeChartImage(updated.getSizeChartImage());
+        }
+        if (updated.getSeoTitleTag() != null) {
+            existing.setSeoTitleTag(updated.getSeoTitleTag());
+        }
+        if (updated.getSeoMetaDescription() != null) {
+            existing.setSeoMetaDescription(updated.getSeoMetaDescription());
+        }
+        if (updated.getSlug() != null) {
+            existing.setSlug(updated.getSlug());
+        } else if (updated.getProductName() != null) {
+            existing.setSlug(generateSlug(updated.getProductName()));
+        }
+        if (updated.getProductType() != null) {
+            existing.setProductType(updated.getProductType());
+        }
         
-        // Update category if provided
+        // Update legacy fields for backward compatibility
+        if (updated.getMrp() != null) {
+            existing.setMrp(updated.getMrp());
+        }
+        if (updated.getSellingPrice() != null) {
+            existing.setSellingPrice(updated.getSellingPrice());
+        }
+        if (updated.getInventoryQuantity() != null) {
+            existing.setInventoryQuantity(updated.getInventoryQuantity());
+        }
+        if (updated.getCustomSku() != null) {
+            existing.setCustomSku(updated.getCustomSku());
+        }
+        if (updated.getColor() != null) {
+            existing.setColor(updated.getColor());
+        }
+        if (updated.getSize() != null) {
+            existing.setSize(updated.getSize());
+        }
+        if (updated.getHsnCode() != null) {
+            existing.setHsnCode(updated.getHsnCode());
+        }
+        
+        // Update category if provided (check both category object and categoryId field)
+        Long categoryIdToSet = null;
         if (updated.getCategory() != null && updated.getCategory().getCategory_id() != null) {
-            Category category = categoryRepository.findById(updated.getCategory().getCategory_id())
-                    .orElseThrow(() -> new RuntimeException("Category not found"));
+            categoryIdToSet = updated.getCategory().getCategory_id();
+        } else if (updated.getCategoryId() != null) {
+            categoryIdToSet = updated.getCategoryId();
+        }
+        
+        if (categoryIdToSet != null) {
+            // Extract to final variable for lambda expression
+            final Long finalCategoryId = categoryIdToSet;
+            Category category = categoryRepository.findById(finalCategoryId)
+                    .orElseThrow(() -> new RuntimeException("Category not found with ID: " + finalCategoryId));
             existing.setCategory(category);
         }
         
@@ -423,7 +476,43 @@ public class ProductService{
             existing.setIsActive(updated.getIsActive());
         }
 
-        // NOTE: Price/Stock updates are handled via variant update methods.
+        // Sync price/stock to variants (SmartBiz: variants are the sellable unit)
+        List<ProductVariant> variants = productVariantRepository.findByProduct_ProductsId(productId);
+        if (!variants.isEmpty()) {
+            // Update first variant (for single-variant products) or all variants
+            for (ProductVariant variant : variants) {
+                if (updated.getMrp() != null) {
+                    variant.setMrp(updated.getMrp());
+                }
+                if (updated.getSellingPrice() != null) {
+                    variant.setSellingPrice(updated.getSellingPrice());
+                }
+                if (updated.getInventoryQuantity() != null) {
+                    variant.setStock(updated.getInventoryQuantity());
+                }
+                if (updated.getHsnCode() != null) {
+                    variant.setHsnCode(updated.getHsnCode());
+                }
+                if (updated.getCustomSku() != null && variants.size() == 1) {
+                    // Only update SKU if single variant (to avoid conflicts)
+                    variant.setSku(updated.getCustomSku());
+                }
+                productVariantRepository.save(variant);
+            }
+        } else {
+            // No variants exist - create a default variant for backward compatibility
+            if (updated.getSellingPrice() != null || updated.getMrp() != null || updated.getInventoryQuantity() != null) {
+                ProductVariant defaultVariant = new ProductVariant();
+                defaultVariant.setProduct(existing);
+                defaultVariant.setMrp(updated.getMrp() != null ? updated.getMrp() : 0.0);
+                defaultVariant.setSellingPrice(updated.getSellingPrice() != null ? updated.getSellingPrice() : 0.0);
+                defaultVariant.setStock(updated.getInventoryQuantity() != null ? updated.getInventoryQuantity() : 0);
+                defaultVariant.setSku(updated.getCustomSku());
+                defaultVariant.setHsnCode(updated.getHsnCode());
+                productVariantRepository.save(defaultVariant);
+            }
+        }
+
         // NOTE: We intentionally do NOT modify productImages, socialSharingImage or seller here.
         // Image updates are handled via the upload endpoint; seller relation stays the same.
 

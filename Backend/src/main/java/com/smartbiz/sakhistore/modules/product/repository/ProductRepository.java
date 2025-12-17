@@ -17,6 +17,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // All products for a specific seller
     List<Product> findBySeller_SellerId(Long sellerId);
     
+    // All products for a specific seller with category fetched
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.seller " +
+           "LEFT JOIN FETCH p.category " +
+           "WHERE p.seller.sellerId = :sellerId " +
+           "ORDER BY p.createdAt DESC")
+    List<Product> findBySeller_SellerIdWithRelations(@Param("sellerId") Long sellerId);
+    
     // Paginated products for a specific seller
     Page<Product> findBySeller_SellerId(Long sellerId, Pageable pageable);
     

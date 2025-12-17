@@ -186,6 +186,11 @@ const ProductDetail = () => {
       ? Math.round(((Number(originalPriceToShow) - Number(priceToShow)) / Number(originalPriceToShow)) * 100)
       : 0;
 
+  // SmartBiz VISIBILITY GATE for buy button:
+  // Product is buyable only if active and has stock (prefer totalStock, fallback to inventory)
+  const totalStock = typeof backend.totalStock === 'number' ? backend.totalStock : inventory;
+  const isBuyable = isActive && (totalStock == null || Number(totalStock) > 0);
+
   // Find cart item for this product
   const cartItem = useMemo(() => {
     const productId = productIdParam || currentProduct?.id;
@@ -202,6 +207,13 @@ const ProductDetail = () => {
       id: productIdParam
     };
 
+    // SmartBiz: Get variantId if available (prefer first active variant)
+    const variants = backend.variants || backend.productVariants || [];
+    const firstActiveVariant = Array.isArray(variants) && variants.length > 0 
+      ? variants.find(v => v.isActive !== false && v.stock > 0) || variants[0]
+      : null;
+    const variantId = firstActiveVariant?.variantId || firstActiveVariant?.id || null;
+
     addToCart(
       {
         name: productToAdd.name,
@@ -209,7 +221,8 @@ const ProductDetail = () => {
         image: selectedImage || productToAdd.image || fallbackImage,
         brand: productToAdd.brand || currentStore?.name || 'Store',
         quantity: 1,
-        productId: productToAdd.id
+        productId: productToAdd.id,
+        variantId: variantId // SmartBiz: include variantId if available
       },
       currentStore?.storeId || currentStore?.id,
       currentStore?.sellerId
@@ -354,7 +367,7 @@ const ProductDetail = () => {
             </div>
           )}
 
-          {cartItem ? (
+          {cartItem && isBuyable ? (
             <div className="product-detail-actions">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: '2px solid #f97316', borderRadius: '8px', padding: '0.5rem 0.75rem', background: 'var(--card-bg)' }}>
                 <button
@@ -458,7 +471,7 @@ const ProductDetail = () => {
                 View Cart
               </button>
             </div>
-          ) : (
+          ) : isBuyable ? (
             <div className="product-detail-actions-row">
               <button
                 onClick={handleAddToCart}
@@ -494,6 +507,12 @@ const ProductDetail = () => {
               >
                 Buy Now
               </button>
+            </div>
+          ) : (
+            <div style={{ marginTop: '1rem' }}>
+              <p style={{ color: '#b91c1c', fontWeight: 600 }}>
+                This product is currently unavailable.
+              </p>
             </div>
           )}
         </div>

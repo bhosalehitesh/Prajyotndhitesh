@@ -76,11 +76,29 @@ const Home = () => {
         if (Array.isArray(products) && products.length > 0) {
           // Transform backend product format to frontend format using utility
           const transformedProducts = transformProducts(products, currentStore?.name || 'Store');
+
+          // SmartBiz VISIBILITY GATE (website-side safety):
+          // Only show products that are:
+          // - product.isActive === true
+          // - category (if present) is active
+          // - have stock (prefer totalStock, fallback to inventoryQuantity)
+          const visibleProducts = transformedProducts.filter(p => {
+            const backend = p.product || {};
+            const productActive = backend.isActive !== false;
+            const categoryActive = backend.category ? backend.category.isActive !== false : true;
+            const totalStock = typeof backend.totalStock === 'number' ? backend.totalStock : backend.inventoryQuantity;
+            const hasStock = totalStock == null || Number(totalStock) > 0;
+            return productActive && categoryActive && hasStock;
+          });
+
           console.log('🏠 [HOME] Transformed products:', {
             count: transformedProducts.length,
-            firstTransformed: transformedProducts[0]
+            visibleCount: visibleProducts.length,
+            firstTransformed: transformedProducts[0],
+            firstVisible: visibleProducts[0],
           });
-          setFeaturedProducts(transformedProducts);
+
+          setFeaturedProducts(visibleProducts);
         } else {
           console.warn('⚠️ [HOME] No products returned for slug:', slugToUse);
           console.warn('⚠️ [HOME] Check backend API: http://localhost:8080/api/public/store/' + slugToUse + '/featured');
@@ -205,7 +223,7 @@ const Home = () => {
 
   // Show 4 products at a time
   const PRODUCTS_PER_SLIDE = 4;
-  
+
   const nextProductSlide = () => {
     const maxSlides = Math.max(0, featuredProducts.length - PRODUCTS_PER_SLIDE);
     setCurrentProductSlide((prev) => Math.min(prev + 1, maxSlides));
@@ -302,7 +320,7 @@ const Home = () => {
               </p>
             </div>
           ) : (
-            <div className="carousel">
+          <div className="carousel">
               <button 
                 className="carousel-btn prev" 
                 onClick={prevProductSlide} 
@@ -311,17 +329,17 @@ const Home = () => {
               >
                 &#10094;
               </button>
-              
+            
               <div 
                 className="carousel-track" 
                 style={{
                   transform: `translateX(-${currentProductSlide * (100 / PRODUCTS_PER_SLIDE)}%)`
                 }}
               >
-                {featuredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+              {featuredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
 
               <button 
                 className="carousel-btn next" 
@@ -331,7 +349,7 @@ const Home = () => {
               >
                 &#10095;
               </button>
-            </div>
+          </div>
           )}
         </div>
       </section>

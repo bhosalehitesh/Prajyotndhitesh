@@ -82,8 +82,13 @@ public class CategoryService {
             category.setCategoryName(categoryName);
             category.setBusinessCategory(businessCategory);
             category.setDescription(description);
+            // Default: category is ACTIVE when created
+            category.setIsActive(true);
             category.setSeoTitleTag(seoTitleTag);
             category.setSeoMetaDescription(seoMetaDescription);
+            // Generate unique slug from category name (SmartBiz: URL-friendly identifier)
+            String slug = generateUniqueSlug(categoryName, sellerId);
+            category.setSlug(slug);
 
             if (!categoryImageUrls.isEmpty()) {
                 category.setCategoryImage(categoryImageUrls.get(0));
@@ -141,6 +146,19 @@ public class CategoryService {
                 .orElseThrow(() -> new NoSuchElementException("Category not found with ID: " + category_id));
     }
 
+    // ✅ Get by slug and seller ID (for public store API)
+    public Category findBySlugAndSellerId(String slug, Long sellerId) {
+        if (slug == null || slug.isEmpty() || sellerId == null) {
+            return null;
+        }
+        try {
+            return categoryRepository.findBySlugAndSeller_SellerId(slug, sellerId);
+        } catch (Exception e) {
+            // Return null if not found (don't throw exception)
+            return null;
+        }
+    }
+
     // ✅ Delete
     public void deleteCategory(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
@@ -195,6 +213,40 @@ public class CategoryService {
         Long sellerId = store.getSeller().getSellerId(); // seller_id exists in store_details
 
         return collectionRepository.findBySeller_SellerId(sellerId);
+    }
+
+    /**
+     * Generate slug from category name (SmartBiz: URL-friendly identifier)
+     * Ensures uniqueness per seller by appending number if needed
+     */
+    private String generateSlug(String categoryName) {
+        if (categoryName == null || categoryName.trim().isEmpty()) {
+            return "category-" + System.currentTimeMillis();
+        }
+        // Convert to lowercase, replace spaces/special chars with hyphens
+        String baseSlug = categoryName.toLowerCase()
+            .replaceAll("[^a-z0-9]+", "-")
+            .replaceAll("^-+|-+$", "");
+        return baseSlug;
+    }
+
+    /**
+     * Generate unique slug for category (ensures uniqueness per seller)
+     */
+    private String generateUniqueSlug(String categoryName, Long sellerId) {
+        String baseSlug = generateSlug(categoryName);
+        if (sellerId == null) {
+            return baseSlug;
+        }
+        
+        // Check if slug already exists for this seller
+        String candidateSlug = baseSlug;
+        int counter = 1;
+        while (categoryRepository.findBySlugAndSeller_SellerId(candidateSlug, sellerId) != null) {
+            candidateSlug = baseSlug + "-" + counter;
+            counter++;
+        }
+        return candidateSlug;
     }
 
 }

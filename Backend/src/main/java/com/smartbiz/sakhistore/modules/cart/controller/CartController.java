@@ -24,34 +24,60 @@ public class CartController {
     }
 
     // ============================
-    // ADD PRODUCT TO CART
+    // ADD VARIANT TO CART (SmartBiz: preferred method)
+    // ============================
+    @PostMapping("/add-variant")
+    public Cart addVariantToCart(@RequestParam Long userId,
+                                  @RequestParam Long variantId,
+                                  @RequestParam Integer quantity) {
+        return cartService.addVariantToCart(userId, variantId, quantity);
+    }
+
+    // ============================
+    // ADD PRODUCT TO CART (LEGACY - auto-selects first variant)
     // ============================
     @PostMapping("/add")
     public Cart addToCart(@RequestParam Long userId,
                           @RequestParam Long productId,
                           @RequestParam Integer quantity) {
-
         return cartService.addToCart(userId, productId, quantity);
     }
 
     // ============================
-    // UPDATE QUANTITY
+    // UPDATE VARIANT QUANTITY (SmartBiz: preferred method)
+    // ============================
+    @PutMapping("/update-variant")
+    public Cart updateVariantQuantity(@RequestParam Long userId,
+                                      @RequestParam Long variantId,
+                                      @RequestParam Integer quantity) {
+        return cartService.updateVariantQuantity(userId, variantId, quantity);
+    }
+
+    // ============================
+    // UPDATE QUANTITY (LEGACY - updates first variant of product)
     // ============================
     @PutMapping("/update")
     public Cart updateQuantity(@RequestParam Long userId,
                                @RequestParam Long productId,
                                @RequestParam Integer quantity) {
-
         return cartService.updateQuantity(userId, productId, quantity);
     }
 
     // ============================
-    // REMOVE ITEM
+    // REMOVE VARIANT FROM CART (SmartBiz: preferred method)
+    // ============================
+    @DeleteMapping("/remove-variant")
+    public Cart removeVariantFromCart(@RequestParam Long userId,
+                                      @RequestParam Long variantId) {
+        return cartService.removeVariantFromCart(userId, variantId);
+    }
+
+    // ============================
+    // REMOVE ITEM (LEGACY - removes all variants of product)
     // ============================
     @DeleteMapping("/remove")
     public Cart removeFromCart(@RequestParam Long userId,
                                @RequestParam Long productId) {
-
         return cartService.removeFromCart(userId, productId);
     }
 

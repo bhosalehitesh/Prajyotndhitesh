@@ -508,6 +508,8 @@ export interface ProductDto {
   description?: string;
   businessCategory?: string;
   productCategory?: string;
+  categoryId?: number; // SmartBiz: category ID from backend Product.getCategoryId()
+  category_id?: number; // Alternative field name (for backward compatibility)
   productImages?: string[];
   socialSharingImage?: string | null;
   customSku?: string;
@@ -1493,11 +1495,25 @@ export const updateProduct = async (
     hsnCode?: string;
     isBestseller?: boolean; // backend expects isBestseller
     bestSeller?: boolean; // legacy support
+    categoryId?: number; // SmartBiz: category ID for product
   },
 ): Promise<ProductDto> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const id = typeof productId === 'string' ? productId : String(productId);
   const url = `${API_BASE_URL}/api/products/${id}`;
+
+  const requestBody = {
+    ...body,
+    isBestseller: body.isBestseller ?? body.bestSeller ?? undefined,
+    bestSeller: undefined,
+  };
+
+  console.log('📡 [API] Updating product:', {
+    url,
+    productId: id,
+    categoryId: body.categoryId,
+    requestBody,
+  });
 
   const response = await fetch(url, {
     method: 'PUT',
@@ -1505,11 +1521,7 @@ export const updateProduct = async (
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({
-      ...body,
-      isBestseller: body.isBestseller ?? body.bestSeller ?? undefined,
-      bestSeller: undefined,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   const payload = await parseJsonOrText(response);
@@ -1519,9 +1531,16 @@ export const updateProduct = async (
       typeof payload === 'string'
         ? payload
         : payload?.message || 'Failed to update product';
+    console.error('❌ [API] Update product failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      message,
+      payload,
+    });
     throw new Error(message);
   }
 
+  console.log('✅ [API] Product updated successfully');
   return payload as ProductDto;
 };
 

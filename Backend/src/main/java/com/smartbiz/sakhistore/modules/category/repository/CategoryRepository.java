@@ -16,5 +16,11 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     List<Category> findBySeller_SellerIdAndBusinessCategoryContainingIgnoreCase(
             Long sellerId, String businessCategory);
+
+    // Find category by slug (for seller)
+    Category findBySlugAndSeller_SellerId(String slug, Long sellerId);
+
+    // Find category by slug (any seller - use with caution)
+    Category findBySlug(String slug);
 }
 

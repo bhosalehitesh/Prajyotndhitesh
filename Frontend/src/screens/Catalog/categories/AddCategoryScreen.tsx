@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useRef} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -45,6 +45,9 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
   );
   const [pickerOpen, setPickerOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Use ref for immediate synchronous check (prevents race conditions)
+  const isSubmittingRef = useRef(false);
 
   const categoryList = [
     'Appliances','Baby','Beauty and Personal Care','Books and Stationery','Clothing','Electronics','Food and Grocery','Footwear','Furniture','General','Health Supplements','Home and Kitchen','Home Care','Jewelry','Lawn and Garden','Luggage and Bags','Multipurpose','Pet Products','Sports and Fitness','Toys and games','Watches',
@@ -154,10 +157,27 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
   };
 
   const handleSave = async () => {
+    // IMMEDIATE synchronous check using ref (prevents race conditions from rapid clicks)
+    if (isSubmittingRef.current) {
+      console.log('⚠️ [AddCategory] Submission already in progress, ignoring duplicate click');
+      return;
+    }
+
+    // Also check state (double protection)
+    if (isSubmitting) {
+      console.log('⚠️ [AddCategory] Submission already in progress (state check), ignoring duplicate click');
+      return;
+    }
+
     if (!canSave) {
       Alert.alert('Validation Error', 'Please fill in all required fields');
       return;
     }
+
+    // Set BOTH ref and state IMMEDIATELY (synchronously) before any async operation
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+    console.log('✅ [AddCategory] Starting category creation...');
 
     try {
       await uploadCategoryWithImages({
@@ -169,6 +189,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
         imageUri: categoryImage,
       });
 
+      console.log('✅ [AddCategory] Category created successfully');
       Alert.alert(
         'Success',
         isEditMode
@@ -177,16 +198,24 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              // Reset both ref and state before navigation
+              isSubmittingRef.current = false;
+              setIsSubmitting(false);
+              navigation.goBack();
+            },
           },
         ],
       );
     } catch (error) {
-      console.error('Failed to save category', error);
+      console.error('❌ [AddCategory] Failed to save category', error);
       const errorMessage = error instanceof Error 
         ? error.message 
         : 'Failed to save category. Please check your internet connection and try again.';
       Alert.alert('Error', errorMessage);
+      // Reset both ref and state on error so user can retry
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -230,7 +259,12 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={true}
+        keyboardShouldPersistTaps="handled"
+        bounces={true}>
         {/* Category Image */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Category Image</Text>
@@ -329,15 +363,15 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
             </TouchableOpacity>
           )}
         <TouchableOpacity
-          style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+          style={[styles.saveButton, (!canSave || isSubmitting) && styles.saveButtonDisabled]}
           onPress={handleSave}
-          disabled={!canSave}>
+          disabled={!canSave || isSubmitting}>
           <Text
             style={[
               styles.saveButtonText,
-              !canSave && styles.saveButtonTextDisabled,
+              (!canSave || isSubmitting) && styles.saveButtonTextDisabled,
             ]}>
-            Save
+            {isSubmitting ? 'Saving...' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -419,6 +453,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF4FA',
   },
+  scrollView: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -443,7 +480,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 250, // Increased to account for button container (2 buttons in edit mode ~140px) + bottom nav (~60px) + safe area (~50px)
   },
   section: {
     marginBottom: 24,

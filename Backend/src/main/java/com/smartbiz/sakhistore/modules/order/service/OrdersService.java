@@ -31,6 +31,9 @@ public class OrdersService {
     @Autowired
     private CartRepository cartRepository;
 
+    @Autowired
+    private StoreDetailsRepo storeDetailsRepo;
+
     // ===============================
     // Create Order From Cart
     // ===============================

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../contexts/StoreContext';
 import { getStoreProducts } from '../utils/api';
 import { transformProducts } from '../utils/format';
@@ -11,11 +11,13 @@ import StoreError from '../components/StoreError';
 const Products = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { storeSlug, currentStore, loading: storeLoading } = useStore();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('');
+  // Read category from URL params (now expects slug, not name)
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
 
   const actualSlug = slug || storeSlug || currentStore?.slug;
 
@@ -44,8 +46,20 @@ const Products = () => {
         
         if (Array.isArray(data) && data.length > 0) {
           const transformedProducts = transformProducts(data, currentStore?.name || 'Store');
-          console.log('Transformed products:', transformedProducts.length);
-          setProducts(transformedProducts);
+
+          // SmartBiz VISIBILITY GATE (website-side safety):
+          // Only list products that are active, in an active category, and have stock.
+          const visibleProducts = transformedProducts.filter(p => {
+            const backend = p.product || {};
+            const productActive = backend.isActive !== false;
+            const categoryActive = backend.category ? backend.category.isActive !== false : true;
+            const totalStock = typeof backend.totalStock === 'number' ? backend.totalStock : backend.inventoryQuantity;
+            const hasStock = totalStock == null || Number(totalStock) > 0;
+            return productActive && categoryActive && hasStock;
+          });
+
+          console.log('Transformed products:', transformedProducts.length, 'Visible:', visibleProducts.length);
+          setProducts(visibleProducts);
         } else {
           console.warn('No products returned for slug:', slugToUse);
           setProducts([]);

@@ -34,7 +34,7 @@ import {launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse} fr
 
 import ViewShot, {captureRef} from 'react-native-view-shot';
 
-import { createProduct, uploadProductWithImages, updateProduct, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, fetchCategories, CategoryDto } from '../../../utils/api';
+import { createProduct, uploadProductWithImages, updateProduct, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, fetchCategories, CategoryDto, uploadCategoryWithImages } from '../../../utils/api';
 import { storage } from '../../../authentication/storage';
 
 
@@ -132,6 +132,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
 
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   const [images, setImages] = useState<string[]>(existing?.images || []);
 
@@ -255,10 +256,89 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
     loadCategories();
   }, []);
 
-  // Require at least name, price, and one image. Category is optional (backend will auto-assign if not provided).
-  const canSubmit = name.trim().length > 0 && 
-                    price.trim().length > 0 && 
-                    images.length > 0;
+  // Load images and categoryId from existing product in edit mode
+  useEffect(() => {
+    if (isEditMode && existing) {
+      // Try multiple possible image fields from backend
+      const existingImages = existing.images || 
+                            existing.productImages || 
+                            (existing.imageUrl ? [existing.imageUrl] : []);
+      if (existingImages.length > 0 && images.length === 0) {
+        console.log('📸 [AddProductScreen] Loading existing product images:', existingImages.length);
+        setImages(existingImages);
+      }
+      
+      // Set selected category if available (check multiple field names)
+      if (!selectedCategoryId) {
+        const categoryIdValue = (existing as any).categoryId ?? 
+                               (existing as any).category_id ?? 
+                               null;
+        
+        if (categoryIdValue != null) {
+          const catId = typeof categoryIdValue === 'number' 
+            ? categoryIdValue 
+            : (typeof categoryIdValue === 'string' ? Number(categoryIdValue) : null);
+          
+          if (catId && !isNaN(catId)) {
+            console.log('📁 [AddProductScreen] Setting existing categoryId:', catId);
+            setSelectedCategoryId(catId);
+          } else {
+            console.warn('⚠️ [AddProductScreen] Invalid categoryId value:', categoryIdValue);
+          }
+        } else {
+          // This is just a warning - product can still be updated without categoryId
+          // The backend will keep the existing category if none is provided
+          console.log('ℹ️ [AddProductScreen] No categoryId in product object (this is OK for updates):', {
+            productId: (existing as any).id,
+            productName: (existing as any).title,
+            existingKeys: Object.keys(existing || {}),
+            note: 'Product will update successfully - backend keeps existing category',
+          });
+        }
+      }
+    }
+  }, [isEditMode, existing, selectedCategoryId, images.length]);
+
+  // Require at least name, price, and a selected database category.
+  // For edit mode: images are optional (they stay as-is in backend)
+  // For create mode: at least one image is required
+  // In edit mode: if categoryId is not set, we still allow update (backend keeps existing category)
+  const hasName = name.trim().length > 0;
+  const hasPrice = price.trim().length > 0;
+  const hasImages = isEditMode || images.length > 0; // Images only required for new products
+  const hasCategory = isEditMode || !!selectedCategoryId; // Category required for new products, optional for edits
+  
+  const canSubmit = hasName && hasPrice && hasImages && hasCategory;
+  
+  // Debug logging for edit mode
+  if (isEditMode && !canSubmit) {
+    console.log('🔍 [AddProductScreen] Validation failed (edit mode):', {
+      hasName,
+      hasPrice,
+      hasImages,
+      hasCategory,
+      selectedCategoryId,
+      imagesCount: images.length,
+      nameLength: name.trim().length,
+      priceLength: price.trim().length,
+    });
+  }
+
+  // Debug logging for validation (only log when in edit mode and button is disabled)
+  useEffect(() => {
+    if (isEditMode && !canSubmit) {
+      console.log('🔍 [AddProductScreen] Validation check (edit mode):', {
+        nameValid: name.trim().length > 0,
+        priceValid: price.trim().length > 0,
+        imagesValid: isEditMode || images.length > 0,
+        categoryValid: !!selectedCategoryId,
+        selectedCategoryId,
+        canSubmit,
+        existingCategoryId: (existing as any)?.categoryId,
+        existingCategory_id: (existing as any)?.category_id,
+      });
+    }
+  }, [isEditMode, canSubmit, name, price, images.length, selectedCategoryId, existing]);
 
 
   const requestCameraPermission = async (): Promise<boolean> => {
@@ -424,24 +504,35 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
 
   const handleSubmit = async () => {
-    if (!canSubmit || isSubmitting) {
-      console.log('Submit blocked:', { canSubmit, isSubmitting, name: name.trim().length, price: price.trim().length, images: images.length });
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      console.log('⚠️ [AddProductScreen] Submission already in progress, ignoring duplicate click');
+      return;
+    }
+
+    if (!canSubmit) {
+      console.log('⚠️ [AddProductScreen] Submit blocked:', { 
+        canSubmit, 
+        isSubmitting, 
+        name: name.trim().length, 
+        price: price.trim().length, 
+        images: images.length, 
+        selectedCategoryId,
+        isEditMode 
+      });
       if (!name.trim().length) {
         Alert.alert('Validation Error', 'Product name is required');
       } else if (!price.trim().length) {
         Alert.alert('Validation Error', 'Product price is required');
-      } else if (images.length === 0) {
+      } else if (!isEditMode && images.length === 0) {
         Alert.alert('Validation Error', 'At least one product image is required');
+      } else if (!isEditMode && !selectedCategoryId) {
+        Alert.alert('Validation Error', 'Please select a Database Category for this product');
       }
       return;
-
     }
     setIsSubmitting(true);
     console.log('Starting product submission...', { name, price, imagesCount: images.length, selectedCategoryId });
-
-    // Generate idempotency key per submission
-    const idempotencyKey = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
 
     // Check userId before submitting
     try {
@@ -507,6 +598,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
         // IMPORTANT: backend expects isBestseller
         isBestseller: bestSeller,
+        // Only include categoryId if it's set (for new products it's required, for edits it's optional)
         categoryId: selectedCategoryId || undefined, // Add categoryId from database category selection
       };
 
@@ -516,30 +608,35 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
 
       if (isEditMode && existing?.id) {
+        console.log('🔄 [AddProductScreen] Updating product:', {
+          productId: existing.id,
+          categoryId: common.categoryId,
+          productName: common.productName,
+          sellingPrice: common.sellingPrice,
+        });
 
         // For now, update textual fields / pricing / inventory; images stay as-is in backend.
-
-        await updateProduct(existing.id, common);
+        try {
+          await updateProduct(existing.id, common);
+          console.log('✅ [AddProductScreen] Product updated successfully');
+        } catch (updateError) {
+          console.error('❌ [AddProductScreen] Update product error:', updateError);
+          throw updateError; // Re-throw to be caught by outer catch
+        }
 
         productId = existing.id;
       } else {
 
         let createdProduct;
         if (images.length > 0) {
-
           createdProduct = await uploadProductWithImages({
             ...common,
-
             imageUris: images,
-            idempotencyKey,
           });
-
         } else {
-
           // Fallback (should not happen because canSubmit enforces image)
           createdProduct = await createProduct({
             ...common,
-            idempotencyKey,
           });
         }
         
@@ -554,25 +651,9 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           );
         }
 
-        // Add product to selected collections automatically
-        if (productId) {
-          const selectedCollectionIds = Object.keys(selectedCollections).filter(
-            id => selectedCollections[id],
-          );
-          
-          if (selectedCollectionIds.length > 0) {
-            try {
-              for (const collectionId of selectedCollectionIds) {
-                await addProductToCollection(collectionId, productId);
-              }
-              addedToCollectionsCount = selectedCollectionIds.length;
-              console.log(`Product automatically added to ${addedToCollectionsCount} collection(s)`);
-            } catch (collectionError) {
-              console.error('Failed to add product to collections', collectionError);
-              // Don't fail the whole operation if collection assignment fails
-            }
-          }
-        }
+        // NOTE: Collections are promotional-only. Do NOT auto-add
+        // new products into collections here. Sellers can add products
+        // to collections later from the Products / Collections screens.
       }
       
       // Show success message with collection info
@@ -846,14 +927,14 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         </TouchableOpacity>
 
 
-        {/* Database Category Selection */}
-        <Text style={styles.sectionHeader}>Database Category <Text style={styles.optional}>(Optional)</Text></Text>
-        <Text style={styles.helperBody}>Select a category from your created categories</Text>
+        {/* Database Category Selection (MANDATORY for SmartBiz-style catalog) */}
+        <Text style={styles.sectionHeader}>Database Category</Text>
+        <Text style={styles.helperBody}>Select a category from your created categories (required)</Text>
         <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryPickerOpen(true)}>
           <Text style={{color: selectedCategoryId ? '#111827' : '#6c757d'}}>
             {selectedCategoryId 
               ? databaseCategories.find(c => c.category_id === selectedCategoryId)?.categoryName || 'Category Selected'
-              : 'Select Category (Optional)'}
+              : 'Select Category (Required)'}
           </Text>
         </TouchableOpacity>
 
@@ -1493,39 +1574,73 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
 
             <View style={styles.createCategoryButtons}>
-
               <TouchableOpacity
-
-                style={[styles.createCategoryBtn, !newCategoryName.trim() && styles.createCategoryBtnDisabled]}
-
-                onPress={() => {
-
-                  if (newCategoryName.trim()) {
-
-                    setProductCategory(newCategoryName.trim());
-
-                    setNewCategoryName('');
-
-                    setNewCategoryOpen(false);
-
-                    Alert.alert('Success', 'Category added successfully');
-
+                style={[styles.createCategoryBtn, (!newCategoryName.trim() || isCreatingCategory) && styles.createCategoryBtnDisabled]}
+                disabled={!newCategoryName.trim() || isCreatingCategory}
+                onPress={async () => {
+                  // Prevent multiple submissions
+                  if (isCreatingCategory) {
+                    return;
                   }
 
+                  const trimmedName = newCategoryName.trim();
+                  if (!trimmedName) {
+                    return;
+                  }
+
+                  // Require a business category so the new database category is properly grouped
+                  if (!businessCategory) {
+                    Alert.alert(
+                      'Select Business Category',
+                      'Please choose a Business Category before creating a database category.',
+                    );
+                    return;
+                  }
+
+                  setIsCreatingCategory(true);
+                  try {
+                    // Create real database category (no image, minimal fields)
+                    const createdCategory = await uploadCategoryWithImages({
+                      categoryName: trimmedName,
+                      businessCategory,
+                      description: '',
+                      seoTitleTag: trimmedName,
+                      seoMetaDescription: '',
+                      imageUri: null,
+                    });
+
+                    // Update UI:
+                    // 1) Fill Product Category text
+                    // 2) Add to local databaseCategories list
+                    // 3) Auto-select it as Database Category
+                    setProductCategory(trimmedName);
+                    setDatabaseCategories(prev => [...prev, createdCategory]);
+                    if (createdCategory && typeof createdCategory.category_id === 'number') {
+                      setSelectedCategoryId(createdCategory.category_id);
+                    }
+
+                    setNewCategoryName('');
+                    setNewCategoryOpen(false);
+                    Alert.alert('Success', 'Category created and selected successfully.');
+                  } catch (error: any) {
+                    console.error('Failed to create category from AddProductScreen', error);
+                    const message =
+                      error?.message || 'Failed to create category. Please try again.';
+                    Alert.alert('Error', message);
+                  } finally {
+                    setIsCreatingCategory(false);
+                  }
                 }}
-
-                disabled={!newCategoryName.trim()}
-
               >
-
-                <Text style={[styles.createCategoryBtnText, !newCategoryName.trim() && styles.createCategoryBtnTextDisabled]}>
-
-                  Add Category
-
+                <Text
+                  style={[
+                    styles.createCategoryBtnText,
+                    (!newCategoryName.trim() || isCreatingCategory) && styles.createCategoryBtnTextDisabled,
+                  ]}
+                >
+                  {isCreatingCategory ? 'Creating...' : 'Add Category'}
                 </Text>
-
               </TouchableOpacity>
-
             </View>
 
           </View>

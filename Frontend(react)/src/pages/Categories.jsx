@@ -67,8 +67,9 @@ const Categories = () => {
 
   const handleCategoryClick = (category) => {
     const basePath = actualSlug ? `/store/${actualSlug}` : '';
-    const categoryName = category.categoryName || category.name || category.businessCategory;
-    navigate(`${basePath}/products?category=${encodeURIComponent(categoryName)}`);
+    // Use slug if available, otherwise fallback to name (for backward compatibility)
+    const categorySlug = category.slug || category.categoryName || category.name || category.businessCategory;
+    navigate(`${basePath}/products?category=${encodeURIComponent(categorySlug)}`);
   };
 
   if (storeLoading || loading) {

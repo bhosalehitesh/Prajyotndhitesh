@@ -38,14 +38,17 @@ public class CollectionController {
         return null;
     }
 
-    // Simple DTO for returning collections with product counts
+    // Simple DTO for returning collections with product counts (SmartBiz: same fields as Category)
     public static class CollectionWithCountDto {
         public Long collectionId;
         public String collectionName;
         public String description;
         public String collectionImage;
         public long productCount;
-        public boolean hideFromWebsite;
+        public boolean hideFromWebsite; // Legacy field
+        public Boolean isActive; // SmartBiz: preferred field (same as Category)
+        public Integer orderIndex; // SmartBiz: for sorting (same as Category)
+        public String slug; // SmartBiz: URL-friendly identifier (same as Category)
     }
 
     // ✅ Get all collections (filtered by authenticated seller)
@@ -153,6 +156,7 @@ public class CollectionController {
     }
 
     // ✅ Get collections with product counts (filtered by authenticated seller)
+    // SmartBiz: Returns all collections (active and hidden) for seller app management
     @GetMapping("/with-counts")
     public ResponseEntity<List<CollectionWithCountDto>> getCollectionsWithCounts(HttpServletRequest httpRequest) {
         Long sellerId = extractSellerIdFromToken(httpRequest);
@@ -164,19 +168,84 @@ public class CollectionController {
             dto.description = c.getDescription();
             dto.collectionImage = c.getCollectionImage();
             dto.productCount = collectionService.countProductsForCollection(c.getCollectionId());
-             dto.hideFromWebsite = c.isHideFromWebsite();
+            dto.hideFromWebsite = c.isHideFromWebsite(); // Legacy field
+            dto.isActive = c.getIsActive(); // SmartBiz: preferred field (same as Category)
+            dto.orderIndex = c.getOrderIndex(); // SmartBiz: for sorting (same as Category)
+            dto.slug = c.getSlug(); // SmartBiz: URL-friendly identifier (same as Category)
             return dto;
         }).toList();
         return ResponseEntity.ok(result);
     }
 
-    // ✅ Toggle hide-from-website flag for a collection
+    // ✅ Toggle hide-from-website flag for a collection (legacy endpoint)
     @PutMapping("/{id}/hide-from-website")
     public ResponseEntity<collection> setHideFromWebsite(
             @PathVariable Long id,
             @RequestParam("hide") boolean hide) {
         collection updated = collectionService.updateHideFromWebsite(id, hide);
         return ResponseEntity.ok(updated);
+    }
+
+    // ✅ Update collection active status (SmartBiz: same as Category)
+    @PutMapping("/{id}/status")
+    public ResponseEntity<collection> updateCollectionStatus(
+            @PathVariable Long id,
+            @RequestParam("isActive") boolean isActive) {
+        collection col = collectionService.findById(id);
+        col.setIsActive(isActive);
+        return ResponseEntity.ok(collectionService.addCollection(col, null));
+    }
+
+    // ✅ Update collection (SmartBiz: supports isActive, slug, orderIndex - same as Category)
+    @PutMapping("/{id}")
+    public ResponseEntity<collection> updateCollection(
+            @PathVariable Long id,
+            @RequestBody collection updatedCollection) {
+        try {
+            collection existing = collectionService.findById(id);
+            
+            // Update fields (SmartBiz: same as Category update logic)
+            if (updatedCollection.getCollectionName() != null) {
+                existing.setCollectionName(updatedCollection.getCollectionName());
+                // Regenerate slug if name changed
+                if (updatedCollection.getSlug() == null || updatedCollection.getSlug().isEmpty()) {
+                    String newSlug = collectionService.generateUniqueSlug(updatedCollection.getCollectionName(), 
+                        existing.getSeller() != null ? existing.getSeller().getSellerId() : null);
+                    existing.setSlug(newSlug);
+                }
+            }
+            if (updatedCollection.getDescription() != null) {
+                existing.setDescription(updatedCollection.getDescription());
+            }
+            if (updatedCollection.getCollectionImage() != null) {
+                existing.setCollectionImage(updatedCollection.getCollectionImage());
+            }
+            if (updatedCollection.getSeoTitleTag() != null) {
+                existing.setSeoTitleTag(updatedCollection.getSeoTitleTag());
+            }
+            if (updatedCollection.getSeoMetaDescription() != null) {
+                existing.setSeoMetaDescription(updatedCollection.getSeoMetaDescription());
+            }
+            if (updatedCollection.getSocialSharingImage() != null) {
+                existing.setSocialSharingImage(updatedCollection.getSocialSharingImage());
+            }
+            if (updatedCollection.getIsActive() != null) {
+                existing.setIsActive(updatedCollection.getIsActive());
+            }
+            if (updatedCollection.getOrderIndex() != null) {
+                existing.setOrderIndex(updatedCollection.getOrderIndex());
+            }
+            if (updatedCollection.getSlug() != null && !updatedCollection.getSlug().isEmpty()) {
+                existing.setSlug(updatedCollection.getSlug());
+            }
+            
+            Long sellerId = existing.getSeller() != null ? existing.getSeller().getSellerId() : null;
+            return ResponseEntity.ok(collectionService.addCollection(existing, sellerId));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(null);
+        }
     }
 
     // ✅ Add a single product to an existing collection (from Products screen)

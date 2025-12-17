@@ -30,5 +30,12 @@ public interface CollectionRepository extends JpaRepository<collection, Long> {
     @Query(value = "DELETE FROM collection_products WHERE collection_id = :collectionId", nativeQuery = true)
     void deleteCollectionProducts(@Param("collectionId") Long collectionId);
     
+    // =======================
+    // SLUG-BASED QUERIES (SmartBiz: same as Category)
+    // =======================
+    // Find by slug and seller ID (for public store API)
+    collection findBySlugAndSeller_SellerId(String slug, Long sellerId);
     
+    // Find by slug (for global slug checks - use with caution)
+    collection findBySlug(String slug);
 }

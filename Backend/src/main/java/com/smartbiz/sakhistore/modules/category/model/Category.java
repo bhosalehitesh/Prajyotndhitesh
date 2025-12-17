@@ -32,6 +32,13 @@ public class Category {
     private String description;
 
     // =======================
+    // CATEGORY STATUS (SmartBiz: ACTIVE / HIDDEN)
+    // Used to control website navigation visibility
+    // =======================
+    @Column(name = "is_active", nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean isActive = true;
+
+    // =======================
     // CATEGORY ORDER (SmartBiz: order index for sorting)
     // =======================
     @Column(name = "order_index", nullable = false, columnDefinition = "INTEGER DEFAULT 0")
@@ -104,6 +111,14 @@ public class Category {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Boolean getIsActive() {
+        return isActive != null ? isActive : true;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive != null ? isActive : true;
     }
 
     public Integer getOrderIndex() {

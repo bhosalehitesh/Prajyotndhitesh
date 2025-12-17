@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { getCart, addToCartAPI, updateCartQuantity, removeFromCartAPI, clearCartAPI } from '../utils/api';
+import { getCart, addToCartAPI, addVariantToCartAPI, updateCartQuantity, updateVariantCartQuantity, removeFromCartAPI, removeVariantFromCartAPI, clearCartAPI } from '../utils/api';
 
 const CartContext = createContext();
 
@@ -46,9 +46,10 @@ export const CartProvider = ({ children }) => {
             const transformedCart = cartItems.map(item => ({
               id: item.orderItemsId || item.OrderItemsId || item.id,
               productId: item.product?.productsId || item.productId,
+              variantId: item.variant?.variantId || item.variantId, // SmartBiz: include variant ID
               name: item.product?.productName || item.name || 'Product',
-              price: item.price ? (item.price / (item.quantity || 1)) : (item.product?.sellingPrice || 0), // Backend stores total price
-              originalPrice: item.product?.mrp || item.originalPrice,
+              price: item.variant?.sellingPrice || (item.price ? (item.price / (item.quantity || 1)) : (item.product?.sellingPrice || 0)), // Prefer variant price
+              originalPrice: item.variant?.mrp || item.product?.mrp || item.originalPrice,
               image: item.product?.productImages?.[0] || item.image || '/assets/products/p1.jpg',
               quantity: item.quantity || 1,
               brand: item.product?.brand || 'Store',
@@ -140,8 +141,8 @@ export const CartProvider = ({ children }) => {
   }, [cart, cartStoreId, cartSellerId, isAuthenticated, user?.userId, loading]);
 
   /**
-   * Add item to cart with store locking
-   * @param {object} item - Item to add
+   * Add item to cart with store locking (SmartBiz: supports variantId)
+   * @param {object} item - Item to add (should include variantId if available)
    * @param {number|string} storeId - Store ID (REQUIRED for store locking)
    * @param {number|string} sellerId - Seller ID (REQUIRED for store locking)
    */
@@ -166,13 +167,22 @@ export const CartProvider = ({ children }) => {
     }
 
     const productId = item.productId || item.id;
+    const variantId = item.variantId; // SmartBiz: prefer variantId
     const quantity = item.quantity || 1;
 
-    if (isAuthenticated && user?.userId && productId) {
-      // Sync to backend
+    if (isAuthenticated && user?.userId) {
+      // Sync to backend (prefer variant-based API if variantId available)
       try {
-        console.log('🛒 [Cart] Adding to backend cart:', { userId: user.userId, productId, quantity });
-        const updatedCart = await addToCartAPI(user.userId, productId, quantity);
+        let updatedCart;
+        if (variantId) {
+          console.log('🛒 [Cart] Adding variant to backend cart:', { userId: user.userId, variantId, quantity });
+          updatedCart = await addVariantToCartAPI(user.userId, variantId, quantity);
+        } else if (productId) {
+          console.log('🛒 [Cart] Adding product to backend cart (legacy):', { userId: user.userId, productId, quantity });
+          updatedCart = await addToCartAPI(user.userId, productId, quantity);
+        } else {
+          throw new Error('Either variantId or productId is required');
+        }
         
           // Transform and update local state
           const cartItems = updatedCart?.items || updatedCart?.orderItems || [];
@@ -180,9 +190,10 @@ export const CartProvider = ({ children }) => {
             const transformedCart = cartItems.map(cartItem => ({
               id: cartItem.orderItemsId || cartItem.OrderItemsId || cartItem.id,
               productId: cartItem.product?.productsId || cartItem.productId,
+              variantId: cartItem.variant?.variantId || cartItem.variantId, // SmartBiz: include variant ID
               name: cartItem.product?.productName || cartItem.name || 'Product',
-              price: cartItem.price ? (cartItem.price / (cartItem.quantity || 1)) : (cartItem.product?.sellingPrice || 0),
-              originalPrice: cartItem.product?.mrp || cartItem.originalPrice,
+              price: cartItem.variant?.sellingPrice || (cartItem.price ? (cartItem.price / (cartItem.quantity || 1)) : (cartItem.product?.sellingPrice || 0)),
+              originalPrice: cartItem.variant?.mrp || cartItem.product?.mrp || cartItem.originalPrice,
               image: cartItem.product?.productImages?.[0] || cartItem.image || '/assets/products/p1.jpg',
               quantity: cartItem.quantity || 1,
               brand: cartItem.product?.brand || 'Store',
@@ -250,21 +261,31 @@ export const CartProvider = ({ children }) => {
 
   const removeFromCart = async (itemId) => {
     const item = cart.find(i => i.id === itemId);
+    const variantId = item?.variantId; // SmartBiz: prefer variantId
     const productId = item?.productId || itemId;
 
-    if (isAuthenticated && user?.userId && productId) {
+    if (isAuthenticated && user?.userId) {
       try {
-        console.log('🛒 [Cart] Removing from backend cart:', { userId: user.userId, productId });
-        const updatedCart = await removeFromCartAPI(user.userId, productId);
+        let updatedCart;
+        if (variantId) {
+          console.log('🛒 [Cart] Removing variant from backend cart:', { userId: user.userId, variantId });
+          updatedCart = await removeVariantFromCartAPI(user.userId, variantId);
+        } else if (productId) {
+          console.log('🛒 [Cart] Removing product from backend cart (legacy):', { userId: user.userId, productId });
+          updatedCart = await removeFromCartAPI(user.userId, productId);
+        } else {
+          throw new Error('Either variantId or productId is required');
+        }
         
         const cartItems = updatedCart?.items || updatedCart?.orderItems || [];
         if (Array.isArray(cartItems) && cartItems.length > 0) {
           const transformedCart = cartItems.map(cartItem => ({
             id: cartItem.orderItemsId || cartItem.id,
             productId: cartItem.product?.productsId || cartItem.productId,
+            variantId: cartItem.variant?.variantId || cartItem.variantId, // SmartBiz: include variant ID
             name: cartItem.product?.productName || cartItem.name || 'Product',
-            price: cartItem.price / (cartItem.quantity || 1),
-            originalPrice: cartItem.product?.mrp || cartItem.originalPrice,
+            price: cartItem.variant?.sellingPrice || (cartItem.price / (cartItem.quantity || 1)),
+            originalPrice: cartItem.variant?.mrp || cartItem.product?.mrp || cartItem.originalPrice,
             image: cartItem.product?.productImages?.[0] || cartItem.image || '/assets/products/p1.jpg',
             quantity: cartItem.quantity || 1,
             brand: cartItem.product?.brand || 'Store'
@@ -293,21 +314,31 @@ export const CartProvider = ({ children }) => {
     }
 
     const item = cart.find(i => i.id === itemId);
+    const variantId = item?.variantId; // SmartBiz: prefer variantId
     const productId = item?.productId || itemId;
 
-    if (isAuthenticated && user?.userId && productId) {
+    if (isAuthenticated && user?.userId) {
       try {
-        console.log('🛒 [Cart] Updating quantity in backend cart:', { userId: user.userId, productId, quantity });
-        const updatedCart = await updateCartQuantity(user.userId, productId, quantity);
+        let updatedCart;
+        if (variantId) {
+          console.log('🛒 [Cart] Updating variant quantity in backend cart:', { userId: user.userId, variantId, quantity });
+          updatedCart = await updateVariantCartQuantity(user.userId, variantId, quantity);
+        } else if (productId) {
+          console.log('🛒 [Cart] Updating product quantity in backend cart (legacy):', { userId: user.userId, productId, quantity });
+          updatedCart = await updateCartQuantity(user.userId, productId, quantity);
+        } else {
+          throw new Error('Either variantId or productId is required');
+        }
         
         const cartItems = updatedCart?.items || updatedCart?.orderItems || [];
         if (Array.isArray(cartItems) && cartItems.length > 0) {
           const transformedCart = cartItems.map(cartItem => ({
             id: cartItem.orderItemsId || cartItem.id,
             productId: cartItem.product?.productsId || cartItem.productId,
+            variantId: cartItem.variant?.variantId || cartItem.variantId, // SmartBiz: include variant ID
             name: cartItem.product?.productName || cartItem.name || 'Product',
-            price: cartItem.price / (cartItem.quantity || 1),
-            originalPrice: cartItem.product?.mrp || cartItem.originalPrice,
+            price: cartItem.variant?.sellingPrice || (cartItem.price / (cartItem.quantity || 1)),
+            originalPrice: cartItem.variant?.mrp || cartItem.product?.mrp || cartItem.originalPrice,
             image: cartItem.product?.productImages?.[0] || cartItem.image || '/assets/products/p1.jpg',
             quantity: cartItem.quantity || 1,
             brand: cartItem.product?.brand || 'Store'

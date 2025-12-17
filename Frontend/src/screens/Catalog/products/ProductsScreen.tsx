@@ -368,25 +368,60 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       } else {
         apiProducts = await fetchProducts();
       }
-      const mapped = apiProducts.map(p => ({
-        id: String(p.productsId),
-        title: p.productName,
-        price: p.sellingPrice ?? 0,
-        mrp: p.mrp ?? undefined,
-        inStock: (p.inventoryQuantity ?? 0) > 0,
-        imageUrl: (p.productImages && p.productImages[0]) || (p.socialSharingImage ?? undefined),
-        images: p.productImages ?? [],
-        isActive: typeof (p as any).isActive === 'boolean' ? (p as any).isActive : undefined,
-        businessCategory: p.businessCategory,
-        productCategory: p.productCategory,
-        description: p.description,
-        inventoryQuantity: p.inventoryQuantity,
-        sku: p.customSku,
-        color: p.color,
-        size: p.size,
-        hsnCode: p.hsnCode,
-        bestSeller: p.bestSeller ?? false,
-      }));
+      
+      // Debug: Log first product to see what fields are available
+      if (apiProducts.length > 0) {
+        console.log('🔍 [ProductsScreen] Sample product from API:', {
+          productsId: apiProducts[0].productsId,
+          productName: apiProducts[0].productName,
+          categoryId: (apiProducts[0] as any).categoryId,
+          category_id: (apiProducts[0] as any).category_id,
+          allKeys: Object.keys(apiProducts[0] || {}),
+        });
+      }
+      
+      const mapped = apiProducts.map(p => {
+        // Extract categoryId from multiple possible sources
+        const categoryIdValue = p.categoryId ?? 
+                               p.category_id ?? 
+                               (p as any).categoryId ?? 
+                               (p as any).category_id ?? 
+                               null;
+        
+        const mappedProduct = {
+          id: String(p.productsId),
+          title: p.productName,
+          price: p.sellingPrice ?? 0,
+          mrp: p.mrp ?? undefined,
+          inStock: (p.inventoryQuantity ?? 0) > 0,
+          imageUrl: (p.productImages && p.productImages[0]) || (p.socialSharingImage ?? undefined),
+          images: p.productImages ?? [],
+          isActive: typeof (p as any).isActive === 'boolean' ? (p as any).isActive : undefined,
+          businessCategory: p.businessCategory,
+          productCategory: p.productCategory,
+          description: p.description,
+          inventoryQuantity: p.inventoryQuantity,
+          sku: p.customSku,
+          color: p.color,
+          size: p.size,
+          hsnCode: p.hsnCode,
+          bestSeller: p.bestSeller ?? false,
+          // SmartBiz: Include categoryId for edit mode (required for validation)
+          categoryId: categoryIdValue,
+          category_id: categoryIdValue,
+        };
+        
+        // Debug: Log if categoryId is missing
+        if (!categoryIdValue) {
+          console.warn('⚠️ [ProductsScreen] Product missing categoryId:', {
+            productId: mappedProduct.id,
+            productName: mappedProduct.title,
+            availableKeys: Object.keys(p),
+          });
+        }
+        
+        return mappedProduct;
+      });
       setProducts(mapped);
     } catch (error) {
       console.error('Failed to refresh products', error);
@@ -1415,8 +1450,14 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                   await deleteProductApi(activeProductId);
                   // Refresh from backend to keep state consistent
                   await loadProducts();
+                  Alert.alert('Success', 'Product deleted successfully');
                 } catch (e) {
                   console.error('Failed to delete product', e);
+                  const message =
+                    e instanceof Error && e.message
+                      ? e.message
+                      : 'Failed to delete product';
+                  Alert.alert('Error', message);
                 } finally {
                   setConfirmDeleteOpen(false);
                 }

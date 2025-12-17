@@ -33,6 +33,9 @@ public class PublicStoreController {
     private CategoryService categoryService;
     
     @Autowired
+    private CollectionService collectionService;
+    
+    @Autowired
     private BannerService bannerService;
 
     /**
@@ -100,16 +103,27 @@ public class PublicStoreController {
             List<Product> allProducts = productService.allProductForSeller(sellerId);
             System.out.println("📦 [DEBUG] Found " + allProducts.size() + " total products for seller " + sellerId);
             
-            // Filter to only active products (public endpoint should only show active products)
+            // SmartBiz VISIBILITY GATE (backend side):
+            // Only include products that:
+            // - are ACTIVE
+            // - have a Category and that Category is ACTIVE
+            // - have at least one ACTIVE variant with stock > 0
             List<Product> products = allProducts.stream()
-                .filter(p -> p.getIsActive() != null && p.getIsActive())
+                .filter(p -> {
+                    boolean productActive = p.getIsActive() != null && p.getIsActive();
+                    boolean hasCategory = p.getCategory() != null;
+                    boolean categoryActive = hasCategory &&
+                            (p.getCategory().getIsActive() == null || p.getCategory().getIsActive());
+                    boolean hasActiveVariants = p.hasActiveVariants();
+                    return productActive && hasCategory && categoryActive && hasActiveVariants;
+                })
                 .toList();
             
-            int inactiveCount = allProducts.size() - products.size();
-            if (inactiveCount > 0) {
-                System.out.println("⚠️ [DEBUG] Filtered out " + inactiveCount + " inactive products (only showing active products)");
+            int inactiveOrHiddenCount = allProducts.size() - products.size();
+            if (inactiveOrHiddenCount > 0) {
+                System.out.println("⚠️ [DEBUG] Filtered out " + inactiveOrHiddenCount + " products (inactive / no category / hidden category / no active variants)");
             }
-            System.out.println("📦 [DEBUG] " + products.size() + " active products after filtering");
+            System.out.println("📦 [DEBUG] " + products.size() + " visible products after SmartBiz visibility gate");
             
             // Log products without images (they might not display properly)
             long productsWithoutImages = products.stream()
@@ -119,14 +133,24 @@ public class PublicStoreController {
                 System.out.println("⚠️ [DEBUG] " + productsWithoutImages + " products have no images (may not display properly)");
             }
             
-            // Filter by category if provided
+            // Filter by category if provided (category param is now a SLUG, not name)
             if (category != null && !category.isEmpty()) {
                 int beforeFilter = products.size();
-                products = products.stream()
-                    .filter(p -> category.equalsIgnoreCase(p.getProductCategory()) || 
-                                category.equalsIgnoreCase(p.getBusinessCategory()))
-                    .toList();
-                System.out.println("🔍 [DEBUG] After category filter (" + category + "): " + products.size() + " products (was " + beforeFilter + ")");
+                
+                // Resolve Category by SLUG for this seller, then filter by category_id (foreign key)
+                Category matchedCategory = categoryService.findBySlugAndSellerId(category, sellerId);
+
+                if (matchedCategory != null) {
+                    Long resolvedCategoryId = matchedCategory.getCategory_id();
+                    products = products.stream()
+                        .filter(p -> p.getCategoryId() != null && p.getCategoryId().equals(resolvedCategoryId))
+                        .toList();
+                } else {
+                    // If no matching category found, return empty list
+                    products = java.util.Collections.emptyList();
+                }
+
+                System.out.println("🔍 [DEBUG] After category filter by slug (" + category + ") -> category_id (" + (matchedCategory != null ? matchedCategory.getCategory_id() : "null") + "): " + products.size() + " products (was " + beforeFilter + ")");
             }
             
             System.out.println("✅ [DEBUG] Returning " + products.size() + " products for slug: " + slug);
@@ -163,8 +187,21 @@ public class PublicStoreController {
             System.out.println("📦 [DEBUG] Seller ID: " + sellerId);
             
             // Get only bestseller products (is_bestseller = true AND is_active = true)
-            List<Product> products = productService.getFeaturedProducts(sellerId);
-            System.out.println("📦 [DEBUG] Found " + products.size() + " bestseller products for seller " + sellerId);
+            List<Product> rawProducts = productService.getFeaturedProducts(sellerId);
+            System.out.println("📦 [DEBUG] Found " + rawProducts.size() + " bestseller products for seller " + sellerId);
+
+            // Apply same SmartBiz visibility gate used for /products:
+            // product ACTIVE, category ACTIVE, at least one active variant
+            List<Product> products = rawProducts.stream()
+                .filter(p -> {
+                    boolean productActive = p.getIsActive() != null && p.getIsActive();
+                    boolean hasCategory = p.getCategory() != null;
+                    boolean categoryActive = hasCategory &&
+                            (p.getCategory().getIsActive() == null || p.getCategory().getIsActive());
+                    boolean hasActiveVariants = p.hasActiveVariants();
+                    return productActive && hasCategory && categoryActive && hasActiveVariants;
+                })
+                .toList();
             
             if (products == null || products.isEmpty()) {
                 System.out.println("⚠️ [DEBUG] No bestseller products found - returning empty list");
@@ -207,13 +244,64 @@ public class PublicStoreController {
             
             // Get categories by seller
             List<Category> categories = categoryService.allCategories(sellerId);
+
+            // SmartBiz: only ACTIVE categories should appear in website navigation,
+            // ordered by orderIndex
+            List<Category> navCategories = categories.stream()
+                    .filter(c -> c.getIsActive() == null || c.getIsActive())
+                    .sorted((c1, c2) -> Integer.compare(c1.getOrderIndex(), c2.getOrderIndex()))
+                    .toList();
             
-            return ResponseEntity.ok(categories);
+            return ResponseEntity.ok(navCategories);
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             // Log error and return empty list instead of error
             System.err.println("Error fetching categories for store slug: " + slug);
+            e.printStackTrace();
+            return ResponseEntity.ok(new java.util.ArrayList<>());
+        }
+    }
+
+    /**
+     * Get collections for a store by slug (public endpoint)
+     * SmartBiz: Only ACTIVE collections, ordered by orderIndex (same as categories)
+     * Example: GET /api/public/store/brownn_boys/collections
+     */
+    @GetMapping("/{slug}/collections")
+    public ResponseEntity<?> getStoreCollections(@PathVariable String slug) {
+        try {
+            // Find store by slug
+            StoreDetails store = storeService.findBySlug(slug);
+            
+            // Check if store has a seller
+            if (store.getSeller() == null) {
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            // Get seller ID from store
+            Long sellerId = store.getSeller().getSellerId();
+            
+            if (sellerId == null) {
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            // Get collections by seller
+            List<collection> collections = collectionService.allCollections(sellerId);
+
+            // SmartBiz: only ACTIVE collections should appear on website,
+            // ordered by orderIndex (same as categories)
+            List<collection> activeCollections = collections.stream()
+                    .filter(c -> c.getIsActive() == null || c.getIsActive())
+                    .sorted((c1, c2) -> Integer.compare(c1.getOrderIndex(), c2.getOrderIndex()))
+                    .toList();
+            
+            return ResponseEntity.ok(activeCollections);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            // Log error and return empty list instead of error
+            System.err.println("Error fetching collections for store slug: " + slug);
             e.printStackTrace();
             return ResponseEntity.ok(new java.util.ArrayList<>());
         }

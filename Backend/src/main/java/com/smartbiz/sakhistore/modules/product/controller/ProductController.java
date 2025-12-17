@@ -3,12 +3,15 @@ package com.smartbiz.sakhistore.modules.product.controller;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -99,9 +102,19 @@ public class ProductController {
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<String> deleteProduct(@PathVariable Long id) {
-		productService.deleteProduct(id);
-		return ResponseEntity.ok("✅ Product with ID " + id + " deleted successfully.");
+	public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
+		try {
+			productService.deleteProduct(id);
+			return ResponseEntity.ok("✅ Product with ID " + id + " deleted successfully.");
+		} catch (DataIntegrityViolationException ex) {
+			// This usually means the product is referenced by orders, cart items, etc.
+			String message = "Cannot delete this product because it is already used in orders or other records. " +
+					"Please mark it as Hidden instead of deleting.";
+			return ResponseEntity.status(HttpStatus.CONFLICT).body(message);
+		} catch (Exception ex) {
+			String message = "Failed to delete product: " + ex.getMessage();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(message);
+		}
 	}
 
 	// Enable/Disable product status (supports both PATCH and POST)
@@ -116,9 +129,30 @@ public class ProductController {
 
 	// ✅ Update product details (JSON, no image upload)
 	@PutMapping("/{id}")
-	public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
-		Product updated = productService.updateProduct(id, product);
-		return ResponseEntity.ok(updated);
+	public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody Product product) {
+		try {
+			System.out.println("🔄 [ProductController] Updating product ID: " + id);
+			System.out.println("🔄 [ProductController] Received categoryId: " + product.getCategoryId());
+			System.out.println("🔄 [ProductController] Product name: " + product.getProductName());
+			
+			Product updated = productService.updateProduct(id, product);
+			System.out.println("✅ [ProductController] Product updated successfully");
+			return ResponseEntity.ok(updated);
+		} catch (NoSuchElementException e) {
+			System.err.println("❌ [ProductController] Product not found: " + e.getMessage());
+			return ResponseEntity.status(HttpStatus.NOT_FOUND)
+					.body("Product not found with ID: " + id);
+		} catch (RuntimeException e) {
+			System.err.println("❌ [ProductController] Validation error: " + e.getMessage());
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+					.body("Failed to update product: " + e.getMessage());
+		} catch (Exception e) {
+			System.err.println("❌ [ProductController] Error updating product: " + e.getMessage());
+			e.printStackTrace();
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Internal server error: " + e.getMessage());
+		}
 	}
 
 	// ✅ Update inventory quantity (stock) for a product
