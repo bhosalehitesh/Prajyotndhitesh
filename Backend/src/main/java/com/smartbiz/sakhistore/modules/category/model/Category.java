@@ -7,6 +7,7 @@ import java.util.List;
 import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -29,6 +30,18 @@ public class Category {
     private String categoryName;
     private String businessCategory;
     private String description;
+
+    // =======================
+    // CATEGORY ORDER (SmartBiz: order index for sorting)
+    // =======================
+    @Column(name = "order_index", nullable = false, columnDefinition = "INTEGER DEFAULT 0")
+    private Integer orderIndex = 0;
+
+    // =======================
+    // CATEGORY SLUG (SmartBiz: URL-friendly identifier)
+    // =======================
+    @Column(name = "slug")
+    private String slug;
 
     // SEO
     private String seoTitleTag;
@@ -91,6 +104,22 @@ public class Category {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Integer getOrderIndex() {
+        return orderIndex != null ? orderIndex : 0;
+    }
+
+    public void setOrderIndex(Integer orderIndex) {
+        this.orderIndex = orderIndex != null ? orderIndex : 0;
+    }
+
+    public String getSlug() {
+        return slug;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
     }
 
     public String getSeoTitleTag() {

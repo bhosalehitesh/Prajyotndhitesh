@@ -10,13 +10,19 @@ import { API_CONFIG } from '../constants';
  */
 export const getBackendUrl = () => {
   const hostname = window.location.hostname;
-  const protocol = window.location.protocol;
   
+  // Always use localhost when running on same machine (browser on dev machine)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return API_CONFIG.BASE_URL;
+    return API_CONFIG.BASE_URL; // http://localhost:8080/api
   }
   
-  return `${protocol}//${hostname}:8080/api`;
+  // For remote access (mobile device, other devices on network):
+  // Always connect to the backend server IP (where backend is actually running)
+  // Update this IP if your backend server's IP changes
+  const BACKEND_SERVER_IP = '192.168.1.34'; // Backend server IP - update if changed
+  
+  // If accessing frontend from any IP (including mobile), use backend server IP
+  return `http://${BACKEND_SERVER_IP}:8080/api`;
 };
 
 /**
