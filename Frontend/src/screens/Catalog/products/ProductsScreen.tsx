@@ -1016,15 +1016,34 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
               if (ids.length === 0) return;
               setAddingToCategory(true);
               try {
-                // Fetch each product and update its productCategory
+                // SmartBiz: Update each product with categoryId (the actual foreign key)
+                // This links the product to the category in the database
+                const categoryIdNum = targetCategoryId ? Number(targetCategoryId) : null;
+                if (!categoryIdNum) {
+                  Alert.alert('Error', 'Category ID is missing. Cannot add products to category.');
+                  setAddingToCategory(false);
+                  return;
+                }
+                
+                console.log('🔄 [ProductsScreen] Adding products to category:', {
+                  categoryId: categoryIdNum,
+                  categoryName: categoryName,
+                  productIds: ids,
+                });
+                
                 for (const pid of ids) {
                   if (alreadyAddedToCategory[pid]) continue;
                   const product = products.find(p => p.id === pid);
                   if (product) {
+                    console.log('🔄 [ProductsScreen] Updating product with categoryId:', {
+                      productId: pid,
+                      productName: product.title,
+                      categoryId: categoryIdNum,
+                    });
                     await updateProduct(pid, {
                       productName: product.title,
                       sellingPrice: product.price,
-                      productCategory: categoryName, // Set the category
+                      productCategory: categoryName, // Keep for backward compatibility
                       businessCategory: product.businessCategory || '',
                       description: product.description || '',
                       mrp: product.mrp,
@@ -1033,6 +1052,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                       color: product.color,
                       size: product.size,
                       hsnCode: product.hsnCode,
+                      categoryId: categoryIdNum, // SmartBiz: CRITICAL - link product to category via foreign key
                     });
                     setAlreadyAddedToCategory(prev => ({ ...prev, [pid]: true }));
                   }
@@ -1453,11 +1473,61 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                   Alert.alert('Success', 'Product deleted successfully');
                 } catch (e) {
                   console.error('Failed to delete product', e);
-                  const message =
+                  const errorMessage =
                     e instanceof Error && e.message
                       ? e.message
                       : 'Failed to delete product';
-                  Alert.alert('Error', message);
+                  
+                  // Check if product is used in orders (common reason for deletion failure)
+                  // The backend error message is: "Cannot delete this product because it is already used in orders or other records. Please mark it as Hidden instead of deleting."
+                  const errorLower = errorMessage.toLowerCase();
+                  const isOrderRelatedError = 
+                    errorLower.includes('already used in orders') ||
+                    errorLower.includes('used in orders') ||
+                    errorLower.includes('used in other records') ||
+                    (errorLower.includes('cannot delete') && errorLower.includes('orders')) ||
+                    (errorLower.includes('cannot delete') && errorLower.includes('records'));
+                  
+                  console.log('🔍 [ProductsScreen] Delete error analysis:', {
+                    errorMessage,
+                    isOrderRelatedError,
+                    activeProductId,
+                    hasActiveProduct: !!activeProduct,
+                  });
+                  
+                  if (isOrderRelatedError) {
+                    Alert.alert(
+                      'Cannot Delete Product',
+                      'This product cannot be deleted because it is already used in orders or other records.\n\nTo hide it from customers, use the "Hide Product Instead" button below or the "Disable (Hide)" option from the product menu.',
+                      [
+                        {
+                          text: 'Hide Product Instead',
+                          onPress: async () => {
+                            try {
+                              if (activeProductId && activeProduct) {
+                                console.log('🔄 [ProductsScreen] Hiding product instead of deleting:', activeProductId);
+                                await updateProductStatus(activeProductId, false);
+                                await loadProducts();
+                                Alert.alert('Success', 'Product has been hidden successfully. It will no longer appear on the website.');
+                              } else {
+                                Alert.alert('Error', 'Product information is missing. Please try again.');
+                              }
+                            } catch (hideError) {
+                              console.error('❌ [ProductsScreen] Failed to hide product', hideError);
+                              Alert.alert('Error', 'Failed to hide product. Please try again.');
+                            }
+                          },
+                          style: 'default',
+                        },
+                        {
+                          text: 'OK',
+                          style: 'cancel',
+                        },
+                      ],
+                    );
+                  } else {
+                    Alert.alert('Error', errorMessage);
+                  }
                 } finally {
                   setConfirmDeleteOpen(false);
                 }

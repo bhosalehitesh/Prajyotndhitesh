@@ -104,8 +104,8 @@ public class ProductController {
 	@DeleteMapping("/{id}")
 	public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
 		try {
-			productService.deleteProduct(id);
-			return ResponseEntity.ok("✅ Product with ID " + id + " deleted successfully.");
+		productService.deleteProduct(id);
+		return ResponseEntity.ok("✅ Product with ID " + id + " deleted successfully.");
 		} catch (DataIntegrityViolationException ex) {
 			// This usually means the product is referenced by orders, cart items, etc.
 			String message = "Cannot delete this product because it is already used in orders or other records. " +
@@ -135,9 +135,9 @@ public class ProductController {
 			System.out.println("🔄 [ProductController] Received categoryId: " + product.getCategoryId());
 			System.out.println("🔄 [ProductController] Product name: " + product.getProductName());
 			
-			Product updated = productService.updateProduct(id, product);
+		Product updated = productService.updateProduct(id, product);
 			System.out.println("✅ [ProductController] Product updated successfully");
-			return ResponseEntity.ok(updated);
+		return ResponseEntity.ok(updated);
 		} catch (NoSuchElementException e) {
 			System.err.println("❌ [ProductController] Product not found: " + e.getMessage());
 			return ResponseEntity.status(HttpStatus.NOT_FOUND)

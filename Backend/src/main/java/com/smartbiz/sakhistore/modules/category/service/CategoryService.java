@@ -232,8 +232,9 @@ public class CategoryService {
 
     /**
      * Generate unique slug for category (ensures uniqueness per seller)
+     * Made public for use in controller (SmartBiz: same as CollectionService)
      */
-    private String generateUniqueSlug(String categoryName, Long sellerId) {
+    public String generateUniqueSlug(String categoryName, Long sellerId) {
         String baseSlug = generateSlug(categoryName);
         if (sellerId == null) {
             return baseSlug;

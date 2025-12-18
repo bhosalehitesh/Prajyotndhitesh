@@ -548,11 +548,15 @@ export interface CollectionDto {
   seoTitleTag?: string;
   seoMetaDescription?: string;
   socialSharingImage?: string | null;
+  // SmartBiz: same fields as Category
+  isActive?: boolean;
+  orderIndex?: number;
+  slug?: string;
+  hideFromWebsite?: boolean; // Legacy field (maps to !isActive)
 }
 
 export interface CollectionWithCountDto extends CollectionDto {
   productCount: number;
-  hideFromWebsite?: boolean;
 }
 
 /**
@@ -906,6 +910,65 @@ export const fetchCategories = async (): Promise<CategoryDto[]> => {
   }
 
   return payload as CategoryDto[];
+};
+
+/**
+ * Update category (SmartBiz: supports isActive, slug, orderIndex - same as Collection)
+ * Backend: PUT /api/category/{id}
+ */
+export const updateCategory = async (
+  categoryId: string | number,
+  body: {
+    categoryName: string;
+    businessCategory: string;
+    description?: string;
+    categoryImage?: string;
+    seoTitleTag?: string;
+    seoMetaDescription?: string;
+    isActive?: boolean;
+    orderIndex?: number;
+    slug?: string;
+  },
+): Promise<CategoryDto> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof categoryId === 'string' ? categoryId : String(categoryId);
+  const url = `${API_BASE_URL}/api/category/${id}`;
+
+  console.log('📡 [API] Updating category:', {
+    url,
+    categoryId: id,
+    isActive: body.isActive,
+    orderIndex: body.orderIndex,
+    requestBody: body,
+  });
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to update category';
+    console.error('❌ [API] Update category failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      message,
+      payload,
+    });
+    throw new Error(message);
+  }
+
+  console.log('✅ [API] Category updated successfully');
+  return payload as CategoryDto;
 };
 
 /**
@@ -1328,6 +1391,64 @@ export const setCollectionVisibility = async (
     throw new Error(message);
   }
 
+  return payload as CollectionDto;
+};
+
+/**
+ * Update collection (SmartBiz: supports isActive, slug, orderIndex - same as Category)
+ * Backend: PUT /api/collections/{id}
+ */
+export const updateCollection = async (
+  collectionId: string | number,
+  body: {
+    collectionName: string;
+    description?: string;
+    collectionImage?: string;
+    seoTitleTag?: string;
+    seoMetaDescription?: string;
+    isActive?: boolean;
+    orderIndex?: number;
+    slug?: string;
+  },
+): Promise<CollectionDto> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof collectionId === 'string' ? collectionId : String(collectionId);
+  const url = `${API_BASE_URL}/api/collections/${id}`;
+
+  console.log('📡 [API] Updating collection:', {
+    url,
+    collectionId: id,
+    isActive: body.isActive,
+    orderIndex: body.orderIndex,
+    requestBody: body,
+  });
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await parseJsonOrText(response);
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'string'
+        ? payload
+        : payload?.message || 'Failed to update collection';
+    console.error('❌ [API] Update collection failed:', {
+      status: response.status,
+      statusText: response.statusText,
+      message,
+      payload,
+    });
+    throw new Error(message);
+  }
+
+  console.log('✅ [API] Collection updated successfully');
   return payload as CollectionDto;
 };
 

@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -19,7 +19,7 @@ import {
   launchImageLibrary,
   ImagePickerResponse,
 } from 'react-native-image-picker';
-import {uploadCategoryWithImages} from '../../../utils/api';
+import {uploadCategoryWithImages, updateCategory, fetchProducts, updateProduct} from '../../../utils/api';
 
 interface AddCategoryScreenProps {
   navigation: any;
@@ -30,7 +30,20 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
   navigation,
   route,
 }) => {
-  const isEditMode = route?.params?.categoryId;
+  // SmartBiz: Check if we're in edit mode (categoryId must be present)
+  const categoryIdFromRoute = route?.params?.categoryId;
+  const isEditMode = !!(categoryIdFromRoute && (categoryIdFromRoute !== '' && categoryIdFromRoute !== null && categoryIdFromRoute !== undefined));
+  
+  // Debug: Log route params on mount
+  useEffect(() => {
+    console.log('🔍 [AddCategoryScreen] Screen mounted/updated:', {
+      routeName: route?.name,
+      hasParams: !!route?.params,
+      categoryId: categoryIdFromRoute,
+      isEditMode,
+      allParams: route?.params,
+    });
+  }, [route?.params, categoryIdFromRoute, isEditMode]);
   const [categoryImage, setCategoryImage] = useState<string | null>(
     route?.params?.image || null,
   );
@@ -177,36 +190,193 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
     // Set BOTH ref and state IMMEDIATELY (synchronously) before any async operation
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    console.log('✅ [AddCategory] Starting category creation...');
+    
+    const categoryId = route?.params?.categoryId;
+    console.log('🔄 [AddCategory] Starting category save...', {
+      isEditMode,
+      categoryId,
+      categoryName,
+      businessCategory,
+      hasImage: !!categoryImage,
+    });
 
     try {
-      await uploadCategoryWithImages({
-        categoryName,
-        businessCategory,
-        description: categoryDescription,
-        seoTitleTag: categoryName,
-        seoMetaDescription: categoryDescription,
-        imageUri: categoryImage,
-      });
-
-      console.log('✅ [AddCategory] Category created successfully');
-      Alert.alert(
-        'Success',
-        isEditMode
-          ? 'Category updated successfully'
-          : 'Category created successfully',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Reset both ref and state before navigation
-              isSubmittingRef.current = false;
-              setIsSubmitting(false);
-              navigation.goBack();
+      if (isEditMode && categoryId) {
+        // Update existing category (SmartBiz: same as collections)
+        const categoryIdNum = typeof categoryId === 'string' ? Number(categoryId) : categoryId;
+        
+        if (isNaN(categoryIdNum)) {
+          throw new Error(`Invalid category ID: ${categoryId}`);
+        }
+        
+        console.log('🔄 [AddCategory] UPDATING existing category:', {
+          categoryId: categoryIdNum,
+          categoryName,
+          businessCategory,
+          description: categoryDescription,
+          hasImage: !!categoryImage,
+          imageUrl: categoryImage ? (categoryImage.length > 50 ? categoryImage.substring(0, 50) + '...' : categoryImage) : 'none',
+        });
+        
+        const updatePayload: any = {
+          categoryName,
+          businessCategory,
+          description: categoryDescription || '',
+          seoTitleTag: categoryName,
+          seoMetaDescription: categoryDescription || '',
+        };
+        
+        // Only include image if it's a new image (not the existing URL)
+        // If categoryImage is a data URI or file path, it's a new image
+        if (categoryImage && (categoryImage.startsWith('file://') || categoryImage.startsWith('data:'))) {
+          // This is a new image - we'd need to upload it first, but for now just pass the URL
+          // TODO: Handle image upload for updates
+          console.warn('⚠️ [AddCategory] New image detected but image upload for updates not yet implemented');
+        } else if (categoryImage) {
+          // This is an existing image URL - include it
+          updatePayload.categoryImage = categoryImage;
+        }
+        
+        await updateCategory(categoryIdNum, updatePayload);
+        console.log('✅ [AddCategory] Category updated successfully');
+        Alert.alert(
+          'Success',
+          'Category updated successfully',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                isSubmittingRef.current = false;
+                setIsSubmitting(false);
+                navigation.goBack();
+              },
             },
-          },
-        ],
-      );
+          ],
+        );
+      } else {
+        // Create new category (no categoryId means this is a new category)
+        console.log('🆕 [AddCategory] CREATING new category (no categoryId found)');
+        const createdCategory = await uploadCategoryWithImages({
+          categoryName,
+          businessCategory,
+          description: categoryDescription,
+          seoTitleTag: categoryName,
+          seoMetaDescription: categoryDescription,
+          imageUri: categoryImage,
+        });
+
+        console.log('✅ [AddCategory] Category created successfully:', {
+          categoryId: createdCategory.category_id,
+          categoryName,
+          businessCategory,
+        });
+
+        // Auto-link products with matching businessCategory to this new category
+        if (createdCategory && createdCategory.category_id && businessCategory) {
+          try {
+            console.log('🔄 [AddCategory] Auto-linking products with businessCategory:', businessCategory);
+            const allProducts = await fetchProducts();
+            
+            // Filter products that match the businessCategory
+            const matchingProducts = allProducts.filter(p => {
+              const pBusinessCategory = (p.businessCategory || '').toLowerCase().trim();
+              const targetBusinessCategory = businessCategory.toLowerCase().trim();
+              return pBusinessCategory === targetBusinessCategory;
+            });
+
+            console.log('📦 [AddCategory] Found matching products:', {
+              totalProducts: allProducts.length,
+              matchingProducts: matchingProducts.length,
+              businessCategory,
+            });
+
+            // Update each matching product to link to the new category
+            let linkedCount = 0;
+            for (const product of matchingProducts) {
+              try {
+                await updateProduct(product.productsId, {
+                  productName: product.productName,
+                  sellingPrice: product.sellingPrice,
+                  businessCategory: product.businessCategory || '',
+                  productCategory: product.productCategory || '',
+                  description: product.description || '',
+                  mrp: product.mrp,
+                  inventoryQuantity: product.inventoryQuantity || 0,
+                  customSku: product.customSku,
+                  color: product.color,
+                  size: product.size,
+                  hsnCode: product.hsnCode,
+                  categoryId: createdCategory.category_id, // Link product to new category
+                });
+                linkedCount++;
+              } catch (productError) {
+                console.error(`❌ [AddCategory] Failed to link product ${product.productsId}:`, productError);
+                // Continue with other products even if one fails
+              }
+            }
+
+            console.log('✅ [AddCategory] Auto-linked products:', {
+              linkedCount,
+              totalMatching: matchingProducts.length,
+            });
+
+            // Show success message with product count
+            const successMessage = linkedCount > 0
+              ? `Category created successfully!\n\n${linkedCount} product${linkedCount > 1 ? 's' : ''} with business category "${businessCategory}" ${linkedCount > 1 ? 'have' : 'has'} been automatically added to this category.`
+              : 'Category created successfully!';
+
+            Alert.alert(
+              'Success',
+              successMessage,
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    // Reset both ref and state before navigation
+                    isSubmittingRef.current = false;
+                    setIsSubmitting(false);
+                    navigation.goBack();
+                  },
+                },
+              ],
+            );
+          } catch (linkError) {
+            console.error('❌ [AddCategory] Error auto-linking products:', linkError);
+            // Still show success for category creation, but warn about product linking
+            Alert.alert(
+              'Category Created',
+              'Category created successfully, but there was an error linking products. You can manually add products to this category.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    isSubmittingRef.current = false;
+                    setIsSubmitting(false);
+                    navigation.goBack();
+                  },
+                },
+              ],
+            );
+          }
+        } else {
+          // No businessCategory selected, just show normal success
+          Alert.alert(
+            'Success',
+            'Category created successfully',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Reset both ref and state before navigation
+                  isSubmittingRef.current = false;
+                  setIsSubmitting(false);
+                  navigation.goBack();
+                },
+              },
+            ],
+          );
+        }
+      }
     } catch (error) {
       console.error('❌ [AddCategory] Failed to save category', error);
       const errorMessage = error instanceof Error 

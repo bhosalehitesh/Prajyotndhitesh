@@ -13,6 +13,8 @@ import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.product.service.ProductService;
 import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.category.service.CategoryService;
+import com.smartbiz.sakhistore.modules.collection.model.collection;
+import com.smartbiz.sakhistore.modules.collection.service.CollectionService;
 import com.smartbiz.sakhistore.modules.store.model.Banner;
 import com.smartbiz.sakhistore.modules.store.service.BannerService;
 
