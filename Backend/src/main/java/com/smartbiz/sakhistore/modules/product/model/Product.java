@@ -85,7 +85,7 @@ public class Product {
     // SINGLE = 1 implicit variant (auto-created)
     // MULTI_VARIANT = many variants (seller defines)
     // =======================
-    @Column(name = "product_type", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'SINGLE'")
+    @Column(name = "product_type", nullable = false, length = 20)
     private String productType = "SINGLE"; // SINGLE or MULTI_VARIANT
 
     // =======================
