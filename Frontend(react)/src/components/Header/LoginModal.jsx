@@ -174,16 +174,28 @@ const LoginModal = ({
                 style={{
                   width: '100%',
                   padding: '14px',
-                  backgroundColor: '#ff6b35',
+                  backgroundColor: 'var(--vibrant-pink)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '50px',
                   fontSize: '1rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   marginTop: '10px',
                   display: 'block',
-                  visibility: 'visible'
+                  visibility: 'visible',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 12px rgba(232, 59, 143, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vibrant-pink-alt)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(232, 59, 143, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vibrant-pink)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(232, 59, 143, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
                 Get OTP
@@ -274,15 +286,27 @@ const LoginModal = ({
                 style={{
                   width: '100%',
                   padding: '14px',
-                  backgroundColor: '#ff6b35',
+                  backgroundColor: 'var(--vibrant-pink)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '50px',
                   fontSize: '1rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'block',
-                  visibility: 'visible'
+                  visibility: 'visible',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 12px rgba(232, 59, 143, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vibrant-pink-alt)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(232, 59, 143, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--vibrant-pink)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(232, 59, 143, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
                 Verify and Continue

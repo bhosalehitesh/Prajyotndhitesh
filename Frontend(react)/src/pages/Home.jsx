@@ -304,10 +304,10 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Products Carousel */}
-      <section className="carousel-section">
-        <div className="carousel-container container">
-          <h2 className="carousel-title">Featured Products</h2>
+      {/* Featured Products */}
+      <section className="biggest-deals" style={{ marginTop: '3rem' }}>
+        <div className="container">
+          <h2 className="section-title">Featured Products</h2>
           {featuredProducts.length === 0 && !loading ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
               <p style={{ fontSize: '1.1rem', fontWeight: '500', marginBottom: '8px' }}>
@@ -320,36 +320,35 @@ const Home = () => {
               </p>
             </div>
           ) : (
-          <div className="carousel">
-              <button 
-                className="carousel-btn prev" 
-                onClick={prevProductSlide} 
-                disabled={currentProductSlide === 0}
-                aria-label="Previous products"
-              >
-                &#10094;
-              </button>
-            
-              <div 
-                className="carousel-track" 
-                style={{
-                  transform: `translateX(-${currentProductSlide * (100 / PRODUCTS_PER_SLIDE)}%)`
-                }}
-              >
-              {featuredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            <div className="featured-product-grid">
+              {featuredProducts.map((product) => {
+                const handleProductClick = () => {
+                  const basePath = actualSlug ? `/store/${actualSlug}` : '';
+                  const params = new URLSearchParams({
+                    id: product.id || product.productId,
+                    name: product.name,
+                    price: product.price,
+                    originalPrice: product.originalPrice || product.price,
+                    image: product.image,
+                    brand: product.brand,
+                    category: product.category
+                  });
+                  const detailPath = basePath ? `${basePath}/product/detail` : '/product/detail';
+                  navigate(`${detailPath}?${params.toString()}`);
+                };
 
-              <button 
-                className="carousel-btn next" 
-                onClick={nextProductSlide} 
-                disabled={currentProductSlide >= Math.max(0, featuredProducts.length - PRODUCTS_PER_SLIDE)}
-                aria-label="Next products"
-              >
-                &#10095;
-              </button>
-          </div>
+                return (
+                  <div key={product.id} className="featured-product-card" onClick={handleProductClick}>
+                    <div className="image-section">
+                      <img src={product.image || '/assets/products/p1.jpg'} alt={product.name} />
+                    </div>
+                    <div className="label-section">
+                      <h3>{product.name}</h3>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </section>
@@ -372,7 +371,7 @@ const Home = () => {
       {/* Biggest Deals */}
       <section className="biggest-deals">
         <div className="container">
-          <h2 className="section-title">BIGGEST DEALS ON TOP DRIPS</h2>
+          <h2 className="section-title">Collection</h2>
           <div className="deals-grid">
             {DEALS.map((deal) => (
               <div key={deal.id} className="deal-card" onClick={() => navigate(getNavPath(ROUTES.PRODUCTS))}>
