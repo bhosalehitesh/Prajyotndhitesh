@@ -83,10 +83,67 @@ public class CategoryController {
         return categoryService.addCategory(category, sellerId);
     }
 
-    // ✅ Edit category
+    // ✅ Edit category (legacy POST endpoint - kept for backward compatibility)
     @PostMapping("/EditCategory")
     public Category editCategory(Category category) {
         return categoryService.addCategory(category);
+    }
+
+    // ✅ Update category (SmartBiz: PUT endpoint for proper REST API - same as collections)
+    @PutMapping("/{id}")
+    public ResponseEntity<Category> updateCategory(
+            @PathVariable Long id,
+            @RequestBody Category updatedCategory) {
+        try {
+            Category existing = categoryService.findById(id);
+            
+            // Update fields (SmartBiz: same as Collection update logic)
+            if (updatedCategory.getCategoryName() != null) {
+                existing.setCategoryName(updatedCategory.getCategoryName());
+                // Regenerate slug if name changed
+                if (updatedCategory.getSlug() == null || updatedCategory.getSlug().isEmpty()) {
+                    String newSlug = categoryService.generateUniqueSlug(updatedCategory.getCategoryName(), 
+                        existing.getSeller() != null ? existing.getSeller().getSellerId() : null);
+                    existing.setSlug(newSlug);
+                }
+            }
+            if (updatedCategory.getBusinessCategory() != null) {
+                existing.setBusinessCategory(updatedCategory.getBusinessCategory());
+            }
+            if (updatedCategory.getDescription() != null) {
+                existing.setDescription(updatedCategory.getDescription());
+            }
+            if (updatedCategory.getCategoryImage() != null) {
+                existing.setCategoryImage(updatedCategory.getCategoryImage());
+            }
+            if (updatedCategory.getSeoTitleTag() != null) {
+                existing.setSeoTitleTag(updatedCategory.getSeoTitleTag());
+            }
+            if (updatedCategory.getSeoMetaDescription() != null) {
+                existing.setSeoMetaDescription(updatedCategory.getSeoMetaDescription());
+            }
+            if (updatedCategory.getSocialSharingImage() != null) {
+                existing.setSocialSharingImage(updatedCategory.getSocialSharingImage());
+            }
+            if (updatedCategory.getIsActive() != null) {
+                existing.setIsActive(updatedCategory.getIsActive());
+            }
+            if (updatedCategory.getOrderIndex() != null) {
+                existing.setOrderIndex(updatedCategory.getOrderIndex());
+            }
+            if (updatedCategory.getSlug() != null && !updatedCategory.getSlug().isEmpty()) {
+                existing.setSlug(updatedCategory.getSlug());
+            }
+            
+            Long sellerId = existing.getSeller() != null ? existing.getSeller().getSellerId() : null;
+            return ResponseEntity.ok(categoryService.addCategory(existing, sellerId));
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            System.err.println("Error updating category " + id + ": " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(null);
+        }
     }
 
     // ✅ Get category by ID

@@ -47,10 +47,50 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
         fetchProducts(),
       ]);
 
+      // Debug: Log first product to see what fields are available
+      if (apiProducts.length > 0) {
+        const firstProduct = apiProducts[0] as any;
+        console.log('🔍 [CategoriesScreen] Sample product structure:', {
+          productsId: firstProduct.productsId,
+          productName: firstProduct.productName,
+          categoryId: firstProduct.categoryId,
+          category_id: firstProduct.category_id,
+          category: firstProduct.category,
+          categoryObject: firstProduct.category ? {
+            category_id: firstProduct.category.category_id,
+            categoryId: firstProduct.category.categoryId,
+            categoryName: firstProduct.category.categoryName,
+          } : 'no category object',
+          allKeys: Object.keys(firstProduct),
+        });
+        
+        // Check if ANY products have categoryId
+        const productsWithCategoryId = apiProducts.filter(p => {
+          const pCategoryId = (p as any).categoryId ?? (p as any).category_id ?? (p as any).category?.category_id ?? null;
+          return pCategoryId != null;
+        });
+        console.log('📊 [CategoriesScreen] Products with categoryId:', {
+          totalProducts: apiProducts.length,
+          productsWithCategoryId: productsWithCategoryId.length,
+          productsWithoutCategoryId: apiProducts.length - productsWithCategoryId.length,
+          sampleProductIds: productsWithCategoryId.slice(0, 3).map((p: any) => ({
+            productId: p.productsId,
+            categoryId: (p as any).categoryId ?? (p as any).category_id ?? 'not found',
+          })),
+        });
+      }
+
       const mapped: Category[] = apiCategories.map(cat => {
         const catName = (cat.categoryName || '').toLowerCase().trim();
         const catBusiness = (cat.businessCategory || '').toLowerCase().trim();
         const catId = cat.category_id;
+
+        // SmartBiz: Count products by categoryId (the actual foreign key relationship)
+        // Check if any products have categoryId - if not, use fallback matching
+        const hasAnyCategoryIds = apiProducts.some(p => {
+          const pCategoryId = (p as any).categoryId ?? (p as any).category_id ?? (p as any).category?.category_id ?? null;
+          return pCategoryId != null;
+        });
 
         const count = apiProducts.filter(p => {
           const product = p as any;
@@ -63,42 +103,41 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
             product.category?.categoryId ??
             null;
 
-          // Primary: Match by category ID (strongest relationship)
+          // Primary: Match by category ID (the actual database relationship)
           if (pCategoryId != null && catId != null) {
-            const matches = Number(pCategoryId) === Number(catId);
-            if (matches) {
+            return Number(pCategoryId) === Number(catId);
+          }
+
+          // Fallback: Only use businessCategory matching if NO products have categoryId
+          // This handles cases where products haven't been migrated to use categoryId yet
+          if (!hasAnyCategoryIds) {
+            const pBusiness = (product.businessCategory || '').toLowerCase().trim();
+            if (catBusiness && pBusiness && pBusiness === catBusiness) {
               return true;
             }
-          }
-
-          // Fallback 1: Match by businessCategory (if both exist)
-          const pBusiness = (product.businessCategory || '').toLowerCase().trim();
-          if (catBusiness && pBusiness && pBusiness === catBusiness) {
-            return true;
-          }
-
-          // Fallback 2: Match productCategory text to categoryName
-          const pCat = (product.productCategory || '').toLowerCase().trim();
-          if (catName && pCat && pCat === catName) {
-            return true;
           }
 
           return false;
         }).length;
 
-        // Debug logging for first category
-        if (catId === apiCategories[0]?.category_id) {
-          console.log('🔍 [CategoriesScreen] Counting products for category:', {
+        // Debug logging for categories with products or if count seems wrong
+        if (count > 0 || catId === apiCategories[0]?.category_id) {
+          console.log('🔍 [CategoriesScreen] Category product count:', {
             categoryId: catId,
             categoryName: cat.categoryName,
-            totalProducts: apiProducts.length,
-            matchedCount: count,
-            sampleProduct: apiProducts[0] ? {
-              productId: (apiProducts[0] as any).productsId,
-              categoryId: (apiProducts[0] as any).categoryId ?? (apiProducts[0] as any).category_id ?? (apiProducts[0] as any).category?.category_id ?? 'not found',
-              businessCategory: (apiProducts[0] as any).businessCategory,
-              productCategory: (apiProducts[0] as any).productCategory,
-            } : null,
+            productCount: count,
+            // Show sample products that matched this category
+            matchedProducts: apiProducts
+              .filter(p => {
+                const pCategoryId = (p as any).categoryId ?? (p as any).category_id ?? (p as any).category?.category_id ?? null;
+                return pCategoryId != null && catId != null && Number(pCategoryId) === Number(catId);
+              })
+              .map(p => ({
+                productId: (p as any).productsId,
+                productName: (p as any).productName,
+                categoryId: (p as any).categoryId ?? (p as any).category_id ?? 'not found',
+              }))
+              .slice(0, 3), // Show first 3 matches
           });
         }
 
@@ -134,9 +173,21 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 
   const handleEdit = () => {
     setBottomSheetOpen(false);
-    navigation.navigate('EditCategory', {
+    if (!activeCategoryId || !activeCategory) {
+      Alert.alert('Error', 'No category selected');
+      return;
+    }
+    console.log('🔄 [CategoriesScreen] Navigating to edit category:', {
       categoryId: activeCategoryId,
-      ...activeCategory,
+      categoryName: activeCategory.name,
+      businessCategory: activeCategory.businessCategory,
+    });
+    navigation.navigate('EditCategory', {
+      categoryId: activeCategoryId, // Ensure this is passed
+      name: activeCategory.name,
+      description: activeCategory.description,
+      image: activeCategory.image,
+      businessCategory: activeCategory.businessCategory,
     });
   };
 

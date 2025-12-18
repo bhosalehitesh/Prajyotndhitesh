@@ -299,16 +299,17 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
     }
   }, [isEditMode, existing, selectedCategoryId, images.length]);
 
-  // Require at least name, price, and a selected database category.
+  // Require at least name, price, images, business category, and product category.
   // For edit mode: images are optional (they stay as-is in backend)
   // For create mode: at least one image is required
-  // In edit mode: if categoryId is not set, we still allow update (backend keeps existing category)
+  // Business Category and Product Category are REQUIRED for both new products and edits
   const hasName = name.trim().length > 0;
   const hasPrice = price.trim().length > 0;
   const hasImages = isEditMode || images.length > 0; // Images only required for new products
-  const hasCategory = isEditMode || !!selectedCategoryId; // Category required for new products, optional for edits
+  const hasBusinessCategory = businessCategory.trim().length > 0;
+  const hasProductCategory = productCategory.trim().length > 0;
   
-  const canSubmit = hasName && hasPrice && hasImages && hasCategory;
+  const canSubmit = hasName && hasPrice && hasImages && hasBusinessCategory && hasProductCategory;
   
   // Debug logging for edit mode
   if (isEditMode && !canSubmit) {
@@ -316,7 +317,6 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       hasName,
       hasPrice,
       hasImages,
-      hasCategory,
       selectedCategoryId,
       imagesCount: images.length,
       nameLength: name.trim().length,
@@ -331,6 +331,8 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         nameValid: name.trim().length > 0,
         priceValid: price.trim().length > 0,
         imagesValid: isEditMode || images.length > 0,
+        businessCategoryValid: businessCategory.trim().length > 0,
+        productCategoryValid: productCategory.trim().length > 0,
         categoryValid: !!selectedCategoryId,
         selectedCategoryId,
         canSubmit,
@@ -338,7 +340,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         existingCategory_id: (existing as any)?.category_id,
       });
     }
-  }, [isEditMode, canSubmit, name, price, images.length, selectedCategoryId, existing]);
+  }, [isEditMode, canSubmit, name, price, images.length, businessCategory, productCategory, selectedCategoryId, existing]);
 
 
   const requestCameraPermission = async (): Promise<boolean> => {
@@ -526,8 +528,10 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         Alert.alert('Validation Error', 'Product price is required');
       } else if (!isEditMode && images.length === 0) {
         Alert.alert('Validation Error', 'At least one product image is required');
-      } else if (!isEditMode && !selectedCategoryId) {
-        Alert.alert('Validation Error', 'Please select a Database Category for this product');
+      } else if (!businessCategory.trim().length) {
+        Alert.alert('Validation Error', 'Business Category is required');
+      } else if (!productCategory.trim().length) {
+        Alert.alert('Validation Error', 'Product Category is required');
       }
       return;
     }
@@ -598,7 +602,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
         // IMPORTANT: backend expects isBestseller
         isBestseller: bestSeller,
-        // Only include categoryId if it's set (for new products it's required, for edits it's optional)
+        // Category is optional - only include categoryId if it's set
         categoryId: selectedCategoryId || undefined, // Add categoryId from database category selection
       };
 
@@ -883,47 +887,30 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
 
         {/* Business Category */}
-
+        <Text style={styles.sectionLabel}>Business Category <Text style={styles.required}>*</Text></Text>
         <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryOpen(true)}>
-
           <Text style={{color: businessCategory ? '#111827' : '#6c757d'}}>
-
-            {businessCategory || 'Business Category'}
-
+            {businessCategory || 'Select Business Category (Required)'}
           </Text>
-
         </TouchableOpacity>
 
 
 
         {/* Product Category */}
-
+        <Text style={styles.sectionLabel}>Product Category <Text style={styles.required}>*</Text></Text>
         <TouchableOpacity
-
           style={styles.dropdown}
-
           onPress={() => {
-
             if (!businessCategory) {
-
               Alert.alert('Select Business Category', 'Please choose a business category first');
-
               return;
-
             }
-
             setProductCategoryOpen(true);
-
           }}
-
         >
-
           <Text style={{color: productCategory ? '#111827' : '#6c757d'}}>
-
-            {productCategory || 'Product Category'}
-
+            {productCategory || 'Select Product Category (Required)'}
           </Text>
-
         </TouchableOpacity>
 
 
@@ -2161,6 +2148,7 @@ const styles = StyleSheet.create({
   sectionLabel: {fontWeight: 'bold', color: '#111827', marginTop: 12},
 
   optional: {color: '#9CA3AF', fontWeight: 'normal'},
+  required: {color: '#EF4444', fontWeight: 'bold'},
 
   input: {borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, marginTop: 8, color: '#111827'},
 

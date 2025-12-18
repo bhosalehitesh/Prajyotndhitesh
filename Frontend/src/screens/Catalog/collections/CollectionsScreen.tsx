@@ -29,7 +29,10 @@ interface Collection {
   name: string;
   image?: string;
   productCount: number;
-  hideFromWebsite: boolean;
+  hideFromWebsite: boolean; // Legacy field
+  isActive?: boolean; // SmartBiz: preferred field (same as Category)
+  orderIndex?: number; // SmartBiz: for sorting (same as Category)
+  slug?: string; // SmartBiz: URL-friendly identifier (same as Category)
   description?: string;
 }
 
@@ -49,12 +52,16 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
     try {
       setLoading(true);
       const apiCollections: CollectionWithCountDto[] = await fetchCollectionsWithCounts();
+      // SmartBiz: Map collections with all fields (same as categories)
       const mapped: Collection[] = apiCollections.map(col => ({
         id: String(col.collectionId),
         name: col.collectionName,
         image: col.collectionImage || undefined,
         productCount: col.productCount ?? 0,
-        hideFromWebsite: !!col.hideFromWebsite,
+        hideFromWebsite: col.hideFromWebsite ?? (!col.isActive ?? false), // Sync with isActive
+        isActive: col.isActive ?? (!col.hideFromWebsite ?? true), // SmartBiz: preferred field
+        orderIndex: col.orderIndex ?? 0, // SmartBiz: for sorting
+        slug: col.slug || undefined, // SmartBiz: URL-friendly identifier
         description: col.description || '',
       }));
       setCollections(mapped);
@@ -79,9 +86,24 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
 
   const handleEdit = () => {
     setBottomSheetOpen(false);
-    navigation.navigate('EditCollection', {
+    if (!activeCollectionId || !activeCollection) {
+      Alert.alert('Error', 'No collection selected');
+      return;
+    }
+    console.log('🔄 [CollectionsScreen] Navigating to edit collection:', {
       collectionId: activeCollectionId,
-      ...activeCollection,
+      collectionName: activeCollection.name,
+      isActive: activeCollection.isActive,
+      orderIndex: activeCollection.orderIndex,
+    });
+    navigation.navigate('EditCollection', {
+      collectionId: activeCollectionId, // Ensure this is passed
+      name: activeCollection.name,
+      description: activeCollection.description,
+      image: activeCollection.image,
+      isActive: activeCollection.isActive ?? !activeCollection.hideFromWebsite ?? true,
+      orderIndex: activeCollection.orderIndex ?? 0,
+      hideFromWebsite: activeCollection.hideFromWebsite,
     });
   };
 
@@ -176,22 +198,29 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
     }
   };
 
-  const toggleHideFromWebsite = async (collectionId: string, value: boolean) => {
+  // SmartBiz: Update collection active status (same as categories)
+  const toggleCollectionStatus = async (collectionId: string, isActive: boolean) => {
     try {
-      await setCollectionVisibility(collectionId, value);
+      // Use the new status endpoint if available, otherwise fallback to hideFromWebsite
+      const hideFromWebsite = !isActive;
+      await setCollectionVisibility(collectionId, hideFromWebsite);
       setCollections(prev =>
-        prev.map(c => (c.id === collectionId ? {...c, hideFromWebsite: value} : c)),
+        prev.map(c => (c.id === collectionId ? {
+          ...c, 
+          hideFromWebsite: hideFromWebsite,
+          isActive: isActive
+        } : c)),
       );
 
       const collection = collections.find(c => c.id === collectionId);
-      if (value) {
-        showSuccessMessage(`${collection?.name} is now hidden from website`);
+      if (isActive) {
+        showSuccessMessage(`${collection?.name} is now active`);
       } else {
-        showSuccessMessage(`${collection?.name} is now visible on website`);
+        showSuccessMessage(`${collection?.name} is now hidden`);
       }
     } catch (error) {
-      console.error('Failed to update collection visibility', error);
-      Alert.alert('Error', 'Failed to update visibility. Please try again.');
+      console.error('Failed to update collection status', error);
+      Alert.alert('Error', 'Failed to update status. Please try again.');
     }
   };
 
@@ -225,72 +254,55 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
       {/* Collections List */}
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {loading && collections.length === 0 ? (
-          <Text style={{textAlign: 'center', color: '#6c757d', marginTop: 24}}>
-            Loading collections...
-          </Text>
+          <Text style={styles.emptyText}>Loading collections...</Text>
         ) : !loading && filteredCollections.length === 0 ? (
-          <Text style={{textAlign: 'center', color: '#6c757d', marginTop: 24}}>
-            No collections found. Add your first collection.
-          </Text>
+          <Text style={styles.emptyText}>No collections found. Add your first collection.</Text>
         ) : (
           filteredCollections.map(collection => (
-          <View key={collection.id} style={styles.collectionCard}>
-            <View style={styles.collectionMainRow}>
-              <TouchableOpacity
-                style={styles.collectionContent}
-                onPress={() => {
-                  // Navigate to ProductsScreen in add-to-collection mode with full product list
-                  navigation.push('Products', {
+            <TouchableOpacity
+              key={collection.id}
+              style={styles.collectionCard}
+              onPress={() => {
+                // Navigate to ProductsScreen in add-to-collection mode with full product list
+                navigation.navigate('Products', {
+                  collectionId: collection.id,
+                  collectionName: collection.name,
+                  addToCollection: true,
+                  returnScreen: 'Collections',
+                  returnParams: {
                     collectionId: collection.id,
                     collectionName: collection.name,
-                    addToCollection: true,
-                    returnScreen: 'Collections',
-                    returnParams: {
-                      collectionId: collection.id,
-                      collectionName: collection.name,
-                      viewCollectionProducts: true,
-                    },
-                  });
-                }}
-                activeOpacity={0.7}>
+                    viewCollectionProducts: true,
+                  },
+                });
+              }}
+              activeOpacity={0.7}>
               <View style={styles.collectionImageContainer}>
                 {collection.image && typeof collection.image === 'string' && collection.image !== 'placeholder' ? (
                   <Image source={{uri: collection.image}} style={styles.collectionImage} />
                 ) : (
                   <View style={styles.collectionImagePlaceholder}>
-                    <IconSymbol name="image" size={24} color="#9CA3AF" />
+                    <IconSymbol name="image-outline" size={32} color="#9CA3AF" />
                   </View>
                 )}
               </View>
               <View style={styles.collectionInfo}>
-                <Text style={styles.collectionName}>{collection.name}</Text>
+                <Text style={styles.collectionName} numberOfLines={1}>
+                  {collection.name}
+                </Text>
                 <Text style={styles.collectionCount}>
                   {collection.productCount === 0
-                    ? 'No products'
-                    : `${collection.productCount} product${collection.productCount > 1 ? 's' : ''}`}
+                    ? 'No product listed'
+                    : `${collection.productCount} product${collection.productCount > 1 ? 's' : ''} listed`}
                 </Text>
               </View>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.menuButton}
                 onPress={() => handleMenuPress(collection.id)}>
                 <IconSymbol name="ellipsis-vertical" size={20} color="#6c757d" />
               </TouchableOpacity>
-            </View>
-            
-            {/* Hide from website toggle */}
-            <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Hide from website</Text>
-              <Switch
-                value={collection.hideFromWebsite}
-                onValueChange={value => toggleHideFromWebsite(collection.id, value)}
-                trackColor={{false: '#D1D5DB', true: '#e61580'}}
-                thumbColor={collection.hideFromWebsite ? '#FFFFFF' : '#f8f9fa'}
-                ios_backgroundColor="#D1D5DB"
-              />
-            </View>
-          </View>
-        )))}
+            </TouchableOpacity>
+          )))}
       </ScrollView>
 
       {/* Success Message Toast */}
@@ -328,6 +340,28 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
             <TouchableOpacity style={styles.actionRow} onPress={handleEdit}>
               <Text style={styles.actionRowText}>Edit Collection</Text>
               <IconSymbol name="pencil" size={20} color="#111827" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionRow} 
+              onPress={() => {
+                setBottomSheetOpen(false);
+                if (activeCollectionId && activeCollection) {
+                  navigation.push('Products', {
+                    collectionId: activeCollectionId,
+                    collectionName: activeCollection.name,
+                    addToCollection: true,
+                    returnScreen: 'Collections',
+                    returnParams: {
+                      collectionId: activeCollectionId,
+                      collectionName: activeCollection.name,
+                      viewCollectionProducts: true,
+                    },
+                  });
+                }
+              }}>
+              <Text style={styles.actionRowText}>Add Products</Text>
+              <IconSymbol name="add-circle" size={20} color="#111827" />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionRow} onPress={handleShare}>
@@ -375,12 +409,12 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF4FA',
+    backgroundColor: '#F5F5F5', // SmartBiz: same as CategoriesScreen
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e61580',
+    backgroundColor: '#1E3A8A', // SmartBiz: same blue as CategoriesScreen
     paddingHorizontal: 16,
     paddingVertical: 12,
     height: 56,
@@ -407,10 +441,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderWidth: 0, // SmartBiz: same as CategoriesScreen (shadow instead)
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
@@ -423,85 +464,79 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 100,
+    paddingBottom: 120, // SmartBiz: same as CategoriesScreen
+    paddingTop: 8,
   },
   collectionCard: {
+    flexDirection: 'row', // SmartBiz: same layout as CategoriesScreen
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  collectionMainRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  collectionContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    shadowRadius: 3.84,
+    elevation: 5, // SmartBiz: same as CategoriesScreen
   },
   collectionImageContainer: {
-    marginRight: 12,
+    marginRight: 12, // SmartBiz: same as CategoriesScreen
   },
   collectionImagePlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-    backgroundColor: '#f8f9fa',
+    width: 70, // SmartBiz: same size as CategoriesScreen
+    height: 70,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6', // SmartBiz: same as CategoriesScreen
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   collectionImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
+    width: 70, // SmartBiz: same size as CategoriesScreen
+    height: 70,
+    borderRadius: 10,
     resizeMode: 'cover',
   },
   collectionInfo: {
-    flex: 1,
+    flex: 1, // SmartBiz: same as CategoriesScreen
   },
   collectionName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 6, // SmartBiz: same spacing as CategoriesScreen
   },
   collectionCount: {
-    fontSize: 14,
-    color: '#6c757d',
+    fontSize: 13, // SmartBiz: same as CategoriesScreen
+    color: '#6B7280', // SmartBiz: same color as CategoriesScreen
   },
   menuButton: {
     padding: 8,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#dee2e6',
-  },
-  toggleLabel: {
-    fontSize: 14,
-    color: '#111827',
-    fontWeight: '500',
+    marginLeft: 8, // SmartBiz: same as CategoriesScreen
   },
   addButton: {
     position: 'absolute',
     bottom: 80,
     left: 16,
     right: 16,
-    backgroundColor: '#e61580',
-    paddingVertical: 14,
+    backgroundColor: '#1E3A8A', // SmartBiz: same blue as CategoriesScreen
+    paddingVertical: 16, // SmartBiz: same as CategoriesScreen
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000', // SmartBiz: same shadow as CategoriesScreen
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   addButtonText: {
     color: '#FFFFFF',
@@ -595,6 +630,12 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontSize: 16,
     fontWeight: '600',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#6c757d',
+    fontSize: 14,
+    marginTop: 24,
   },
   successMessageContainer: {
     position: 'absolute',
