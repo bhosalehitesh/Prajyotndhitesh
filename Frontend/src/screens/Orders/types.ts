@@ -18,7 +18,8 @@ export interface OrderItem {
 }
 
 export interface Order {
-  id: string;
+  id: string; // Display ID (formatted)
+  ordersId?: number; // Backend OrdersId for API calls
   orderNumber: string;
   customerName: string;
   orderDate: string;

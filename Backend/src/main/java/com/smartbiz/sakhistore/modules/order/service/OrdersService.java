@@ -126,7 +126,8 @@ public class OrdersService {
     // Fetch Order by ID
     // ===============================
     public Orders getOrder(Long id) {
-        return ordersRepository.findById(id)
+        // Use findByIdWithUser to eagerly load user for customerName/customerPhone getters
+        return ordersRepository.findByIdWithUser(id)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
     }
 

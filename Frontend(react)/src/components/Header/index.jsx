@@ -140,13 +140,13 @@ const Header = () => {
               {NAV_ITEMS.map((item) => {
                 const storePath = getRoute(item.path, storeSlug);
                 return (
-                  <Link 
-                    key={item.path}
+                <Link 
+                  key={item.path}
                     to={storePath} 
                     className={`nav-item ${location.pathname === storePath || location.pathname === item.path ? 'active' : ''}`}
-                  >
-                    {item.label}
-                  </Link>
+                >
+                  {item.label}
+                </Link>
                 );
               })}
             </nav>

@@ -44,17 +44,17 @@ const MyOrders = () => {
     ];
 
     // Each section must have a `data` array; we use a single placeholder item
-    const sections = config.map((s) => ({ ...s, data: [s.title] }));
+    const sections = config.map((s, index) => ({ ...s, data: [s.title], index }));
 
     return (
       <SectionList
         sections={sections}
-        keyExtractor={(item) => String(item)}
+        keyExtractor={(item, index) => `section-${index}-${item}`}
         renderSectionHeader={({ section }) => (
           <Text style={styles.sectionTitle}>{section.title}</Text>
         )}
-        renderItem={({ section }) => (
-          <View style={styles.sectionContent}>{section.component}</View>
+        renderItem={({ section, index }) => (
+          <View key={`section-content-${index}`} style={styles.sectionContent}>{section.component}</View>
         )}
         contentContainerStyle={styles.sectionListContainer}
         showsVerticalScrollIndicator={false}
