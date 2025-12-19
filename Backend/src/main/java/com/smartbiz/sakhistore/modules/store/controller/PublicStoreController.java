@@ -274,11 +274,21 @@ public class PublicStoreController {
     @GetMapping("/{slug}/categories")
     public ResponseEntity<?> getStoreCategories(@PathVariable String slug) {
         try {
+            System.out.println("🔍 [Categories API] Fetching categories for slug: " + slug);
+            
             // Find store by slug
             StoreDetails store = storeService.findBySlug(slug);
             
+            if (store == null) {
+                System.out.println("❌ [Categories API] Store not found for slug: " + slug);
+                return ResponseEntity.notFound().build();
+            }
+            
+            System.out.println("✅ [Categories API] Store found: " + store.getStoreName() + " (ID: " + store.getStoreId() + ")");
+            
             // Check if store has a seller
             if (store.getSeller() == null) {
+                System.out.println("⚠️ [Categories API] Store has no seller linked");
                 return ResponseEntity.ok(new java.util.ArrayList<>());
             }
             
@@ -286,11 +296,15 @@ public class PublicStoreController {
             Long sellerId = store.getSeller().getSellerId();
             
             if (sellerId == null) {
+                System.out.println("⚠️ [Categories API] Seller ID is null");
                 return ResponseEntity.ok(new java.util.ArrayList<>());
             }
             
+            System.out.println("✅ [Categories API] Seller ID: " + sellerId);
+            
             // Get categories by seller
             List<Category> categories = categoryService.allCategories(sellerId);
+            System.out.println("📦 [Categories API] Total categories found: " + categories.size());
 
             // SmartBiz: only ACTIVE categories should appear in website navigation,
             // ordered by orderIndex
@@ -299,12 +313,22 @@ public class PublicStoreController {
                     .sorted((c1, c2) -> Integer.compare(c1.getOrderIndex(), c2.getOrderIndex()))
                     .toList();
             
+            System.out.println("✅ [Categories API] Active categories: " + navCategories.size());
+            
+            if (navCategories.size() > 0) {
+                System.out.println("📋 [Categories API] Category names: " + 
+                    navCategories.stream()
+                        .map(c -> c.getCategoryName())
+                        .collect(java.util.stream.Collectors.joining(", ")));
+            }
+            
             return ResponseEntity.ok(navCategories);
         } catch (NoSuchElementException e) {
+            System.err.println("❌ [Categories API] Store not found: " + slug);
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             // Log error and return empty list instead of error
-            System.err.println("Error fetching categories for store slug: " + slug);
+            System.err.println("❌ [Categories API] Error fetching categories for store slug: " + slug);
             e.printStackTrace();
             return ResponseEntity.ok(new java.util.ArrayList<>());
         }

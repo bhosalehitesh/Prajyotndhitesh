@@ -7,6 +7,7 @@ import java.util.List;
 import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.model.SellerDetails;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -26,7 +27,10 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long category_id;
 
+    @JsonProperty("categoryImage")
     private String categoryImage;
+    
+    @JsonProperty("categoryName")
     private String categoryName;
     private String businessCategory;
     private String description;
@@ -73,6 +77,7 @@ public class Category {
     // ============================
     // Getters & Setters
     // ============================
+    @JsonProperty("categoryId")
     public Long getCategory_id() {
         return category_id;
     }

@@ -15,11 +15,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
-
-    @RestController
-    @RequestMapping("/api/pincode")
-    @RequiredArgsConstructor
-    public class PincodeLookupController {
+@RestController
+@RequestMapping("/api/pincode")
+@RequiredArgsConstructor
+public class PincodeLookupController {
 
         private final LivePincodeLookupService service;
 
@@ -52,6 +51,4 @@ import lombok.RequiredArgsConstructor;
 		
         // SIMPLE DTO FOR ERROR RESPONSE
         record ErrorMessage(String message) {}
-    }
-
-    
+}
