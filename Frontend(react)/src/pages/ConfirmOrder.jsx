@@ -4,6 +4,7 @@ import { useCart } from '../contexts/CartContext';
 import { useStore } from '../contexts/StoreContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { ROUTES, getRoute } from '../constants/routes';
 import { placeOrder, getCart, addToCartAPI, getStoreBySlug } from '../utils/api';
 
 // Get backend URL - try to match the API_CONFIG pattern
@@ -80,7 +81,7 @@ const ConfirmOrder = () => {
   useEffect(() => {
     if (cart.length === 0) {
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const cartPath = resolvedSlug ? `/store/${resolvedSlug}/cart` : '/cart';
+      const cartPath = getRoute(ROUTES.CART, resolvedSlug);
       navigate(cartPath);
     }
   }, [cart, storeSlug, currentStore, navigate]);
@@ -107,7 +108,7 @@ const ConfirmOrder = () => {
     if (!isLoading && !address && cart.length > 0) {
       console.log('ConfirmOrder: No address found, redirecting to checkout');
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const checkoutPath = resolvedSlug ? `/store/${resolvedSlug}/checkout` : '/checkout';
+      const checkoutPath = getRoute(ROUTES.CHECKOUT, resolvedSlug);
       navigate(checkoutPath);
     }
   }, [isLoading, address, cart, storeSlug, currentStore, navigate]);
@@ -238,7 +239,7 @@ const ConfirmOrder = () => {
 
             // Navigate to success page
             const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-            const successPath = resolvedSlug ? `/store/${resolvedSlug}/order/success` : '/order/success';
+            const successPath = getRoute(ROUTES.ORDER_SUCCESS, resolvedSlug);
             navigate(successPath, { 
               state: { 
                 orderId: orderId,
@@ -279,14 +280,15 @@ const ConfirmOrder = () => {
   const handlePlaceOrder = async () => {
     if (!isAuthenticated || !user) {
       alert('Please login to place an order');
-      navigate('/login');
+      // Note: Login route doesn't exist in this app, redirect to home instead
+      navigate(getRoute(ROUTES.HOME, storeSlug));
       return;
     }
 
     if (!address) {
       alert('Please provide a delivery address');
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const checkoutPath = resolvedSlug ? `/store/${resolvedSlug}/checkout` : '/checkout';
+      const checkoutPath = getRoute(ROUTES.CHECKOUT, resolvedSlug);
       navigate(checkoutPath);
       return;
     }

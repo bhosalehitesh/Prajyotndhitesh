@@ -281,9 +281,9 @@ const Home = () => {
     }
   };
 
-  // Build navigation paths with store slug
+  // Build navigation paths with store slug using utility function
   const getNavPath = (path) => {
-    return actualSlug ? `/${actualSlug}${path}` : path;
+    return actualSlug ? `/store/${actualSlug}${path}` : path;
   };
 
   if (storeLoading || loading) {

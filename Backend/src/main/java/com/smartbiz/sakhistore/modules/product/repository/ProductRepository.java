@@ -18,7 +18,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findBySeller_SellerId(Long sellerId);
     
     // All products for a specific seller with category fetched
-    @Query("SELECT p FROM Product p " +
+    // Note: Variants are loaded separately to avoid JPA cartesian product issues
+    @Query("SELECT DISTINCT p FROM Product p " +
            "LEFT JOIN FETCH p.seller " +
            "LEFT JOIN FETCH p.category " +
            "WHERE p.seller.sellerId = :sellerId " +
@@ -29,7 +30,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findBySeller_SellerId(Long sellerId, Pageable pageable);
     
     // Optimized query with JOIN FETCH to avoid N+1 queries
-    @Query("SELECT p FROM Product p " +
+    // Note: Variants are loaded separately to avoid JPA cartesian product issues
+    @Query("SELECT DISTINCT p FROM Product p " +
            "LEFT JOIN FETCH p.seller " +
            "LEFT JOIN FETCH p.category " +
            "WHERE p.seller.sellerId = :sellerId " +
@@ -37,7 +39,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Page<Product> findBySeller_SellerIdWithRelations(@Param("sellerId") Long sellerId, Pageable pageable);
 
     // Find products by seller and active status with relations
-    @Query("SELECT p FROM Product p " +
+    // Note: Variants are loaded separately to avoid JPA cartesian product issues
+    @Query("SELECT DISTINCT p FROM Product p " +
            "LEFT JOIN FETCH p.seller " +
            "LEFT JOIN FETCH p.category " +
            "WHERE p.seller.sellerId = :sellerId AND p.isActive = :isActive " +

@@ -1092,27 +1092,6 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             }}>
             <Text style={styles.addButtonText}>+ Add Products to Collection</Text>
             </TouchableOpacity>
-        ) : targetCategoryId ? (
-          // When viewing a category, show "Add Products" to enter add-to-category mode
-          <TouchableOpacity 
-            style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}
-            onPress={() => {
-              if (navBusy) return;
-              setNavBusy(true);
-              navigation.push('Products', {
-                categoryId: targetCategoryId,
-                categoryName: categoryName,
-                addToCategory: true,
-                returnScreen: 'Products',
-                returnParams: {
-                  categoryId: targetCategoryId,
-                  categoryName: categoryName,
-                },
-              });
-              setTimeout(() => setNavBusy(false), 800);
-            }}>
-            <Text style={styles.addButtonText}>Add Products</Text>
-          </TouchableOpacity>
         ) : (
         <TouchableOpacity 
           style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}

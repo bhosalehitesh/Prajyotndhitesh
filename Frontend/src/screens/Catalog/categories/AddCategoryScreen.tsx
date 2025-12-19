@@ -393,27 +393,6 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
     setCategoryImage(null);
   };
 
-  const handleAddProductsToCategory = () => {
-    if (!isEditMode || !route?.params?.categoryId) {
-      Alert.alert('Add products', 'Please save the category first, then add products.');
-      return;
-    }
-
-    navigation.push('Products', {
-      categoryId: route.params.categoryId,
-      categoryName: categoryName || route.params.name,
-      addToCategory: true,
-      returnScreen: 'AddCategory',
-      returnParams: {
-        categoryId: route.params.categoryId,
-        name: categoryName,
-        description: categoryDescription,
-        image: categoryImage,
-        businessCategory: businessCategory,
-      },
-    });
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -523,15 +502,6 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
 
       {/* Save Button */}
       <View style={styles.buttonContainer}>
-          {isEditMode && (
-            <TouchableOpacity
-              style={[styles.saveButton, styles.secondaryButton]}
-              onPress={handleAddProductsToCategory}>
-              <Text style={[styles.saveButtonText, styles.secondaryButtonText]}>
-                Add Products to Category
-              </Text>
-            </TouchableOpacity>
-          )}
         <TouchableOpacity
           style={[styles.saveButton, (!canSave || isSubmitting) && styles.saveButtonDisabled]}
           onPress={handleSave}
@@ -650,7 +620,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 250, // Increased to account for button container (2 buttons in edit mode ~140px) + bottom nav (~60px) + safe area (~50px)
+    paddingBottom: 150, // Account for button container (~70px) + bottom nav (~60px) + safe area (~20px)
   },
   section: {
     marginBottom: 24,

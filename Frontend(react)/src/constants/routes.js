@@ -3,6 +3,8 @@
  * Centralized route definitions for easy maintenance
  */
 
+import { getStoreRoute } from '../utils/helpers';
+
 export const ROUTES = {
   HOME: '/',
   CATEGORIES: '/categories',
@@ -16,6 +18,20 @@ export const ROUTES = {
   ORDERS: '/orders',
   ORDER_TRACKING: '/order-tracking',
   FAQ: '/faq',
+  CHECKOUT: '/checkout',
+  CHECKOUT_CONFIRM: '/checkout/confirm',
+  CHECKOUT_PAYMENT: '/checkout/payment',
+  ORDER_SUCCESS: '/order/success',
+};
+
+/**
+ * Get store-aware route path
+ * @param {string} route - Base route from ROUTES constant
+ * @param {string|null} storeSlug - Store slug if available
+ * @returns {string} - Store-aware route path
+ */
+export const getRoute = (route, storeSlug) => {
+  return getStoreRoute(route, storeSlug);
 };
 
 export const NAV_ITEMS = [
