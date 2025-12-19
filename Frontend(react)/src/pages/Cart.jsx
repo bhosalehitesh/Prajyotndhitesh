@@ -15,6 +15,7 @@ const Cart = () => {
   const currentSellerId = currentStore?.sellerId;
   
   const filteredCart = React.useMemo(() => {
+    // If no store context at all, show all items
     if (!currentStoreId && !currentSellerId && !cartStoreId) {
       console.log('🛒 [Cart] No store filter - showing all items:', cart.length);
       return cart;
@@ -24,6 +25,12 @@ const Cart = () => {
       // Match by storeId or sellerId (cart items might have either)
       const itemStoreId = item.storeId;
       const itemSellerId = item.sellerId;
+      
+      // If item has no storeId or sellerId, include it (legacy items or guest cart)
+      if (!itemStoreId && !itemSellerId) {
+        console.log('🛒 [Cart] Item has no storeId/sellerId, including:', item.name);
+        return true;
+      }
       
       // Priority 1: Match by cartStoreId (cart's locked store)
       if (cartStoreId && itemStoreId) {
@@ -43,8 +50,36 @@ const Cart = () => {
         if (matches) return true;
       }
       
+      // If we have cartStoreId but item doesn't match, exclude it
+      // But if we only have currentStoreId (not cartStoreId), be more lenient
+      if (cartStoreId && itemStoreId && String(itemStoreId) !== String(cartStoreId)) {
+        return false;
+      }
+      
+      // If no cartStoreId but we have items without storeId, include them
+      if (!cartStoreId && !itemStoreId && !itemSellerId) {
+        return true;
+      }
+      
       return false;
     });
+    
+    // If filtering resulted in empty cart but we have items, show all items with a warning
+    if (filtered.length === 0 && cart.length > 0) {
+      console.warn('🛒 [Cart] Filtering resulted in empty cart but cart has items. Showing all items.');
+      console.log('🛒 [Cart] Filtering details:', {
+        totalItems: cart.length,
+        filteredItems: filtered.length,
+        cartStoreId,
+        currentStoreId,
+        currentSellerId,
+        itemStoreIds: cart.map(i => i.storeId),
+        itemSellerIds: cart.map(i => i.sellerId),
+        itemNames: cart.map(i => i.name)
+      });
+      // Return all items if filtering is too strict
+      return cart;
+    }
     
     console.log('🛒 [Cart] Filtering cart:', {
       totalItems: cart.length,
@@ -112,28 +147,86 @@ const Cart = () => {
 
       {filteredCart.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ fontSize: '1.2rem', color: '#666' }}>
-            {currentStore?.name 
-              ? `Your cart is empty for ${currentStore.name}. Add items to continue.`
-              : 'Your cart is empty'}
-          </p>
-          {currentStore && storeSlug && (
-            <button
-              onClick={() => navigate(`/store/${storeSlug}/products`)}
-              style={{
-                marginTop: '1rem',
-                padding: '0.75rem 1.5rem',
-                background: '#f97316',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600'
-              }}
-            >
-              Browse Products
-            </button>
+          {cart.length > 0 ? (
+            <>
+              <p style={{ fontSize: '1.2rem', color: '#f97316', marginBottom: '1rem' }}>
+                ⚠️ You have {cart.length} item(s) in your cart, but they may be from a different store.
+              </p>
+              <p style={{ fontSize: '1rem', color: '#666', marginBottom: '1.5rem' }}>
+                {currentStore?.name 
+                  ? `Items in your cart are not from ${currentStore.name}. Please navigate to the correct store to view your cart items.`
+                  : 'Please navigate to the store where you added these items to view them.'}
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                {currentStore && storeSlug && (
+                  <button
+                    onClick={() => navigate(`/store/${storeSlug}/products`)}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      background: '#f97316',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Browse Products
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    console.log('🛒 [Cart] Debug info:', {
+                      cartLength: cart.length,
+                      filteredCartLength: filteredCart.length,
+                      cartItems: cart.map(i => ({ name: i.name, storeId: i.storeId, sellerId: i.sellerId })),
+                      cartStoreId,
+                      currentStoreId: currentStore?.storeId || currentStore?.id,
+                      currentSellerId: currentStore?.sellerId
+                    });
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: '#e5e7eb',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  Debug Cart (Check Console)
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: '1.2rem', color: '#666' }}>
+                {currentStore?.name 
+                  ? `Your cart is empty for ${currentStore.name}. Add items to continue.`
+                  : 'Your cart is empty'}
+              </p>
+              {currentStore && storeSlug && (
+                <button
+                  onClick={() => navigate(`/store/${storeSlug}/products`)}
+                  style={{
+                    marginTop: '1rem',
+                    padding: '0.75rem 1.5rem',
+                    background: '#f97316',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  Browse Products
+                </button>
+              )}
+            </>
           )}
         </div>
       ) : (

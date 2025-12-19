@@ -79,20 +79,32 @@ export const CartProvider = ({ children }) => {
         } else {
           // Guest user - load from localStorage
           console.log('🛒 [Cart] Loading cart from localStorage (guest user)');
-    const savedCart = localStorage.getItem('cart');
-    const savedStoreId = localStorage.getItem('cartStoreId');
+          const savedCart = localStorage.getItem('cart');
+          const savedStoreId = localStorage.getItem('cartStoreId');
           const savedSellerId = localStorage.getItem('cartSellerId');
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart));
-      } catch (e) {
-        console.error('Error loading cart:', e);
-        setCart([]);
-      }
-    }
-    if (savedStoreId) {
-      setCartStoreId(savedStoreId);
-    }
+          if (savedCart) {
+            try {
+              const parsedCart = JSON.parse(savedCart);
+              // Ensure all items have storeId/sellerId
+              const cartWithStoreIds = parsedCart.map(item => ({
+                ...item,
+                storeId: item.storeId || savedStoreId || null,
+                sellerId: item.sellerId || savedSellerId || null
+              }));
+              setCart(cartWithStoreIds);
+              console.log('🛒 [Cart] Loaded cart from localStorage:', {
+                itemCount: cartWithStoreIds.length,
+                storeId: savedStoreId,
+                sellerId: savedSellerId
+              });
+            } catch (e) {
+              console.error('Error loading cart:', e);
+              setCart([]);
+            }
+          }
+          if (savedStoreId) {
+            setCartStoreId(savedStoreId);
+          }
           if (savedSellerId) {
             setCartSellerId(savedSellerId);
           }
@@ -232,11 +244,23 @@ export const CartProvider = ({ children }) => {
         item.id = `${item.name}_${item.size || 'default'}_${item.color || 'default'}_${Date.now()}`;
       }
 
+      // Ensure storeId and sellerId are always set
+      const finalStoreId = storeId || item.storeId || cartStoreId;
+      const finalSellerId = sellerId || item.sellerId || cartSellerId;
+
       const itemWithStore = {
         ...item,
-        storeId: storeId || cartStoreId,
-        sellerId: sellerId || cartSellerId
+        storeId: finalStoreId,
+        sellerId: finalSellerId
       };
+
+      console.log('🛒 [Cart] Adding item locally:', {
+        name: item.name,
+        storeId: finalStoreId,
+        sellerId: finalSellerId,
+        cartStoreId,
+        cartSellerId
+      });
 
       // Check if item already exists
       const existingIndex = prevCart.findIndex(cartItem => 
@@ -249,6 +273,13 @@ export const CartProvider = ({ children }) => {
       if (existingIndex !== -1) {
         const updatedCart = [...prevCart];
         updatedCart[existingIndex].quantity = (updatedCart[existingIndex].quantity || 1) + (item.quantity || 1);
+        // Also update storeId/sellerId if they weren't set before
+        if (!updatedCart[existingIndex].storeId && finalStoreId) {
+          updatedCart[existingIndex].storeId = finalStoreId;
+        }
+        if (!updatedCart[existingIndex].sellerId && finalSellerId) {
+          updatedCart[existingIndex].sellerId = finalSellerId;
+        }
         return updatedCart;
       } else {
         return [...prevCart, {

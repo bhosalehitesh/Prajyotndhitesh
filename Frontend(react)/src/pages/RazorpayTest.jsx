@@ -8,11 +8,14 @@ import { useStore } from '../contexts/StoreContext';
 const getBackendUrl = () => {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
+  const port = window.location.port;
 
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:8080';
   }
 
+  // For production or other environments, use the same hostname but port 8080
+  // If frontend is on a different port, backend should be on 8080
   return `${protocol}//${hostname}:8080`;
 };
 
@@ -27,20 +30,54 @@ const RazorpayTest = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
   const API_BASE = getBackendUrl() || 'http://192.168.1.21:8080';
   
   // Get the store slug from URL params or context
   const currentStoreSlug = slug || storeSlug || 'v'; // Default to 'v' if not found
 
-  // Load Razorpay script once
+  // Load Razorpay script once and wait for it to be ready
   useEffect(() => {
+    // Check if already loaded
+    if (window.Razorpay) {
+      setIsScriptLoaded(true);
+      return;
+    }
+
     const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
-    if (existing) return;
+    if (existing) {
+      // Script exists but might not be loaded yet, wait for it
+      const checkScript = setInterval(() => {
+        if (window.Razorpay) {
+          setIsScriptLoaded(true);
+          clearInterval(checkScript);
+        }
+      }, 100);
+      
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        clearInterval(checkScript);
+        if (!window.Razorpay) {
+          setErrorMsg('Razorpay script failed to load. Please refresh the page.');
+        }
+      }, 10000);
+
+      return () => clearInterval(checkScript);
+    }
 
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
+    
+    script.onload = () => {
+      setIsScriptLoaded(true);
+    };
+    
+    script.onerror = () => {
+      setErrorMsg('Failed to load Razorpay script. Please check your internet connection.');
+    };
+
     document.body.appendChild(script);
 
     return () => {
@@ -62,6 +99,11 @@ const RazorpayTest = () => {
       return;
     }
 
+    if (!isScriptLoaded || !window.Razorpay) {
+      setErrorMsg('Razorpay script is still loading. Please wait a moment and try again.');
+      return;
+    }
+
     setIsProcessing(true);
     setErrorMsg('');
     setSuccessMsg('');
@@ -69,8 +111,10 @@ const RazorpayTest = () => {
 
     try {
       // Step 1: create Razorpay order on backend
-      const createOrderApi = `${API_BASE}/payment/create-razorpay-order`;
-      const orderResponse = await fetch(createOrderApi, {
+      let createOrderApi = `${API_BASE}/payment/create-razorpay-order`;
+      console.log('Creating Razorpay order:', { url: createOrderApi, orderId, amount });
+      
+      let orderResponse = await fetch(createOrderApi, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -79,14 +123,35 @@ const RazorpayTest = () => {
         }),
       });
 
+      // If 404, try with /api prefix as fallback
+      if (orderResponse.status === 404 || orderResponse.status === 0) {
+        console.log('Trying with /api prefix...');
+        createOrderApi = `${API_BASE}/api/payment/create-razorpay-order`;
+        orderResponse = await fetch(createOrderApi, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: Number(orderId),
+            amount: Number(amount),
+          }),
+        });
+      }
+
       if (!orderResponse.ok) {
         const errorText = await orderResponse.text();
-        throw new Error(`Failed to create order: ${orderResponse.status} - ${errorText}`);
+        console.error('Razorpay order creation failed:', {
+          status: orderResponse.status,
+          statusText: orderResponse.statusText,
+          error: errorText,
+          url: createOrderApi
+        });
+        throw new Error(`Failed to create order (${orderResponse.status}): ${errorText || orderResponse.statusText}`);
       }
 
       const orderData = await orderResponse.json();
       if (!orderData.razorpayOrderId) {
-        throw new Error('Backend did not return razorpayOrderId');
+        console.error('Invalid response from backend:', orderData);
+        throw new Error('Backend did not return razorpayOrderId. Response: ' + JSON.stringify(orderData));
       }
 
       const options = {
@@ -98,7 +163,10 @@ const RazorpayTest = () => {
         order_id: orderData.razorpayOrderId,
         handler: async (response) => {
           try {
-            const callbackResponse = await fetch(`${API_BASE}/payment/razorpay-callback`, {
+            let callbackUrl = `${API_BASE}/payment/razorpay-callback`;
+            console.log('Verifying payment:', { url: callbackUrl, orderId });
+            
+            let callbackResponse = await fetch(callbackUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -110,9 +178,32 @@ const RazorpayTest = () => {
               }),
             });
 
+            // If 404, try with /api prefix as fallback
+            if (callbackResponse.status === 404 || callbackResponse.status === 0) {
+              console.log('Trying callback with /api prefix...');
+              callbackUrl = `${API_BASE}/api/payment/razorpay-callback`;
+              callbackResponse = await fetch(callbackUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  orderId: Number(orderId),
+                  amount: Number(amount),
+                }),
+              });
+            }
+
             if (!callbackResponse.ok) {
               const errorText = await callbackResponse.text();
-              throw new Error(`Callback failed: ${callbackResponse.status} - ${errorText}`);
+              console.error('Payment verification failed:', {
+                status: callbackResponse.status,
+                statusText: callbackResponse.statusText,
+                error: errorText,
+                url: callbackUrl
+              });
+              throw new Error(`Callback failed (${callbackResponse.status}): ${errorText || callbackResponse.statusText}`);
             }
 
             const callbackData = await callbackResponse.json();
@@ -147,10 +238,12 @@ const RazorpayTest = () => {
         theme: { color: '#3399cc' },
       };
 
+      // Double check Razorpay is available
       if (!window.Razorpay) {
-        throw new Error('Razorpay script not loaded yet. Please try again.');
+        throw new Error('Razorpay script not loaded yet. Please refresh the page and try again.');
       }
 
+      console.log('Opening Razorpay checkout...');
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (error) {
@@ -195,8 +288,12 @@ const RazorpayTest = () => {
           </div>
         )}
 
-        <button style={styles.button} onClick={startPayment} disabled={isProcessing}>
-          {isProcessing ? 'Processing...' : (errorMsg ? 'Retry Payment' : 'Pay Now')}
+        <button 
+          style={styles.button} 
+          onClick={startPayment} 
+          disabled={isProcessing || !isScriptLoaded}
+        >
+          {!isScriptLoaded ? 'Loading Razorpay...' : (isProcessing ? 'Processing...' : (errorMsg ? 'Retry Payment' : 'Pay Now'))}
         </button>
         <button
           style={{ ...styles.button, background: '#eee', color: '#333', marginTop: '10px' }}
