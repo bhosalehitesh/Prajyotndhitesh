@@ -2,6 +2,7 @@ import React from 'react';
 import { useWishlist } from '../contexts/WishlistContext';
 import { useStore } from '../contexts/StoreContext';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES, getRoute } from '../constants/routes';
 import ProductCard from '../components/ProductCard';
 
 const Wishlist = () => {
@@ -33,9 +34,9 @@ const Wishlist = () => {
     if (!currentStore && wishlist.length > 0) {
       // If wishlist has items but we're not on a store page, redirect to home
       console.warn('⚠️ [Wishlist] Wishlist has items but no store context. Redirecting...');
-      navigate('/');
+      navigate(getRoute(ROUTES.HOME, storeSlug));
     }
-  }, [currentStore, wishlist, navigate]);
+  }, [currentStore, wishlist, navigate, storeSlug]);
 
   // Transform wishlist items to product format for ProductCard
   const products = filteredWishlist.map(item => ({
@@ -63,7 +64,7 @@ const Wishlist = () => {
           </p>
           {currentStore && (
             <button
-              onClick={() => navigate(`/store/${storeSlug}/products`)}
+              onClick={() => navigate(getRoute(ROUTES.PRODUCTS, storeSlug))}
               style={{
                 marginTop: '1rem',
                 padding: '0.75rem 1.5rem',

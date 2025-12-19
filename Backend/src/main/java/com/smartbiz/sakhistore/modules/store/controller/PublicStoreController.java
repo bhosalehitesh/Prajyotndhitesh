@@ -17,6 +17,7 @@ import com.smartbiz.sakhistore.modules.collection.model.collection;
 import com.smartbiz.sakhistore.modules.collection.service.CollectionService;
 import com.smartbiz.sakhistore.modules.store.model.Banner;
 import com.smartbiz.sakhistore.modules.store.service.BannerService;
+import com.smartbiz.sakhistore.modules.product.repository.ProductVariantRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -39,6 +40,9 @@ public class PublicStoreController {
     
     @Autowired
     private BannerService bannerService;
+    
+    @Autowired
+    private ProductVariantRepository productVariantRepository;
 
     /**
      * Get store details by slug (public endpoint)
@@ -116,7 +120,37 @@ public class PublicStoreController {
                     boolean hasCategory = p.getCategory() != null;
                     boolean categoryActive = hasCategory &&
                             (p.getCategory().getIsActive() == null || p.getCategory().getIsActive());
-                    boolean hasActiveVariants = p.hasActiveVariants();
+                    
+                    // Check variants directly from database (not from lazy-loaded collection)
+                    // This avoids issues with multiple JOIN FETCH
+                    boolean hasActiveVariants = false;
+                    try {
+                        List<com.smartbiz.sakhistore.modules.product.model.ProductVariant> activeVariants = 
+                            productVariantRepository.findByProduct_ProductsIdAndIsActiveTrue(p.getProductsId());
+                        
+                        if (activeVariants != null && !activeVariants.isEmpty()) {
+                            System.out.println("   - Found " + activeVariants.size() + " active variants for product " + p.getProductsId());
+                            for (com.smartbiz.sakhistore.modules.product.model.ProductVariant v : activeVariants) {
+                                System.out.println("     Variant ID: " + v.getVariantId() + ", Stock: " + v.getStock() + ", Active: " + v.getIsActive());
+                            }
+                            hasActiveVariants = activeVariants.stream().anyMatch(v -> v.getStock() != null && v.getStock() > 0);
+                        } else {
+                            System.out.println("   - No active variants found for product " + p.getProductsId());
+                        }
+                    } catch (Exception e) {
+                        System.err.println("⚠️ [DEBUG] Error checking variants for product " + p.getProductsId() + ": " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                    
+                    // Detailed logging for debugging
+                    if (!productActive || !hasCategory || !categoryActive || !hasActiveVariants) {
+                        System.out.println("🔍 [DEBUG] Product filtered: " + p.getProductName() + " (ID: " + p.getProductsId() + ")");
+                        System.out.println("   - productActive: " + productActive + " (isActive: " + p.getIsActive() + ")");
+                        System.out.println("   - hasCategory: " + hasCategory + " (category: " + (p.getCategory() != null ? p.getCategory().getCategoryName() : "null") + ")");
+                        System.out.println("   - categoryActive: " + categoryActive + " (category.isActive: " + (p.getCategory() != null ? p.getCategory().getIsActive() : "N/A") + ")");
+                        System.out.println("   - hasActiveVariants: " + hasActiveVariants);
+                    }
+                    
                     return productActive && hasCategory && categoryActive && hasActiveVariants;
                 })
                 .toList();
@@ -200,7 +234,18 @@ public class PublicStoreController {
                     boolean hasCategory = p.getCategory() != null;
                     boolean categoryActive = hasCategory &&
                             (p.getCategory().getIsActive() == null || p.getCategory().getIsActive());
-                    boolean hasActiveVariants = p.hasActiveVariants();
+                    
+                    // Check variants directly from database (not from lazy-loaded collection)
+                    boolean hasActiveVariants = false;
+                    try {
+                        List<com.smartbiz.sakhistore.modules.product.model.ProductVariant> activeVariants = 
+                            productVariantRepository.findByProduct_ProductsIdAndIsActiveTrue(p.getProductsId());
+                        hasActiveVariants = activeVariants != null && 
+                            activeVariants.stream().anyMatch(v -> v.getStock() != null && v.getStock() > 0);
+                    } catch (Exception e) {
+                        System.err.println("⚠️ [DEBUG] Error checking variants for product " + p.getProductsId() + ": " + e.getMessage());
+                    }
+                    
                     return productActive && hasCategory && categoryActive && hasActiveVariants;
                 })
                 .toList();

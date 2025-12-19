@@ -61,7 +61,7 @@ public class CartService {
     public Cart addToCart(Long userId, Long productId, Integer quantity) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product Not Found"));
-        
+
         // Find first active variant for backward compatibility
         List<ProductVariant> variants = productVariantRepository.findByProduct_ProductsIdAndIsActiveTrue(productId);
         if (variants.isEmpty()) {
@@ -191,7 +191,7 @@ public class CartService {
                     item.setQuantity(quantity);
                     item.setPrice(quantity * variant.getSellingPrice());
                 } else {
-                    item.setQuantity(quantity);
+                item.setQuantity(quantity);
                     item.setPrice(quantity * item.getProduct().getSellingPrice());
                 }
                 break;

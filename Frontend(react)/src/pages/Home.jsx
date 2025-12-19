@@ -19,10 +19,10 @@ const Home = () => {
   const [flashSaleTime, setFlashSaleTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [loading, setLoading] = useState(false);
   const [featuredProducts, setFeaturedProducts] = useState([]);
-  
+
   // Determine the actual store slug (from route params or context)
   const actualSlug = slug || storeSlug || currentStore?.slug;
-  
+
   // Debug logging
   useEffect(() => {
     console.log('🏠 [HOME] Route params slug:', slug);
@@ -281,9 +281,9 @@ const Home = () => {
     }
   };
 
-  // Build navigation paths with store slug
+  // Build navigation paths with store slug using utility function
   const getNavPath = (path) => {
-    return actualSlug ? `/${actualSlug}${path}` : path;
+    return actualSlug ? `/store/${actualSlug}${path}` : path;
   };
 
   if (storeLoading || loading) {
@@ -293,7 +293,7 @@ const Home = () => {
   return (
     <div className="home-page">
       <StoreError />
-      
+
       {/* Floating Login Button Component */}
       <FloatingLoginButton />
       {/* Banner Carousel */}
@@ -301,7 +301,7 @@ const Home = () => {
         <div className="banner-carousel-container">
           <div className="banner-carousel-wrapper">
             <button className="banner-carousel-btn banner-prev" onClick={prevBanner} aria-label="Previous banner">&#10094;</button>
-            
+
             <div className="banner-carousel-track">
               {banners.map((banner, index) => (
                 <div key={banner.id} className={`banner-slide ${index === currentBanner ? 'active' : ''}`}>
@@ -312,10 +312,10 @@ const Home = () => {
 
             <button className="banner-carousel-btn banner-next" onClick={nextBanner} aria-label="Next banner">&#10095;</button>
           </div>
-          
+
           <div className="banner-indicators">
             {banners.map((banner, index) => (
-              <span 
+              <span
                 key={banner.id}
                 className={`banner-indicator ${index === currentBanner ? 'active' : ''}`}
                 onClick={() => goToBanner(index)}
@@ -422,7 +422,7 @@ const Home = () => {
       </section>
 
       {/* Flash Sale Banner */}
-      <section className="flash-sale-section" style={{padding: '24px 0'}}>
+      <section className="flash-sale-section" style={{ padding: '24px 0' }}>
         <div className="container">
           <div className="flash-sale-banner">
             <div className="flash-sale-content">

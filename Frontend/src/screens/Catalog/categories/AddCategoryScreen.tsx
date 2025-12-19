@@ -654,7 +654,11 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+<<<<<<< HEAD
     paddingBottom: 120, // Account for button container (~70px) + bottom nav (~60px) + safe area (~50px)
+=======
+    paddingBottom: 150, // Account for button container (~70px) + bottom nav (~60px) + safe area (~20px)
+>>>>>>> 52b6e24e7b6c4a160662c5ee2931c4c9deab2ac8
   },
   section: {
     marginBottom: 24,

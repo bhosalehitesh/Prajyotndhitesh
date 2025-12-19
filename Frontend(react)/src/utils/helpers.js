@@ -91,3 +91,54 @@ export const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
+/**
+ * Generate store-aware route path
+ * @param {string} route - Base route path (e.g., '/categories', '/products')
+ * @param {string|null} storeSlug - Store slug if available
+ * @returns {string} - Store-aware route path
+ * 
+ * Examples:
+ * - getStoreRoute('/categories', 'mystore') => '/store/mystore/categories'
+ * - getStoreRoute('/categories', null) => '/categories'
+ * - getStoreRoute('/product/detail', 'mystore') => '/store/mystore/product/detail'
+ */
+export const getStoreRoute = (route, storeSlug) => {
+  if (!storeSlug) {
+    return route;
+  }
+  
+  // Remove leading slash if present for consistency
+  const cleanRoute = route.startsWith('/') ? route.slice(1) : route;
+  
+  // Return store-specific route
+  return `/store/${storeSlug}/${cleanRoute}`;
+};
+
+/**
+ * Get store slug from current URL path
+ * @returns {string|null} - Store slug if found, null otherwise
+ */
+export const getSlugFromPath = () => {
+  const path = window.location?.pathname || '';
+  
+  // Try /store/:slug pattern first (preferred)
+  let match = path.match(/\/store\/([^/]+)/);
+  if (match) return match[1];
+  
+  // Fallback: try /:slug pattern (but exclude known routes)
+  match = path.match(/^\/([^/]+)/);
+  if (match) {
+    const firstSegment = match[1];
+    const excludedRoutes = [
+      'categories', 'featured', 'products', 'collections', 
+      'cart', 'wishlist', 'orders', 'order-tracking', 'faq', 
+      'search', 'product', 'checkout', 'store'
+    ];
+    if (!excludedRoutes.includes(firstSegment)) {
+      return firstSegment;
+    }
+  }
+  
+  return null;
+};
+

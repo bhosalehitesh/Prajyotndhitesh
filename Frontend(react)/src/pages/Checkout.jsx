@@ -4,6 +4,7 @@ import { useStore } from '../contexts/StoreContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { ROUTES, getRoute } from '../constants/routes';
 import { updateUserAddress, getUserById, getUserByPhone, updateUserAddressByPhone } from '../utils/api';
 
 // Hook for responsive design
@@ -89,7 +90,7 @@ const Checkout = () => {
   const [isAddressSaved, setIsAddressSaved] = useState(false);
   const navigateToPayment = () => {
     const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-    const path = resolvedSlug ? `/store/${resolvedSlug}/checkout/confirm` : '/checkout/confirm';
+    const path = getRoute(ROUTES.CHECKOUT_CONFIRM, resolvedSlug);
     // Pass address data to confirm order page
     const address = {
       customerName: formData.customerName,
@@ -208,7 +209,7 @@ const Checkout = () => {
   useEffect(() => {
     if (cart.length === 0) {
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const cartPath = resolvedSlug ? `/store/${resolvedSlug}/cart` : '/cart';
+      const cartPath = getRoute(ROUTES.CART, resolvedSlug);
       navigate(cartPath);
     }
   }, [cart, storeSlug, currentStore, navigate]);
@@ -452,7 +453,7 @@ const Checkout = () => {
 
       // Navigate to confirm order page
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const confirmPath = resolvedSlug ? `/store/${resolvedSlug}/checkout/confirm` : '/checkout/confirm';
+      const confirmPath = getRoute(ROUTES.CHECKOUT_CONFIRM, resolvedSlug);
       // Reuse the address variable already created above (line 385)
       navigate(confirmPath, { state: { address } });
     } catch (error) {

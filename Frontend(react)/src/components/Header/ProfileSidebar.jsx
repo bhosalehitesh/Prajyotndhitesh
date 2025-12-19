@@ -1,22 +1,23 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
+import { ROUTES, getRoute } from '../../constants/routes';
 
 /**
  * Profile Sidebar Component
  * User profile menu with navigation options
  */
-const ProfileSidebar = ({ isOpen, onClose, user, onLogout }) => {
+const ProfileSidebar = ({ isOpen, onClose, user, storeSlug, onLogout }) => {
   const location = useLocation();
   const { isDarkMode, toggleTheme } = useTheme();
 
   if (!isOpen) return null;
 
   const menuItems = [
-    { path: '/orders', label: 'My Orders', icon: 'orders' },
-    { path: '/wishlist', label: 'My Wishlist', icon: 'wishlist' },
-    { path: '/cart', label: 'Shopping Cart', icon: 'cart' },
-    { path: '/order-tracking', label: 'Track Order', icon: 'location' },
+    { path: ROUTES.ORDERS, label: 'My Orders', icon: 'orders' },
+    { path: ROUTES.WISHLIST, label: 'My Wishlist', icon: 'wishlist' },
+    { path: ROUTES.CART, label: 'Shopping Cart', icon: 'cart' },
+    { path: ROUTES.ORDER_TRACKING, label: 'Track Order', icon: 'location' },
   ];
 
   const getIcon = (iconName) => {
@@ -76,17 +77,20 @@ const ProfileSidebar = ({ isOpen, onClose, user, onLogout }) => {
             </div>
           </div>
           <div className="profile-sidebar-menu">
-            {menuItems.map((item) => (
-              <Link 
-                key={item.path}
-                to={item.path} 
-                className="profile-sidebar-item" 
-                onClick={onClose}
-              >
-                {getIcon(item.icon)}
-                <span>{item.label}</span>
-              </Link>
-            ))}
+            {menuItems.map((item) => {
+              const storePath = getRoute(item.path, storeSlug);
+              return (
+                <Link 
+                  key={item.path}
+                  to={storePath} 
+                  className="profile-sidebar-item" 
+                  onClick={onClose}
+                >
+                  {getIcon(item.icon)}
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
             <div className="profile-sidebar-divider"></div>
             <div className="profile-sidebar-item" onClick={toggleTheme}>
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -95,7 +99,7 @@ const ProfileSidebar = ({ isOpen, onClose, user, onLogout }) => {
               </svg>
               <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
             </div>
-            <Link to="/faq" className="profile-sidebar-item" onClick={onClose}>
+            <Link to={getRoute(ROUTES.FAQ, storeSlug)} className="profile-sidebar-item" onClick={onClose}>
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="12" cy="12" r="10"></circle>
                 <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>

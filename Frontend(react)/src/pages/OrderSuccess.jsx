@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../contexts/StoreContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { ROUTES, getRoute } from '../constants/routes';
 
 const OrderSuccess = () => {
   const navigate = useNavigate();
@@ -24,21 +25,18 @@ const OrderSuccess = () => {
     } else {
       // If no order data, redirect to home
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const homePath = resolvedSlug ? `/store/${resolvedSlug}` : '/';
-      navigate(homePath);
+      navigate(getRoute(ROUTES.HOME, resolvedSlug));
     }
   }, [location.state, navigate, storeSlug, currentStore]);
 
   const handleContinueShopping = () => {
     const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-    const homePath = resolvedSlug ? `/store/${resolvedSlug}` : '/';
-    navigate(homePath);
+    navigate(getRoute(ROUTES.HOME, resolvedSlug));
   };
 
   const handleViewOrderStatus = () => {
     const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-    const ordersPath = resolvedSlug ? `/store/${resolvedSlug}/orders` : '/orders';
-    navigate(ordersPath);
+    navigate(getRoute(ROUTES.ORDERS, resolvedSlug));
   };
 
   if (!orderData) {

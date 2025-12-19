@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MOBILE_NAV_ITEMS } from '../../constants/routes';
+import { MOBILE_NAV_ITEMS, getRoute } from '../../constants/routes';
 
 /**
  * Mobile Sidebar Component
  * Slide-out navigation menu for mobile devices
  */
-const MobileSidebar = ({ isOpen, onClose, user, onSignIn, onSignOut }) => {
+const MobileSidebar = ({ isOpen, onClose, user, storeSlug, onSignIn, onSignOut }) => {
   const location = useLocation();
 
   if (!isOpen) return null;
@@ -48,11 +48,12 @@ const MobileSidebar = ({ isOpen, onClose, user, onSignIn, onSignOut }) => {
 
         <nav className="mobile-sidebar-nav">
           {MOBILE_NAV_ITEMS.map((item) => {
-            const isActive = location.pathname === item.path;
+            const storePath = getRoute(item.path, storeSlug);
+            const isActive = location.pathname === storePath || location.pathname === item.path;
             return (
               <Link 
                 key={item.path}
-                to={item.path} 
+                to={storePath} 
                 className={`mobile-sidebar-nav-item ${isActive ? 'active' : ''}`}
                 onClick={onClose}
               >

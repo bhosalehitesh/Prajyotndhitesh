@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../contexts/StoreContext';
+import { ROUTES, getRoute } from '../constants/routes';
 
 const Footer = () => {
-  const { currentStore } = useStore();
+  const { currentStore, storeSlug } = useStore();
 
   const storeName = currentStore?.name || 'Store';
   const logoUrl = currentStore?.logo;
@@ -104,9 +105,9 @@ const Footer = () => {
         <div className="footer-column">
           <h4>Help</h4>
           <ul>
-            <li><Link to="/faq">FAQ</Link></li>
+            <li><Link to={getRoute(ROUTES.FAQ, storeSlug)}>FAQ</Link></li>
             <li><a href="#">Store policies</a></li>
-            <li><Link to="/order-tracking">Track your Orders</Link></li>
+            <li><Link to={getRoute(ROUTES.ORDER_TRACKING, storeSlug)}>Track your Orders</Link></li>
             <li><a href="#">Return Policy</a></li>
             <li><a href="#">Privacy Policy</a></li>
           </ul>

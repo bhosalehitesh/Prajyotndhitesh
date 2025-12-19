@@ -1,17 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES, getRoute } from '../../constants/routes';
 
 /**
  * Search Modal Component
  * Handles product search functionality
  */
-const SearchModal = ({ isOpen, onClose, searchQuery, onSearchChange }) => {
+const SearchModal = ({ isOpen, onClose, searchQuery, onSearchChange, storeSlug }) => {
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      const searchPath = getRoute(ROUTES.SEARCH, storeSlug);
+      navigate(`${searchPath}?q=${encodeURIComponent(searchQuery)}`);
       onClose();
     }
   };

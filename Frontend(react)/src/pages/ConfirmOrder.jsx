@@ -4,6 +4,7 @@ import { useCart } from '../contexts/CartContext';
 import { useStore } from '../contexts/StoreContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { ROUTES, getRoute } from '../constants/routes';
 import { placeOrder, getCart, addToCartAPI, getStoreBySlug } from '../utils/api';
 
 // Get backend URL - try to match the API_CONFIG pattern
@@ -80,19 +81,43 @@ const ConfirmOrder = () => {
   useEffect(() => {
     if (cart.length === 0) {
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const cartPath = resolvedSlug ? `/store/${resolvedSlug}/cart` : '/cart';
+      const cartPath = getRoute(ROUTES.CART, resolvedSlug);
       navigate(cartPath);
     }
   }, [cart, storeSlug, currentStore, navigate]);
 
   // Load Razorpay script
   useEffect(() => {
+    // Check if already loaded
+    if (window.Razorpay) {
+      return;
+    }
+
     const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
-    if (existing) return;
+    if (existing) {
+      // Script exists but might not be loaded yet, wait for it
+      const checkScript = setInterval(() => {
+        if (window.Razorpay) {
+          clearInterval(checkScript);
+        }
+      }, 100);
+      
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        clearInterval(checkScript);
+      }, 10000);
+
+      return () => clearInterval(checkScript);
+    }
 
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
+    
+    script.onerror = () => {
+      console.error('Failed to load Razorpay script');
+    };
+
     document.body.appendChild(script);
 
     return () => {
@@ -107,7 +132,7 @@ const ConfirmOrder = () => {
     if (!isLoading && !address && cart.length > 0) {
       console.log('ConfirmOrder: No address found, redirecting to checkout');
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const checkoutPath = resolvedSlug ? `/store/${resolvedSlug}/checkout` : '/checkout';
+      const checkoutPath = getRoute(ROUTES.CHECKOUT, resolvedSlug);
       navigate(checkoutPath);
     }
   }, [isLoading, address, cart, storeSlug, currentStore, navigate]);
@@ -127,8 +152,18 @@ const ConfirmOrder = () => {
   };
 
   const handleRazorpayPayment = async (orderId) => {
+    // Wait for Razorpay script to load if not already loaded
     if (!window.Razorpay) {
-      throw new Error('Razorpay script not loaded yet. Please try again.');
+      // Wait up to 5 seconds for script to load
+      let attempts = 0;
+      while (!window.Razorpay && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      
+      if (!window.Razorpay) {
+        throw new Error('Razorpay script not loaded yet. Please refresh the page and try again.');
+      }
     }
 
     const API_BASE = getBackendUrl();
@@ -238,7 +273,7 @@ const ConfirmOrder = () => {
 
             // Navigate to success page
             const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-            const successPath = resolvedSlug ? `/store/${resolvedSlug}/order/success` : '/order/success';
+            const successPath = getRoute(ROUTES.ORDER_SUCCESS, resolvedSlug);
             navigate(successPath, { 
               state: { 
                 orderId: orderId,
@@ -279,14 +314,15 @@ const ConfirmOrder = () => {
   const handlePlaceOrder = async () => {
     if (!isAuthenticated || !user) {
       alert('Please login to place an order');
-      navigate('/login');
+      // Note: Login route doesn't exist in this app, redirect to home instead
+      navigate(getRoute(ROUTES.HOME, storeSlug));
       return;
     }
 
     if (!address) {
       alert('Please provide a delivery address');
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
-      const checkoutPath = resolvedSlug ? `/store/${resolvedSlug}/checkout` : '/checkout';
+      const checkoutPath = getRoute(ROUTES.CHECKOUT, resolvedSlug);
       navigate(checkoutPath);
       return;
     }
@@ -886,6 +922,104 @@ const ConfirmOrder = () => {
                 <span>Order Total:</span>
                 <span>₹{orderTotal.toLocaleString('en-IN')}</span>
               </div>
+            </div>
+          </div>
+
+          {/* Payment Method Selection */}
+          <div style={{
+            background: isDarkMode ? '#1b1b1b' : '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`
+          }}>
+            <h3 style={{
+              fontSize: '1.1rem',
+              fontWeight: '700',
+              color: isDarkMode ? '#f5f5f5' : '#111',
+              marginBottom: '16px'
+            }}>
+              Payment Method
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  border: `2px solid ${paymentMethod === 'COD' ? '#ff6d2e' : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)')}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  background: paymentMethod === 'COD' ? (isDarkMode ? 'rgba(255, 109, 46, 0.1)' : 'rgba(255, 109, 46, 0.05)') : 'transparent',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setPaymentMethod('COD')}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="COD"
+                  checked={paymentMethod === 'COD'}
+                  onChange={() => setPaymentMethod('COD')}
+                  style={{ cursor: 'pointer' }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: isDarkMode ? '#f5f5f5' : '#111',
+                    marginBottom: '4px'
+                  }}>
+                    Cash on Delivery (COD)
+                  </div>
+                  <div style={{
+                    fontSize: '0.85rem',
+                    color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'
+                  }}>
+                    Pay ₹{codCharges} extra when you receive
+                  </div>
+                </div>
+              </label>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  border: `2px solid ${paymentMethod === 'RAZORPAY' ? '#ff6d2e' : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)')}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  background: paymentMethod === 'RAZORPAY' ? (isDarkMode ? 'rgba(255, 109, 46, 0.1)' : 'rgba(255, 109, 46, 0.05)') : 'transparent',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => setPaymentMethod('RAZORPAY')}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="RAZORPAY"
+                  checked={paymentMethod === 'RAZORPAY'}
+                  onChange={() => setPaymentMethod('RAZORPAY')}
+                  style={{ cursor: 'pointer' }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    color: isDarkMode ? '#f5f5f5' : '#111',
+                    marginBottom: '4px'
+                  }}>
+                    Razorpay (Online Payment)
+                  </div>
+                  <div style={{
+                    fontSize: '0.85rem',
+                    color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'
+                  }}>
+                    Pay securely with cards, UPI, or wallets
+                  </div>
+                </div>
+              </label>
             </div>
           </div>
 

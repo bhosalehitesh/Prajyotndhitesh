@@ -4,8 +4,9 @@ import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useStore } from '../../contexts/StoreContext';
 import { NAV_ITEMS } from '../../constants/routes';
-import { ROUTES } from '../../constants/routes';
+import { ROUTES, getRoute } from '../../constants/routes';
 import { STORAGE_KEYS } from '../../constants/config';
 import LoginModal from './LoginModal';
 import MobileSidebar from './MobileSidebar';
@@ -23,6 +24,7 @@ const Header = () => {
   const { wishlist } = useWishlist();
   const { user, sendOTP, verifyOTP, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+  const { storeSlug } = useStore();
   
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showOTPForm, setShowOTPForm] = useState(false);
@@ -70,7 +72,7 @@ const Header = () => {
   const handleLogout = () => {
     logout();
     setProfileSidebarOpen(false);
-    navigate(ROUTES.HOME);
+    navigate(getRoute(ROUTES.HOME, storeSlug));
   };
 
   const handlePhoneChange = (e) => {
@@ -119,7 +121,7 @@ const Header = () => {
             </div>
             <div className="avatar desktop-avatar" aria-hidden="true">
               <Link 
-                to={ROUTES.HOME} 
+                to={getRoute(ROUTES.HOME, storeSlug)} 
                 style={{
                   textDecoration:'none',
                   color:'inherit',
@@ -135,15 +137,18 @@ const Header = () => {
             </div>
             <div className="divider"></div>
             <nav className="main-nav" aria-label="Main">
-              {NAV_ITEMS.map((item) => (
-                <Link 
-                  key={item.path}
-                  to={item.path} 
-                  className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {NAV_ITEMS.map((item) => {
+                const storePath = getRoute(item.path, storeSlug);
+                return (
+                  <Link 
+                    key={item.path}
+                    to={storePath} 
+                    className={`nav-item ${location.pathname === storePath || location.pathname === item.path ? 'active' : ''}`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
           <div className="right-group">
@@ -188,7 +193,7 @@ const Header = () => {
 
             <button 
               className="icon-btn" 
-              onClick={() => navigate(ROUTES.WISHLIST)} 
+              onClick={() => navigate(getRoute(ROUTES.WISHLIST, storeSlug))} 
               title="Wishlist"
             >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
@@ -199,7 +204,7 @@ const Header = () => {
 
             <button 
               className="icon-btn" 
-              onClick={() => navigate(ROUTES.CART)} 
+              onClick={() => navigate(getRoute(ROUTES.CART, storeSlug))} 
               title="Cart"
             >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
@@ -235,6 +240,7 @@ const Header = () => {
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         user={user}
+        storeSlug={storeSlug}
         onSignIn={() => {
           setShowLoginModal(true);
           setMobileMenuOpen(false);
@@ -266,6 +272,7 @@ const Header = () => {
         isOpen={profileSidebarOpen}
         onClose={() => setProfileSidebarOpen(false)}
         user={user}
+        storeSlug={storeSlug}
         onLogout={handleLogout}
       />
 
@@ -278,6 +285,7 @@ const Header = () => {
         }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        storeSlug={storeSlug}
       />
     </>
   );
