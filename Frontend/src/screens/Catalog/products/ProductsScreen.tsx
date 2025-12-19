@@ -140,6 +140,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       setSortBy('title-az');
       setFilterTab('Inventory');
       setSearchQuery('');
+      setCategoryFilter(null);
+      setBusinessFilter(null);
     }
   }, [addToCollectionMode, addToCategoryMode]);
 
@@ -295,27 +297,48 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         // Default: all products (with status filter if set)
         apiProducts = await fetchProducts({ isActive: isActiveParam });
       }
-      const mapped = apiProducts.map(p => ({
-        id: String(p.productsId),
-        title: p.productName,
-        price: p.sellingPrice ?? 0,
-        mrp: p.mrp ?? undefined,
-        inStock: (p.inventoryQuantity ?? 0) > 0,
-        imageUrl:
-          (p.productImages && p.productImages[0]) ||
-          (p.socialSharingImage ?? undefined),
-        images: p.productImages ?? [],
-        isActive: typeof (p as any).isActive === 'boolean' ? (p as any).isActive : undefined,
-        businessCategory: p.businessCategory,
-        productCategory: p.productCategory,
-        description: p.description,
-        inventoryQuantity: p.inventoryQuantity,
-        sku: p.customSku,
-        color: p.color,
-        size: p.size,
-        hsnCode: p.hsnCode,
-        bestSeller: p.bestSeller ?? false,
-      }));
+      // Debug: Log first product to see what fields are available
+      if (apiProducts.length > 0) {
+        console.log('🔍 [ProductsScreen] Sample product from API:', {
+          productsId: apiProducts[0].productsId,
+          productName: apiProducts[0].productName,
+          categoryId: (apiProducts[0] as any).categoryId,
+          category_id: (apiProducts[0] as any).category_id,
+          allKeys: Object.keys(apiProducts[0] || {}),
+        });
+      }
+      
+      const mapped = apiProducts.map(p => {
+        // Extract categoryId from multiple possible sources
+        const categoryIdValue = (p as any).categoryId ?? 
+                               (p as any).category_id ?? 
+                               null;
+        
+        return {
+          id: String(p.productsId),
+          title: p.productName,
+          price: p.sellingPrice ?? 0,
+          mrp: p.mrp ?? undefined,
+          inStock: (p.inventoryQuantity ?? 0) > 0,
+          imageUrl:
+            (p.productImages && p.productImages[0]) ||
+            (p.socialSharingImage ?? undefined),
+          images: p.productImages ?? [],
+          isActive: typeof (p as any).isActive === 'boolean' ? (p as any).isActive : undefined,
+          businessCategory: p.businessCategory,
+          productCategory: p.productCategory,
+          description: p.description,
+          inventoryQuantity: p.inventoryQuantity,
+          sku: p.customSku,
+          color: p.color,
+          size: p.size,
+          hsnCode: p.hsnCode,
+          bestSeller: p.bestSeller ?? false,
+          // Include categoryId for filtering by category
+          categoryId: categoryIdValue,
+          category_id: categoryIdValue,
+        };
+      });
       setProducts(mapped);
     } catch (error) {
       console.error('Failed to load products', error);
@@ -432,20 +455,37 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     }
   }, [rotateAnim, addToCollectionMode, addToCategoryMode, viewCollectionProducts, targetCollectionId]);
 
-  // Load products whenever screen gains focus
+  // Load products whenever screen gains focus - always reload to show latest products
   React.useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      console.log('👁️ Screen focused, loading products...', {
+      console.log('👁️ Screen focused, reloading products immediately...', {
         addToCollectionMode,
         addToCategoryMode,
+        targetCategoryId,
+        categoryId: route?.params?.categoryId,
         routeParams: route?.params,
       });
+      // Always reload products when screen gains focus to show latest data
+      // This ensures newly added products appear immediately
       loadProducts();
       // Refresh collections when returning from AddCollection
       loadCollectionsForSheet();
     });
     return unsubscribe;
-  }, [navigation, loadProducts, loadCollectionsForSheet, addToCollectionMode, addToCategoryMode, route?.params]);
+  }, [navigation, loadProducts, loadCollectionsForSheet]);
+  
+  // Auto-reload when route params change (e.g., when navigating to a different category)
+  // Also watch for refreshTimestamp to force reload when clicking category again
+  React.useEffect(() => {
+    if (route?.params?.categoryId || route?.params?.categoryName) {
+      console.log('🔄 Category route params detected, reloading products...', {
+        categoryId: route?.params?.categoryId,
+        categoryName: route?.params?.categoryName,
+        refreshTimestamp: route?.params?.refreshTimestamp,
+      });
+      loadProducts();
+    }
+  }, [route?.params?.categoryId, route?.params?.categoryName, route?.params?.refreshTimestamp, loadProducts]);
   
   // If coming from Categories to view products, seed category/business filters (view mode)
   React.useEffect(() => {
@@ -453,11 +493,16 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       if (route?.params?.categoryName) {
         setCategoryFilter(route.params.categoryName);
       }
-      if (route?.params?.businessCategory) {
+      // Only set businessFilter if there's no categoryId (categoryId takes priority)
+      if (route?.params?.businessCategory && !route?.params?.categoryId) {
         setBusinessFilter(route.params.businessCategory);
+      } else if (route?.params?.categoryId) {
+        // Clear businessFilter when viewing a category (categoryId is more specific)
+        setBusinessFilter(null);
       }
     }
-  }, [addToCategoryMode, route?.params?.categoryName, route?.params?.businessCategory]);
+  }, [addToCategoryMode, route?.params?.categoryName, route?.params?.businessCategory, route?.params?.categoryId]);
+
 
   // Also load products on mount
   React.useEffect(() => {
@@ -562,12 +607,34 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       );
     }
     // Category filter (when navigated from Categories screen)
-    // Prefer matching by category name; if not set, fall back to business category
-    if (categoryFilter) {
+    // Priority: categoryId > categoryName > businessFilter
+    if (targetCategoryId && !addToCategoryMode) {
+      // Filter by categoryId if targetCategoryId is present (most accurate)
+      const targetId = Number(targetCategoryId);
+      const categoryName = route?.params?.categoryName;
+      
+      // Try filtering by categoryId first
+      let filteredByCategoryId = items.filter(p => {
+        const pCategoryId = (p as any).categoryId ?? (p as any).category_id ?? null;
+        return pCategoryId != null && Number(pCategoryId) === targetId;
+      });
+      
+      // If no results by categoryId and we have categoryName, fallback to name matching
+      if (filteredByCategoryId.length === 0 && categoryName) {
+        console.log(`⚠️ No products found by categoryId ${targetId}, trying category name fallback: ${categoryName}`);
+        const cat = categoryName.toLowerCase().trim();
+        filteredByCategoryId = items.filter(p => (p.productCategory || '').toLowerCase().trim() === cat);
+      }
+      
+      items = filteredByCategoryId;
+      console.log(`🔍 Category filter applied (ID: ${targetId}, Name: ${categoryName}), results: ${items.length}`);
+    } else if (categoryFilter) {
+      // Category name matching
       const cat = categoryFilter.toLowerCase().trim();
       items = items.filter(p => (p.productCategory || '').toLowerCase().trim() === cat);
       console.log(`🔍 Category filter applied: ${cat}, results: ${items.length}`);
     } else if (businessFilter) {
+      // Apply business filter when no category filter is active
       const b = businessFilter.toLowerCase().trim();
       items = items.filter(p => (p.businessCategory || '').toLowerCase().trim() === b);
       console.log(`🔍 Business filter applied: ${b}, results: ${items.length}`);
@@ -631,7 +698,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     });
     
     return items;
-  }, [products, addToCollectionMode, addToCategoryMode, searchQuery, inventory, priceRange, discounts, categoryFilter, businessFilter, sortBy]);
+  }, [products, addToCollectionMode, addToCategoryMode, searchQuery, inventory, priceRange, discounts, categoryFilter, businessFilter, sortBy, targetCategoryId, route?.params?.categoryName]);
 
   // Counts for filter UI
   const inventoryCounts = useMemo(() => ({
@@ -1093,26 +1160,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             <Text style={styles.addButtonText}>+ Add Products to Collection</Text>
             </TouchableOpacity>
         ) : targetCategoryId ? (
-          // When viewing a category, show "Add Products" to enter add-to-category mode
-          <TouchableOpacity 
-            style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}
-            onPress={() => {
-              if (navBusy) return;
-              setNavBusy(true);
-              navigation.push('Products', {
-                categoryId: targetCategoryId,
-                categoryName: categoryName,
-                addToCategory: true,
-                returnScreen: 'Products',
-                returnParams: {
-                  categoryId: targetCategoryId,
-                  categoryName: categoryName,
-                },
-              });
-              setTimeout(() => setNavBusy(false), 800);
-            }}>
-            <Text style={styles.addButtonText}>Add Products</Text>
-          </TouchableOpacity>
+          // When viewing a category, don't show any add button
+          null
         ) : (
         <TouchableOpacity 
           style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}
@@ -1144,7 +1193,14 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         <View style={styles.sheet}>
           <View style={styles.sheetHeaderRow}>
             <Text style={styles.sheetTitle}>Filter</Text>
-            <TouchableOpacity onPress={() => { setInventory('all'); setDiscounts({}); setPriceRange({min:0,max:0}); setStatusFilter('all'); }}>
+            <TouchableOpacity onPress={() => { 
+              setInventory('all'); 
+              setDiscounts({}); 
+              setPriceRange({min:0,max:0}); 
+              setStatusFilter('all');
+              setCategoryFilter(null);
+              setBusinessFilter(null);
+            }}>
               <Text style={styles.clearAll}>Clear All</Text>
             </TouchableOpacity>
           </View>

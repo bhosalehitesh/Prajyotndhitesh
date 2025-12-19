@@ -44,6 +44,10 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
       allParams: route?.params,
     });
   }, [route?.params, categoryIdFromRoute, isEditMode]);
+  
+  // Note: businessCategory is initialized from route params in useState
+  // No useEffect needed - we want user changes to persist
+  
   const [categoryImage, setCategoryImage] = useState<string | null>(
     route?.params?.image || null,
   );
@@ -68,8 +72,8 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
 
   const canSave =
     categoryName.trim().length > 0 &&
-    categoryName.length <= 30 &&
-    businessCategory.length > 0;
+    categoryName.length <= 30;
+    // businessCategory is now optional
 
   const requestCameraPermission = async (): Promise<boolean> => {
     try {
@@ -220,7 +224,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
         
         const updatePayload: any = {
           categoryName,
-          businessCategory,
+          businessCategory: businessCategory || '', // Allow empty business category
           description: categoryDescription || '',
           seoTitleTag: categoryName,
           seoMetaDescription: categoryDescription || '',
@@ -393,27 +397,6 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
     setCategoryImage(null);
   };
 
-  const handleAddProductsToCategory = () => {
-    if (!isEditMode || !route?.params?.categoryId) {
-      Alert.alert('Add products', 'Please save the category first, then add products.');
-      return;
-    }
-
-    navigation.push('Products', {
-      categoryId: route.params.categoryId,
-      categoryName: categoryName || route.params.name,
-      addToCategory: true,
-      returnScreen: 'AddCategory',
-      returnParams: {
-        categoryId: route.params.categoryId,
-        name: categoryName,
-        description: categoryDescription,
-        image: categoryImage,
-        businessCategory: businessCategory,
-      },
-    });
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -504,34 +487,43 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
         {/* Business Category */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>
-            Business Category<Text style={styles.required}>*</Text>
+            Business Category
           </Text>
-          <TouchableOpacity
-            style={styles.dropdown}
-            onPress={() => setCategoryOpen(true)}>
-            <Text
-              style={[
-                styles.dropdownText,
-                !businessCategory && styles.placeholderText,
-              ]}>
-              {businessCategory || 'Select Business Category'}
-            </Text>
-            <IconSymbol name="chevron-down" size={20} color="#6c757d" />
-          </TouchableOpacity>
+          {isEditMode ? (
+            // In edit mode: show as read-only text (not editable)
+            <View style={[styles.dropdown, styles.dropdownReadOnly]}>
+              <Text
+                style={[
+                  styles.dropdownText,
+                  !businessCategory && styles.placeholderText,
+                ]}>
+                {businessCategory || 'Not set'}
+              </Text>
+            </View>
+          ) : (
+            // In add mode: show as editable dropdown
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => {
+                console.log('📋 Opening business category selector, current value:', businessCategory);
+                setCategoryOpen(true);
+              }}
+              activeOpacity={0.7}>
+              <Text
+                style={[
+                  styles.dropdownText,
+                  !businessCategory && styles.placeholderText,
+                ]}>
+                {businessCategory || 'Select Business Category (Optional)'}
+              </Text>
+              <IconSymbol name="chevron-down" size={20} color="#6c757d" />
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
       {/* Save Button */}
       <View style={styles.buttonContainer}>
-          {isEditMode && (
-            <TouchableOpacity
-              style={[styles.saveButton, styles.secondaryButton]}
-              onPress={handleAddProductsToCategory}>
-              <Text style={[styles.saveButtonText, styles.secondaryButtonText]}>
-                Add Products to Category
-              </Text>
-            </TouchableOpacity>
-          )}
         <TouchableOpacity
           style={[styles.saveButton, (!canSave || isSubmitting) && styles.saveButtonDisabled]}
           onPress={handleSave}
@@ -596,6 +588,18 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
               </TouchableOpacity>
             </View>
             <ScrollView>
+              {/* Option to clear business category */}
+              <TouchableOpacity
+                style={styles.categoryItem}
+                onPress={() => {
+                  setBusinessCategory('');
+                  setCategoryOpen(false);
+                }}>
+                <Text style={styles.categoryItemText}>None (Clear Selection)</Text>
+                {!businessCategory && (
+                  <IconSymbol name="checkmark" size={20} color="#e61580" />
+                )}
+              </TouchableOpacity>
               {categoryList.map(category => (
                 <TouchableOpacity
                   key={category}
@@ -650,7 +654,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 250, // Increased to account for button container (2 buttons in edit mode ~140px) + bottom nav (~60px) + safe area (~50px)
+    paddingBottom: 120, // Account for button container (~70px) + bottom nav (~60px) + safe area (~50px)
   },
   section: {
     marginBottom: 24,
@@ -743,6 +747,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: '#dee2e6',
+  },
+  dropdownReadOnly: {
+    backgroundColor: '#f3f4f6',
+    opacity: 0.8,
   },
   dropdownText: {
     fontSize: 16,
