@@ -2,6 +2,7 @@ package com.smartbiz.sakhistore.modules.collection.controller;
 
 import com.smartbiz.sakhistore.modules.collection.model.collection;
 import com.smartbiz.sakhistore.modules.collection.service.CollectionService;
+import com.smartbiz.sakhistore.modules.product.model.Product;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -153,6 +154,28 @@ public class CollectionController {
             @RequestBody List<Long> productIds) {
         collection updated = collectionService.setProductsForCollection(id, productIds);
         return ResponseEntity.ok(updated);
+    }
+
+    // ✅ Get products for a specific collection
+    // Backend: GET /api/collections/{id}/products
+    @GetMapping("/{id}/products")
+    public ResponseEntity<?> getCollectionProducts(@PathVariable Long id, HttpServletRequest httpRequest) {
+        try {
+            Long sellerId = extractSellerIdFromToken(httpRequest);
+            
+            // Verify collection exists and belongs to seller
+            collection col = collectionService.findById(id);
+            if (sellerId != null && col.getSeller() != null && !col.getSeller().getSellerId().equals(sellerId)) {
+                return ResponseEntity.status(403).body("You can only view products of your own collections.");
+            }
+            
+            List<Product> products = collectionService.getProductsByCollectionId(id);
+            return ResponseEntity.ok(products);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(404).body("Collection not found with ID: " + id);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching collection products: " + e.getMessage());
+        }
     }
 
     // ✅ Get collections with product counts (filtered by authenticated seller)

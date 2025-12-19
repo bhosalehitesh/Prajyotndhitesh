@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, { useState, useRef } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -19,7 +19,8 @@ import {
   launchImageLibrary,
   ImagePickerResponse,
 } from 'react-native-image-picker';
-import {uploadCollectionWithImages, saveCollectionProducts, updateCollection} from '../../../utils/api';
+import { uploadCollectionWithImages, saveCollectionProducts, updateCollection, deleteCollection, API_BASE_URL } from '../../../utils/api';
+import { storage, AUTH_TOKEN_KEY } from '../../../authentication/storage';
 
 interface AddCollectionScreenProps {
   navigation: any;
@@ -33,7 +34,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
   // SmartBiz: Check if we're in edit mode (collectionId must be present)
   const collectionIdFromRoute = route?.params?.collectionId;
   const isEditMode = !!(collectionIdFromRoute && (collectionIdFromRoute !== '' && collectionIdFromRoute !== null && collectionIdFromRoute !== undefined));
-  
+
   // Debug: Log route params on mount
   React.useEffect(() => {
     console.log('🔍 [AddCollectionScreen] Screen mounted/updated:', {
@@ -62,7 +63,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
   // Use ref for immediate synchronous check (prevents race conditions - same as categories)
   const isSubmittingRef = useRef(false);
   // SmartBiz: Add orderIndex and isActive fields (same as categories)
-  const [orderIndex, setOrderIndex] = useState<string>(
+  const [orderIndex] = useState<string>(
     route?.params?.orderIndex != null ? String(route.params.orderIndex) : '0',
   );
   // SmartBiz: Initialize isActive from params (prefer isActive, fallback to !hideFromWebsite)
@@ -75,8 +76,8 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
     }
     return true; // Default to active
   };
-  const [isActive, setIsActive] = useState<boolean>(getInitialIsActive());
-  
+  const [isActive] = useState<boolean>(getInitialIsActive());
+
   // Debug: Log when screen loads in edit mode
   React.useEffect(() => {
     if (isEditMode) {
@@ -92,12 +93,23 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
     }
   }, [isEditMode, route?.params, isActive]);
 
-  // Update selected products when coming back from SelectProducts screen
+  // Sync all fields when coming back from selection screens
   React.useEffect(() => {
-    if (route?.params?.selectedProducts) {
-      setSelectedProducts(route.params.selectedProducts);
+    if (route?.params) {
+      if (route.params.selectedProducts) {
+        setSelectedProducts(route.params.selectedProducts);
+      }
+      if (route.params.name !== undefined) {
+        setCollectionName(route.params.name);
+      }
+      if (route.params.description !== undefined) {
+        setCollectionDescription(route.params.description);
+      }
+      if (route.params.image !== undefined) {
+        setCollectionImage(route.params.image);
+      }
     }
-  }, [route?.params?.selectedProducts]);
+  }, [route?.params]);
 
   const canSave =
     collectionName.trim().length > 0 &&
@@ -145,7 +157,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
         console.log('ImagePicker Error: ', res.errorMessage);
         Alert.alert('Error', res.errorMessage || 'Failed to open camera');
       } else if (res.assets?.[0]?.uri) {
-        const {fileSize, type, uri} = res.assets[0];
+        const { fileSize, type, uri } = res.assets[0];
         if (fileSize && fileSize > 10 * 1024 * 1024) {
           Alert.alert('Image too large', 'Please select an image less than 10MB');
           return;
@@ -180,7 +192,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
         console.log('ImagePicker Error: ', res.errorMessage);
         Alert.alert('Error', res.errorMessage || 'Failed to open image library');
       } else if (res.assets?.[0]?.uri) {
-        const {fileSize, type, uri} = res.assets[0];
+        const { fileSize, type, uri } = res.assets[0];
         if (fileSize && fileSize > 10 * 1024 * 1024) {
           Alert.alert('Image too large', 'Please select an image less than 10MB');
           return;
@@ -222,7 +234,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
     // Set BOTH ref and state IMMEDIATELY (synchronously) before any async operation
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    
+
     const collectionId = route?.params?.collectionId;
     console.log('🔄 [AddCollection] Starting collection save...', {
       isEditMode,
@@ -239,11 +251,11 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
         // Update existing collection (SmartBiz: same as categories)
         const orderIndexNum = orderIndex ? Number(orderIndex) : 0;
         const collectionIdNum = typeof collectionId === 'string' ? Number(collectionId) : collectionId;
-        
+
         if (isNaN(collectionIdNum)) {
           throw new Error(`Invalid collection ID: ${collectionId}`);
         }
-        
+
         console.log('🔄 [AddCollection] UPDATING existing collection:', {
           collectionId: collectionIdNum,
           collectionName,
@@ -253,8 +265,8 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
           hasImage: !!collectionImage,
           imageUrl: collectionImage ? (collectionImage.length > 50 ? collectionImage.substring(0, 50) + '...' : collectionImage) : 'none',
         });
-        
-        const updatePayload = {
+
+        const updatePayload: any = {
           collectionName,
           description: collectionDescription || '',
           seoTitleTag: collectionName,
@@ -262,20 +274,110 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
           isActive: isActive,
           orderIndex: orderIndexNum,
         };
-        
+
         // Only include image if it's a new image (not the existing URL)
         // If collectionImage is a data URI or file path, it's a new image
         if (collectionImage && (collectionImage.startsWith('file://') || collectionImage.startsWith('data:'))) {
-          // This is a new image - we'd need to upload it first, but for now just pass the URL
-          // TODO: Handle image upload for updates
-          console.warn('⚠️ [AddCollection] New image detected but image upload for updates not yet implemented');
+          // This is a new image - we'd need to upload it first
+          // SmartBiz: Use the workaround similar to AddCategoryScreen
+          console.log('📤 [AddCollection] Uploading new image for collection update...');
+          try {
+            // Upload image using FormData (similar to uploadCollectionWithImages)
+            const form = new FormData();
+            form.append('collectionName', collectionName);
+            form.append('description', collectionDescription || '');
+            form.append('seoTitleTag', collectionName);
+            form.append('seoMetaDescription', collectionDescription || '');
+
+            // Upload the new image
+            form.append('collectionImages', {
+              uri: collectionImage,
+              name: `collection_${Date.now()}.jpg`,
+              type: 'image/jpeg',
+            } as any);
+
+            form.append('socialSharingImage', {
+              uri: collectionImage,
+              name: `social_${Date.now()}.jpg`,
+              type: 'image/jpeg',
+            } as any);
+
+            // Upload to get image URL
+            const token = await storage.getItem(AUTH_TOKEN_KEY);
+            const uploadUrl = `${API_BASE_URL}/api/collections/upload`;
+
+            const uploadResponse = await fetch(uploadUrl, {
+              method: 'POST',
+              headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: form,
+            });
+
+            let uploadPayload;
+            try {
+              uploadPayload = await uploadResponse.json();
+            } catch (jsonError) {
+              const textResponse = await uploadResponse.text();
+              throw new Error(`Failed to parse upload response: ${textResponse}`);
+            }
+
+            if (!uploadResponse.ok) {
+              throw new Error(uploadPayload?.message || uploadPayload?.error || 'Failed to upload image');
+            }
+
+            // Extract image URL from the uploaded collection response
+            const uploadedImageUrl = uploadPayload?.collectionImage || null;
+            const temporaryCollectionId = uploadPayload?.collectionId;
+
+            if (uploadedImageUrl) {
+              updatePayload.collectionImage = uploadedImageUrl;
+              console.log('✅ [AddCollection] Image uploaded successfully, URL:', uploadedImageUrl);
+
+              // Delete the temporary collection
+              if (temporaryCollectionId) {
+                try {
+                  await deleteCollection(temporaryCollectionId);
+                  console.log('🗑️ [AddCollection] Temporary collection deleted:', temporaryCollectionId);
+                } catch (deleteError) {
+                  console.warn('⚠️ [AddCollection] Failed to delete temporary collection:', deleteError);
+                }
+              }
+            } else {
+              console.warn('⚠️ [AddCollection] Image uploaded but URL not found in response');
+              if (temporaryCollectionId) {
+                try { await deleteCollection(temporaryCollectionId); } catch (e) { }
+              }
+              throw new Error('Image uploaded but URL not found in response');
+            }
+
+          } catch (imageUploadError) {
+            console.error('❌ [AddCollection] Failed to upload image:', imageUploadError);
+            Alert.alert(
+              'Image Upload Failed',
+              'Failed to upload the new image. The collection will be updated without the new image.'
+            );
+            // Continue without new image
+          }
         } else if (collectionImage) {
           // This is an existing image URL - include it
           updatePayload.collectionImage = collectionImage;
         }
-        
+
         await updateCollection(collectionIdNum, updatePayload);
         console.log('✅ [AddCollection] Collection updated successfully');
+
+        // SmartBiz: Also update product mappings for existing collection
+        const productIdsToAdd: number[] = selectedProducts.map(p => Number(p.id));
+        if (productIdToAdd && !productIdsToAdd.includes(Number(productIdToAdd))) {
+          productIdsToAdd.push(Number(productIdToAdd));
+        }
+
+        if (productIdsToAdd.length > 0) {
+          console.log(`🔗 [AddCollection] Updating ${productIdsToAdd.length} product(s) for collection ${collectionIdNum}`);
+          await saveCollectionProducts(collectionIdNum, productIdsToAdd);
+        }
+
         Alert.alert(
           'Success',
           'Collection updated successfully',
@@ -301,30 +403,22 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
           imageUri: collectionImage,
         });
 
-        // Map selected products to this collection in backend
-        const productIdsToAdd: number[] = [];
-        
-        // Add products from selectedProducts (if any)
-        if (selectedProducts.length > 0) {
-          productIdsToAdd.push(...selectedProducts.map(p => Number(p.id)));
-        }
-        
-        // Add productIdToAdd if provided (when coming from ProductsScreen)
+        // SmartBiz: Prepare product IDs (unified logic)
+        const productIdsToAdd: number[] = selectedProducts.map(p => Number(p.id));
         if (productIdToAdd && !productIdsToAdd.includes(Number(productIdToAdd))) {
           productIdsToAdd.push(Number(productIdToAdd));
         }
-        
+
         if (productIdsToAdd.length > 0 && created?.collectionId != null) {
-          console.log(`Adding ${productIdsToAdd.length} product(s) to new collection ${created.collectionId}`);
+          console.log(`🔗 [AddCollection] Adding ${productIdsToAdd.length} product(s) to new collection ${created.collectionId}`);
           await saveCollectionProducts(
             created.collectionId,
             productIdsToAdd,
           );
-          console.log(`Products added successfully. Note: Products remain in their existing collections.`);
         }
 
         const successMessage = productIdsToAdd.length > 0
-          ? `Collection created successfully with ${productIdsToAdd.length} product(s). Products remain in their existing collections.`
+          ? `Collection created successfully with ${productIdsToAdd.length} product(s).`
           : 'Collection created successfully';
 
         console.log('✅ [AddCollection] Collection created successfully');
@@ -345,8 +439,8 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
       }
     } catch (error) {
       console.error('❌ [AddCollection] Failed to save collection', error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : 'Failed to save collection. Please check your internet connection and try again.';
       Alert.alert('Error', errorMessage);
       // Reset both ref and state on error so user can retry
@@ -360,25 +454,25 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
   };
 
   const handleAddProducts = () => {
-    // SmartBiz: Same as categories - navigate to ProductsScreen to add products
-    if (!isEditMode || !route?.params?.collectionId) {
-      Alert.alert('Add products', 'Please save the collection first, then add products.');
-      return;
-    }
+    // Navigate to CategoriesScreen to select a category first
+    // We allow this even for new collections (products will be passed back via route params)
 
-    navigation.push('Products', {
-      collectionId: route.params.collectionId,
-      collectionName: collectionName || route?.params?.collectionName,
+    navigation.push('Categories', {
       addToCollection: true,
+      // Pass the final destination for the products
       returnScreen: 'AddCollection',
       returnParams: {
-        collectionId: route.params.collectionId,
+        collectionId: route?.params?.collectionId,
         name: collectionName,
         description: collectionDescription,
         image: collectionImage,
-        orderIndex: orderIndex,
         isActive: isActive,
+        // Preserve selected products if we're coming back
+        selectedProducts: selectedProducts,
       },
+      // Also pass collection info for context if needed
+      collectionId: route?.params?.collectionId || null,
+      collectionName: collectionName || route?.params?.collectionName || 'New Collection',
     });
   };
 
@@ -397,7 +491,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={true}
@@ -412,7 +506,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
             {collectionImage ? (
               <View style={styles.imageWrapper}>
                 <Image
-                  source={{uri: collectionImage}}
+                  source={{ uri: collectionImage }}
                   style={styles.collectionImage}
                 />
                 <TouchableOpacity
@@ -424,7 +518,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
             ) : (
               <View style={styles.uploadPlaceholder}>
                 <View style={styles.uploadIconCircle}>
-                  <IconSymbol name="add" size={32} color="#1E3A8A" />
+                  <IconSymbol name="add" size={32} color="#FFFFFF" />
                 </View>
                 <Text style={styles.uploadText}>Upload Image</Text>
               </View>
@@ -469,49 +563,43 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
           </Text>
         </View>
 
-        {/* SmartBiz: Order Index (same as Category) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Order Index (Optional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter order index (0 = first)"
-            placeholderTextColor="#9CA3AF"
-            value={orderIndex}
-            onChangeText={setOrderIndex}
-            keyboardType="numeric"
-          />
-          <Text style={styles.helper}>
-            Lower numbers appear first on website
-          </Text>
-        </View>
+        {/* Add Products Link */}
+        <TouchableOpacity
+          style={styles.addProductsLink}
+          onPress={handleAddProducts}>
+          <Text style={styles.addProductsText}>Add products to Collection</Text>
+          <IconSymbol name="chevron-forward" size={24} color="#008080" />
+        </TouchableOpacity>
 
-        {/* SmartBiz: Active Status (same as Category) */}
-        <View style={styles.section}>
-          <View style={styles.switchRow}>
-            <Text style={styles.sectionLabel}>Active Status</Text>
-            <TouchableOpacity
-              style={[styles.switchContainer, isActive && styles.switchContainerActive]}
-              onPress={() => setIsActive(!isActive)}>
-              <View style={[styles.switchThumb, isActive && styles.switchThumbActive]} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.helper}>
-            {isActive ? 'Collection is visible on website' : 'Collection is hidden from website'}
-          </Text>
-        </View>
+        {/* Selected Products Summary Row */}
+        {selectedProducts.length > 0 && (
+          <TouchableOpacity
+            style={styles.selectedProductsSummary}
+            onPress={() => navigation.navigate('SelectedProductsPreview', {
+              selectedProducts,
+              returnScreen: route?.name || 'AddCollection',
+              returnParams: {
+                collectionId: collectionIdFromRoute,
+                name: collectionName,
+                description: collectionDescription,
+                image: collectionImage,
+                isActive: isActive,
+                orderIndex: orderIndex,
+                selectedProducts: selectedProducts
+              }
+            })}
+          >
+            <Text style={styles.selectedProductsSummaryText}>
+              {selectedProducts.length} Product{selectedProducts.length !== 1 ? 's' : ''} Selected
+            </Text>
+            <IconSymbol name="chevron-forward" size={20} color="#008080" />
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       {/* Save Button (SmartBiz: same as Category) */}
       <View style={styles.buttonContainer}>
-        {isEditMode && (
-          <TouchableOpacity
-            style={[styles.saveButton, styles.secondaryButton]}
-            onPress={handleAddProducts}>
-            <Text style={[styles.saveButtonText, styles.secondaryButtonText]}>
-              Add Products to Collection
-            </Text>
-          </TouchableOpacity>
-        )}
+
         <TouchableOpacity
           style={[styles.saveButton, (!canSave || isSubmitting) && styles.saveButtonDisabled]}
           onPress={handleSave}
@@ -627,6 +715,21 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
+  addProductsLink: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginBottom: 24,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  addProductsText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#008080',
+  },
   removeImageButton: {
     position: 'absolute',
     top: 8,
@@ -647,7 +750,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#008080',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -655,7 +758,20 @@ const styles = StyleSheet.create({
   uploadText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1E3A8A', // SmartBiz: same blue as AddCategoryScreen
+    color: '#008080', // SmartBiz: Teal to match Add Products link
+  },
+  selectedProductsSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    marginTop: 8,
+    // Add background color similar to screenshot 1
+  },
+  selectedProductsSummaryText: {
+    fontSize: 16, // Bigger font as per screenshot
+    fontWeight: '600',
+    color: '#008080',
   },
   input: {
     backgroundColor: '#f8f9fa',
@@ -677,34 +793,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: 4,
   },
-  // SmartBiz: Switch styles for Active Status (same as categories would have)
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  switchContainer: {
-    width: 50,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#D1D5DB',
-    padding: 2,
-    justifyContent: 'center',
-  },
-  switchContainerActive: {
-    backgroundColor: '#1E3A8A', // SmartBiz: same blue as header
-  },
-  switchThumb: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#FFFFFF',
-    alignSelf: 'flex-start',
-  },
-  switchThumbActive: {
-    alignSelf: 'flex-end',
-  },
+
   buttonContainer: {
     position: 'absolute',
     bottom: 0,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import {NavigationContainer} from '@react-navigation/native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
   SafeAreaView,
   StyleSheet,
@@ -34,6 +34,7 @@ import AddCategoryScreen from './src/screens/Catalog/categories/AddCategoryScree
 import CollectionsScreen from './src/screens/Catalog/collections/CollectionsScreen';
 import AddCollectionScreen from './src/screens/Catalog/collections/AddCollectionScreen';
 import SelectProductsScreen from './src/screens/Catalog/collections/SelectProductsScreen';
+import SelectedProductsPreviewScreen from './src/screens/Catalog/collections/SelectedProductsPreviewScreen';
 import StoreAppearanceScreen from './src/screens/StoreAppearance/StoreAppearanceScreen';
 import OrderDetailsScreen from './src/screens/Orders/OrderDetailsScreen';
 
@@ -43,7 +44,7 @@ const Stack = createNativeStackNavigator();
 // Catalog Stack Navigator
 function CatalogStack() {
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CatalogMain" component={CatalogScreen} />
       <Stack.Screen name="Products" component={ProductsScreen} />
       <Stack.Screen name="AddProduct" component={AddProductScreen} />
@@ -56,6 +57,7 @@ function CatalogStack() {
       <Stack.Screen name="AddCollection" component={AddCollectionScreen} />
       <Stack.Screen name="EditCollection" component={AddCollectionScreen} />
       <Stack.Screen name="SelectProducts" component={SelectProductsScreen} />
+      <Stack.Screen name="SelectedProductsPreview" component={SelectedProductsPreviewScreen} />
       <Stack.Screen name="StockNotifications" component={StockNotificationsScreen} />
     </Stack.Navigator>
   );
@@ -64,16 +66,16 @@ function CatalogStack() {
 // Screen components are now imported from organized folders
 
 // Custom Tab Bar Component
-function CustomTabBar({state, descriptors, navigation}: any) {
+function CustomTabBar({ state, descriptors, navigation }: any) {
   return (
     <View style={styles.bottomTabBar}>
       {state.routes.map((route: any, index: number) => {
-        const {options} = descriptors[route.key];
+        const { options } = descriptors[route.key];
         const label = options.tabBarLabel !== undefined
           ? options.tabBarLabel
           : options.title !== undefined
-          ? options.title
-          : route.name;
+            ? options.title
+            : route.name;
 
         const isFocused = state.index === index;
 
@@ -92,54 +94,54 @@ function CustomTabBar({state, descriptors, navigation}: any) {
         const getIcon = (routeName: string, isFocused: boolean) => {
           // Icons are black for inactive, solid black for active Catalog
           const iconColor = '#000000';
-          
+
           switch (routeName) {
             case 'Home':
               return (
-                <IconSymbol 
-                  name="home-outline" 
-                  size={24} 
-                  color={iconColor} 
+                <IconSymbol
+                  name="home-outline"
+                  size={24}
+                  color={iconColor}
                 />
               );
             case 'Orders':
               return (
-                <IconSymbol 
-                  name="folder-outline" 
-                  size={24} 
-                  color={iconColor} 
+                <IconSymbol
+                  name="folder-outline"
+                  size={24}
+                  color={iconColor}
                 />
               );
             case 'Catalog':
               return (
-                <IconSymbol 
-                  name={isFocused ? "grid" : "grid-outline"} 
-                  size={24} 
-                  color={iconColor} 
+                <IconSymbol
+                  name={isFocused ? "grid" : "grid-outline"}
+                  size={24}
+                  color={iconColor}
                 />
               );
             case 'Analytics':
               return (
-                <IconSymbol 
-                  name="stats-chart-outline" 
-                  size={24} 
-                  color={iconColor} 
+                <IconSymbol
+                  name="stats-chart-outline"
+                  size={24}
+                  color={iconColor}
                 />
               );
             case 'Profile':
               return (
-                <IconSymbol 
-                  name="menu-outline" 
-                  size={24} 
-                  color={iconColor} 
+                <IconSymbol
+                  name="menu-outline"
+                  size={24}
+                  color={iconColor}
                 />
               );
             default:
               return (
-                <IconSymbol 
-                  name="ellipse-outline" 
-                  size={24} 
-                  color={iconColor} 
+                <IconSymbol
+                  name="ellipse-outline"
+                  size={24}
+                  color={iconColor}
                 />
               );
           }
@@ -164,7 +166,7 @@ function CustomTabBar({state, descriptors, navigation}: any) {
 // Main Stack Navigator (includes tabs + modal screens)
 function MainStack() {
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="StoreAppearance" component={StoreAppearanceScreen} />
       <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
@@ -180,11 +182,11 @@ function TabNavigator() {
       screenOptions={{
         headerShown: false,
       }}>
-      <Tab.Screen name="Home" component={HomeScreen} options={{tabBarLabel: 'Home'}} />
-      <Tab.Screen name="Orders" component={OrdersScreen} options={{tabBarLabel: 'My Orders'}} />
-      <Tab.Screen name="Catalog" component={CatalogStack} options={{tabBarLabel: 'Catalog'}} />
-      <Tab.Screen name="Analytics" component={AnalyticsScreen} options={{tabBarLabel: 'Analytics'}} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{tabBarLabel: 'Profile'}} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home' }} />
+      <Tab.Screen name="Orders" component={OrdersScreen} options={{ tabBarLabel: 'My Orders' }} />
+      <Tab.Screen name="Catalog" component={CatalogStack} options={{ tabBarLabel: 'Catalog' }} />
+      <Tab.Screen name="Analytics" component={AnalyticsScreen} options={{ tabBarLabel: 'Analytics' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Profile' }} />
     </Tab.Navigator>
   );
 }
@@ -224,25 +226,25 @@ function AppContent(): JSX.Element {
         setCheckingOnboarding(false);
         return;
       }
-      
+
       const completed = await storage.getItem('onboardingCompleted');
       const storeName = await storage.getItem('storeName');
-      
+
       // Skip onboarding if completed OR if store name already exists
       const shouldSkipOnboarding = completed === 'true' || (!!storeName && storeName.trim().length > 0);
-      
-      console.log('🔍 App mount onboarding check:', { 
-        completed, 
-        storeName, 
+
+      console.log('🔍 App mount onboarding check:', {
+        completed,
+        storeName,
         isAuthenticated,
-        shouldSkipOnboarding 
+        shouldSkipOnboarding
       });
-      
+
       // For auto-login or sign-up sessions, respect onboarding flags
       setShowOnboarding(!shouldSkipOnboarding);
       setCheckingOnboarding(false);
     };
-    
+
     checkAuthAndOnboarding();
   }, [isAuthenticated, isLoading]);
 
@@ -262,9 +264,9 @@ function AppContent(): JSX.Element {
           // After successful auth, check if this is sign-in or sign-up
           setShowAuth(false);
           setCheckingOnboarding(true);
-          
+
           const isSignIn = await storage.getItem('isSignIn');
-          
+
           // If user is SIGNING IN (existing user), ALWAYS skip onboarding and go to home
           if (isSignIn === 'true') {
             console.log('✅ User signed IN - skipping onboarding, going to home');
@@ -272,7 +274,7 @@ function AppContent(): JSX.Element {
             setCheckingOnboarding(false);
             return;
           }
-          
+
           // For SIGN-UPS (new users), ALWAYS show onboarding immediately after account creation,
           // regardless of any previous onboarding data stored on device.
           console.log('🆕 New sign-up detected - showing onboarding flow');

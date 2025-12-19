@@ -279,6 +279,13 @@ public class CollectionService {
     }
 
     /**
+     * Get all products associated with a collection.
+     */
+    public List<Product> getProductsByCollectionId(Long collectionId) {
+        return productRepository.findByCollections_CollectionId(collectionId);
+    }
+
+    /**
      * Add a single product to an existing collection without removing other products.
      */
     @Transactional

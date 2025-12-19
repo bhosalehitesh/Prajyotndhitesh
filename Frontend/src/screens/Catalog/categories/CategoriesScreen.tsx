@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -14,10 +14,11 @@ import {
   Alert,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
-import {fetchCategories, deleteCategory, fetchProducts, CategoryDto, ProductDto} from '../../../utils/api';
+import { fetchCategories, deleteCategory, fetchProducts, CategoryDto, ProductDto } from '../../../utils/api';
 
 interface CategoriesScreenProps {
   navigation: any;
+  route?: any;
 }
 
 interface Category {
@@ -29,13 +30,17 @@ interface Category {
   businessCategory?: string;
 }
 
-const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
+const CategoriesScreen: React.FC<CategoriesScreenProps> = ({ navigation, route }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<any[]>(route?.params?.selectedProducts || []);
+
+  const addToCollection = route?.params?.addToCollection === true;
+  const returnParams = route?.params?.returnParams || {};
 
   const activeCategory = categories.find(c => c.id === activeCategoryId);
 
@@ -63,7 +68,7 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
           } : 'no category object',
           allKeys: Object.keys(firstProduct),
         });
-        
+
         // Check if ANY products have categoryId
         const productsWithCategoryId = apiProducts.filter(p => {
           const pCategoryId = (p as any).categoryId ?? (p as any).category_id ?? (p as any).category?.category_id ?? null;
@@ -94,7 +99,7 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 
         const count = apiProducts.filter(p => {
           const product = p as any;
-          
+
           // Try multiple possible field names for category ID
           const pCategoryId =
             product.categoryId ??
@@ -151,7 +156,34 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
         };
       });
 
-      setCategories(mapped);
+
+
+      // SmartBiz: Deduplicate categories by name (group similar)
+      const uniqueCategoriesMap = mapped.reduce((acc, cat) => {
+        const key = cat.name.toLowerCase().trim();
+        if (!acc.has(key)) {
+          acc.set(key, cat);
+        } else {
+          // Merge with existing
+          const existing = acc.get(key)!;
+          // Add counts
+          existing.productCount += cat.productCount;
+          // If existing has no image but new one does, update it
+          if (!existing.image && cat.image) {
+            existing.image = cat.image;
+          }
+          // We keep the ID of the first one found (usually the oldest or first returned)
+          // This ensures we have a valid ID for operations, though 'ProductsScreen' 
+          // should use name matching to find all products across the duplicate categories.
+        }
+        return acc;
+      }, new Map<string, Category>());
+
+      const uniqueCategories = Array.from(uniqueCategoriesMap.values());
+      // Sort alphabetically
+      uniqueCategories.sort((a, b) => a.name.localeCompare(b.name));
+
+      setCategories(uniqueCategories);
     } catch (error) {
       console.error('Failed to load categories', error);
     } finally {
@@ -165,6 +197,16 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
     });
     return unsubscribe;
   }, [navigation, loadCategories]);
+
+  // SmartBiz: Sync selected products when coming back from ProductsScreen or AddCollection
+  useEffect(() => {
+    // Check both 'selectedProducts' directly and 'returnParams'
+    const newSelected = route?.params?.selectedProducts || route?.params?.returnParams?.selectedProducts;
+    if (newSelected) {
+      console.log(`📦 [CategoriesScreen] Syncing ${newSelected.length} selected products`);
+      setSelectedProducts(newSelected);
+    }
+  }, [route?.params?.selectedProducts, route?.params?.returnParams?.selectedProducts]);
 
   const handleMenuPress = (categoryId: string) => {
     setActiveCategoryId(categoryId);
@@ -193,7 +235,7 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 
   const handleShare = async () => {
     setBottomSheetOpen(false);
-    
+
     if (!activeCategory) {
       Alert.alert('Error', 'No category selected');
       return;
@@ -204,17 +246,17 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 
     try {
       const shareMessage = `Check out this category: ${activeCategory.name}\n\n${activeCategory.description || 'Explore this category on our app!'}`;
-      
+
       console.log('Sharing category:', activeCategory.name);
-      
+
       // Use native Android/iOS share sheet - shows all available apps on the device
       const result = await Share.share({
         message: shareMessage,
         title: activeCategory.name,
       });
-      
+
       console.log('Share result:', result);
-      
+
       if (result.action === Share.sharedAction) {
         console.log('Category shared successfully via:', result.activityType || 'unknown');
       } else if (result.action === Share.dismissedAction) {
@@ -224,9 +266,9 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
       console.error('Error sharing category:', error);
       // Only show error if it's not a user cancellation
       const errorMessage = error?.message || String(error);
-      if (!errorMessage.includes('User did not share') && 
-          !errorMessage.includes('cancelled') && 
-          !errorMessage.includes('dismissed')) {
+      if (!errorMessage.includes('User did not share') &&
+        !errorMessage.includes('cancelled') &&
+        !errorMessage.includes('dismissed')) {
         Alert.alert('Error', 'Failed to share category. Please try again.');
       }
     }
@@ -294,52 +336,60 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
           filteredCategories.map(category => (
             <TouchableOpacity
               key={category.id}
-              style={styles.categoryCard}
-              onPress={() =>
+              style={styles.categoryListItem}
+              onPress={() => {
                 navigation.navigate('Products', {
                   categoryId: category.id,
                   categoryName: category.name,
                   businessCategory: category.businessCategory,
+                  // SmartBiz: Always return to Categories so user can pick from multiple categories
+                  addToCollection: addToCollection,
                   returnScreen: 'Categories',
-                  refreshTimestamp: Date.now(), // Force refresh to show latest products
-                })
-              }
+                  returnParams: {
+                    ...route?.params,
+                    selectedProducts: selectedProducts, // Pass current cumulative selection
+                  },
+                  collectionId: route?.params?.collectionId,
+                  collectionName: route?.params?.collectionName,
+                  refreshTimestamp: Date.now(),
+                });
+              }}
             >
-              <View style={styles.categoryImageContainer}>
-                {category.image && typeof category.image === 'string' && category.image !== 'placeholder' ? (
-                  <Image source={{uri: category.image}} style={styles.categoryImage} />
-                ) : (
-                  <View style={styles.categoryImagePlaceholder}>
-                    <IconSymbol name="image-outline" size={32} color="#9CA3AF" />
-                  </View>
-                )}
-              </View>
-              <View style={styles.categoryInfo}>
-                <Text style={styles.categoryName} numberOfLines={1}>
-                  {category.name}
-                </Text>
-                <Text style={styles.categoryCount}>
-                  {category.productCount === 0
-                    ? 'No product listed'
-                    : `${category.productCount} product${category.productCount > 1 ? 's' : ''} listed`}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.menuButton}
-                onPress={() => handleMenuPress(category.id)}>
-                <IconSymbol name="ellipsis-vertical" size={20} color="#6c757d" />
-              </TouchableOpacity>
+              <Text style={styles.categoryNameSimple}>
+                {category.name}
+              </Text>
+              <IconSymbol name="chevron-forward" size={20} color="#008080" />
             </TouchableOpacity>
           ))
         )}
       </ScrollView>
 
-      {/* Add New Category Button */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => navigation.navigate('AddCategory')}>
-        <Text style={styles.addButtonText}>Add New Category</Text>
-      </TouchableOpacity>
+      {/* Bottom Buttons */}
+      {!addToCollection && (
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate('AddCategory')}>
+          <Text style={styles.addButtonText}>Add New Category</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Continue to Preview Button (Image 1 & 2) */}
+      {addToCollection && selectedProducts.length > 0 && (
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={() => {
+            navigation.navigate('SelectedProductsPreview', {
+              selectedProducts: selectedProducts,
+              // Metadata to return finally to AddCollection
+              returnScreen: route?.params?.returnScreen || 'AddCollection',
+              returnParams: route?.params?.returnParams,
+            });
+          }}>
+          <Text style={styles.continueButtonText}>
+            Continue to Preview Products ({selectedProducts.length})
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Bottom Sheet */}
       <Modal
@@ -406,12 +456,12 @@ const CategoriesScreen: React.FC<CategoriesScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF', // Changed from #F5F5F5 for cleaner look
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#1F2937', // Dark header to match Preview and screenshot
     paddingHorizontal: 16,
     paddingVertical: 12,
     height: 56,
@@ -485,6 +535,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  // Add new styles for the simple list
+  categoryListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  categoryNameSimple: {
+    fontSize: 16,
+    color: '#000000',
+    flex: 1, // Take remaining space
   },
   categoryImageContainer: {
     marginRight: 12,
@@ -634,7 +699,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  continueButton: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    backgroundColor: '#1F2937', // Dark blue/slate like the image
+    paddingVertical: 18,
+    borderRadius: 30, // Pill shaped
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
+
 
 export default CategoriesScreen;
 
