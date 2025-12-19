@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "setup-adb": "adb reverse tcp:8080 tcp:8080 && echo ADB reverse port forwarding set up successfully!",
+    "setup-adb": "adb reverse tcp:8080 tcp:8080 && adb reverse tcp:8081 tcp:8081 && echo ADB reverse port forwarding set up successfully! (Ports 8080 for API, 8081 for Metro)",
     "setup-local-ip": "node scripts/setup-local-ip.js",
     "check-adb": "adb devices",
     "android-with-adb": "npm run setup-adb && react-native run-android",

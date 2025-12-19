@@ -80,15 +80,15 @@ const ProfileSidebar = ({ isOpen, onClose, user, storeSlug, onLogout }) => {
             {menuItems.map((item) => {
               const storePath = getRoute(item.path, storeSlug);
               return (
-                <Link 
-                  key={item.path}
+              <Link 
+                key={item.path}
                   to={storePath} 
-                  className="profile-sidebar-item" 
-                  onClick={onClose}
-                >
-                  {getIcon(item.icon)}
-                  <span>{item.label}</span>
-                </Link>
+                className="profile-sidebar-item" 
+                onClick={onClose}
+              >
+                {getIcon(item.icon)}
+                <span>{item.label}</span>
+              </Link>
               );
             })}
             <div className="profile-sidebar-divider"></div>

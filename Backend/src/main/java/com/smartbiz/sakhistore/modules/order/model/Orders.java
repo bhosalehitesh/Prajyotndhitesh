@@ -169,4 +169,33 @@ public class Orders {
     public void setSellerId(Long sellerId) {
         this.sellerId = sellerId;
     }
+
+    // ===============================
+    // Customer Info Getters (for JSON serialization)
+    // These allow access to user info without serializing the full user object
+    // ===============================
+    
+    /**
+     * Get customer name from user object
+     * This will be included in JSON response even though user is @JsonIgnore
+     */
+    public String getCustomerName() {
+        return user != null ? user.getFullName() : null;
+    }
+
+    /**
+     * Get customer phone from user object
+     * This will be included in JSON response even though user is @JsonIgnore
+     */
+    public String getCustomerPhone() {
+        return user != null ? user.getPhone() : null;
+    }
+
+    /**
+     * Get customer ID from user object
+     * This will be included in JSON response even though user is @JsonIgnore
+     */
+    public Long getCustomerId() {
+        return user != null ? user.getId() : null;
+    }
 }

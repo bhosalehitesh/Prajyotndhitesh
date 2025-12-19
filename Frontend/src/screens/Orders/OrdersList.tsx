@@ -1,13 +1,29 @@
+/**
+ * Shared Orders List Component
+ * Displays orders filtered by status with loading and error states
+ */
+
 import React from 'react';
 import { View, FlatList, StyleSheet, Text, RefreshControl, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import OrderCard from '../../components/orders/OrderCard';
 import { useOrders } from './useOrders';
+import { filterOrdersByStatus } from './orderUtils';
+import { OrderStatus, Order } from './types';
 
-const AllOrders = () => {
+interface OrdersListProps {
+  status: OrderStatus;
+  emptyMessage?: string;
+}
+
+const OrdersList: React.FC<OrdersListProps> = ({ status, emptyMessage }) => {
   const navigation = useNavigation();
   const { orders, loading, error, refetch } = useOrders();
   const [refreshing, setRefreshing] = React.useState(false);
+
+  const filteredOrders = React.useMemo(() => {
+    return filterOrdersByStatus(orders, status);
+  }, [orders, status]);
 
   const handleOrderPress = (orderId: string) => {
     // Find the order to get the numeric OrdersId
@@ -43,7 +59,7 @@ const AllOrders = () => {
   return (
     <View style={styles.container}>
       <FlatList
-        data={orders}
+        data={filteredOrders}
         keyExtractor={(item, index) => {
           // Always use index to guarantee unique keys, even if id exists
           // This prevents duplicate key errors when multiple orders have id "0" or undefined
@@ -58,13 +74,15 @@ const AllOrders = () => {
         }
         contentContainerStyle={[
           styles.listContent,
-          orders.length === 0 && styles.emptyListContainer,
+          filteredOrders.length === 0 && styles.emptyListContainer,
         ]}
         ListEmptyComponent={
           <View style={styles.emptyList}>
             <View style={styles.placeholderCircle} />
-            <Text style={styles.noOrdersText}>You don't have any orders yet</Text>
-            <Text style={styles.subText}>
+            <Text style={styles.emptyText}>
+              {emptyMessage || `No ${status} orders yet`}
+            </Text>
+            <Text style={styles.emptySubText}>
               Share your website link with customers to get more orders
             </Text>
           </View>
@@ -98,18 +116,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     marginBottom: 15,
   },
-  noOrdersText: {
-    fontSize: 16,
-    fontWeight: '600',
+  emptyText: {
+    color: '#6c757d',
+    fontSize: 15,
+    fontWeight: '500',
     marginBottom: 8,
-    color: '#333',
   },
-  subText: {
-    color: '#777',
-    fontSize: 14,
+  emptySubText: {
+    color: '#9ca3af',
+    fontSize: 13,
     textAlign: 'center',
     paddingHorizontal: 30,
-    lineHeight: 20,
   },
   centerContainer: {
     flex: 1,
@@ -134,4 +151,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AllOrders;
+export default OrdersList;
+

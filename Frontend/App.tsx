@@ -22,7 +22,7 @@ import { storage } from './src/authentication/storage';
 import HomeScreen from './src/screens/Home/HomeScreen';
 import OrdersScreen from './src/screens/Orders/OrdersScreen';
 import CatalogScreen from './src/screens/Catalog/CatalogScreen';
-import AnalyticsScreen from './src/screens/Analytics/AnalyticsScreen';
+import AnalyticsScreen from './src/screens/Analytics'; // Uses AnalyticsComingSoon for v1
 import ProfileScreen from './src/screens/Profile/ProfileScreen';
 import ProductsScreen from './src/screens/Catalog/products/ProductsScreen';
 import AddProductScreen from './src/screens/Catalog/products/AddProductScreen';
@@ -36,6 +36,7 @@ import AddCollectionScreen from './src/screens/Catalog/collections/AddCollection
 import SelectProductsScreen from './src/screens/Catalog/collections/SelectProductsScreen';
 import SelectedProductsPreviewScreen from './src/screens/Catalog/collections/SelectedProductsPreviewScreen';
 import StoreAppearanceScreen from './src/screens/StoreAppearance/StoreAppearanceScreen';
+import OrderDetailsScreen from './src/screens/Orders/OrderDetailsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -168,6 +169,7 @@ function MainStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="StoreAppearance" component={StoreAppearanceScreen} />
+      <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
     </Stack.Navigator>
   );
 }
