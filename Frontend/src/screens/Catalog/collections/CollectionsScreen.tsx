@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -18,7 +18,7 @@ import {
   Animated,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
-import {fetchCollectionsWithCounts, deleteCollection, CollectionWithCountDto, setCollectionVisibility} from '../../../utils/api';
+import { fetchCollectionsWithCounts, deleteCollection, CollectionWithCountDto, setCollectionVisibility } from '../../../utils/api';
 
 interface CollectionsScreenProps {
   navigation: any;
@@ -36,7 +36,7 @@ interface Collection {
   description?: string;
 }
 
-const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
+const CollectionsScreen: React.FC<CollectionsScreenProps> = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(false);
@@ -109,7 +109,7 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
 
   const handleShare = async () => {
     setBottomSheetOpen(false);
-    
+
     if (!activeCollection) {
       Alert.alert('Error', 'No collection selected');
       return;
@@ -120,17 +120,17 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
 
     try {
       const shareMessage = `Check out this collection: ${activeCollection.name}\n\n${activeCollection.description || 'Explore this collection on our app!'}`;
-      
+
       console.log('Sharing collection:', activeCollection.name);
-      
+
       // Use native Android/iOS share sheet - shows all available apps on the device
       const result = await Share.share({
         message: shareMessage,
         title: activeCollection.name,
       });
-      
+
       console.log('Share result:', result);
-      
+
       if (result.action === Share.sharedAction) {
         console.log('Collection shared successfully via:', result.activityType || 'unknown');
       } else if (result.action === Share.dismissedAction) {
@@ -140,9 +140,9 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
       console.error('Error sharing collection:', error);
       // Only show error if it's not a user cancellation
       const errorMessage = error?.message || String(error);
-      if (!errorMessage.includes('User did not share') && 
-          !errorMessage.includes('cancelled') && 
-          !errorMessage.includes('dismissed')) {
+      if (!errorMessage.includes('User did not share') &&
+        !errorMessage.includes('cancelled') &&
+        !errorMessage.includes('dismissed')) {
         Alert.alert('Error', 'Failed to share collection. Please try again.');
       }
     }
@@ -206,7 +206,7 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
       await setCollectionVisibility(collectionId, hideFromWebsite);
       setCollections(prev =>
         prev.map(c => (c.id === collectionId ? {
-          ...c, 
+          ...c,
           hideFromWebsite: hideFromWebsite,
           isActive: isActive
         } : c)),
@@ -267,19 +267,15 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
                 navigation.navigate('Products', {
                   collectionId: collection.id,
                   collectionName: collection.name,
-                  addToCollection: true,
+                  addToCollection: false, // Default to view mode
+                  viewCollectionProducts: true,
                   returnScreen: 'Collections',
-                  returnParams: {
-                    collectionId: collection.id,
-                    collectionName: collection.name,
-                    viewCollectionProducts: true,
-                  },
                 });
               }}
               activeOpacity={0.7}>
               <View style={styles.collectionImageContainer}>
                 {collection.image && typeof collection.image === 'string' && collection.image !== 'placeholder' ? (
-                  <Image source={{uri: collection.image}} style={styles.collectionImage} />
+                  <Image source={{ uri: collection.image }} style={styles.collectionImage} />
                 ) : (
                   <View style={styles.collectionImagePlaceholder}>
                     <IconSymbol name="image-outline" size={32} color="#9CA3AF" />
@@ -342,8 +338,8 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({navigation}) => {
               <IconSymbol name="pencil" size={20} color="#111827" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.actionRow} 
+            <TouchableOpacity
+              style={styles.actionRow}
               onPress={() => {
                 setBottomSheetOpen(false);
                 if (activeCollectionId && activeCollection) {
@@ -650,7 +646,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,

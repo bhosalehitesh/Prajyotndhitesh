@@ -1,4 +1,4 @@
-import React, {useMemo, useState, useRef} from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import IconSymbol from '../../../components/IconSymbol';
-import { fetchProducts, fetchProductsByCollection, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, updateProduct, updateProductStatus } from '../../../utils/api';
+import { fetchProducts, fetchProductsByCollection, ProductDto, deleteProduct as deleteProductApi, updateProductStock, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, updateProduct, updateProductStatus, saveCollectionProducts } from '../../../utils/api';
 import { storage } from '../../../authentication/storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -29,94 +29,92 @@ interface ProductsScreenProps {
   route?: any;
 }
 
-const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
-  // Check if we're in "add to collection" mode
-  const targetCollectionId = route?.params?.collectionId;
-  // Fallback: if returning from EditCollection with a collectionId, force add-to-collection mode
-  const addToCollectionMode =
-    route?.params?.addToCollection === true ||
-    (!!targetCollectionId && route?.params?.returnScreen === 'EditCollection');
-  const returnScreen = route?.params?.returnScreen;
-  // Check if we're viewing products in a collection
-  const viewCollectionProducts = route?.params?.viewCollectionProducts === true;
-  const collectionName = route?.params?.collectionName;
-  
-  // Add to category mode
-  const targetCategoryId = route?.params?.categoryId;
-  const categoryName = route?.params?.categoryName;
-  const addToCategoryMode = route?.params?.addToCategory === true;
-  
+const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) => {
+  // SmartBiz: Parse navigation params for different modes
+  const params = route?.params || {};
+  const {
+    returnScreen,
+    returnParams,
+    collectionName,
+    viewCollectionProducts,
+    // other params used for init
+  } = params;
+
+  const targetCollectionId = params.collectionId;
+  const addToCollectionMode = params.addToCollection === true || (!!targetCollectionId && returnScreen === 'EditCollection');
+
+  const addToCategoryMode = params.addProductsToCategory === true || params.addToCategory === true;
+  const targetCategoryId = params.categoryId;
+  const targetCategoryName = params.categoryName;
+
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [collectionSheetOpen, setCollectionSheetOpen] = useState(false);
-  const [collections, setCollections] = useState<Array<{id: string; name: string}>>([]);
+  const [collections, setCollections] = useState<Array<{ id: string; name: string }>>([]);
   const [storeName, setStoreName] = useState('My Store');
   const [storeLink, setStoreLink] = useState<string | null>(null);
   const [storeOpen, setStoreOpen] = useState(true);
   const [selectedCollections, setSelectedCollections] = useState<Record<string, boolean>>({});
-  const [products, setProducts] = useState<Array<{
-    id: string;
-    title: string;
-    price: number;
-    mrp?: number;
-    inStock: boolean;
-    imageUrl?: string;
-    images?: string[];
-    businessCategory?: string;
-    productCategory?: string;
-    description?: string;
-    inventoryQuantity?: number;
-    sku?: string;
-    color?: string;
-    size?: string;
-    hsnCode?: string;
-    bestSeller?: boolean;
-    variantCount?: number;
-    variants?: Array<{
-      id: string;
-      title: string;
-      price: number;
-      mrp?: number;
-      inStock: boolean;
-      imageUrl?: string;
-      images?: string[];
-      businessCategory?: string;
-      productCategory?: string;
-      description?: string;
-      inventoryQuantity?: number;
-      sku?: string;
-      color?: string;
-      size?: string;
-      hsnCode?: string;
-    }>;
-  }>>([]);
+
+  const [products, setProducts] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const [filterTab, setFilterTab] = useState<'Inventory' | 'Status' | 'Discount' | 'Price Range'>('Inventory');
   const [inventory, setInventory] = useState<'all' | 'in' | 'out'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'hidden'>('all');
-  const [discounts, setDiscounts] = useState<{[key: string]: boolean}>({});
-  const [priceRange, setPriceRange] = useState<{min: number; max: number}>({min: 0, max: 0});
+  const [discounts, setDiscounts] = useState<{ [key: string]: boolean }>({});
+  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 0 });
   const [sortBy, setSortBy] = useState<'title-az' | 'title-za' | 'price-low' | 'price-high' | 'disc-low' | 'disc-high'>('title-az');
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(route?.params?.categoryName ?? null);
-  const [businessFilter, setBusinessFilter] = useState<string | null>(route?.params?.businessCategory ?? null);
+
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(params.categoryName ?? null);
+  const [businessFilter, setBusinessFilter] = useState<string | null>(params.businessCategory ?? null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedForCollection, setSelectedForCollection] = useState<Record<string, boolean>>({});
-  const [addingSelected, setAddingSelected] = useState(false);
-  const [alreadyAdded, setAlreadyAdded] = useState<Record<string, boolean>>({});
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+
+  // New state to manage selected products for collection addition
+  const [selectedProductsMap, setSelectedProductsMap] = useState<Map<string, any>>(new Map());
+
+  // Legacy states for "Add to Category"
   const [selectedForCategory, setSelectedForCategory] = useState<Record<string, boolean>>({});
   const [addingToCategory, setAddingToCategory] = useState(false);
   const [alreadyAddedToCategory, setAlreadyAddedToCategory] = useState<Record<string, boolean>>({});
   const [navBusy, setNavBusy] = useState(false);
   const [pageSize, setPageSize] = useState(20);
-  
+
+  const prepopulatedRef = useRef(false);
+
+  // Initialize selection from params (when coming from AddCollection screen or Categories)
+  useEffect(() => {
+    if (returnParams?.selectedProducts) {
+      console.log(`📦 [ProductsScreen] Initializing/Refreshing selection from params with ${returnParams.selectedProducts.length} items`);
+      const initialMap = new Map();
+      returnParams.selectedProducts.forEach((p: any) => initialMap.set(p.id, p));
+      setSelectedProductsMap(initialMap);
+      prepopulatedRef.current = true;
+    }
+  }, [returnParams?.selectedProducts]);
+
+  // Pre-populate selection map when viewing an existing collection's products (VIEW mode only)
+  useEffect(() => {
+    // ONLY pre-populate from the list if we are in VIEW mode (which fetches only the collection products)
+    // AND we haven't already pre-populated from returnParams
+    if (viewCollectionProducts && !addToCollectionMode && !addToCategoryMode && products.length > 0 && !prepopulatedRef.current) {
+      console.log(`📦 [ProductsScreen] Pre-populating selection map with ${products.length} existing products in VIEW mode`);
+      const initialMap = new Map();
+      products.forEach(p => initialMap.set(p.id, p));
+      setSelectedProductsMap(initialMap);
+      prepopulatedRef.current = true;
+    }
+  }, [viewCollectionProducts, addToCollectionMode, addToCategoryMode, products]);
+
   // Animation for refresh button
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   // Load store info (name/link)
-  React.useEffect(() => {
+  useEffect(() => {
     const loadStoreInfo = async () => {
       try {
         const name = (await storage.getItem('storeName')) || 'My Store';
@@ -131,12 +129,12 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   }, []);
 
   // When in add-to-collection or add-to-category mode, reset filters/search so all products show
-  React.useEffect(() => {
+  useEffect(() => {
     if (addToCollectionMode || addToCategoryMode) {
       console.log('🔄 Resetting filters for add-to-collection/category mode');
       setInventory('all');
       setDiscounts({});
-      setPriceRange({min: 0, max: 0});
+      setPriceRange({ min: 0, max: 0 });
       setSortBy('title-az');
       setFilterTab('Inventory');
       setSearchQuery('');
@@ -154,7 +152,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     console.log('Navigate to Add Product screen');
   };
 
-  const activeProduct = useMemo(() => products.find(p=>p.id===activeProductId) || null, [products, activeProductId]);
+  const activeProduct = useMemo(() => products.find(p => p.id === activeProductId) || null, [products, activeProductId]);
 
   const loadCollectionsForSheet = React.useCallback(async () => {
     try {
@@ -178,7 +176,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
 
     // Close action sheet first
     setActionSheetOpen(false);
-    
+
     // Small delay to ensure action sheet closes before share sheet opens
     await new Promise(resolve => setTimeout(resolve, 300));
 
@@ -186,10 +184,10 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       // Get store link from storage
       const storeLink = await storage.getItem('storeLink');
       const storeName = await storage.getItem('storeName') || 'My Store';
-      
+
       // Build product share message
       let shareMessage = `🛍️ ${activeProduct.title}\n\n`;
-      
+
       // Add price information
       if (activeProduct.mrp && activeProduct.mrp > activeProduct.price) {
         const discount = Math.round(((activeProduct.mrp - activeProduct.price) / activeProduct.mrp) * 100);
@@ -199,38 +197,38 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       } else {
         shareMessage += `💰 Price: ₹${activeProduct.price}\n\n`;
       }
-      
+
       // Add description if available
       if (activeProduct.description) {
         shareMessage += `${activeProduct.description}\n\n`;
       }
-      
+
       // Add stock status
       if (activeProduct.inStock) {
         shareMessage += `✅ In Stock\n`;
       } else {
         shareMessage += `❌ Out of Stock\n`;
       }
-      
+
       // Add store link
       if (storeLink) {
         shareMessage += `\n🏪 Shop at: ${storeLink}`;
       } else {
         shareMessage += `\n🏪 Shop at: ${storeName}`;
       }
-      
+
       console.log('Sharing product:', activeProduct.title);
       console.log('Share message:', shareMessage);
-      
+
       // Use native Android/iOS share sheet
       // This will show the native share sheet with all available apps on the device
       const result = await Share.share({
         message: shareMessage,
         title: activeProduct.title,
       });
-      
+
       console.log('Share result:', result);
-      
+
       // Log result for debugging
       if (result.action === Share.sharedAction) {
         console.log('Product shared successfully via:', result.activityType || 'unknown');
@@ -241,18 +239,30 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       console.error('Error sharing product:', error);
       // Only show error if it's not a user cancellation
       const errorMessage = error?.message || String(error);
-      if (!errorMessage.includes('User did not share') && 
-          !errorMessage.includes('cancelled') && 
-          !errorMessage.includes('dismissed')) {
+      if (!errorMessage.includes('User did not share') &&
+        !errorMessage.includes('cancelled') &&
+        !errorMessage.includes('dismissed')) {
         Alert.alert('Error', 'Failed to share product. Please try again.');
       }
     }
   };
 
+  const toggleSelection = (product: any) => {
+    setSelectedProductsMap(prev => {
+      const newMap = new Map(prev);
+      if (newMap.has(product.id)) {
+        newMap.delete(product.id);
+      } else {
+        newMap.set(product.id, product);
+      }
+      return newMap;
+    });
+  };
+
   const loadProducts = React.useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Start continuous rotation animation
       const startRotation = () => {
         rotateAnim.setValue(0);
@@ -265,38 +275,56 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         ).start();
       };
       startRotation();
-      
-      // Determine data source
-      const viewCollection = route?.params?.viewCollectionProducts === true;
-      const collectionId = route?.params?.collectionId;
-      const currentAddToCategoryMode = route?.params?.addToCategory === true;
-      
-      console.log('📦 Loading products:', {
-        addToCollectionMode,
-        currentAddToCategoryMode,
-        addToCategoryMode,
-        viewCollection,
-        collectionId,
-      });
-      
+
+      // Determine filters
       const isActiveParam =
         statusFilter === 'active' ? true :
-        statusFilter === 'hidden' ? false :
-        undefined;
+          statusFilter === 'hidden' ? false :
+            undefined;
 
       let apiProducts: ProductDto[] = [];
-      if (addToCollectionMode || currentAddToCategoryMode || addToCategoryMode) {
+      if (addToCollectionMode || addToCategoryMode) {
         // In add-to-collection or add-to-category picker, always show all products to pick from
         console.log('✅ Fetching ALL products for add-to-collection/category mode');
-        apiProducts = await fetchProducts({ isActive: undefined });
-        console.log(`✅ Fetched ${apiProducts.length} products`);
-      } else if (viewCollection && collectionId) {
+
+        // SmartBiz: If we have a targetCollectionId, also fetch current collection products to pre-populate
+        if (addToCollectionMode && targetCollectionId && !prepopulatedRef.current && (!returnParams?.selectedProducts || returnParams.selectedProducts.length === 0)) {
+          try {
+            const [allProducts, collectionProducts] = await Promise.all([
+              fetchProducts(),
+              fetchProductsByCollection(targetCollectionId)
+            ]);
+            apiProducts = allProducts;
+
+            console.log(`📦 [ProductsScreen] Pre-populating selection map with ${collectionProducts.length} EXISTING products for collection ${targetCollectionId}`);
+            const initialMap = new Map();
+            collectionProducts.forEach((p: any) => {
+              // Map backend product to frontend format for selection map
+              initialMap.set(String(p.productsId), {
+                id: String(p.productsId),
+                title: p.productName,
+                price: p.sellingPrice ?? 0,
+                imageUrl: (p.productImages && p.productImages[0]) || (p.socialSharingImage ?? undefined),
+                // include other basic fields needed for display in summary/preview
+              });
+            });
+            setSelectedProductsMap(initialMap);
+            prepopulatedRef.current = true;
+          } catch (err) {
+            console.warn('⚠️ [ProductsScreen] Failed to fetch existing collection products for pre-population:', err);
+            apiProducts = await fetchProducts();
+          }
+        } else {
+          apiProducts = await fetchProducts();
+        }
+      } else if (viewCollectionProducts && targetCollectionId) {
         // Viewing a specific collection
-        apiProducts = await fetchProductsByCollection(collectionId);
+        apiProducts = await fetchProductsByCollection(targetCollectionId);
       } else {
         // Default: all products (with status filter if set)
-        apiProducts = await fetchProducts({ isActive: isActiveParam });
+        apiProducts = await fetchProducts();
       }
+
       // Debug: Log first product to see what fields are available
       if (apiProducts.length > 0) {
         console.log('🔍 [ProductsScreen] Sample product from API:', {
@@ -307,13 +335,13 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           allKeys: Object.keys(apiProducts[0] || {}),
         });
       }
-      
+
       const mapped = apiProducts.map(p => {
         // Extract categoryId from multiple possible sources
-        const categoryIdValue = (p as any).categoryId ?? 
-                               (p as any).category_id ?? 
-                               null;
-        
+        const categoryIdValue = (p as any).categoryId ??
+          (p as any).category_id ??
+          null;
+
         return {
           id: String(p.productsId),
           title: p.productName,
@@ -347,13 +375,13 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       rotateAnim.stopAnimation();
       rotateAnim.setValue(0);
     }
-  }, [rotateAnim, route, addToCollectionMode, addToCategoryMode, statusFilter]);
+  }, [rotateAnim, addToCollectionMode, addToCategoryMode, viewCollectionProducts, targetCollectionId, statusFilter]);
 
   // Comprehensive refresh function that resets everything and reloads
   const refreshScreen = React.useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Start continuous rotation animation
       const startRotation = () => {
         rotateAnim.setValue(0);
@@ -366,22 +394,22 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         ).start();
       };
       startRotation();
-      
+
       // Reset all filters and state
       setInventory('all');
       setDiscounts({});
-      setPriceRange({min: 0, max: 0});
+      setPriceRange({ min: 0, max: 0 });
       setSortBy('title-az');
       setFilterTab('Inventory');
       setActiveProductId(null);
-      
+
       // Close all modals
       setIsFilterOpen(false);
       setIsSortOpen(false);
       setActionSheetOpen(false);
       setConfirmDeleteOpen(false);
       setCollectionSheetOpen(false);
-      
+
       // Reload products (mirror the logic in loadProducts)
       let apiProducts: ProductDto[] = [];
       if (addToCollectionMode || addToCategoryMode) {
@@ -391,7 +419,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       } else {
         apiProducts = await fetchProducts();
       }
-      
+
       // Debug: Log first product to see what fields are available
       if (apiProducts.length > 0) {
         console.log('🔍 [ProductsScreen] Sample product from API:', {
@@ -402,15 +430,15 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           allKeys: Object.keys(apiProducts[0] || {}),
         });
       }
-      
+
       const mapped = apiProducts.map(p => {
         // Extract categoryId from multiple possible sources
-        const categoryIdValue = p.categoryId ?? 
-                               p.category_id ?? 
-                               (p as any).categoryId ?? 
-                               (p as any).category_id ?? 
-                               null;
-        
+        const categoryIdValue = p.categoryId ??
+          p.category_id ??
+          (p as any).categoryId ??
+          (p as any).category_id ??
+          null;
+
         const mappedProduct = {
           id: String(p.productsId),
           title: p.productName,
@@ -433,7 +461,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           categoryId: categoryIdValue,
           category_id: categoryIdValue,
         };
-        
+
         // Debug: Log if categoryId is missing
         if (!categoryIdValue) {
           console.warn('⚠️ [ProductsScreen] Product missing categoryId:', {
@@ -442,7 +470,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             availableKeys: Object.keys(p),
           });
         }
-        
+
         return mappedProduct;
       });
       setProducts(mapped);
@@ -473,7 +501,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     });
     return unsubscribe;
   }, [navigation, loadProducts, loadCollectionsForSheet]);
-  
+
   // Auto-reload when route params change (e.g., when navigating to a different category)
   // Also watch for refreshTimestamp to force reload when clicking category again
   React.useEffect(() => {
@@ -486,7 +514,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       loadProducts();
     }
   }, [route?.params?.categoryId, route?.params?.categoryName, route?.params?.refreshTimestamp, loadProducts]);
-  
+
   // If coming from Categories to view products, seed category/business filters (view mode)
   React.useEffect(() => {
     if (!addToCategoryMode) {
@@ -520,7 +548,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     const prices = products.map(p => p.price).filter(p => typeof p === 'number' && !isNaN(p) && p >= 0);
     return prices.length ? Math.min(...prices) : 0;
   }, [products]);
-  
+
   const absoluteMaxPrice = useMemo(() => {
     if (!products.length) return 0;
     const prices = products.map(p => p.price).filter(p => typeof p === 'number' && !isNaN(p) && p >= 0);
@@ -582,19 +610,24 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
   }, [filterTab, absoluteMinPrice, absoluteMaxPrice]);
 
   // Helpers for discount calculation
-  const getDiscountPercent = (p:{price:number; mrp?:number}) => {
+  const getDiscountPercent = (p: { price: number; mrp?: number }) => {
     if (!p.mrp || p.mrp <= 0 || p.mrp <= p.price) return 0;
     return Math.round((1 - (p.price / p.mrp)) * 100);
   };
 
   // Build filtered and sorted list based on current filter state
   const filteredProducts = useMemo(() => {
-    // In add-to-collection or add-to-category picker, always show all products (ignore filters/search)
-    if (addToCollectionMode || addToCategoryMode) {
+    // In add-to-category picker, always show all products (ignore filters/search)
+    if (addToCategoryMode) {
       return products;
     }
 
     let items = products.slice();
+
+    // SmartBiz: Filter by selection if requested
+    if (showSelectedOnly && addToCollectionMode) {
+      items = items.filter(p => selectedProductsMap.has(p.id));
+    }
     // Text search
     if (searchQuery.trim().length > 0) {
       const q = searchQuery.toLowerCase().trim();
@@ -611,23 +644,24 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     if (targetCategoryId && !addToCategoryMode) {
       // Filter by categoryId if targetCategoryId is present (most accurate)
       const targetId = Number(targetCategoryId);
-      const categoryName = route?.params?.categoryName;
-      
-      // Try filtering by categoryId first
-      let filteredByCategoryId = items.filter(p => {
+      const targetName = (route?.params?.categoryName || '').toLowerCase().trim();
+
+      // SmartBiz: Filter by ID *OR* Name to handle duplicate categories
+      items = items.filter(p => {
+        // Check by ID
         const pCategoryId = (p as any).categoryId ?? (p as any).category_id ?? null;
-        return pCategoryId != null && Number(pCategoryId) === targetId;
+        if (pCategoryId != null && Number(pCategoryId) === targetId) return true;
+
+        // Check by Name (Inclusive OR)
+        if (targetName) {
+          const pCatName = (p.productCategory || '').toLowerCase().trim();
+          if (pCatName === targetName) return true;
+        }
+
+        return false;
       });
-      
-      // If no results by categoryId and we have categoryName, fallback to name matching
-      if (filteredByCategoryId.length === 0 && categoryName) {
-        console.log(`⚠️ No products found by categoryId ${targetId}, trying category name fallback: ${categoryName}`);
-        const cat = categoryName.toLowerCase().trim();
-        filteredByCategoryId = items.filter(p => (p.productCategory || '').toLowerCase().trim() === cat);
-      }
-      
-      items = filteredByCategoryId;
-      console.log(`🔍 Category filter applied (ID: ${targetId}, Name: ${categoryName}), results: ${items.length}`);
+
+      console.log(`🔍 Category filter applied (ID: ${targetId}, Name: ${targetName}), results: ${items.length}`);
     } else if (categoryFilter) {
       // Category name matching
       const cat = categoryFilter.toLowerCase().trim();
@@ -662,7 +696,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             }
             return false;
           }
-          const [lo, hi] = r.replace('%','').split(' - ').map(x=>parseInt(x, 10)).filter(x => !isNaN(x));
+          const [lo, hi] = r.replace('%', '').split(' - ').map(x => parseInt(x, 10)).filter(x => !isNaN(x));
           if (lo != null && hi != null) {
             return d >= lo && d <= hi;
           }
@@ -670,7 +704,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         });
       });
     }
-    
+
     // Apply sorting
     items.sort((a, b) => {
       switch (sortBy) {
@@ -696,27 +730,27 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           return 0;
       }
     });
-    
+
     return items;
-  }, [products, addToCollectionMode, addToCategoryMode, searchQuery, inventory, priceRange, discounts, categoryFilter, businessFilter, sortBy, targetCategoryId, route?.params?.categoryName]);
+  }, [products, addToCollectionMode, addToCategoryMode, searchQuery, inventory, priceRange, discounts, categoryFilter, businessFilter, sortBy, targetCategoryId, route?.params?.categoryName, showSelectedOnly, selectedProductsMap, statusFilter]);
 
   // Counts for filter UI
   const inventoryCounts = useMemo(() => ({
     all: products.length,
-    in: products.filter(p=>p.inStock).length,
-    out: products.filter(p=>!p.inStock).length,
+    in: products.filter(p => p.inStock).length,
+    out: products.filter(p => !p.inStock).length,
   }), [products]);
 
   const selectedCount = useMemo(() => {
     if (addToCategoryMode) {
       return Object.values(selectedForCategory).filter(Boolean).length;
     }
-    return Object.values(selectedForCollection).filter(Boolean).length;
-  }, [selectedForCollection, selectedForCategory, addToCategoryMode]);
+    return selectedProductsMap.size; // Use the new Map for collection selection count
+  }, [selectedProductsMap, selectedForCategory, addToCategoryMode]);
 
-  const discountRanges = ['0 - 20%','21 - 40%','41 - 60%','61 - 80%','81% and above'];
+  const discountRanges = ['0 - 20%', '21 - 40%', '41 - 60%', '61 - 80%', '81% and above'];
   const discountCounts = useMemo(() => {
-    const map: {[k:string]: number} = {};
+    const map: { [k: string]: number } = {};
     for (const r of discountRanges) map[r] = 0;
     for (const p of products) {
       const d = getDiscountPercent(p);
@@ -727,7 +761,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             map[r] += 1;
           }
         } else {
-          const parts = r.replace('%','').split(' - ').map(x=>parseInt(x, 10)).filter(x => !isNaN(x));
+          const parts = r.replace('%', '').split(' - ').map(x => parseInt(x, 10)).filter(x => !isNaN(x));
           if (parts.length === 2 && d >= parts[0] && d <= parts[1]) {
             map[r] += 1;
             break;
@@ -740,13 +774,13 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
 
   // Group variants by base product (name + categories) so variants are treated as one product
   const groupedProducts = useMemo(() => {
-    const groups = new Map<string, {base: any; variants: any[]}>();
+    const groups = new Map<string, { base: any; variants: any[] }>();
 
     filteredProducts.forEach(p => {
       const key = `${(p.title || '').toLowerCase().trim()}|${(p.businessCategory || '').toLowerCase().trim()}|${(p.productCategory || '').toLowerCase().trim()}`;
       const existing = groups.get(key);
       if (!existing) {
-        groups.set(key, {base: p, variants: [p]});
+        groups.set(key, { base: p, variants: [p] });
       } else {
         existing.variants.push(p);
         // Use lowest price as representative
@@ -756,7 +790,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
       }
     });
 
-    return Array.from(groups.values()).map(({base, variants}) => {
+    return Array.from(groups.values()).map(({ base, variants }) => {
       const prices = variants
         .map(v => v.price)
         .filter(v => typeof v === 'number' && !isNaN(v) && v >= 0);
@@ -779,10 +813,11 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => {
-            if (returnScreen) {
+            // If in addToCollectionMode, we want the back button to go back to category list if we came from there
+            if (returnScreen && !addToCollectionMode) {
               navigation.navigate(returnScreen);
             } else {
               navigation.goBack();
@@ -791,18 +826,18 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           <IconSymbol name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {addToCollectionMode 
+          {addToCollectionMode
             ? 'Add Products to Collection'
             : addToCategoryMode
-            ? 'Add Products to Category'
-            : viewCollectionProducts && collectionName
-            ? collectionName
-            : (categoryFilter ?? businessFilter ?? 'All Products')}
+              ? 'Add Products to Category'
+              : viewCollectionProducts && collectionName
+                ? collectionName
+                : (categoryFilter ?? businessFilter ?? 'All Products')}
         </Text>
         <View style={styles.headerRight}>
           {viewCollectionProducts && targetCollectionId && !addToCollectionMode ? (
             // Show "Add" button when viewing collection products
-        <TouchableOpacity 
+            <TouchableOpacity
               style={styles.headerAddButton}
               onPress={() => {
                 if (navBusy) return;
@@ -817,6 +852,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                     collectionName: collectionName,
                     viewCollectionProducts: true,
                   },
+                  // Pass currently selected products to pre-populate selection in add mode
+                  selectedProducts: Array.from(selectedProductsMap.values()),
                 });
                 setTimeout(() => setNavBusy(false), 800);
               }}
@@ -824,25 +861,25 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
               <IconSymbol name="add" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           ) : null}
-          <TouchableOpacity 
-            style={styles.headerRefreshButton} 
-          onPress={refreshScreen}
-          disabled={loading}
-          activeOpacity={0.7}
-        >
-          <Animated.View
-            style={{
-              transform: [{
-                rotate: rotateAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0deg', '360deg'],
-                }),
-              }],
-            }}
+          <TouchableOpacity
+            style={styles.headerRefreshButton}
+            onPress={refreshScreen}
+            disabled={loading}
+            activeOpacity={0.7}
           >
-            <IconSymbol name="refresh" size={22} color={loading ? "#CCCCCC" : "#FFFFFF"} />
-          </Animated.View>
-        </TouchableOpacity>
+            <Animated.View
+              style={{
+                transform: [{
+                  rotate: rotateAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg'],
+                  }),
+                }],
+              }}
+            >
+              <IconSymbol name="refresh" size={22} color={loading ? "#CCCCCC" : "#FFFFFF"} />
+            </Animated.View>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -859,7 +896,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
               onPress={() => setStoreOpen(prev => !prev)}
               activeOpacity={0.7}
             >
-              <View style={[styles.statusDot, {backgroundColor: storeOpen ? '#10B981' : '#F59E0B'}]} />
+              <View style={[styles.statusDot, { backgroundColor: storeOpen ? '#10B981' : '#F59E0B' }]} />
               <Text style={styles.statusText}>{storeOpen ? 'Open' : 'Closed'}</Text>
             </TouchableOpacity>
           </View>
@@ -880,37 +917,53 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
         </View>
       )}
 
-      {/* Search and Filter Section (hidden in add-to-collection and add-to-category modes) */}
-      {!addToCollectionMode && !addToCategoryMode && (
+      {/* Search and Filter Section */}
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
-          <IconSymbol name="search" size={20} color="#666666" />
+          <IconSymbol name="search" size={20} color="#9CA3AF" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search Products"
-            placeholderTextColor="#999999"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
+          {addToCollectionMode && (
+            <TouchableOpacity
+              onPress={() => setShowSelectedOnly(!showSelectedOnly)}
+              style={{
+                marginLeft: 8,
+                padding: 4,
+                backgroundColor: showSelectedOnly ? '#e61580' : 'transparent',
+                borderRadius: 6,
+              }}
+            >
+              <IconSymbol
+                name={showSelectedOnly ? "checkmark-circle" : "checkmark-circle-outline"}
+                size={22}
+                color={showSelectedOnly ? "#FFFFFF" : "#6B7280"}
+              />
+            </TouchableOpacity>
+          )}
         </View>
-        
-        <View style={styles.filterButtons}>
-          <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
-            <IconSymbol name="filter" size={20} color="#333333" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={[styles.filterButton, styles.sortButton]} onPress={() => setIsSortOpen(true)}>
-            <IconSymbol name="swap-vertical" size={20} color="#333333" />
-          </TouchableOpacity>
-        </View>
+
+        {!addToCollectionMode && !addToCategoryMode && (
+          <View style={styles.filterButtons}>
+            <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
+              <IconSymbol name="options-outline" size={20} color="#111827" />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.filterButton, styles.sortButton]} onPress={() => setIsSortOpen(true)}>
+              <IconSymbol name="swap-vertical" size={20} color="#10B981" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
-      )}
 
       {/* Main Content - Product List */}
       <ScrollView style={styles.content}>
         {loading && groupedProducts.length === 0 && (
-          <View style={{alignItems: 'center', marginVertical: 16}}>
-            <Text style={{color: '#6c757d'}}>Loading products...</Text>
+          <View style={{ alignItems: 'center', marginVertical: 16 }}>
+            <Text style={{ color: '#6c757d' }}>Loading products...</Text>
           </View>
         )}
         {groupedProducts
@@ -921,282 +974,286 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           })
           .slice(0, pageSize)
           .map(item => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.card}
-            activeOpacity={0.8}
-            onPress={async () => {
-      // If in "add to collection" mode, just toggle selection (bulk add via bottom button)
-      if (addToCollectionMode && targetCollectionId) {
-        setSelectedForCollection(prev => ({
-          ...prev,
-          [item.id]: !prev[item.id],
-        }));
-      } else if (addToCategoryMode && targetCategoryId) {
-        // If in "add to category" mode, toggle selection
-        setSelectedForCategory(prev => ({
-          ...prev,
-          [item.id]: !prev[item.id],
-        }));
-      } else {
-        // Normal mode - navigate to edit product
-              navigation.navigate('AddProduct', {
-                mode: 'edit',
-                product: item,
-        });
-      }
-            }}>
-            <View style={{flexDirection:'row', alignItems:'center', flex:1}}>
-            {item.imageUrl ? (
-              <Image source={{uri: item.imageUrl}} style={styles.thumbImage} />
-            ) : (
-              <View style={styles.thumbPlaceholder}>
-                <IconSymbol name="image-outline" size={18} color="#9CA3AF" />
-              </View>
-            )}
-            <View style={{flex: 1}}>
-                <View style={{flexDirection:'row', alignItems:'center', justifyContent:'space-between'}}>
-                  <View style={{flex:1, paddingRight:8}}>
-              <Text style={styles.title}>{item.title}</Text>
-              {item.variantCount && item.variantCount > 0 ? (
-                <Text style={styles.variantCountText}>
-                  {item.variantCount} variant{item.variantCount > 1 ? 's' : ''} • {item.variants?.filter(v=>v.inStock).length ?? 0} in stock
-                </Text>
-              ) : (
-                <Text style={styles.variantCountText}>
-                  {item.inStock ? 'In stock' : 'Out of stock'}
-                </Text>
-              )}
+            <TouchableOpacity
+              key={item.id}
+              style={styles.card}
+              activeOpacity={0.8}
+              onPress={() => {
+                // If in "add to collection" mode, just toggle selection (bulk add via bottom button)
+                if (addToCollectionMode) {
+                  toggleSelection(item);
+                  return;
+                }
+
+                // Add to category logic
+                if (addToCategoryMode) {
+                  const newSel = { ...selectedForCategory };
+                  if (newSel[item.id]) delete newSel[item.id];
+                  else newSel[item.id] = true;
+                  setSelectedForCategory(newSel);
+                  return;
+                }
+
+                // Normal mode - navigate to edit product
+                navigation.navigate('AddProduct', {
+                  mode: 'edit',
+                  product: item,
+                });
+              }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.thumbImage} />
+                ) : (
+                  <View style={styles.thumbPlaceholder}>
+                    <IconSymbol name="image-outline" size={18} color="#9CA3AF" />
                   </View>
-                  {typeof item.isActive === 'boolean' && (
-                    <View style={[styles.statusChip, item.isActive ? styles.statusChipActive : styles.statusChipDisabled]}>
-                      <View style={[styles.statusDotSmall, {backgroundColor: item.isActive ? '#10B981' : '#9CA3AF'}]} />
-                      <Text style={[styles.statusChipText, {color: item.isActive ? '#065F46' : '#4B5563'}]}>
-                        {item.isActive ? 'Active' : 'Hidden'}
-                      </Text>
-                    </View>
-                  )}
+                )}
+
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
+
                   {addToCollectionMode ? (
-                    <IconSymbol
-                      name={selectedForCollection[item.id] ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={22}
-                      color={selectedForCollection[item.id] ? '#10B981' : '#9CA3AF'}
-                    />
-                  ) : addToCategoryMode ? (
-                    <IconSymbol
-                      name={selectedForCategory[item.id] ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={22}
-                      color={selectedForCategory[item.id] ? '#10B981' : '#9CA3AF'}
-                    />
+                    <Text style={styles.variantCountText}>
+                      {item.variantCount && item.variantCount > 0
+                        ? `${item.variantCount} variant${item.variantCount > 1 ? 's' : ''}`
+                        : '1 Variant'}
+                    </Text>
                   ) : (
-                    <TouchableOpacity
-                      style={styles.kebab}
-                      onPress={() => {
-                        setActiveProductId(item.id);
-                        setActionSheetOpen(true);
-                      }}>
-                      <IconSymbol name="ellipsis-vertical" size={18} color="#111827" />
-                    </TouchableOpacity>
+                    <>
+                      {item.variantCount && item.variantCount > 0 ? (
+                        <Text style={styles.variantCountText}>
+                          {item.variantCount} variant{item.variantCount > 1 ? 's' : ''} • {item.variants?.filter((v: any) => v.inStock).length ?? 0} in stock
+                        </Text>
+                      ) : (
+                        <Text style={styles.variantCountText}>
+                          {item.inStock ? 'In stock' : 'Out of stock'}
+                        </Text>
+                      )}
+                    </>
                   )}
                 </View>
-              <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
-                <Text style={styles.price}>₹{item.price}</Text>
-                {item.mrp ? <Text style={styles.mrp}>₹{item.mrp}</Text> : null}
-              </View>
-                {addToCollectionMode && (
-                  <View style={styles.stockBadgeRow}>
-                    <Text style={styles.addToCollectionHint}>Tap to add to collection</Text>
+
+                {/* Status or Selection indicator */}
+                {!addToCollectionMode && !addToCategoryMode && typeof item.isActive === 'boolean' && (
+                  <View style={[styles.statusChip, item.isActive ? styles.statusChipActive : styles.statusChipDisabled]}>
+                    <View style={[styles.statusDotSmall, { backgroundColor: item.isActive ? '#10B981' : '#9CA3AF' }]} />
+                    <Text style={[styles.statusChipText, { color: item.isActive ? '#065F46' : '#4B5563' }]}>
+                      {item.isActive ? 'Active' : 'Hidden'}
+                    </Text>
                   </View>
                 )}
-                {addToCategoryMode && (
-                  <View style={styles.stockBadgeRow}>
-                    <Text style={styles.addToCollectionHint}>Tap to add to category</Text>
+
+                {addToCollectionMode ? (
+                  <View style={styles.checkboxContainer}>
+                    <View style={[
+                      styles.selectionCheckbox,
+                      selectedProductsMap.has(item.id) && styles.selectionCheckboxSelected
+                    ]}>
+                      {selectedProductsMap.has(item.id) && (
+                        <IconSymbol name="checkmark" size={16} color="#FFFFFF" />
+                      )}
+                    </View>
                   </View>
-                )}
-                {!item.inStock && !addToCollectionMode && !addToCategoryMode && (
-                <View style={styles.stockBadgeRow}>
-                  <Text style={styles.outOfStockBadge}>Out of Stock</Text>
+                ) : addToCategoryMode ? (
+                  <IconSymbol
+                    name={selectedForCategory[item.id] ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={22}
+                    color={selectedForCategory[item.id] ? '#10B981' : '#9CA3AF'}
+                  />
+                ) : (
                   <TouchableOpacity
+                    style={styles.kebab}
                     onPress={() => {
                       setActiveProductId(item.id);
                       setActionSheetOpen(true);
                     }}>
-                    <Text style={styles.updateInventory}>Update Inventory</Text>
+                    <IconSymbol name="ellipsis-vertical" size={18} color="#111827" />
                   </TouchableOpacity>
-                </View>
-              )}
-            </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
 
         {/* Add Product Button (bottom) */}
-        {addToCollectionMode ? (
+        {
+          addToCollectionMode ? (
             <TouchableOpacity
-            style={[
-              styles.addButton,
-              {alignSelf:'center', marginVertical:24},
-              (selectedCount === 0 || addingSelected) && styles.addButtonDisabled
-            ]}
-            disabled={selectedCount === 0 || addingSelected}
-            onPress={async () => {
-              if (addingSelected) return; // extra guard against double-tap
-              if (!targetCollectionId) return;
-              const ids = Array.from(new Set(Object.keys(selectedForCollection).filter(id => selectedForCollection[id])));
-              if (ids.length === 0) return;
-              setAddingSelected(true);
-              try {
-                for (const pid of ids) {
-                  // Skip if already added in this session
-                  if (alreadyAdded[pid]) continue;
-                  await addProductToCollection(targetCollectionId, pid);
-                  setAlreadyAdded(prev => ({ ...prev, [pid]: true }));
-                }
-                Alert.alert('Success', `Added ${ids.length} product(s) to collection`);
-                setSelectedForCollection({});
-                if (returnScreen && route?.params?.returnParams) {
-                  navigation.navigate(returnScreen, route.params.returnParams);
-                } else {
-                  navigation.goBack();
-                }
-              } catch (e:any) {
-                console.error('Failed to add selected products', e);
-                Alert.alert('Error', e?.message || 'Failed to add products to collection');
-              } finally {
-                setAddingSelected(false);
-              }
-            }}>
-            <Text style={styles.addButtonText}>{addingSelected ? 'Adding...' : `Add to Collection (${selectedCount})`}</Text>
-          </TouchableOpacity>
-        ) : addToCategoryMode ? (
-          <TouchableOpacity 
-            style={[
-              styles.addButton,
-              {alignSelf:'center', marginVertical:24},
-              (selectedCount === 0 || addingToCategory) && styles.addButtonDisabled
-            ]}
-            disabled={selectedCount === 0 || addingToCategory}
-            onPress={async () => {
-              if (addingToCategory) return; // extra guard against double-tap
-              if (!targetCategoryId || !categoryName) return;
-              const ids = Array.from(new Set(Object.keys(selectedForCategory).filter(id => selectedForCategory[id])));
-              if (ids.length === 0) return;
-              setAddingToCategory(true);
-              try {
-                // SmartBiz: Update each product with categoryId (the actual foreign key)
-                // This links the product to the category in the database
-                const categoryIdNum = targetCategoryId ? Number(targetCategoryId) : null;
-                if (!categoryIdNum) {
-                  Alert.alert('Error', 'Category ID is missing. Cannot add products to category.');
-                  setAddingToCategory(false);
-                  return;
-                }
-                
-                console.log('🔄 [ProductsScreen] Adding products to category:', {
-                  categoryId: categoryIdNum,
-                  categoryName: categoryName,
-                  productIds: ids,
-                });
-                
-                for (const pid of ids) {
-                  if (alreadyAddedToCategory[pid]) continue;
-                  const product = products.find(p => p.id === pid);
-                  if (product) {
-                    console.log('🔄 [ProductsScreen] Updating product with categoryId:', {
-                      productId: pid,
-                      productName: product.title,
-                      categoryId: categoryIdNum,
-                    });
-                    await updateProduct(pid, {
-                      productName: product.title,
-                      sellingPrice: product.price,
-                      productCategory: categoryName, // Keep for backward compatibility
-                      businessCategory: product.businessCategory || '',
-                      description: product.description || '',
-                      mrp: product.mrp,
-                      inventoryQuantity: product.inventoryQuantity || 0,
-                      customSku: product.sku,
-                      color: product.color,
-                      size: product.size,
-                      hsnCode: product.hsnCode,
-                      categoryId: categoryIdNum, // SmartBiz: CRITICAL - link product to category via foreign key
-                    });
-                    setAlreadyAddedToCategory(prev => ({ ...prev, [pid]: true }));
+              style={[
+                styles.saveSelectionButton,
+                { alignSelf: 'center', marginVertical: 24 }
+              ]}
+              onPress={async () => {
+                if (navBusy) return;
+                setNavBusy(true);
+
+                const updatedSelection = Array.from(selectedProductsMap.values());
+                const productIds = updatedSelection.map(p => Number(p.id));
+
+                try {
+                  // SmartBiz: If we have a target collection and aren't returning to the creation screen,
+                  // we should save the products NOW.
+                  if (targetCollectionId && returnScreen !== 'AddCollection' && returnScreen !== 'EditCollection') {
+                    console.log(`🔗 [ProductsScreen] Saving ${productIds.length} products to collection ${targetCollectionId}`);
+                    await saveCollectionProducts(Number(targetCollectionId), productIds);
+                    Alert.alert('Success', `Added ${productIds.length} product(s) to collection`);
                   }
+
+                  if (returnScreen) {
+                    const params = {
+                      ...(route?.params?.returnParams || {}),
+                      selectedProducts: updatedSelection,
+                      refreshTimestamp: Date.now(), // Signal refresh
+                    };
+                    navigation.navigate(returnScreen, params);
+                  } else {
+                    navigation.goBack();
+                  }
+                } catch (err: any) {
+                  console.error('Failed to save collection products:', err);
+                  Alert.alert('Error', err?.message || 'Failed to save selection');
+                } finally {
+                  setNavBusy(false);
                 }
-                Alert.alert('Success', `Added ${ids.length} product(s) to category "${categoryName}"`);
-                setSelectedForCategory({});
-                navigation.goBack();
-              } catch (e: any) {
-                console.error('Failed to add products to category', e);
-                Alert.alert('Error', e?.message || 'Failed to add products to category');
-              } finally {
-                setAddingToCategory(false);
-              }
-            }}>
-            <Text style={styles.addButtonText}>{addingToCategory ? 'Adding...' : `Add to Category (${selectedCount})`}</Text>
-          </TouchableOpacity>
-        ) : viewCollectionProducts && targetCollectionId ? (
-          // When viewing collection products, show "Add Products to Collection" button
-          <TouchableOpacity 
-            style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}
+              }}>
+              <Text style={styles.saveSelectionButtonText}>Save Selection</Text>
+            </TouchableOpacity>
+          ) : addToCategoryMode ? (
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                { alignSelf: 'center', marginVertical: 24 },
+                (selectedCount === 0 || addingToCategory) && styles.addButtonDisabled
+              ]}
+              disabled={selectedCount === 0 || addingToCategory}
+              onPress={async () => {
+                if (addingToCategory) return; // extra guard against double-tap
+                if (!targetCategoryId || !targetCategoryName) return;
+                const ids = Array.from(new Set(Object.keys(selectedForCategory).filter(id => selectedForCategory[id])));
+                if (ids.length === 0) return;
+                setAddingToCategory(true);
+                try {
+                  // SmartBiz: Update each product with categoryId (the actual foreign key)
+                  // This links the product to the category in the database
+                  const categoryIdNum = targetCategoryId ? Number(targetCategoryId) : null;
+                  if (!categoryIdNum) {
+                    Alert.alert('Error', 'Category ID is missing. Cannot add products to category.');
+                    setAddingToCategory(false);
+                    return;
+                  }
+
+                  console.log('🔄 [ProductsScreen] Adding products to category:', {
+                    categoryId: categoryIdNum,
+                    categoryName: targetCategoryName,
+                    productIds: ids,
+                  });
+
+                  for (const pid of ids) {
+                    if (alreadyAddedToCategory[pid]) continue;
+                    const product = products.find(p => p.id === pid);
+                    if (product) {
+                      console.log('🔄 [ProductsScreen] Updating product with categoryId:', {
+                        productId: pid,
+                        productName: product.title,
+                        categoryId: categoryIdNum,
+                      });
+                      await updateProduct(pid, {
+                        productName: product.title,
+                        sellingPrice: product.price,
+                        productCategory: targetCategoryName, // Keep for backward compatibility
+                        businessCategory: product.businessCategory || '',
+                        description: product.description || '',
+                        mrp: product.mrp,
+                        inventoryQuantity: product.inventoryQuantity || 0,
+                        customSku: product.sku,
+                        color: product.color,
+                        size: product.size,
+                        hsnCode: product.hsnCode,
+                        categoryId: categoryIdNum, // SmartBiz: CRITICAL - link product to category via foreign key
+                      });
+                      setAlreadyAddedToCategory(prev => ({ ...prev, [pid]: true }));
+                    }
+                  }
+                  Alert.alert('Success', `Added ${ids.length} product(s) to category "${targetCategoryName}"`);
+                  setSelectedForCategory({});
+                  navigation.goBack();
+                } catch (e: any) {
+                  console.error('Failed to add products to category', e);
+                  Alert.alert('Error', e?.message || 'Failed to add products to category');
+                } finally {
+                  setAddingToCategory(false);
+                }
+              }}>
+              <Text style={styles.addButtonText}>{addingToCategory ? 'Adding...' : `Add to Category (${selectedCount})`}</Text>
+            </TouchableOpacity>
+          ) : viewCollectionProducts && targetCollectionId ? (
+            // When viewing collection products, show "Add Products to Collection" button
+            <TouchableOpacity
+              style={[styles.addButton, { alignSelf: 'center', marginVertical: 24 }]}
               onPress={() => {
-              if (navBusy) return;
-              setNavBusy(true);
-              // Navigate to all products in "add to collection" mode
-              navigation.navigate('Products', {
-                collectionId: targetCollectionId,
-                collectionName: collectionName,
-                addToCollection: true,
-                returnScreen: 'Products', // Return to this screen after adding
-                returnParams: {
+                if (navBusy) return;
+                setNavBusy(true);
+                // Navigate to all products in "add to collection" mode
+                navigation.navigate('Products', {
                   collectionId: targetCollectionId,
                   collectionName: collectionName,
-                  viewCollectionProducts: true,
-                },
-              });
-              setTimeout(() => setNavBusy(false), 800);
-            }}>
-            <Text style={styles.addButtonText}>+ Add Products to Collection</Text>
+                  addToCollection: true,
+                  returnScreen: 'Products', // Return to this screen after adding
+                  returnParams: {
+                    collectionId: targetCollectionId,
+                    collectionName: collectionName,
+                    viewCollectionProducts: true,
+                    selectedProducts: products, // Pass currently viewed products as selected
+                  },
+                });
+                setTimeout(() => setNavBusy(false), 800);
+              }}>
+              <Text style={styles.addButtonText}>+ Add Products to Collection</Text>
             </TouchableOpacity>
-        ) : targetCategoryId ? (
-          // When viewing a category, don't show any add button
-          null
-        ) : (
-        <TouchableOpacity 
-          style={[styles.addButton,{alignSelf:'center', marginVertical:24}]}
-          onPress={handleAddProduct}>
-          <Text style={styles.addButtonText}>Add New Product</Text>
-        </TouchableOpacity>
-        )}
-        {groupedProducts.length === 0 && (
-          <View style={{alignItems:'center', marginBottom:24}}>
-            <Text style={{color:'#6c757d'}}>No products match your filters</Text>
-          </View>
-        )}
-        {groupedProducts.length > pageSize && (
-          <View style={{alignItems:'center', marginBottom:24}}>
-            <TouchableOpacity 
-              style={[styles.addButton,{alignSelf:'center', marginVertical:12}]}
-              onPress={() => setPageSize(prev => prev + 20)}>
-              <Text style={styles.addButtonText}>Load more</Text>
+          ) : targetCategoryId ? (
+            // When viewing a category, don't show any add button
+            null
+          ) : (
+            <TouchableOpacity
+              style={[styles.addButton, { alignSelf: 'center', marginVertical: 24 }]}
+              onPress={handleAddProduct}>
+              <Text style={styles.addButtonText}>Add New Product</Text>
             </TouchableOpacity>
-            <Text style={{color:'#6B7280', fontSize:12}}>
-              Showing {Math.min(pageSize, groupedProducts.length)} of {groupedProducts.length}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+          )
+        }
+        {
+          groupedProducts.length === 0 && (
+            <View style={{ alignItems: 'center', marginBottom: 24, marginTop: 50 }}>
+              <Text style={{ color: '#6c757d' }}>No products match your filters</Text>
+            </View>
+          )
+        }
+
+        {
+          groupedProducts.length > pageSize && (
+            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+              <TouchableOpacity
+                style={[styles.addButton, { alignSelf: 'center', marginVertical: 12 }]}
+                onPress={() => setPageSize(prev => prev + 20)}>
+                <Text style={styles.addButtonText}>Load more</Text>
+              </TouchableOpacity>
+              <Text style={{ color: '#6B7280', fontSize: 12 }}>
+                Showing {Math.min(pageSize, groupedProducts.length)} of {groupedProducts.length}
+              </Text>
+            </View>
+          )
+        }
+      </ScrollView >
+
       {/* Filter Bottom Sheet */}
       <Modal transparent visible={isFilterOpen} animationType="slide" onRequestClose={() => setIsFilterOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setIsFilterOpen(false)} />
         <View style={styles.sheet}>
           <View style={styles.sheetHeaderRow}>
             <Text style={styles.sheetTitle}>Filter</Text>
-            <TouchableOpacity onPress={() => { 
-              setInventory('all'); 
-              setDiscounts({}); 
-              setPriceRange({min:0,max:0}); 
+            <TouchableOpacity onPress={() => {
+              setInventory('all');
+              setDiscounts({});
+              setPriceRange({ min: 0, max: 0 });
               setStatusFilter('all');
               setCategoryFilter(null);
               setBusinessFilter(null);
@@ -1206,44 +1263,44 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           </View>
           <View style={styles.sheetBody}>
             <View style={styles.sheetTabs}>
-              {['Inventory','Status','Discount','Price Range'].map(tab => (
-                <TouchableOpacity key={tab} style={[styles.tabItem, filterTab===tab && styles.tabItemActive]} onPress={() => setFilterTab(tab as any)}>
-                  <Text style={[styles.tabText, filterTab===tab && styles.tabTextActive]}>{tab}</Text>
+              {['Inventory', 'Status', 'Discount', 'Price Range'].map(tab => (
+                <TouchableOpacity key={tab} style={[styles.tabItem, filterTab === tab && styles.tabItemActive]} onPress={() => setFilterTab(tab as any)}>
+                  <Text style={[styles.tabText, filterTab === tab && styles.tabTextActive]}>{tab}</Text>
                 </TouchableOpacity>
               ))}
             </View>
             <View style={styles.sheetContent}>
-              {filterTab==='Inventory' && (
+              {filterTab === 'Inventory' && (
                 <>
-                  {[{key:'all',label:'Show All'},{key:'in',label:'In Stock only'},{key:'out',label:'Out of Stock only'}].map(opt => (
+                  {[{ key: 'all', label: 'Show All' }, { key: 'in', label: 'In Stock only' }, { key: 'out', label: 'Out of Stock only' }].map(opt => (
                     <TouchableOpacity key={opt.key} style={styles.optionRow} onPress={() => setInventory(opt.key as any)}>
-                      <View style={[styles.radioOuter, inventory===opt.key && styles.radioOuterActive]}>
-                        {inventory===opt.key && <View style={styles.radioInner} />}
+                      <View style={[styles.radioOuter, inventory === opt.key && styles.radioOuterActive]}>
+                        {inventory === opt.key && <View style={styles.radioInner} />}
                       </View>
                       <Text style={styles.optionLabel}>{opt.label}</Text>
                       <Text style={styles.optionCount}>
-                        {opt.key==='all'?inventoryCounts.all: opt.key==='in'?inventoryCounts.in: inventoryCounts.out}
+                        {opt.key === 'all' ? inventoryCounts.all : opt.key === 'in' ? inventoryCounts.in : inventoryCounts.out}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </>
               )}
-              {filterTab==='Status' && (
+              {filterTab === 'Status' && (
                 <>
-                  {[{key:'all',label:'Show All'},{key:'active',label:'Active'},{key:'hidden',label:'Hidden'}].map(opt => (
+                  {[{ key: 'all', label: 'Show All' }, { key: 'active', label: 'Active' }, { key: 'hidden', label: 'Hidden' }].map(opt => (
                     <TouchableOpacity key={opt.key} style={styles.optionRow} onPress={() => setStatusFilter(opt.key as any)}>
-                      <View style={[styles.radioOuter, statusFilter===opt.key && styles.radioOuterActive]}>
-                        {statusFilter===opt.key && <View style={styles.radioInner} />}
+                      <View style={[styles.radioOuter, statusFilter === opt.key && styles.radioOuterActive]}>
+                        {statusFilter === opt.key && <View style={styles.radioInner} />}
                       </View>
                       <Text style={styles.optionLabel}>{opt.label}</Text>
                     </TouchableOpacity>
                   ))}
                 </>
               )}
-              {filterTab==='Discount' && (
+              {filterTab === 'Discount' && (
                 <>
                   {discountRanges.map(r => (
-                    <TouchableOpacity key={r} style={styles.optionRow} onPress={() => setDiscounts(p => ({...p,[r]:!p[r]}))}>
+                    <TouchableOpacity key={r} style={styles.optionRow} onPress={() => setDiscounts(p => ({ ...p, [r]: !p[r] }))}>
                       <View style={[styles.checkbox, discounts[r] && styles.checkboxChecked]} />
                       <Text style={styles.optionLabel}>{r}</Text>
                       <Text style={styles.optionCount}>{discountCounts[r] || 0}</Text>
@@ -1251,7 +1308,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                   ))}
                 </>
               )}
-              {filterTab==='Price Range' && (
+              {filterTab === 'Price Range' && (
                 <>
                   <View style={styles.priceRangeContainer}>
                     <View style={styles.priceDisplayRow}>
@@ -1264,7 +1321,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                         <Text style={styles.priceValue}>₹{priceRange.max > 0 ? priceRange.max : (absoluteMaxPrice > 0 ? absoluteMaxPrice : 0)}</Text>
                       </View>
                     </View>
-                    
+
                     {/* Range Slider */}
                     {absoluteMinPrice >= 0 && absoluteMaxPrice > absoluteMinPrice && (
                       <View style={styles.rangeSliderWrapper}>
@@ -1313,40 +1370,40 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             <Text style={styles.primaryCtaText}>Show All Products</Text>
           </TouchableOpacity>
         </View>
-      </Modal>
+      </Modal >
 
       {/* Sort Bottom Sheet */}
-      <Modal transparent visible={isSortOpen} animationType="slide" onRequestClose={() => setIsSortOpen(false)}>
+      < Modal transparent visible={isSortOpen} animationType="slide" onRequestClose={() => setIsSortOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setIsSortOpen(false)} />
         <View style={styles.sheet}>
-          <Text style={[styles.sheetTitle,{marginBottom:10}]}>Sort By</Text>
+          <Text style={[styles.sheetTitle, { marginBottom: 10 }]}>Sort By</Text>
           {[
-            {key:'title-az', label:'Title(A-Z)'},
-            {key:'title-za', label:'Title(Z-A)'},
-            {key:'price-low', label:'Price (Low to High)'},
-            {key:'price-high', label:'Price (High to Low)'},
-            {key:'disc-low', label:'Discount (Low to High)'},
-            {key:'disc-high', label:'Discount (High to Low)'},
+            { key: 'title-az', label: 'Title(A-Z)' },
+            { key: 'title-za', label: 'Title(Z-A)' },
+            { key: 'price-low', label: 'Price (Low to High)' },
+            { key: 'price-high', label: 'Price (High to Low)' },
+            { key: 'disc-low', label: 'Discount (Low to High)' },
+            { key: 'disc-high', label: 'Discount (High to Low)' },
           ].map(item => (
-            <TouchableOpacity 
-              key={item.key} 
-              style={styles.optionRow} 
+            <TouchableOpacity
+              key={item.key}
+              style={styles.optionRow}
               onPress={() => {
                 setSortBy(item.key as any);
                 setIsSortOpen(false); // Close modal after selection
               }}
             >
-              <View style={[styles.radioOuter, sortBy===item.key && styles.radioOuterActive]}>
-                {sortBy===item.key && <View style={styles.radioInner} />}
+              <View style={[styles.radioOuter, sortBy === item.key && styles.radioOuterActive]}>
+                {sortBy === item.key && <View style={styles.radioInner} />}
               </View>
               <Text style={styles.optionLabel}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
-      </Modal>
+      </Modal >
 
       {/* Actions Bottom Sheet */}
-      <Modal transparent visible={actionSheetOpen} animationType="slide" onRequestClose={() => setActionSheetOpen(false)}>
+      < Modal transparent visible={actionSheetOpen} animationType="slide" onRequestClose={() => setActionSheetOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setActionSheetOpen(false)} />
         <View style={styles.actionSheet}>
           {activeProduct?.inStock ? (
@@ -1391,70 +1448,70 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
               <IconSymbol name="chevron-forward" size={18} color="#10B981" />
             </TouchableOpacity>
           )}
-        {typeof activeProduct?.isActive === 'boolean' && (
+          {typeof activeProduct?.isActive === 'boolean' && (
+            <TouchableOpacity
+              style={styles.actionRow}
+              onPress={async () => {
+                console.log('🔀 Toggling status', { activeProductId, current: activeProduct?.isActive });
+                if (!activeProductId) {
+                  setActionSheetOpen(false);
+                  return;
+                }
+                try {
+                  await updateProductStatus(activeProductId, !activeProduct.isActive);
+                  await loadProducts();
+                } catch (e) {
+                  console.error('Failed to update status', e);
+                  Alert.alert('Error', e instanceof Error ? e.message : 'Failed to update product status');
+                } finally {
+                  setActionSheetOpen(false);
+                }
+              }}>
+              <Text style={styles.actionText}>{activeProduct.isActive ? 'Disable (Hide)' : 'Enable (Show)'}</Text>
+              <IconSymbol name="chevron-forward" size={18} color="#10B981" />
+            </TouchableOpacity>
+          )}
+          {/* Best Seller Toggle */}
           <TouchableOpacity
             style={styles.actionRow}
             onPress={async () => {
-                console.log('🔀 Toggling status', { activeProductId, current: activeProduct?.isActive });
-              if (!activeProductId) {
+              if (!activeProductId || !activeProduct) {
                 setActionSheetOpen(false);
                 return;
               }
+              const currentBestSeller = activeProduct.bestSeller || false;
+              setActionSheetOpen(false);
               try {
-                await updateProductStatus(activeProductId, !activeProduct.isActive);
+                await updateProduct(activeProductId, {
+                  productName: activeProduct.title,
+                  sellingPrice: activeProduct.price,
+                  businessCategory: activeProduct.businessCategory || '',
+                  description: activeProduct.description || '',
+                  mrp: activeProduct.mrp,
+                  inventoryQuantity: activeProduct.inventoryQuantity || 0,
+                  customSku: activeProduct.sku,
+                  color: activeProduct.color,
+                  size: activeProduct.size,
+                  hsnCode: activeProduct.hsnCode,
+                  bestSeller: !currentBestSeller,
+                });
                 await loadProducts();
+                Alert.alert(
+                  'Success',
+                  !currentBestSeller
+                    ? 'Product marked as Best Seller'
+                    : 'Product unmarked from Best Seller'
+                );
               } catch (e) {
-                  console.error('Failed to update status', e);
-                  Alert.alert('Error', e instanceof Error ? e.message : 'Failed to update product status');
-              } finally {
-                setActionSheetOpen(false);
+                console.error('Failed to toggle best seller', e);
+                Alert.alert('Error', e instanceof Error ? e.message : 'Failed to update best seller status');
               }
             }}>
-            <Text style={styles.actionText}>{activeProduct.isActive ? 'Disable (Hide)' : 'Enable (Show)'}</Text>
+            <Text style={styles.actionText}>
+              {activeProduct?.bestSeller ? 'Unmark Best Seller' : 'Mark as Best Seller'}
+            </Text>
             <IconSymbol name="chevron-forward" size={18} color="#10B981" />
           </TouchableOpacity>
-        )}
-        {/* Best Seller Toggle */}
-        <TouchableOpacity
-          style={styles.actionRow}
-          onPress={async () => {
-            if (!activeProductId || !activeProduct) {
-              setActionSheetOpen(false);
-              return;
-            }
-            const currentBestSeller = activeProduct.bestSeller || false;
-            setActionSheetOpen(false);
-            try {
-              await updateProduct(activeProductId, {
-                productName: activeProduct.title,
-                sellingPrice: activeProduct.price,
-                businessCategory: activeProduct.businessCategory || '',
-                description: activeProduct.description || '',
-                mrp: activeProduct.mrp,
-                inventoryQuantity: activeProduct.inventoryQuantity || 0,
-                customSku: activeProduct.sku,
-                color: activeProduct.color,
-                size: activeProduct.size,
-                hsnCode: activeProduct.hsnCode,
-                bestSeller: !currentBestSeller,
-              });
-              await loadProducts();
-              Alert.alert(
-                'Success',
-                !currentBestSeller 
-                  ? 'Product marked as Best Seller' 
-                  : 'Product unmarked from Best Seller'
-              );
-            } catch (e) {
-              console.error('Failed to toggle best seller', e);
-              Alert.alert('Error', e instanceof Error ? e.message : 'Failed to update best seller status');
-            }
-          }}>
-          <Text style={styles.actionText}>
-            {activeProduct?.bestSeller ? 'Unmark Best Seller' : 'Mark as Best Seller'}
-          </Text>
-          <IconSymbol name="chevron-forward" size={18} color="#10B981" />
-        </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionRow}
             onPress={async () => {
@@ -1504,15 +1561,15 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             <IconSymbol name="share" size={18} color="#10B981" />
           </TouchableOpacity>
         </View>
-      </Modal>
+      </Modal >
 
       {/* Delete Confirm Modal */}
-      <Modal transparent visible={confirmDeleteOpen} animationType="fade" onRequestClose={() => setConfirmDeleteOpen(false)}>
-        <View style={[styles.backdrop,{justifyContent:'flex-end'}]}>
+      < Modal transparent visible={confirmDeleteOpen} animationType="fade" onRequestClose={() => setConfirmDeleteOpen(false)}>
+        <View style={[styles.backdrop, { justifyContent: 'flex-end' }]}>
           <View style={styles.deleteCard}>
-            <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={styles.sheetTitle}>Delete Product</Text>
-              <TouchableOpacity onPress={() => setConfirmDeleteOpen(false)}><IconSymbol name="close" size={20} color="#6c757d"/></TouchableOpacity>
+              <TouchableOpacity onPress={() => setConfirmDeleteOpen(false)}><IconSymbol name="close" size={20} color="#6c757d" /></TouchableOpacity>
             </View>
             <Text style={styles.deleteQuestion}>Are you sure you want to delete {activeProduct?.title}?</Text>
             <TouchableOpacity
@@ -1533,24 +1590,24 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
                     e instanceof Error && e.message
                       ? e.message
                       : 'Failed to delete product';
-                  
+
                   // Check if product is used in orders (common reason for deletion failure)
                   // The backend error message is: "Cannot delete this product because it is already used in orders or other records. Please mark it as Hidden instead of deleting."
                   const errorLower = errorMessage.toLowerCase();
-                  const isOrderRelatedError = 
+                  const isOrderRelatedError =
                     errorLower.includes('already used in orders') ||
                     errorLower.includes('used in orders') ||
                     errorLower.includes('used in other records') ||
                     (errorLower.includes('cannot delete') && errorLower.includes('orders')) ||
                     (errorLower.includes('cannot delete') && errorLower.includes('records'));
-                  
+
                   console.log('🔍 [ProductsScreen] Delete error analysis:', {
                     errorMessage,
                     isOrderRelatedError,
                     activeProductId,
                     hasActiveProduct: !!activeProduct,
                   });
-                  
+
                   if (isOrderRelatedError) {
                     Alert.alert(
                       'Cannot Delete Product',
@@ -1595,10 +1652,10 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </Modal >
 
       {/* Select Collection Bottom Sheet */}
-      <Modal
+      < Modal
         transparent
         visible={collectionSheetOpen}
         animationType="slide"
@@ -1608,7 +1665,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
           onPress={() => setCollectionSheetOpen(false)}
         />
         <View style={styles.collectionSheet}>
-          <Text style={[styles.sheetTitle, {marginBottom: 8}]}>
+          <Text style={[styles.sheetTitle, { marginBottom: 8 }]}>
             Select a Collection
           </Text>
           <TouchableOpacity
@@ -1650,7 +1707,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             </TouchableOpacity>
           ))}
           <TouchableOpacity
-            style={[styles.primaryCta, {marginTop: 16}]}
+            style={[styles.primaryCta, { marginTop: 16 }]}
             onPress={async () => {
               if (!activeProductId) {
                 setCollectionSheetOpen(false);
@@ -1672,8 +1729,8 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({navigation, route}) => {
             <Text style={styles.primaryCtaText}>Add to Selected Collections</Text>
           </TouchableOpacity>
         </View>
-      </Modal>
-    </SafeAreaView>
+      </Modal >
+    </SafeAreaView >
   );
 };
 
@@ -1712,17 +1769,17 @@ const styles = StyleSheet.create({
   headerRefreshButton: {
     padding: 4,
   },
-  storeHeader: {padding:16, paddingTop:12},
-  storeRow: {flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:12},
-  storeName: {fontSize:18, fontWeight:'700', color:'#111827'},
-  storeStatus: {fontSize:13, color:'#6B7280', marginTop:2},
-  statusBadge: {flexDirection:'row', alignItems:'center', backgroundColor:'#ECFDF3', paddingHorizontal:10, paddingVertical:6, borderRadius:12},
-  statusDot: {width:8, height:8, borderRadius:4, backgroundColor:'#10B981', marginRight:6},
-  statusText: {color:'#065F46', fontWeight:'600', fontSize:12},
-  countersRow: {flexDirection:'row', justifyContent:'space-between', gap:10},
-  counterCard: {flex:1, backgroundColor:'#FFFFFF', borderRadius:12, padding:12, shadowColor:'#000', shadowOpacity:0.06, shadowRadius:4, shadowOffset:{width:0,height:2}, elevation:2},
-  counterValue: {fontSize:18, fontWeight:'700', color:'#111827'},
-  counterLabel: {fontSize:12, color:'#6B7280', marginTop:4},
+  storeHeader: { padding: 16, paddingTop: 12 },
+  storeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  storeName: { fontSize: 18, fontWeight: '700', color: '#111827' },
+  storeStatus: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF3', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', marginRight: 6 },
+  statusText: { color: '#065F46', fontWeight: '600', fontSize: 12 },
+  countersRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  counterCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  counterValue: { fontSize: 18, fontWeight: '700', color: '#111827' },
+  counterLabel: { fontSize: 12, color: '#6B7280', marginTop: 4 },
   searchSection: {
     flexDirection: 'row',
     padding: 15,
@@ -1765,23 +1822,64 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  card: {marginHorizontal:16, marginTop:12, backgroundColor:'#FFFFFF', borderRadius:12, padding:14, flexDirection:'row', alignItems:'center', gap:12},
-  thumbImage: {width:60, height:60, borderRadius:8, marginRight:8},
-  thumbPlaceholder: {width:60, height:60, borderRadius:8, backgroundColor:'#E5E7EB', marginRight:8, alignItems:'center', justifyContent:'center'},
-  title: {fontWeight:'600', color:'#111827'},
-  variantCountText: {marginTop: 2, fontSize: 13, color: '#6c757d'},
-  price: {fontWeight:'bold', color:'#111827'},
-  mrp: {textDecorationLine:'line-through', color:'#9CA3AF'},
-  kebab: {padding:8},
-  stockBadgeRow: {marginTop:8, flexDirection:'row', alignItems:'center', justifyContent:'space-between'},
-  outOfStockBadge: {backgroundColor:'#F3E8E2', color:'#6c757d', paddingVertical:6, paddingHorizontal:10, borderRadius:8},
-  updateInventory: {color:'#B91C1C', fontWeight:'600'},
-  addToCollectionHint: {color:'#e61580', fontWeight:'600', fontSize:12, marginTop:4},
-  statusChip: {flexDirection:'row', alignItems:'center', paddingHorizontal:10, paddingVertical:6, borderRadius:12, gap:6},
-  statusChipActive: {backgroundColor:'#ECFDF3'},
-  statusChipDisabled: {backgroundColor:'#F3F4F6'},
-  statusDotSmall: {width:8, height:8, borderRadius:4},
-  statusChipText: {fontSize:12, fontWeight:'600'},
+  card: { marginHorizontal: 16, marginTop: 12, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  thumbImage: { width: 60, height: 60, borderRadius: 8, marginRight: 8 },
+  thumbPlaceholder: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#E5E7EB', marginRight: 8, alignItems: 'center', justifyContent: 'center' },
+  title: { fontWeight: '600', color: '#111827' },
+  variantCountText: { marginTop: 2, fontSize: 13, color: '#6c757d' },
+  price: { fontWeight: 'bold', color: '#111827' },
+  mrp: { textDecorationLine: 'line-through', color: '#9CA3AF' },
+  kebab: { padding: 8 },
+  stockBadgeRow: { marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  outOfStockBadge: { backgroundColor: '#F3E8E2', color: '#6c757d', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 },
+  updateInventory: { color: '#B91C1C', fontWeight: '600' },
+  addToCollectionHint: {
+    fontSize: 12,
+    color: '#008080',
+    fontWeight: '500',
+  },
+  // SmartBiz: New Selection UI Styles
+  checkboxContainer: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectionCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#111827', // Dark border
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectionCheckboxSelected: {
+    backgroundColor: '#111827', // Dark fill
+    borderColor: '#111827',
+  },
+  saveSelectionButton: {
+    backgroundColor: '#111827', // Dark button from screenshot
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 30, // Pill shape
+    alignItems: 'center',
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  saveSelectionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  statusChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, gap: 6 },
+  statusChipActive: { backgroundColor: '#ECFDF3' },
+  statusChipDisabled: { backgroundColor: '#F3F4F6' },
+  statusDotSmall: { width: 8, height: 8, borderRadius: 4 },
+  statusChipText: { fontSize: 12, fontWeight: '600' },
   addButton: {
     backgroundColor: '#e61580',
     paddingVertical: 15,
@@ -1799,34 +1897,34 @@ const styles = StyleSheet.create({
   addButtonDisabled: {
     opacity: 0.5,
   },
-  backdrop: {flex: 1, backgroundColor: 'rgba(0,0,0,0.25)'},
-  sheet: {position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16},
-  actionSheet: {position:'absolute', left:0,right:0,bottom:0, backgroundColor:'#FFFFFF', borderTopLeftRadius:16, borderTopRightRadius:16, padding:16},
-  actionRow: {flexDirection:'row', justifyContent:'space-between', alignItems:'center', paddingVertical:14},
-  actionText: {color:'#111827', fontSize:16},
-  sheetHeaderRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8},
-  sheetTitle: {fontSize: 18, fontWeight: 'bold', color: '#111827'},
-  clearAll: {color: '#10B981', fontWeight: '600'},
-  sheetBody: {flexDirection: 'row', minHeight: 260},
-  sheetTabs: {width: 120, borderRightWidth: 1, borderRightColor: '#dee2e6'},
-  tabItem: {paddingVertical: 14, paddingHorizontal: 12},
-  tabItemActive: {backgroundColor: '#D1FAE5'},
-  tabText: {color: '#111827'},
-  tabTextActive: {color: '#10B981', fontWeight: 'bold'},
-  sheetContent: {flex: 1, paddingHorizontal: 16},
-  optionRow: {flexDirection: 'row', alignItems: 'center', paddingVertical: 12},
-  optionLabel: {flex: 1, color: '#4B5563', fontSize: 16, marginLeft: 10},
-  optionCount: {color: '#9CA3AF'},
-  radioOuter: {width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#9CA3AF', justifyContent: 'center', alignItems: 'center'},
-  radioOuterActive: {borderColor: '#e61580'},
-  radioInner: {width: 10, height: 10, borderRadius: 5, backgroundColor: '#e61580'},
-  checkbox: {width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF'},
-  checkboxChecked: {backgroundColor: '#e61580', borderColor: '#e61580'},
-  priceRangeContainer: {marginBottom: 16},
-  priceDisplayRow: {flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20},
-  priceDisplay: {alignItems: 'center'},
-  priceLabel: {color: '#6c757d', fontSize: 14, fontWeight: '500', marginBottom: 4},
-  priceValue: {color: '#111827', fontSize: 18, fontWeight: '600'},
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)' },
+  sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 },
+  actionSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 },
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14 },
+  actionText: { color: '#111827', fontSize: 16 },
+  sheetHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  clearAll: { color: '#10B981', fontWeight: '600' },
+  sheetBody: { flexDirection: 'row', minHeight: 260 },
+  sheetTabs: { width: 120, borderRightWidth: 1, borderRightColor: '#dee2e6' },
+  tabItem: { paddingVertical: 14, paddingHorizontal: 12 },
+  tabItemActive: { backgroundColor: '#D1FAE5' },
+  tabText: { color: '#111827' },
+  tabTextActive: { color: '#10B981', fontWeight: 'bold' },
+  sheetContent: { flex: 1, paddingHorizontal: 16 },
+  optionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  optionLabel: { flex: 1, color: '#4B5563', fontSize: 16, marginLeft: 10 },
+  optionCount: { color: '#9CA3AF' },
+  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#9CA3AF', justifyContent: 'center', alignItems: 'center' },
+  radioOuterActive: { borderColor: '#e61580' },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#e61580' },
+  checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF' },
+  checkboxChecked: { backgroundColor: '#e61580', borderColor: '#e61580' },
+  priceRangeContainer: { marginBottom: 16 },
+  priceDisplayRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
+  priceDisplay: { alignItems: 'center' },
+  priceLabel: { color: '#6c757d', fontSize: 14, fontWeight: '500', marginBottom: 4 },
+  priceValue: { color: '#111827', fontSize: 18, fontWeight: '600' },
   rangeSliderWrapper: {
     marginTop: 10,
     marginBottom: 10,
@@ -1905,20 +2003,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 50,
   },
-  primaryCta: {backgroundColor: '#e61580', paddingVertical: 14, borderRadius: 12, marginTop: 12},
-  primaryCtaText: {color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold'},
-  deleteCard: {backgroundColor:'#FFFFFF', borderTopLeftRadius:16, borderTopRightRadius:16, padding:16},
-  deleteQuestion: {fontSize:16, color:'#111827', marginVertical:16},
-  deleteBtn: {backgroundColor:'#B91C1C', paddingVertical:14, borderRadius:12, marginBottom:10},
-  deleteBtnText: {color:'#FFFFFF', textAlign:'center', fontWeight:'bold'},
-  cancelBtn: {borderWidth:1, borderColor:'#CBD5E1', paddingVertical:14, borderRadius:12},
-  cancelBtnText: {textAlign:'center', color:'#111827', fontWeight:'600'},
-  collectionSheet: {position:'absolute', left:0, right:0, bottom:0, backgroundColor:'#FFFFFF', borderTopLeftRadius:16, borderTopRightRadius:16, padding:16, maxHeight:'70%'},
-  addCollectionRow: {flexDirection:'row', alignItems:'center', paddingVertical:12},
-  collectionRow: {flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingVertical:12},
-  collectionName: {color:'#111827'},
-  checkBox: {width:20, height:20, borderRadius:4, borderWidth:2, borderColor:'#9CA3AF'},
-  checkBoxChecked: {backgroundColor:'#e61580', borderColor:'#e61580'},
+  primaryCta: { backgroundColor: '#e61580', paddingVertical: 14, borderRadius: 12, marginTop: 12 },
+  primaryCtaText: { color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold' },
+  deleteCard: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16 },
+  deleteQuestion: { fontSize: 16, color: '#111827', marginVertical: 16 },
+  deleteBtn: { backgroundColor: '#B91C1C', paddingVertical: 14, borderRadius: 12, marginBottom: 10 },
+  deleteBtnText: { color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold' },
+  cancelBtn: { borderWidth: 1, borderColor: '#CBD5E1', paddingVertical: 14, borderRadius: 12 },
+  cancelBtnText: { textAlign: 'center', color: '#111827', fontWeight: '600' },
+  collectionSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, maxHeight: '70%' },
+  addCollectionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  collectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
+  collectionName: { color: '#111827' },
+  checkBox: { width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF' },
+  checkBoxChecked: { backgroundColor: '#e61580', borderColor: '#e61580' },
 });
 
 export default ProductsScreen;
