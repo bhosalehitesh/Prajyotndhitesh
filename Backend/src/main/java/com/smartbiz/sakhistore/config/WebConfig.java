@@ -1,22 +1,12 @@
 package com.smartbiz.sakhistore.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.context.annotation.Configuration;
 
+/**
+ * WebConfig - Reserved for future web-related configurations.
+ * CORS is currently handled in SecurityConfig to avoid bean conflicts.
+ */
+@Configuration
 public class WebConfig {
-
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOrigins("*")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*");
-            }
-        };
-    }
-
+    // CORS configuration is handled in SecurityConfig to avoid duplicate bean definitions
 }

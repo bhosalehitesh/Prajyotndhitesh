@@ -319,7 +319,22 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
         }
       } else if (viewCollectionProducts && targetCollectionId) {
         // Viewing a specific collection
-        apiProducts = await fetchProductsByCollection(targetCollectionId);
+        try {
+          apiProducts = await fetchProductsByCollection(targetCollectionId);
+        } catch (err: any) {
+          console.error('❌ [ProductsScreen] Failed to load collection products:', err);
+          // If collection doesn't exist or access denied, show empty list instead of crashing
+          if (err.message?.includes('not found') || err.message?.includes('own collections')) {
+            apiProducts = [];
+            setProducts([]);
+            setLoading(false);
+            rotateAnim.stopAnimation();
+            rotateAnim.setValue(0);
+            return; // Exit early to avoid further processing
+          }
+          // Re-throw other errors
+          throw err;
+        }
       } else {
         // Default: all products (with status filter if set)
         apiProducts = await fetchProducts();
@@ -368,8 +383,19 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
         };
       });
       setProducts(mapped);
-    } catch (error) {
-      console.error('Failed to load products', error);
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to load products';
+      console.error('❌ [ProductsScreen] Failed to load products:', error);
+      
+      // If it's a collection products error, show a more specific message
+      if (errorMessage.includes('collection products')) {
+        console.warn('⚠️ [ProductsScreen] Collection products error - this may be expected if collection is empty or invalid');
+        // Set empty products instead of crashing
+        setProducts([]);
+      } else {
+        // For other errors, still set empty to prevent crash
+        setProducts([]);
+      }
     } finally {
       setLoading(false);
       rotateAnim.stopAnimation();
@@ -415,7 +441,18 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
       if (addToCollectionMode || addToCategoryMode) {
         apiProducts = await fetchProducts();
       } else if (viewCollectionProducts && targetCollectionId) {
-        apiProducts = await fetchProductsByCollection(targetCollectionId);
+        try {
+          apiProducts = await fetchProductsByCollection(targetCollectionId);
+        } catch (err: any) {
+          console.error('❌ [ProductsScreen] Failed to load collection products in refresh:', err);
+          // If collection doesn't exist or access denied, show empty list instead of crashing
+          if (err.message?.includes('not found') || err.message?.includes('own collections')) {
+            apiProducts = [];
+          } else {
+            // For other errors, fall back to all products
+            apiProducts = await fetchProducts();
+          }
+        }
       } else {
         apiProducts = await fetchProducts();
       }
@@ -474,8 +511,18 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
         return mappedProduct;
       });
       setProducts(mapped);
-    } catch (error) {
-      console.error('Failed to refresh products', error);
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to refresh products';
+      console.error('❌ [ProductsScreen] Failed to refresh products:', error);
+      
+      // If it's a collection products error, show empty list instead of crashing
+      if (errorMessage.includes('collection products')) {
+        console.warn('⚠️ [ProductsScreen] Collection products error during refresh - showing empty list');
+        setProducts([]);
+      } else {
+        // For other errors, still set empty to prevent crash
+        setProducts([]);
+      }
     } finally {
       setLoading(false);
       rotateAnim.stopAnimation();

@@ -181,11 +181,17 @@ public class SellerDetailsController {
     @PostMapping("/login-otp-seller")
     public ResponseEntity<?> sendLoginOtp(@RequestBody PhoneRequest req) {
         try {
+            System.out.println("📱 [Login OTP Request] Phone: " + req.getPhone());
             String otp = authService.sendLoginOtp(req.getPhone());
+            System.out.println("✅ [Login OTP] OTP generated and sent: " + otp);
             return ResponseEntity.ok(Map.of("message", "Login OTP sent", "otp", otp));
         } catch (RuntimeException ex) {
+            System.err.println("❌ [Login OTP Error] " + ex.getMessage());
+            ex.printStackTrace();
             return ResponseEntity.status(400).body(Map.of("message", ex.getMessage()));
         } catch (Exception ex) {
+            System.err.println("❌ [Login OTP Unexpected Error] " + ex.getMessage());
+            ex.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("message", "Internal server error: " + ex.getMessage()));
         }
     }

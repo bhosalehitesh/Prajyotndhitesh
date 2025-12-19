@@ -316,6 +316,45 @@ export const getStoreCategories = async (storeSlug) => {
   }
 };
 
+/**
+ * Get collections for a specific store by slug
+ * @param {string} storeSlug - Store slug
+ * @returns {Promise<Array>} Array of collections
+ */
+export const getStoreCollections = async (storeSlug) => {
+  if (!storeSlug || storeSlug.trim() === '') {
+    throw new Error('Store slug is required');
+  }
+  const normalizedSlug = storeSlug.trim();
+  const endpoint = `/public/store/${encodeURIComponent(normalizedSlug)}/collections`;
+  const API_BASE = getBackendUrl();
+  const fullUrl = `${API_BASE}${endpoint}`;
+  
+  console.log('📡 [API] Fetching store collections:', {
+    slug: normalizedSlug,
+    endpoint: endpoint,
+    fullUrl: fullUrl
+  });
+  
+  try {
+    const collections = await apiRequest(endpoint);
+    console.log('✅ [API] Store collections fetched:', {
+      isArray: Array.isArray(collections),
+      count: Array.isArray(collections) ? collections.length : 0,
+      sample: Array.isArray(collections) && collections.length > 0 ? collections[0] : null
+    });
+    return collections;
+  } catch (error) {
+    console.error('❌ [API] Error fetching store collections:', {
+      slug: normalizedSlug,
+      error: error.message,
+      status: error.status,
+      url: fullUrl
+    });
+    throw error;
+  }
+};
+
 // ==================== CART FUNCTIONS ====================
 // (Functions moved below to match backend API format)
 

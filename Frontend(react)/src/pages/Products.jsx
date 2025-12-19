@@ -108,17 +108,16 @@ const Products = () => {
   return (
     <div className="container" style={{padding: '2rem 0'}}>
       <StoreError />
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
-        <h1>Products</h1>
-        {selectedCategory && (
+      {selectedCategory && (
+        <div style={{display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '2rem'}}>
           <button 
             onClick={() => setSelectedCategory('')}
             style={{padding: '0.5rem 1rem', cursor: 'pointer'}}
           >
             Clear Filter
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {products.length === 0 ? (
         <div style={{textAlign: 'center', padding: '3rem'}}>

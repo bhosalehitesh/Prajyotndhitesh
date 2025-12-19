@@ -414,7 +414,14 @@ export const CartProvider = ({ children }) => {
   };
 
   const getCartItemCount = () => {
-    return cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    // Return the number of unique products (by productId), not total quantity or cart items
+    // This counts unique products, so if same product has multiple variants, it counts as 1
+    const uniqueProductIds = new Set(
+      cart
+        .map(item => item.productId)
+        .filter(id => id != null && id !== undefined)
+    );
+    return uniqueProductIds.size;
   };
 
   const getCartStoreId = () => {
