@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect} from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -19,8 +19,8 @@ import {
   launchImageLibrary,
   ImagePickerResponse,
 } from 'react-native-image-picker';
-import {uploadCategoryWithImages, updateCategory, fetchProducts, updateProduct, deleteCategory, API_BASE_URL} from '../../../utils/api';
-import {storage, AUTH_TOKEN_KEY} from '../../../authentication/storage';
+import { uploadCategoryWithImages, updateCategory, fetchProducts, updateProduct, deleteCategory, API_BASE_URL } from '../../../utils/api';
+import { storage, AUTH_TOKEN_KEY } from '../../../authentication/storage';
 
 interface AddCategoryScreenProps {
   navigation: any;
@@ -34,7 +34,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
   // SmartBiz: Check if we're in edit mode (categoryId must be present)
   const categoryIdFromRoute = route?.params?.categoryId;
   const isEditMode = !!(categoryIdFromRoute && (categoryIdFromRoute !== '' && categoryIdFromRoute !== null && categoryIdFromRoute !== undefined));
-  
+
   // Debug: Log route params on mount
   useEffect(() => {
     console.log('🔍 [AddCategoryScreen] Screen mounted/updated:', {
@@ -45,10 +45,10 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
       allParams: route?.params,
     });
   }, [route?.params, categoryIdFromRoute, isEditMode]);
-  
+
   // Note: businessCategory is initialized from route params in useState
   // No useEffect needed - we want user changes to persist
-  
+
   const [categoryImage, setCategoryImage] = useState<string | null>(
     route?.params?.image || null,
   );
@@ -68,13 +68,13 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
   const isSubmittingRef = useRef(false);
 
   const categoryList = [
-    'Appliances','Baby','Beauty and Personal Care','Books and Stationery','Clothing','Electronics','Food and Grocery','Footwear','Furniture','General','Health Supplements','Home and Kitchen','Home Care','Jewelry','Lawn and Garden','Luggage and Bags','Multipurpose','Pet Products','Sports and Fitness','Toys and games','Watches',
+    'Appliances', 'Baby', 'Beauty and Personal Care', 'Books and Stationery', 'Clothing', 'Electronics', 'Food and Grocery', 'Footwear', 'Furniture', 'General', 'Health Supplements', 'Home and Kitchen', 'Home Care', 'Jewelry', 'Lawn and Garden', 'Luggage and Bags', 'Multipurpose', 'Pet Products', 'Sports and Fitness', 'Toys and games', 'Watches',
   ];
 
   const canSave =
     categoryName.trim().length > 0 &&
     categoryName.length <= 30;
-    // businessCategory is now optional
+  // businessCategory is now optional
 
   const requestCameraPermission = async (): Promise<boolean> => {
     try {
@@ -118,7 +118,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
         console.log('ImagePicker Error: ', res.errorMessage);
         Alert.alert('Error', res.errorMessage || 'Failed to open camera');
       } else if (res.assets?.[0]?.uri) {
-        const {fileSize, type, uri} = res.assets[0];
+        const { fileSize, type, uri } = res.assets[0];
         if (fileSize && fileSize > 10 * 1024 * 1024) {
           Alert.alert('Image too large', 'Please select an image less than 10MB');
           return;
@@ -153,7 +153,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
         console.log('ImagePicker Error: ', res.errorMessage);
         Alert.alert('Error', res.errorMessage || 'Failed to open image library');
       } else if (res.assets?.[0]?.uri) {
-        const {fileSize, type, uri} = res.assets[0];
+        const { fileSize, type, uri } = res.assets[0];
         if (fileSize && fileSize > 10 * 1024 * 1024) {
           Alert.alert('Image too large', 'Please select an image less than 10MB');
           return;
@@ -195,7 +195,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
     // Set BOTH ref and state IMMEDIATELY (synchronously) before any async operation
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    
+
     const categoryId = route?.params?.categoryId;
     console.log('🔄 [AddCategory] Starting category save...', {
       isEditMode,
@@ -209,11 +209,11 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
       if (isEditMode && categoryId) {
         // Update existing category (SmartBiz: same as collections)
         const categoryIdNum = typeof categoryId === 'string' ? Number(categoryId) : categoryId;
-        
+
         if (isNaN(categoryIdNum)) {
           throw new Error(`Invalid category ID: ${categoryId}`);
         }
-        
+
         console.log('🔄 [AddCategory] UPDATING existing category:', {
           categoryId: categoryIdNum,
           categoryName,
@@ -222,7 +222,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
           hasImage: !!categoryImage,
           imageUrl: categoryImage ? (categoryImage.length > 50 ? categoryImage.substring(0, 50) + '...' : categoryImage) : 'none',
         });
-        
+
         const updatePayload: any = {
           categoryName,
           businessCategory: businessCategory || '', // Allow empty business category
@@ -230,7 +230,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
           seoTitleTag: categoryName,
           seoMetaDescription: categoryDescription || '',
         };
-        
+
         // Handle image upload for updates
         // If categoryImage is a data URI or file path, it's a new image that needs to be uploaded
         if (categoryImage && (categoryImage.startsWith('file://') || categoryImage.startsWith('data:'))) {
@@ -244,24 +244,24 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
             form.append('description', categoryDescription || '');
             form.append('seoTitleTag', categoryName);
             form.append('seoMetaDescription', categoryDescription || '');
-            
+
             // Upload the new image
             form.append('categoryImages', {
               uri: categoryImage,
               name: `category_${Date.now()}.jpg`,
               type: 'image/jpeg',
             } as any);
-            
+
             form.append('socialSharingImage', {
               uri: categoryImage,
               name: `social_${Date.now()}.jpg`,
               type: 'image/jpeg',
             } as any);
-            
+
             // Upload to get image URL (we'll extract the URL from response)
             const token = await storage.getItem(AUTH_TOKEN_KEY);
             const uploadUrl = `${API_BASE_URL}/api/category/upload`;
-            
+
             const uploadResponse = await fetch(uploadUrl, {
               method: 'POST',
               headers: {
@@ -269,7 +269,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
               },
               body: form,
             });
-            
+
             let uploadPayload;
             try {
               uploadPayload = await uploadResponse.json();
@@ -277,20 +277,20 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
               const textResponse = await uploadResponse.text();
               throw new Error(`Failed to parse upload response: ${textResponse}`);
             }
-            
+
             if (!uploadResponse.ok) {
               throw new Error(uploadPayload?.message || uploadPayload?.error || 'Failed to upload image');
             }
-            
+
             // Extract image URL from the uploaded category response
             // Backend returns Category object with categoryImage field (single string, not array)
             const uploadedImageUrl = uploadPayload?.categoryImage || null;
             const temporaryCategoryId = uploadPayload?.categoryId || uploadPayload?.id || uploadPayload?.category_id;
-            
+
             if (uploadedImageUrl) {
               updatePayload.categoryImage = uploadedImageUrl;
               console.log('✅ [AddCategory] Image uploaded successfully, URL:', uploadedImageUrl);
-              
+
               // Delete the temporary category that was created just to upload the image
               // This is a workaround since backend doesn't have a standalone image upload endpoint
               if (temporaryCategoryId) {
@@ -346,7 +346,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
           // This is an existing image URL - include it
           updatePayload.categoryImage = categoryImage;
         }
-        
+
         await updateCategory(categoryIdNum, updatePayload);
         console.log('✅ [AddCategory] Category updated successfully');
         Alert.alert(
@@ -386,7 +386,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
           try {
             console.log('🔄 [AddCategory] Auto-linking products with businessCategory:', businessCategory);
             const allProducts = await fetchProducts();
-            
+
             // Filter products that match the businessCategory
             const matchingProducts = allProducts.filter(p => {
               const pBusinessCategory = (p.businessCategory || '').toLowerCase().trim();
@@ -489,8 +489,8 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
       }
     } catch (error) {
       console.error('❌ [AddCategory] Failed to save category', error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : 'Failed to save category. Please check your internet connection and try again.';
       Alert.alert('Error', errorMessage);
       // Reset both ref and state on error so user can retry
@@ -518,7 +518,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={true}
@@ -533,7 +533,7 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
             {categoryImage ? (
               <View style={styles.imageWrapper}>
                 <Image
-                  source={{uri: categoryImage}}
+                  source={{ uri: categoryImage }}
                   style={styles.categoryImage}
                 />
                 <TouchableOpacity
