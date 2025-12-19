@@ -16,7 +16,8 @@
 export const API_BASE_URL_DEV = 'http://localhost:8080';
 
 // Use IP address (only if USE_IP_ADDRESS is true)
-export const API_BASE_URL_DEV_IP = 'http://192.168.1.54:8080'; // Change this to your IP if needed
+// Updated to current machine IP (detected): 192.168.1.60
+export const API_BASE_URL_DEV_IP = 'http://192.168.1.60:8080'; // Change this to your IP if needed
 
 // Production URL
 export const API_BASE_URL_PROD = 'https://your-production-api.com';
