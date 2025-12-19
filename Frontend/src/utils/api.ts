@@ -1463,6 +1463,8 @@ export const fetchProductsByCollection = async (
   const id = typeof collectionId === 'string' ? collectionId : String(collectionId);
   const url = `${API_BASE_URL}/api/collections/${id}/products`;
 
+  console.log('📡 [API] Fetching products for collection:', { url, collectionId: id });
+
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -1474,21 +1476,42 @@ export const fetchProductsByCollection = async (
   const payload = await parseJsonOrText(response);
 
   if (!response.ok) {
-    const message =
-      typeof payload === 'string'
+    let message = 'Failed to load collection products';
+    
+    if (response.status === 404) {
+      message = `Collection not found (ID: ${id})`;
+    } else if (response.status === 403) {
+      message = 'You can only view products of your own collections';
+    } else if (response.status === 500) {
+      message = typeof payload === 'string' ? payload : 'Server error while loading collection products';
+    } else {
+      message = typeof payload === 'string'
         ? payload
-        : payload?.message || 'Failed to load collection products';
+        : payload?.message || `Failed to load collection products (${response.status})`;
+    }
+    
+    console.error('❌ [API] Failed to fetch collection products:', {
+      status: response.status,
+      statusText: response.statusText,
+      message,
+      payload,
+      collectionId: id,
+    });
+    
     throw new Error(message);
   }
 
   if (!payload) {
+    console.log('✅ [API] Collection products fetched (empty)');
     return [];
   }
 
   if (!Array.isArray(payload)) {
+    console.error('❌ [API] Invalid products response from server:', { payload });
     throw new Error('Invalid products response from server');
   }
 
+  console.log('✅ [API] Collection products fetched successfully:', payload.length);
   return payload as ProductDto[];
 };
 
