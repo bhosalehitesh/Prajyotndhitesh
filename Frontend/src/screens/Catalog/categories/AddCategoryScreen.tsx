@@ -19,7 +19,8 @@ import {
   launchImageLibrary,
   ImagePickerResponse,
 } from 'react-native-image-picker';
-import {uploadCategoryWithImages, updateCategory, fetchProducts, updateProduct} from '../../../utils/api';
+import {uploadCategoryWithImages, updateCategory, fetchProducts, updateProduct, deleteCategory, API_BASE_URL} from '../../../utils/api';
+import {storage, AUTH_TOKEN_KEY} from '../../../authentication/storage';
 
 interface AddCategoryScreenProps {
   navigation: any;
@@ -230,12 +231,117 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
           seoMetaDescription: categoryDescription || '',
         };
         
-        // Only include image if it's a new image (not the existing URL)
-        // If categoryImage is a data URI or file path, it's a new image
+        // Handle image upload for updates
+        // If categoryImage is a data URI or file path, it's a new image that needs to be uploaded
         if (categoryImage && (categoryImage.startsWith('file://') || categoryImage.startsWith('data:'))) {
-          // This is a new image - we'd need to upload it first, but for now just pass the URL
-          // TODO: Handle image upload for updates
-          console.warn('⚠️ [AddCategory] New image detected but image upload for updates not yet implemented');
+          // This is a new image - upload it first to get the URL
+          console.log('📤 [AddCategory] Uploading new image for category update...');
+          try {
+            // Upload image using FormData (similar to uploadCategoryWithImages)
+            const form = new FormData();
+            form.append('categoryName', categoryName); // Required by backend
+            form.append('businessCategory', businessCategory || ''); // Required by backend
+            form.append('description', categoryDescription || '');
+            form.append('seoTitleTag', categoryName);
+            form.append('seoMetaDescription', categoryDescription || '');
+            
+            // Upload the new image
+            form.append('categoryImages', {
+              uri: categoryImage,
+              name: `category_${Date.now()}.jpg`,
+              type: 'image/jpeg',
+            } as any);
+            
+            form.append('socialSharingImage', {
+              uri: categoryImage,
+              name: `social_${Date.now()}.jpg`,
+              type: 'image/jpeg',
+            } as any);
+            
+            // Upload to get image URL (we'll extract the URL from response)
+            const token = await storage.getItem(AUTH_TOKEN_KEY);
+            const uploadUrl = `${API_BASE_URL}/api/category/upload`;
+            
+            const uploadResponse = await fetch(uploadUrl, {
+              method: 'POST',
+              headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: form,
+            });
+            
+            let uploadPayload;
+            try {
+              uploadPayload = await uploadResponse.json();
+            } catch (jsonError) {
+              const textResponse = await uploadResponse.text();
+              throw new Error(`Failed to parse upload response: ${textResponse}`);
+            }
+            
+            if (!uploadResponse.ok) {
+              throw new Error(uploadPayload?.message || uploadPayload?.error || 'Failed to upload image');
+            }
+            
+            // Extract image URL from the uploaded category response
+            // Backend returns Category object with categoryImage field (single string, not array)
+            const uploadedImageUrl = uploadPayload?.categoryImage || null;
+            const temporaryCategoryId = uploadPayload?.categoryId || uploadPayload?.id || uploadPayload?.category_id;
+            
+            if (uploadedImageUrl) {
+              updatePayload.categoryImage = uploadedImageUrl;
+              console.log('✅ [AddCategory] Image uploaded successfully, URL:', uploadedImageUrl);
+              
+              // Delete the temporary category that was created just to upload the image
+              // This is a workaround since backend doesn't have a standalone image upload endpoint
+              if (temporaryCategoryId) {
+                try {
+                  await deleteCategory(temporaryCategoryId);
+                  console.log('🗑️ [AddCategory] Temporary category deleted:', temporaryCategoryId);
+                } catch (deleteError) {
+                  console.warn('⚠️ [AddCategory] Failed to delete temporary category:', deleteError);
+                  // Continue anyway - the category update will still work
+                  // The temporary category will remain but won't affect functionality
+                }
+              }
+            } else {
+              console.warn('⚠️ [AddCategory] Image uploaded but URL not found in response');
+              // Try to delete temporary category even if URL not found
+              if (temporaryCategoryId) {
+                try {
+                  await deleteCategory(temporaryCategoryId);
+                  console.log('🗑️ [AddCategory] Temporary category deleted (no URL found):', temporaryCategoryId);
+                } catch (deleteError) {
+                  console.warn('⚠️ [AddCategory] Failed to delete temporary category:', deleteError);
+                }
+              }
+              // Throw error since we couldn't get the image URL
+              throw new Error('Image uploaded but URL not found in response');
+            }
+          } catch (imageUploadError) {
+            console.error('❌ [AddCategory] Failed to upload image:', imageUploadError);
+            Alert.alert(
+              'Image Upload Failed',
+              'Failed to upload the new image. The category will be updated without the new image.',
+              [
+                {
+                  text: 'Continue Anyway',
+                  onPress: () => {
+                    // Continue with update without image
+                  },
+                },
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                  onPress: () => {
+                    isSubmittingRef.current = false;
+                    setIsSubmitting(false);
+                    return;
+                  },
+                },
+              ],
+            );
+            // Don't include image in update if upload failed
+          }
         } else if (categoryImage) {
           // This is an existing image URL - include it
           updatePayload.categoryImage = categoryImage;
@@ -654,11 +760,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-<<<<<<< HEAD
-    paddingBottom: 120, // Account for button container (~70px) + bottom nav (~60px) + safe area (~50px)
-=======
     paddingBottom: 150, // Account for button container (~70px) + bottom nav (~60px) + safe area (~20px)
->>>>>>> 52b6e24e7b6c4a160662c5ee2931c4c9deab2ac8
   },
   section: {
     marginBottom: 24,
