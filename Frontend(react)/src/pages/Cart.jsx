@@ -16,6 +16,7 @@ const Cart = () => {
   const currentSellerId = currentStore?.sellerId;
   
   const filteredCart = React.useMemo(() => {
+    // If no store context at all, show all items
     if (!currentStoreId && !currentSellerId && !cartStoreId) {
       console.log('🛒 [Cart] No store filter - showing all items:', cart.length);
       return cart;
@@ -25,6 +26,12 @@ const Cart = () => {
       // Match by storeId or sellerId (cart items might have either)
       const itemStoreId = item.storeId;
       const itemSellerId = item.sellerId;
+      
+      // If item has no storeId or sellerId, include it (legacy items or guest cart)
+      if (!itemStoreId && !itemSellerId) {
+        console.log('🛒 [Cart] Item has no storeId/sellerId, including:', item.name);
+        return true;
+      }
       
       // Priority 1: Match by cartStoreId (cart's locked store)
       if (cartStoreId && itemStoreId) {
@@ -44,8 +51,36 @@ const Cart = () => {
         if (matches) return true;
       }
       
+      // If we have cartStoreId but item doesn't match, exclude it
+      // But if we only have currentStoreId (not cartStoreId), be more lenient
+      if (cartStoreId && itemStoreId && String(itemStoreId) !== String(cartStoreId)) {
+        return false;
+      }
+      
+      // If no cartStoreId but we have items without storeId, include them
+      if (!cartStoreId && !itemStoreId && !itemSellerId) {
+        return true;
+      }
+      
       return false;
     });
+    
+    // If filtering resulted in empty cart but we have items, show all items with a warning
+    if (filtered.length === 0 && cart.length > 0) {
+      console.warn('🛒 [Cart] Filtering resulted in empty cart but cart has items. Showing all items.');
+      console.log('🛒 [Cart] Filtering details:', {
+        totalItems: cart.length,
+        filteredItems: filtered.length,
+        cartStoreId,
+        currentStoreId,
+        currentSellerId,
+        itemStoreIds: cart.map(i => i.storeId),
+        itemSellerIds: cart.map(i => i.sellerId),
+        itemNames: cart.map(i => i.name)
+      });
+      // Return all items if filtering is too strict
+      return cart;
+    }
     
     console.log('🛒 [Cart] Filtering cart:', {
       totalItems: cart.length,

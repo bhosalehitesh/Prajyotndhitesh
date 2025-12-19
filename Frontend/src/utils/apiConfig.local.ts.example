@@ -16,5 +16,5 @@
  */
 
 export const USE_IP_ADDRESS = false; // Set to true to use IP address instead of localhost
-export const API_BASE_URL_DEV_IP = 'http://192.168.1.60:8080'; // Replace YOUR_IP_HERE with your actual IP
+export const API_BASE_URL_DEV_IP = 'http://192.168.1.54:8080'; // Replace YOUR_IP_HERE with your actual IP
 
