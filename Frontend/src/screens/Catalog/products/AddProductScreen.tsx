@@ -52,7 +52,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
   const isEditMode = route?.params?.mode === 'edit';
 
-  const existing = route?.params?.product;
+  const existing = route?.params?.productjhgf;
 
 
 
