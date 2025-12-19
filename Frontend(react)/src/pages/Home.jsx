@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BANNERS, CATEGORIES, DEALS, FEATURES, ROUTES, STORAGE_KEYS } from '../constants';
 import { useStore } from '../contexts/StoreContext';
-import { getStoreFeatured, getStoreBanners } from '../utils/api';
+import { getStoreFeatured, getStoreBanners, getStoreProducts } from '../utils/api';
 import { transformProducts } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/ui/Loading';
@@ -65,14 +65,35 @@ const Home = () => {
           sellerId: currentStore.sellerId,
           storeName: currentStore.name
         });
-
-        const products = await getStoreFeatured(slugToUse);
-        console.log('🏠 [HOME] API Response:', {
-          isArray: Array.isArray(products),
-          length: Array.isArray(products) ? products.length : 'N/A',
-          firstProduct: Array.isArray(products) && products.length > 0 ? products[0] : null
-        });
-
+        
+        // Try to fetch featured products first, but fallback to all products if none found
+        let products = [];
+        try {
+          products = await getStoreFeatured(slugToUse);
+          console.log('🏠 [HOME] Featured products API Response:', {
+            isArray: Array.isArray(products),
+            length: Array.isArray(products) ? products.length : 'N/A',
+            firstProduct: Array.isArray(products) && products.length > 0 ? products[0] : null
+          });
+        } catch (featuredError) {
+          console.warn('⚠️ [HOME] Error fetching featured products, trying all products:', featuredError);
+        }
+        
+        // If no featured products, fetch all products instead
+        if (!Array.isArray(products) || products.length === 0) {
+          console.log('🏠 [HOME] No featured products found, fetching all products...');
+          try {
+            products = await getStoreProducts(slugToUse, null);
+            console.log('🏠 [HOME] All products API Response:', {
+              isArray: Array.isArray(products),
+              length: Array.isArray(products) ? products.length : 'N/A',
+            });
+          } catch (allProductsError) {
+            console.error('❌ [HOME] Error fetching all products:', allProductsError);
+            products = [];
+          }
+        }
+        
         if (Array.isArray(products) && products.length > 0) {
           // Transform backend product format to frontend format using utility
           const transformedProducts = transformProducts(products, currentStore?.name || 'Store');
@@ -101,8 +122,8 @@ const Home = () => {
           setFeaturedProducts(visibleProducts);
         } else {
           console.warn('⚠️ [HOME] No products returned for slug:', slugToUse);
-          console.warn('⚠️ [HOME] Check backend API: http://localhost:8080/api/public/store/' + slugToUse + '/featured');
-          console.warn('⚠️ [HOME] Verify products are marked as bestseller in database for seller_id:', currentStore.sellerId);
+          console.warn('⚠️ [HOME] Check backend API: http://localhost:8080/api/public/store/' + slugToUse + '/products');
+          console.warn('⚠️ [HOME] Verify products exist and are active for seller_id:', currentStore.sellerId);
           setFeaturedProducts([]);
         }
       } catch (error) {
@@ -311,12 +332,12 @@ const Home = () => {
           {featuredProducts.length === 0 && !loading ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
               <p style={{ fontSize: '1.1rem', fontWeight: '500', marginBottom: '8px' }}>
-                No featured products available.
+                No products available.
               </p>
               <p style={{ fontSize: '14px', marginTop: '10px', color: '#888' }}>
-                Only products marked as <strong>bestseller</strong> are shown here.
+                Products will appear here once they are added and marked as active.
                 <br />
-                Check console for details or mark products as bestseller in the seller app.
+                Check the seller app to add products or ensure products are active.
               </p>
             </div>
           ) : (
