@@ -96,9 +96,6 @@ const Featured = () => {
   return (
     <div className="container" style={{padding: '2rem 0'}}>
       <StoreError />
-      <h1>{currentStore ? `${currentStore.name} - Featured Products` : 'Featured Products'}</h1>
-      <p style={{marginBottom: '2rem', color: '#666'}}>Browse our bestseller products</p>
-
       {products.length === 0 ? (
         <div style={{textAlign: 'center', padding: '3rem'}}>
           <p>No featured products available.</p>

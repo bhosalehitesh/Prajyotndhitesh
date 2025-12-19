@@ -21,14 +21,17 @@ const getApiBaseUrl = (): string => {
 
   // In development, use the configured URL
   if (USE_IP_ADDRESS) {
+    console.log('🌐 [API] Using IP address:', API_BASE_URL_DEV_IP_FINAL);
     return API_BASE_URL_DEV_IP_FINAL;
   }
 
   // Default to localhost (requires ADB reverse port forwarding)
+  console.log('🏠 [API] Using localhost (ADB reverse):', API_BASE_URL_DEV);
   return API_BASE_URL_DEV;
 };
 
 const API_BASE_URL = getApiBaseUrl();
+console.log('✅ [API] Final API_BASE_URL:', API_BASE_URL, 'USE_IP_ADDRESS:', USE_IP_ADDRESS);
 
 // Log the API configuration on module load (for debugging)
 console.log('API Configuration:', {
@@ -235,13 +238,20 @@ export const verifyOtp = async (data: VerifyOtpRequest): Promise<AuthResponse> =
 export const sendLoginOtp = async (phone: string): Promise<string> => {
   const url = `${API_BASE_URL}/api/sellers/login-otp-seller`;
   const cleanPhone = phone.replace(/\D/g, '');
-
+  
   try {
-    console.log('Login OTP attempt:', { phone: cleanPhone, url });
+    console.log('📱 [Login OTP] Starting request...');
+    console.log('📱 [Login OTP] Phone:', cleanPhone);
+    console.log('📱 [Login OTP] URL:', url);
+    console.log('📱 [Login OTP] API_BASE_URL:', API_BASE_URL);
+    console.log('📱 [Login OTP] Expected IP: 192.168.1.48:8080');
     
     // Add timeout to prevent hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => {
+      console.error('⏱️ Request timeout after 20 seconds');
+      controller.abort();
+    }, 20000); // 20 second timeout
     
     const response = await fetch(url, {
       method: 'POST',
@@ -252,10 +262,22 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
         phone: cleanPhone,
       }),
       signal: controller.signal,
+    }).catch((fetchError) => {
+      console.error('🔴 Fetch error details:', {
+        name: fetchError.name,
+        message: fetchError.message,
+        stack: fetchError.stack
+      });
+      throw fetchError;
     });
 
     clearTimeout(timeoutId);
-    console.log('Login OTP response received:', { status: response.status, statusText: response.statusText });
+    console.log('✅ Login OTP response received:', { 
+      status: response.status, 
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
+    });
 
     const payload = await parseJsonOrText(response);
 
@@ -276,34 +298,43 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
 
     return '';
   } catch (error: any) {
+    console.error('❌ Login OTP Error:', {
+      name: error.name,
+      message: error.message,
+      API_BASE_URL,
+      url
+    });
+    
     // Handle abort/timeout errors
-    if (error.name === 'AbortError') {
-      console.error('Login OTP request timed out');
-      throw new Error(
-        `Request timed out. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
-      );
+    if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      const errorMsg = `Cannot connect to backend server.\n\n` +
+        `Backend URL: ${API_BASE_URL}\n\n` +
+        `Please check:\n` +
+        `1. Backend server is running on port 8080\n` +
+        `2. IP address ${API_BASE_URL.replace('http://', '').replace(':8080', '')} is correct\n` +
+        `3. Your device and computer are on the same WiFi network\n` +
+        `4. Firewall is not blocking port 8080\n` +
+        `5. Try: ping ${API_BASE_URL.replace('http://', '').replace(':8080', '')} from command prompt`;
+      
+      throw new Error(errorMsg);
     }
     
-    // Handle network errors with detailed diagnostics
-    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
-      console.error('Network error during sendLoginOtp:', error);
-      console.error('Connection diagnostics:', {
-        API_BASE_URL,
-        url,
-        errorType: error.constructor.name,
-        errorMessage: error.message,
-      });
+    // Handle network errors
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network') || error.message.includes('Failed to fetch'))) {
+      const errorMsg = `Network connection failed.\n\n` +
+        `Backend URL: ${API_BASE_URL}\n\n` +
+        `Troubleshooting:\n` +
+        `1. Verify backend is running: Check if Spring Boot server started successfully\n` +
+        `2. Test in browser: Open ${API_BASE_URL}/api/sellers/login-otp-seller\n` +
+        `3. Check IP address: Run 'ipconfig' and verify your IP matches\n` +
+        `4. Same network: Ensure phone/emulator and computer are on same WiFi\n` +
+        `5. Firewall: Allow port 8080 in Windows Firewall\n` +
+        `6. Try ADB reverse: Run 'adb reverse tcp:8080 tcp:8080' and use localhost`;
       
-      // Provide more actionable error message with troubleshooting steps
-      const isLocalhost = API_BASE_URL.includes('localhost') || API_BASE_URL.includes('127.0.0.1');
-      const troubleshootingSteps = isLocalhost
-        ? `\n\nTroubleshooting:\n1. If using a mobile device/emulator, localhost won't work. Use your computer's IP address instead.\n2. Check apiConfig.ts and set USE_IP_ADDRESS=true with your computer's IP.\n3. Ensure backend is running on port 8080.\n4. Verify device and computer are on the same WiFi network.\n5. Check firewall settings.`
-        : `\n\nTroubleshooting:\n1. Verify backend is running on ${API_BASE_URL}\n2. Check device can reach this IP address\n3. Ensure same WiFi network\n4. Check firewall settings\n5. Try accessing ${url} in a browser to test connectivity`;
-      
-      throw new Error(
-        `Network request failed. Backend URL: ${API_BASE_URL}${troubleshootingSteps}`,
-      );
+      throw new Error(errorMsg);
     }
+    
+    // Re-throw other errors with original message
     throw error;
   }
 };

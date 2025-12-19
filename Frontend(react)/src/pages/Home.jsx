@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BANNERS, CATEGORIES, DEALS, FEATURES, ROUTES, STORAGE_KEYS } from '../constants';
 import { useStore } from '../contexts/StoreContext';
-import { getStoreFeatured, getStoreBanners, getStoreProducts } from '../utils/api';
+import { getStoreFeatured, getStoreBanners, getStoreProducts, getStoreCollections } from '../utils/api';
 import { transformProducts } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/ui/Loading';
@@ -19,6 +19,7 @@ const Home = () => {
   const [flashSaleTime, setFlashSaleTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [loading, setLoading] = useState(false);
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [collections, setCollections] = useState([]);
 
   // Determine the actual store slug (from route params or context)
   const actualSlug = slug || storeSlug || currentStore?.slug;
@@ -187,6 +188,49 @@ const Home = () => {
 
     fetchBanners();
   }, [actualSlug, storeLoading]);
+
+  // Fetch collections for the store
+  useEffect(() => {
+    const fetchCollections = async () => {
+      if (!actualSlug) {
+        console.log('🏠 [HOME] No slug available, skipping collections fetch');
+        setCollections([]);
+        return;
+      }
+
+      if (storeLoading) {
+        return;
+      }
+
+      if (!currentStore || !currentStore.sellerId) {
+        return;
+      }
+
+      try {
+        console.log('🔍 [HOME] Fetching collections for slug:', actualSlug);
+        const data = await getStoreCollections(actualSlug);
+        const collectionsArray = Array.isArray(data) ? data : [];
+        
+        console.log('📦 [HOME] Collections API Response:', {
+          isArray: Array.isArray(data),
+          count: collectionsArray.length,
+        });
+        
+        if (collectionsArray.length > 0) {
+          console.log('✅ [HOME] Collections received:', collectionsArray.length);
+          console.log('📦 [HOME] First collection sample:', collectionsArray[0]);
+        }
+        
+        setCollections(collectionsArray);
+      } catch (err) {
+        console.error('❌ [HOME] Error fetching collections:', err);
+        // Don't show error to user, just use empty array (fallback to static DEALS if needed)
+        setCollections([]);
+      }
+    };
+
+    fetchCollections();
+  }, [actualSlug, storeLoading, currentStore]);
 
   useEffect(() => {
     const total = banners.length || 1;
@@ -389,22 +433,117 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Biggest Deals */}
+      {/* Collections */}
       <section className="biggest-deals">
         <div className="container">
           <h2 className="section-title">Collection</h2>
           <div className="deals-grid">
-            {DEALS.map((deal) => (
-              <div key={deal.id} className="deal-card" onClick={() => navigate(getNavPath(ROUTES.PRODUCTS))}>
-                <div className="image-wrapper">
-                  <img src={deal.image} alt={deal.name} />
-                  <div className="overlay">
-                    <h3>{deal.name}</h3>
-                    <p className="price">STARTING {deal.price}</p>
+            {collections.length > 0 ? (
+              collections.map((collection, index) => {
+                const collectionName =
+                  collection.collectionName ||
+                  collection.name ||
+                  `Collection ${index + 1}`;
+
+                // Try multiple field name variations to find the image
+                let collectionImage =
+                  collection.collectionImage ||
+                  collection.collection_image ||
+                  collection.imageUrl ||
+                  collection.image_url ||
+                  collection.image ||
+                  null;
+                
+                // Get starting price if available
+                const startingPrice = collection.startingPrice || collection.starting_price || null;
+                
+                const basePath = actualSlug ? `/store/${actualSlug}` : '';
+                const collectionSlug = collection.slug || collection.collectionName || collection.name;
+                const collectionPath = collectionSlug 
+                  ? `${basePath}/products?collection=${encodeURIComponent(collectionSlug)}`
+                  : getNavPath(ROUTES.PRODUCTS);
+
+                return (
+                  <div 
+                    key={collection.collectionId || collection.collection_id || collection.id || index} 
+                    className="deal-card" 
+                    onClick={() => navigate(collectionPath)}
+                  >
+                    <div className="image-wrapper">
+                      {collectionImage && collectionImage.trim() !== '' ? (
+                        <img 
+                          src={collectionImage} 
+                          alt={collectionName}
+                          onError={(e) => {
+                            // Hide image on error, show placeholder
+                            e.target.style.display = 'none';
+                            const placeholder = e.target.parentElement?.querySelector('.collection-placeholder');
+                            if (placeholder) {
+                              placeholder.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="collection-placeholder" style={{
+                          width: '100%',
+                          height: '280px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: '#f3f4f6',
+                          color: '#9ca3af',
+                          gap: '8px'
+                        }}>
+                          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{opacity: 0.5}}>
+                            <path d="M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z" fill="currentColor"/>
+                          </svg>
+                          <span style={{fontSize: '0.875rem', fontWeight: 500}}>Image Missing</span>
+                        </div>
+                      )}
+                      <div className="overlay">
+                        <h3>{collectionName}</h3>
+                        {startingPrice && (
+                          <p className="price">STARTING ₹{startingPrice}</p>
+                        )}
+                      </div>
+                      <div className="collection-placeholder" style={{
+                        width: '100%',
+                        height: '280px',
+                        display: 'none',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#f3f4f6',
+                        color: '#9ca3af',
+                        gap: '8px',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0
+                      }}>
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{opacity: 0.5}}>
+                          <path d="M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z" fill="currentColor"/>
+                        </svg>
+                        <span style={{fontSize: '0.875rem', fontWeight: 500}}>Image Missing</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              // Fallback to static DEALS if no collections from backend
+              DEALS.map((deal) => (
+                <div key={deal.id} className="deal-card" onClick={() => navigate(getNavPath(ROUTES.PRODUCTS))}>
+                  <div className="image-wrapper">
+                    <img src={deal.image} alt={deal.name} />
+                    <div className="overlay">
+                      <h3>{deal.name}</h3>
+                      <p className="price">STARTING {deal.price}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </section>

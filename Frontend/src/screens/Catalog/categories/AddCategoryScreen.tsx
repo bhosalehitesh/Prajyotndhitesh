@@ -33,7 +33,14 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
 }) => {
   // SmartBiz: Check if we're in edit mode (categoryId must be present)
   const categoryIdFromRoute = route?.params?.categoryId;
-  const isEditMode = !!(categoryIdFromRoute && (categoryIdFromRoute !== '' && categoryIdFromRoute !== null && categoryIdFromRoute !== undefined));
+  // Handle both actual undefined and string "undefined" cases
+  const isValidCategoryId = categoryIdFromRoute && 
+    categoryIdFromRoute !== '' && 
+    categoryIdFromRoute !== null && 
+    categoryIdFromRoute !== undefined &&
+    categoryIdFromRoute !== 'undefined' && // Handle string "undefined"
+    !isNaN(Number(categoryIdFromRoute)); // Must be a valid number
+  const isEditMode = !!isValidCategoryId;
 
   // Debug: Log route params on mount
   useEffect(() => {
@@ -196,21 +203,42 @@ const AddCategoryScreen: React.FC<AddCategoryScreenProps> = ({
     isSubmittingRef.current = true;
     setIsSubmitting(true);
 
-    const categoryId = route?.params?.categoryId;
+    // Get categoryId from route params (re-read to ensure we have the latest value)
+    let categoryId = route?.params?.categoryId || categoryIdFromRoute;
+    
+    // Normalize: if categoryId is the string "undefined", treat it as actually undefined
+    if (categoryId === 'undefined' || categoryId === 'null' || categoryId === '') {
+      categoryId = undefined;
+    }
+    
+    // Recalculate isEditMode based on current categoryId to handle cases where route params changed
+    // Handle both actual undefined and string "undefined" cases
+    const isValidCategoryId = categoryId != null && 
+      categoryId !== '' && 
+      categoryId !== 'undefined' && // Handle string "undefined"
+      categoryId !== 'null' && // Handle string "null"
+      !isNaN(Number(categoryId)) && // Must be a valid number
+      Number(categoryId) > 0; // Must be positive
+    const currentIsEditMode = !!isValidCategoryId;
+    
     console.log('🔄 [AddCategory] Starting category save...', {
       isEditMode,
+      currentIsEditMode,
       categoryId,
+      categoryIdType: typeof categoryId,
+      categoryIdFromRoute,
+      isValidCategoryId,
       categoryName,
       businessCategory,
       hasImage: !!categoryImage,
     });
 
     try {
-      if (isEditMode && categoryId) {
+      if (currentIsEditMode && isValidCategoryId && categoryId != null) {
         // Update existing category (SmartBiz: same as collections)
         const categoryIdNum = typeof categoryId === 'string' ? Number(categoryId) : categoryId;
 
-        if (isNaN(categoryIdNum)) {
+        if (isNaN(categoryIdNum) || categoryIdNum <= 0) {
           throw new Error(`Invalid category ID: ${categoryId}`);
         }
 

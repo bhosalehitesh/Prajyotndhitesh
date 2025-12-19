@@ -5,7 +5,7 @@ import { useStore } from '../contexts/StoreContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ROUTES, getRoute } from '../constants/routes';
-import { placeOrder, getCart, addToCartAPI, getStoreBySlug } from '../utils/api';
+import { placeOrder, getCart, addToCartAPI, getStoreBySlug, getUserByPhone, getUserOrders, updateUserAddressByPhone } from '../utils/api';
 
 // Get backend URL - try to match the API_CONFIG pattern
 const getBackendUrl = () => {
@@ -37,11 +37,15 @@ const ConfirmOrder = () => {
   const { isDarkMode } = useTheme();
   
   const [address, setAddress] = useState(null);
+  const [savedAddresses, setSavedAddresses] = useState([]);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('COD'); // 'COD' or 'RAZORPAY'
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [showAddressList, setShowAddressList] = useState(false);
+  const [isAddressSaved, setIsAddressSaved] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   const itemTotal = getCartTotal();
   const deliveryFee = 0; // Free delivery
@@ -50,32 +54,368 @@ const ConfirmOrder = () => {
     ? itemTotal + deliveryFee + codCharges 
     : itemTotal + deliveryFee;
 
-  // Load address from location state or localStorage
+  // Load address from location state, database, or localStorage
   useEffect(() => {
-    setIsLoading(true);
-    console.log('ConfirmOrder: Loading address, location.state:', location.state);
-    
-    if (location.state?.address) {
-      console.log('ConfirmOrder: Address found in location.state:', location.state.address);
-      setAddress(location.state.address);
-      setIsLoading(false);
-    } else {
-      // Load from localStorage
-      const savedAddress = localStorage.getItem('selectedAddress');
-      if (savedAddress) {
-        try {
-          const parsedAddress = JSON.parse(savedAddress);
-          console.log('ConfirmOrder: Address found in localStorage:', parsedAddress);
-          setAddress(parsedAddress);
-        } catch (e) {
-          console.error('Error loading address:', e);
-        }
-      } else {
-        console.log('ConfirmOrder: No address found in location.state or localStorage');
+    const loadAddresses = async () => {
+      setIsLoading(true);
+      console.log('ConfirmOrder: Loading addresses, location.state:', location.state);
+      
+      const addresses = [];
+      
+      // 1. Priority: Address from location state (just selected from checkout)
+      if (location.state?.address) {
+        console.log('ConfirmOrder: Address found in location.state:', location.state.address);
+        const stateAddress = { ...location.state.address, source: 'current' };
+        setAddress(location.state.address);
+        addresses.push(stateAddress);
+        // Reset saved status for new address from checkout
+        setIsAddressSaved(false);
+        // Don't return early - continue to load other saved addresses
       }
+      
+      // 2. Load from database if user is authenticated
+      if (isAuthenticated && user?.phone) {
+        try {
+          const token = user.token || localStorage.getItem('authToken');
+          const userId = user.id || user.userId;
+          
+          // Get user data from database
+          const userData = await getUserByPhone(user.phone, token);
+          console.log('ConfirmOrder: User data from database:', userData);
+          
+          // Add address from User table
+          if (userData && (userData.pincode || userData.flatOrHouseNo || userData.areaOrStreet)) {
+            const dbAddress = {
+              customerName: userData.fullName || '',
+              mobileNumber: userData.phone || user.phone,
+              pincode: userData.pincode || '',
+              houseNumber: userData.flatOrHouseNo || '',
+              areaStreet: userData.areaOrStreet || '',
+              landmark: userData.landmark || '',
+              city: userData.city || '',
+              state: userData.state || '',
+              addressType: userData.addressType || 'Other',
+              emailId: userData.email || '',
+              source: 'database'
+            };
+            addresses.push(dbAddress);
+            
+            // Set as current address if no address is set yet
+            if (!address) {
+              setAddress(dbAddress);
+            }
+            
+            // If address from database matches current address, mark as saved
+            if (address && 
+                address.pincode === dbAddress.pincode &&
+                (address.houseNumber || address.flatOrHouseNo) === dbAddress.houseNumber &&
+                (address.areaStreet || address.areaOrStreet) === dbAddress.areaStreet) {
+              setIsAddressSaved(true);
+            }
+          }
+          
+          // Extract unique addresses from order history
+          if (userId) {
+            try {
+              const orders = await getUserOrders(userId);
+              console.log('ConfirmOrder: User orders from database:', orders);
+              
+              if (Array.isArray(orders) && orders.length > 0) {
+                // Extract unique addresses from orders
+                const orderAddresses = new Map();
+                
+                orders.forEach(order => {
+                  if (order.address && typeof order.address === 'string' && order.address.trim()) {
+                    // Parse address string (format: "name, house, area, city, state, pincode")
+                    const addressParts = order.address.split(',').map(s => s.trim()).filter(Boolean);
+                    
+                    if (addressParts.length >= 4) {
+                      // Try to parse the address string
+                      // Common format: "name, house, area, city, state, pincode"
+                      const parsedAddress = {
+                        customerName: addressParts[0] || userData?.fullName || '',
+                        houseNumber: addressParts[1] || '',
+                        areaStreet: addressParts[2] || '',
+                        city: addressParts[3] || '',
+                        state: addressParts[4] || '',
+                        pincode: addressParts[5] || '',
+                        mobileNumber: order.mobile ? String(order.mobile) : (userData?.phone || user.phone),
+                        source: 'order_history',
+                        orderId: order.ordersId || order.id
+                      };
+                      
+                      // Create a unique key for this address
+                      const addressKey = `${parsedAddress.pincode}-${parsedAddress.houseNumber}-${parsedAddress.areaStreet}`;
+                      
+                      // Only add if not already in map and not duplicate of existing addresses
+                      if (!orderAddresses.has(addressKey)) {
+                        const isDuplicate = addresses.some(addr => {
+                          const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
+                          const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
+                          const addrPincode = addr.pincode || '';
+                          
+                          return addrPincode === parsedAddress.pincode &&
+                                 addrHouseNumber === parsedAddress.houseNumber &&
+                                 addrAreaStreet === parsedAddress.areaStreet;
+                        });
+                        
+                        if (!isDuplicate) {
+                          orderAddresses.set(addressKey, parsedAddress);
+                        }
+                      }
+                    }
+                  }
+                });
+                
+                // Add unique addresses from orders
+                orderAddresses.forEach((orderAddr) => {
+                  addresses.push(orderAddr);
+                  console.log('ConfirmOrder: Added address from order history:', orderAddr);
+                });
+              }
+            } catch (orderError) {
+              console.error('ConfirmOrder: Error loading orders for address extraction:', orderError);
+              // Don't fail if orders can't be loaded
+            }
+          }
+        } catch (error) {
+          console.error('ConfirmOrder: Error loading address from database:', error);
+        }
+      }
+      
+      // 3. Load saved addresses from localStorage (user-specific, up to 5)
+      if (isAuthenticated && user?.phone) {
+        try {
+          const userAddressesKey = `userAddresses_${user.phone}`;
+          const savedAddressesStr = localStorage.getItem(userAddressesKey);
+          if (savedAddressesStr) {
+            const parsedAddresses = JSON.parse(savedAddressesStr);
+            console.log('ConfirmOrder: Found saved addresses for user:', parsedAddresses.length);
+            
+            if (Array.isArray(parsedAddresses)) {
+              parsedAddresses.forEach(addr => {
+                // Normalize field names for comparison
+                const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
+                const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
+                const addrPincode = addr.pincode || '';
+                
+                const isDuplicate = addresses.some(existing => {
+                  const existingHouseNumber = existing.houseNumber || existing.flatOrHouseNo || '';
+                  const existingAreaStreet = existing.areaStreet || existing.areaOrStreet || '';
+                  const existingPincode = existing.pincode || '';
+                  
+                  return existingPincode === addrPincode &&
+                         existingHouseNumber === addrHouseNumber &&
+                         existingAreaStreet === addrAreaStreet;
+                });
+                
+                if (!isDuplicate) {
+                  addresses.push({ ...addr, source: 'saved' });
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.error('ConfirmOrder: Error loading saved addresses:', e);
+        }
+      }
+      
+      // 4. Load from localStorage selectedAddress (fallback)
+      try {
+        const savedAddressStr = localStorage.getItem('selectedAddress');
+        if (savedAddressStr) {
+          const parsedAddress = JSON.parse(savedAddressStr);
+          console.log('ConfirmOrder: Address found in localStorage (selectedAddress):', parsedAddress);
+          
+          // Only add if it's different from existing addresses
+          const parsedHouseNumber = parsedAddress.houseNumber || parsedAddress.flatOrHouseNo || '';
+          const parsedAreaStreet = parsedAddress.areaStreet || parsedAddress.areaOrStreet || '';
+          const parsedPincode = parsedAddress.pincode || '';
+          
+          const isDuplicate = addresses.some(addr => {
+            const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
+            const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
+            const addrPincode = addr.pincode || '';
+            
+            return addrPincode === parsedPincode &&
+                   addrHouseNumber === parsedHouseNumber &&
+                   addrAreaStreet === parsedAreaStreet;
+          });
+          
+          if (!isDuplicate) {
+            addresses.push({ ...parsedAddress, source: 'localStorage' });
+          }
+          
+          // Set as current address if no address is set yet
+          if (!address) {
+            setAddress(parsedAddress);
+          }
+        }
+      } catch (e) {
+        console.error('ConfirmOrder: Error loading address from localStorage:', e);
+      }
+      
+      // 5. Check for additional saved addresses in localStorage (stored as 'addresses' array - legacy)
+      try {
+        // Check 'addresses' key (used by Checkout page)
+        const addressesStr = localStorage.getItem('addresses');
+        if (addressesStr) {
+          const parsedAddresses = JSON.parse(addressesStr);
+          if (Array.isArray(parsedAddresses)) {
+            console.log('ConfirmOrder: Found addresses array in localStorage:', parsedAddresses.length, 'addresses');
+            
+            // Filter addresses by current user's phone if authenticated
+            const userPhone = isAuthenticated && user?.phone ? user.phone : null;
+            const userAddresses = userPhone 
+              ? parsedAddresses.filter(addr => 
+                  (addr.userPhone === userPhone || addr.mobileNumber === userPhone || !addr.userPhone)
+                )
+              : parsedAddresses;
+            
+            userAddresses.forEach(addr => {
+              // Normalize field names for comparison
+              const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
+              const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
+              const addrPincode = addr.pincode || '';
+              
+              const isDuplicate = addresses.some(existing => {
+                const existingHouseNumber = existing.houseNumber || existing.flatOrHouseNo || '';
+                const existingAreaStreet = existing.areaStreet || existing.areaOrStreet || '';
+                const existingPincode = existing.pincode || '';
+                
+                return existingPincode === addrPincode &&
+                       existingHouseNumber === addrHouseNumber &&
+                       existingAreaStreet === addrAreaStreet;
+              });
+              
+              if (!isDuplicate) {
+                // Normalize the address object before adding
+                const normalizedAddr = {
+                  ...addr,
+                  houseNumber: addr.houseNumber || addr.flatOrHouseNo || '',
+                  areaStreet: addr.areaStreet || addr.areaOrStreet || '',
+                  source: 'localStorage'
+                };
+                addresses.push(normalizedAddr);
+                console.log('ConfirmOrder: Added address from localStorage array:', normalizedAddr);
+              }
+            });
+          }
+        }
+        
+        // Also check 'savedAddresses' key (legacy/alternative storage)
+        const savedAddressesStr = localStorage.getItem('savedAddresses');
+        if (savedAddressesStr) {
+          const parsedAddresses = JSON.parse(savedAddressesStr);
+          if (Array.isArray(parsedAddresses)) {
+            console.log('ConfirmOrder: Found savedAddresses array in localStorage:', parsedAddresses.length, 'addresses');
+            
+            parsedAddresses.forEach(addr => {
+              // Normalize field names for comparison
+              const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
+              const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
+              const addrPincode = addr.pincode || '';
+              
+              const isDuplicate = addresses.some(existing => {
+                const existingHouseNumber = existing.houseNumber || existing.flatOrHouseNo || '';
+                const existingAreaStreet = existing.areaStreet || existing.areaOrStreet || '';
+                const existingPincode = existing.pincode || '';
+                
+                return existingPincode === addrPincode &&
+                       existingHouseNumber === addrHouseNumber &&
+                       existingAreaStreet === addrAreaStreet;
+              });
+              
+              if (!isDuplicate) {
+                // Normalize the address object before adding
+                const normalizedAddr = {
+                  ...addr,
+                  houseNumber: addr.houseNumber || addr.flatOrHouseNo || '',
+                  areaStreet: addr.areaStreet || addr.areaOrStreet || '',
+                  source: 'localStorage'
+                };
+                addresses.push(normalizedAddr);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error('ConfirmOrder: Error loading saved addresses array:', e);
+      }
+      
+      console.log('ConfirmOrder: Total addresses loaded:', addresses.length);
+      console.log('ConfirmOrder: Addresses:', addresses);
+      
+      // Debug: Check what's in localStorage
+      console.log('ConfirmOrder: localStorage.getItem("addresses"):', localStorage.getItem('addresses'));
+      console.log('ConfirmOrder: localStorage.getItem("selectedAddress"):', localStorage.getItem('selectedAddress'));
+      console.log('ConfirmOrder: localStorage.getItem("savedAddresses"):', localStorage.getItem('savedAddresses'));
+      
+      // Ensure current address is in the addresses list if it exists
+      if (address && addresses.length > 0) {
+        const currentHouseNumber = address.houseNumber || address.flatOrHouseNo || '';
+        const currentAreaStreet = address.areaStreet || address.areaOrStreet || '';
+        const currentPincode = address.pincode || '';
+        
+        const isCurrentInList = addresses.some(addr => {
+          const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
+          const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
+          const addrPincode = addr.pincode || '';
+          
+          return currentPincode === addrPincode &&
+                 currentHouseNumber === addrHouseNumber &&
+                 currentAreaStreet === addrAreaStreet;
+        });
+        
+        if (!isCurrentInList) {
+          console.log('ConfirmOrder: Current address not in list, adding it');
+          addresses.push({ ...address, source: 'current' });
+        }
+      }
+      
+      // Check if current address matches database address (already saved)
+      if (address && isAuthenticated && user?.phone) {
+        const dbAddress = addresses.find(addr => addr.source === 'database');
+        if (dbAddress) {
+          const currentHouseNumber = address.houseNumber || address.flatOrHouseNo || '';
+          const currentAreaStreet = address.areaStreet || address.areaOrStreet || '';
+          const currentPincode = address.pincode || '';
+          
+          const dbHouseNumber = dbAddress.houseNumber || dbAddress.flatOrHouseNo || '';
+          const dbAreaStreet = dbAddress.areaStreet || dbAddress.areaOrStreet || '';
+          const dbPincode = dbAddress.pincode || '';
+          
+          if (currentPincode === dbPincode &&
+              currentHouseNumber === dbHouseNumber &&
+              currentAreaStreet === dbAreaStreet) {
+            console.log('ConfirmOrder: Current address matches database address - already saved');
+            setIsAddressSaved(true);
+          }
+        }
+      }
+      
+      // Set saved addresses state
+      setSavedAddresses(addresses);
+      
+      // If we have addresses but no current address is set, set the first one
+      if (addresses.length > 0 && !address) {
+        console.log('ConfirmOrder: Setting first address as current:', addresses[0]);
+        setAddress(addresses[0]);
+      }
+      
+      if (addresses.length === 0) {
+        console.log('ConfirmOrder: No addresses found');
+        console.log('ConfirmOrder: Debug - isAuthenticated:', isAuthenticated, 'user:', user);
+      } else {
+        console.log('ConfirmOrder: Found', addresses.length, 'address(es). Current address:', address);
+        console.log('ConfirmOrder: savedAddresses state will be set to:', addresses);
+      }
+      
       setIsLoading(false);
-    }
-  }, [location.state]);
+    };
+    
+    loadAddresses();
+  }, [location.state, isAuthenticated, user]);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -141,8 +481,8 @@ const ConfirmOrder = () => {
     if (!address) return '';
     const parts = [
       address.customerName,
-      address.houseNumber,
-      address.areaStreet,
+      address.houseNumber || address.flatOrHouseNo,
+      address.areaStreet || address.areaOrStreet,
       address.landmark,
       address.city,
       address.state,
@@ -541,6 +881,203 @@ const ConfirmOrder = () => {
     navigate(checkoutPath);
   };
 
+  const handleSaveAddress = async () => {
+    if (!address || !isAuthenticated || !user) {
+      alert('Please login to save your address');
+      return;
+    }
+
+    const userPhone = user.phone;
+    if (!userPhone) {
+      alert('User phone number not found. Please login again.');
+      return;
+    }
+
+    // Validate address fields
+    if (!address.pincode || !address.houseNumber || !address.areaStreet || !address.city || !address.state) {
+      alert('Please ensure all address fields are filled (Pincode, House Number, Area, City, State)');
+      return;
+    }
+
+    // Check if user already has 5 addresses saved
+    const userAddressesKey = `userAddresses_${userPhone}`;
+    const existingAddresses = JSON.parse(localStorage.getItem(userAddressesKey) || '[]');
+    
+    if (existingAddresses.length >= 5) {
+      alert('You can only save up to 5 addresses. Please delete an existing address first.');
+      return;
+    }
+
+    setIsSavingAddress(true);
+    setError('');
+
+    try {
+      // Map address to database fields
+      const addressData = {
+        fullName: address.customerName || user.fullName || '',
+        phone: userPhone,
+        email: address.emailId || user.email || null,
+        pincode: address.pincode,
+        flatOrHouseNo: address.houseNumber || address.flatOrHouseNo || '',
+        areaOrStreet: address.areaStreet || address.areaOrStreet || '',
+        landmark: address.landmark || null,
+        city: address.city || '',
+        state: address.state || '',
+        addressType: address.addressType || 'Other',
+        whatsappUpdates: true
+      };
+
+      console.log('Saving address to database:', addressData);
+
+      const token = user.token || localStorage.getItem('authToken');
+      const updatedUser = await updateUserAddressByPhone(userPhone, addressData, token);
+      
+      console.log('Address saved successfully:', updatedUser);
+      
+      // Create saved address object with unique ID
+      const savedAddress = {
+        ...address,
+        id: `addr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Unique ID
+        customerName: updatedUser.fullName || address.customerName,
+        emailId: updatedUser.email || address.emailId,
+        source: 'database',
+        savedAt: new Date().toISOString()
+      };
+      
+      // Check if this address already exists in saved addresses
+      const addressKey = `${savedAddress.pincode}-${savedAddress.houseNumber || savedAddress.flatOrHouseNo}-${savedAddress.areaStreet || savedAddress.areaOrStreet}`;
+      const isDuplicate = existingAddresses.some(addr => {
+        const addrKey = `${addr.pincode}-${addr.houseNumber || addr.flatOrHouseNo}-${addr.areaStreet || addr.areaOrStreet}`;
+        return addrKey === addressKey;
+      });
+      
+      if (isDuplicate) {
+        alert('This address is already saved!');
+        setIsSavingAddress(false);
+        return;
+      }
+      
+      // Add to saved addresses list (limit 5)
+      const updatedSavedAddresses = [...existingAddresses, savedAddress];
+      localStorage.setItem(userAddressesKey, JSON.stringify(updatedSavedAddresses));
+      
+      // Update current address
+      setAddress(savedAddress);
+      localStorage.setItem('selectedAddress', JSON.stringify(savedAddress));
+      
+      // Update saved addresses state
+      const allAddresses = [...savedAddresses];
+      if (!allAddresses.some(addr => {
+        const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
+        const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
+        const addrPincode = addr.pincode || '';
+        
+        return addrPincode === savedAddress.pincode &&
+               addrHouseNumber === (savedAddress.houseNumber || savedAddress.flatOrHouseNo) &&
+               addrAreaStreet === (savedAddress.areaStreet || savedAddress.areaOrStreet);
+      })) {
+        allAddresses.push(savedAddress);
+      }
+      
+      setSavedAddresses(allAddresses);
+      setIsAddressSaved(true);
+      
+      alert(`✅ Address saved successfully! (${updatedSavedAddresses.length}/5 addresses saved)`);
+    } catch (error) {
+      console.error('Error saving address:', error);
+      let errorMessage = error.message || 'Failed to save address. Please try again.';
+      
+      if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+        errorMessage = 'Cannot connect to server. Please ensure the backend server is running on port 8080.';
+      }
+      
+      setError(errorMessage);
+      alert(`Failed to save address: ${errorMessage}`);
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
+
+  const handleDeleteAddress = (addressToDelete) => {
+    if (!isAuthenticated || !user) {
+      alert('Please login to delete addresses');
+      return;
+    }
+
+    const userPhone = user.phone;
+    if (!userPhone) {
+      alert('User phone number not found. Please login again.');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to delete this address?')) {
+      return;
+    }
+
+    const userAddressesKey = `userAddresses_${userPhone}`;
+    const existingAddresses = JSON.parse(localStorage.getItem(userAddressesKey) || '[]');
+    
+    // Remove the address
+    const updatedAddresses = existingAddresses.filter(addr => {
+      // Match by ID if available, otherwise match by address details
+      if (addressToDelete.id && addr.id) {
+        return addr.id !== addressToDelete.id;
+      }
+      
+      const addrKey = `${addr.pincode}-${addr.houseNumber || addr.flatOrHouseNo}-${addr.areaStreet || addr.areaOrStreet}`;
+      const deleteKey = `${addressToDelete.pincode}-${addressToDelete.houseNumber || addressToDelete.flatOrHouseNo}-${addressToDelete.areaStreet || addressToDelete.areaOrStreet}`;
+      return addrKey !== deleteKey;
+    });
+    
+    localStorage.setItem(userAddressesKey, JSON.stringify(updatedAddresses));
+    
+    // Update saved addresses state
+    const updatedSavedAddresses = savedAddresses.filter(addr => {
+      if (addressToDelete.id && addr.id) {
+        return addr.id !== addressToDelete.id;
+      }
+      
+      const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
+      const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
+      const addrPincode = addr.pincode || '';
+      
+      const deleteHouseNumber = addressToDelete.houseNumber || addressToDelete.flatOrHouseNo || '';
+      const deleteAreaStreet = addressToDelete.areaStreet || addressToDelete.areaOrStreet || '';
+      const deletePincode = addressToDelete.pincode || '';
+      
+      return !(addrPincode === deletePincode &&
+               addrHouseNumber === deleteHouseNumber &&
+               addrAreaStreet === deleteAreaStreet);
+    });
+    
+    setSavedAddresses(updatedSavedAddresses);
+    
+    // If deleted address was the current address, set first available address or null
+    const currentHouseNumber = address?.houseNumber || address?.flatOrHouseNo || '';
+    const currentAreaStreet = address?.areaStreet || address?.areaOrStreet || '';
+    const currentPincode = address?.pincode || '';
+    
+    const deleteHouseNumber = addressToDelete.houseNumber || addressToDelete.flatOrHouseNo || '';
+    const deleteAreaStreet = addressToDelete.areaStreet || addressToDelete.areaOrStreet || '';
+    const deletePincode = addressToDelete.pincode || '';
+    
+    if (currentPincode === deletePincode &&
+        currentHouseNumber === deleteHouseNumber &&
+        currentAreaStreet === deleteAreaStreet) {
+      // Set first available address or null
+      if (updatedSavedAddresses.length > 0) {
+        setAddress(updatedSavedAddresses[0]);
+        localStorage.setItem('selectedAddress', JSON.stringify(updatedSavedAddresses[0]));
+      } else {
+        setAddress(null);
+        localStorage.removeItem('selectedAddress');
+      }
+      setIsAddressSaved(false);
+    }
+    
+    alert('Address deleted successfully!');
+  };
+
   const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
   const isMobile = window.innerWidth <= 968;
 
@@ -592,45 +1129,295 @@ const ConfirmOrder = () => {
               }}>
                 Shipping Address
               </h3>
-              <button
-                onClick={handleChangeAddress}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}`,
-                  borderRadius: '6px',
-                  color: isDarkMode ? '#f5f5f5' : '#111',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.borderColor = '#ff6d2e';
-                  e.target.style.color = '#ff6d2e';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.borderColor = isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)';
-                  e.target.style.color = isDarkMode ? '#f5f5f5' : '#111';
-                }}
-              >
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5"></path>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {savedAddresses.length > 0 && (
+                  <button
+                    onClick={() => setShowAddressList(!showAddressList)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      background: 'transparent',
+                      border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}`,
+                      borderRadius: '6px',
+                      color: isDarkMode ? '#f5f5f5' : '#111',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.borderColor = '#ff6d2e';
+                      e.target.style.color = '#ff6d2e';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.borderColor = isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)';
+                      e.target.style.color = isDarkMode ? '#f5f5f5' : '#111';
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    {showAddressList ? 'Hide' : `View All (${savedAddresses.length})`}
+                  </button>
+                )}
+                <button
+                  onClick={handleChangeAddress}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    background: 'transparent',
+                    border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}`,
+                    borderRadius: '6px',
+                    color: isDarkMode ? '#f5f5f5' : '#111',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.borderColor = '#ff6d2e';
+                    e.target.style.color = '#ff6d2e';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.borderColor = isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)';
+                    e.target.style.color = isDarkMode ? '#f5f5f5' : '#111';
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                  </svg>
+                  Change
+                </button>
+              </div>
+            </div>
+            
+            {/* Show all saved addresses if toggle is on */}
+            {showAddressList && savedAddresses.length > 0 && (
+              <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {savedAddresses.map((addr, index) => {
+                  // Normalize field names for comparison
+                  const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
+                  const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
+                  const addrPincode = addr.pincode || '';
+                  
+                  const currentHouseNumber = address?.houseNumber || address?.flatOrHouseNo || '';
+                  const currentAreaStreet = address?.areaStreet || address?.areaOrStreet || '';
+                  const currentPincode = address?.pincode || '';
+                  
+                  const isSelected = address && 
+                    currentPincode === addrPincode &&
+                    currentHouseNumber === addrHouseNumber &&
+                    currentAreaStreet === addrAreaStreet;
+                  
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setAddress(addr);
+                        localStorage.setItem('selectedAddress', JSON.stringify(addr));
+                        setShowAddressList(false);
+                        // Reset saved status when selecting a different address
+                        setIsAddressSaved(false);
+                      }}
+                      style={{
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: `2px solid ${isSelected ? '#ff6d2e' : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+                        background: isSelected ? (isDarkMode ? 'rgba(255,109,46,0.1)' : 'rgba(255,109,46,0.05)') : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.borderColor = '#ff6d2e';
+                          e.currentTarget.style.background = isDarkMode ? 'rgba(255,109,46,0.05)' : 'rgba(255,109,46,0.02)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.borderColor = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <div style={{ fontWeight: '600', color: isDarkMode ? '#f5f5f5' : '#111' }}>
+                          {addr.customerName || 'Address'}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          {isSelected && (
+                            <span style={{
+                              padding: '4px 8px',
+                              background: '#ff6d2e',
+                              color: '#fff',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              fontWeight: '600'
+                            }}>
+                              Selected
+                            </span>
+                          )}
+                          {/* Delete button for saved addresses */}
+                          {(addr.source === 'saved' || addr.source === 'database' || addr.id) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteAddress(addr);
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                background: '#dc3545',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.style.background = '#c82333';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.style.background = '#dc3545';
+                              }}
+                              title="Delete address"
+                            >
+                              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: isDarkMode ? '#ccc' : '#666', lineHeight: '1.6' }}>
+                        {[(addr.houseNumber || addr.flatOrHouseNo), (addr.areaStreet || addr.areaOrStreet), addr.landmark].filter(Boolean).join(', ')}
+                        {addr.city && `, ${addr.city}`}
+                        {addr.state && `, ${addr.state}`}
+                        {addr.pincode && ` - ${addr.pincode}`}
+                      </div>
+                      {addr.mobileNumber && (
+                        <div style={{ fontSize: '0.85rem', color: isDarkMode ? '#999' : '#888', marginTop: '4px' }}>
+                          📱 {addr.mobileNumber}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Current Selected Address - Only show when address list is NOT shown */}
+            {address && !showAddressList && (
+              <div style={{
+                fontSize: '0.95rem',
+                color: isDarkMode ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)',
+                lineHeight: '1.6',
+                marginBottom: '12px'
+              }}>
+                {address.customerName && (
+                  <div style={{ fontWeight: '600', marginBottom: '4px', color: isDarkMode ? '#f5f5f5' : '#111' }}>
+                    {address.customerName}
+                  </div>
+                )}
+                {formatAddress()}
+                {address.mobileNumber && (
+                  <div style={{ fontSize: '0.85rem', color: isDarkMode ? '#999' : '#888', marginTop: '4px' }}>
+                    📱 {address.mobileNumber}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Save Address Button - Only show if address is not saved and user is authenticated */}
+            {address && !showAddressList && isAuthenticated && user && !isAddressSaved && (
+              <div>
+                {(() => {
+                  const userAddressesKey = `userAddresses_${user.phone}`;
+                  const existingAddresses = JSON.parse(localStorage.getItem(userAddressesKey) || '[]');
+                  const addressCount = existingAddresses.length;
+                  const canSaveMore = addressCount < 5;
+                  
+                  return (
+                    <>
+                      <button
+                        onClick={handleSaveAddress}
+                        disabled={isSavingAddress || !canSaveMore}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          background: (isSavingAddress || !canSaveMore) ? '#ccc' : '#ff6d2e',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '0.95rem',
+                          fontWeight: '600',
+                          cursor: (isSavingAddress || !canSaveMore) ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.3s',
+                          marginBottom: '8px'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSavingAddress && canSaveMore) {
+                            e.target.style.background = '#e55a1f';
+                            e.target.style.transform = 'translateY(-2px)';
+                            e.target.style.boxShadow = '0 4px 12px rgba(255, 109, 46, 0.3)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSavingAddress && canSaveMore) {
+                            e.target.style.background = '#ff6d2e';
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = 'none';
+                          }
+                        }}
+                      >
+                        {isSavingAddress ? 'Saving Address...' : canSaveMore ? `Save Address (${addressCount}/5)` : 'Maximum 5 addresses reached'}
+                      </button>
+                      {!canSaveMore && (
+                        <div style={{
+                          fontSize: '0.85rem',
+                          color: '#dc3545',
+                          textAlign: 'center',
+                          marginBottom: '8px'
+                        }}>
+                          You have reached the maximum of 5 saved addresses. Delete one to save a new address.
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+            
+            {/* Address Saved Success Message */}
+            {isAddressSaved && !showAddressList && (
+              <div style={{
+                padding: '12px',
+                background: '#d4edda',
+                border: '1px solid #c3e6cb',
+                borderRadius: '8px',
+                color: '#155724',
+                fontSize: '0.9rem',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
-                Change
-              </button>
-            </div>
-            <div style={{
-              fontSize: '0.95rem',
-              color: isDarkMode ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)',
-              lineHeight: '1.6',
-              marginBottom: '12px'
-            }}>
-              {formatAddress()}
-            </div>
+                Address saved successfully!
+              </div>
+            )}
+            
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -1023,32 +1810,32 @@ const ConfirmOrder = () => {
             </div>
           </div>
 
-          {/* Place Order Button */}
+          {/* Continue to Payment / Place Order Button */}
           <button
             onClick={handlePlaceOrder}
-            disabled={isPlacingOrder || isProcessingPayment}
+            disabled={isPlacingOrder || isProcessingPayment || (!isAddressSaved && isAuthenticated && user)}
             style={{
               width: '100%',
               padding: '16px',
-              background: '#ff6d2e',
+              background: (!isAddressSaved && isAuthenticated && user) ? '#ccc' : '#ff6d2e',
               color: '#fff',
               border: 'none',
               borderRadius: '8px',
               fontSize: '1rem',
               fontWeight: '600',
-              cursor: (isPlacingOrder || isProcessingPayment) ? 'not-allowed' : 'pointer',
+              cursor: (isPlacingOrder || isProcessingPayment || (!isAddressSaved && isAuthenticated && user)) ? 'not-allowed' : 'pointer',
               transition: 'all 0.3s',
-              opacity: (isPlacingOrder || isProcessingPayment) ? 0.6 : 1
+              opacity: (isPlacingOrder || isProcessingPayment || (!isAddressSaved && isAuthenticated && user)) ? 0.6 : 1
             }}
             onMouseEnter={(e) => {
-              if (!isPlacingOrder && !isProcessingPayment) {
+              if (!isPlacingOrder && !isProcessingPayment && (isAddressSaved || !isAuthenticated || !user)) {
                 e.target.style.background = '#e55a1f';
                 e.target.style.transform = 'translateY(-2px)';
                 e.target.style.boxShadow = '0 4px 12px rgba(255, 109, 46, 0.3)';
               }
             }}
             onMouseLeave={(e) => {
-              if (!isPlacingOrder && !isProcessingPayment) {
+              if (!isPlacingOrder && !isProcessingPayment && (isAddressSaved || !isAuthenticated || !user)) {
                 e.target.style.background = '#ff6d2e';
                 e.target.style.transform = 'translateY(0)';
                 e.target.style.boxShadow = 'none';
@@ -1059,9 +1846,13 @@ const ConfirmOrder = () => {
               ? 'Processing Payment...' 
               : isPlacingOrder 
                 ? 'Placing Order...' 
-                : paymentMethod === 'RAZORPAY' 
-                  ? 'Pay & Place Order' 
-                  : 'Place Order'}
+                : (!isAddressSaved && isAuthenticated && user)
+                  ? 'Please Save Address First'
+                  : paymentMethod === 'RAZORPAY' 
+                    ? 'Pay & Place Order' 
+                    : isAddressSaved || !isAuthenticated || !user
+                      ? 'Continue to Payment'
+                      : 'Place Order'}
           </button>
 
           {error && (
