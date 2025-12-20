@@ -385,7 +385,16 @@ public class Product {
     }
 
     public void setVariants(List<ProductVariant> variants) {
-        this.variants = variants;
+        // Clear existing variants first to avoid orphan removal issues
+        if (this.variants != null) {
+            this.variants.clear();
+        } else {
+            this.variants = new java.util.ArrayList<>();
+        }
+        // Add new variants to maintain collection reference
+        if (variants != null) {
+            this.variants.addAll(variants);
+        }
     }
 
     // =======================
@@ -436,6 +445,21 @@ public class Product {
     @com.fasterxml.jackson.annotation.JsonSetter("categoryId")
     public void setCategoryId(Long categoryId) {
         this.categoryId = categoryId;
+    }
+
+    /**
+     * Get variants for JSON response (avoid lazy loading issues)
+     * Returns variants if they're already loaded, otherwise returns empty list
+     * Variants are loaded separately in ProductService to avoid cartesian product
+     */
+    @JsonProperty("variants")
+    public List<ProductVariant> getVariantsForJson() {
+        // Return variants if they're already loaded (set by ProductService)
+        if (variants != null) {
+            return variants;
+        }
+        // Return empty list if variants are not loaded (lazy loading not triggered)
+        return new java.util.ArrayList<>();
     }
 
     /**

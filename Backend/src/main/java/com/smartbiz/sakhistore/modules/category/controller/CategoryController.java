@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/category")
+@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class CategoryController {
 
@@ -89,6 +90,47 @@ public class CategoryController {
         return categoryService.addCategory(category);
     }
 
+    // ✅ Toggle trending status for a category (similar to product bestseller)
+    // IMPORTANT: This endpoint must be BEFORE /{id} to avoid path conflicts
+    @PutMapping("/{id}/trending")
+    public ResponseEntity<?> updateCategoryTrendingStatus(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Boolean> body) {
+        try {
+            System.out.println("🔄 [CategoryController] Updating trending status for category ID: " + id);
+            System.out.println("🔄 [CategoryController] Request body: " + body);
+            
+            Boolean isTrending = body.get("isTrending");
+            if (isTrending == null) {
+                System.err.println("❌ [CategoryController] isTrending parameter is null");
+                return ResponseEntity.badRequest().body("isTrending parameter is required");
+            }
+            
+            Category category = categoryService.findById(id);
+            if (category == null) {
+                System.err.println("❌ [CategoryController] Category not found with ID: " + id);
+                return ResponseEntity.notFound().build();
+            }
+            
+            System.out.println("✅ [CategoryController] Category found: " + category.getCategoryName());
+            category.setIsTrending(isTrending);
+            Long sellerId = category.getSeller() != null ? category.getSeller().getSellerId() : null;
+            Category updated = categoryService.addCategory(category, sellerId);
+            System.out.println("✅ [CategoryController] Category trending status updated successfully");
+            return ResponseEntity.ok(updated);
+        } catch (NoSuchElementException e) {
+            System.err.println("❌ [CategoryController] Category not found: " + e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            System.err.println("❌ [CategoryController] Error updating category trending status " + id + ": " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(java.util.Map.of(
+                "error", "Internal Server Error",
+                "message", e.getMessage() != null ? e.getMessage() : "Failed to update category trending status"
+            ));
+        }
+    }
+
     // ✅ Update category (SmartBiz: PUT endpoint for proper REST API - same as collections)
     @PutMapping("/{id}")
     public ResponseEntity<Category> updateCategory(
@@ -127,6 +169,9 @@ public class CategoryController {
             }
             if (updatedCategory.getIsActive() != null) {
                 existing.setIsActive(updatedCategory.getIsActive());
+            }
+            if (updatedCategory.getIsTrending() != null) {
+                existing.setIsTrending(updatedCategory.getIsTrending());
             }
             if (updatedCategory.getOrderIndex() != null) {
                 existing.setOrderIndex(updatedCategory.getOrderIndex());

@@ -47,12 +47,12 @@ public class ProductService{
     
     @Autowired
     private StoreDetailsRepo storeRepository;
+    
+    @Autowired
+    private ProductVariantRepository productVariantRepository;
 
     @Autowired
     private StoreDetailsService storeService;
-
-    @Autowired
-    private ProductVariantRepository productVariantRepository;
 
 
     public Product uploadProductWithImages(
@@ -182,7 +182,39 @@ public class ProductService{
             return productRepository.findAll();
         }
         // Use query with JOIN FETCH to ensure category is loaded (needed for categoryId in JSON)
-        return productRepository.findBySeller_SellerIdWithRelations(sellerId);
+        List<Product> products = productRepository.findBySeller_SellerIdWithRelations(sellerId);
+        
+        // Load variants separately to avoid cartesian product issues
+        if (!products.isEmpty()) {
+            List<Long> productIds = products.stream()
+                .map(Product::getProductsId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toList());
+            
+            if (!productIds.isEmpty()) {
+                List<ProductVariant> variants = productVariantRepository.findVariantsByProductIds(productIds);
+                // Group variants by product ID and set them
+                java.util.Map<Long, List<ProductVariant>> variantsByProduct = variants.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(v -> v.getProduct().getProductsId()));
+                
+                products.forEach(p -> {
+                    List<ProductVariant> productVariants = variantsByProduct.getOrDefault(p.getProductsId(), new java.util.ArrayList<>());
+                    // Use getVariants() to get the existing collection, then clear and add to avoid orphan removal issues
+                    List<ProductVariant> existingVariants = p.getVariants();
+                    if (existingVariants == null) {
+                        // If no collection exists, initialize it first
+                        p.setVariants(new java.util.ArrayList<>());
+                        existingVariants = p.getVariants();
+                    }
+                    // Clear existing and add new to maintain collection reference
+                    // Don't modify variant product references - they should already be correct from the query
+                    existingVariants.clear();
+                    existingVariants.addAll(productVariants);
+                });
+            }
+        }
+        
+        return products;
     }
 
     /**

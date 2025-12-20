@@ -39,6 +39,8 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [availableVariants, setAvailableVariants] = useState([]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -91,11 +93,94 @@ const ProductDetail = () => {
   const backend = currentProduct?.product || {};
   const isBestseller = backend.isBestseller === true || backend.bestSeller === true;
   const isActive = backend.isActive !== false;
-  const inventory = backend.inventoryQuantity;
-  const hsnCode = backend.hsnCode;
-  const sku = backend.customSku;
-  const color = backend.color;
-  const size = backend.size;
+  
+  // Get variants from backend (they might be in the response or need to be fetched)
+  const backendVariants = backend.variants || backend.productVariants || [];
+  
+  // Process and group variants by attributes (color, size)
+  const processedVariants = useMemo(() => {
+    if (!Array.isArray(backendVariants) || backendVariants.length === 0) {
+      return [];
+    }
+    
+    return backendVariants.map(v => {
+      // Parse attributes JSON if it's a string
+      let attributes = {};
+      if (v.attributesJson) {
+        try {
+          attributes = typeof v.attributesJson === 'string' 
+            ? JSON.parse(v.attributesJson) 
+            : v.attributesJson;
+        } catch (e) {
+          console.warn('Failed to parse variant attributes:', e);
+        }
+      }
+      // Also check if attributes are already parsed
+      if (v.attributes && typeof v.attributes === 'object') {
+        attributes = v.attributes;
+      }
+      
+      return {
+        variantId: v.variantId || v.id,
+        color: attributes.color || v.color || '',
+        size: attributes.size || v.size || '',
+        price: v.sellingPrice || v.price || 0,
+        mrp: v.mrp || v.originalPrice || 0,
+        stock: v.stock || v.inventoryQuantity || 0,
+        isActive: v.isActive !== false,
+        sku: v.sku || v.customSku || '',
+        hsnCode: v.hsnCode || '',
+        images: v.images || v.productImages || [],
+        attributes: attributes
+      };
+    }).filter(v => v.isActive && v.stock > 0); // Only show active variants with stock
+  }, [backendVariants]);
+  
+  // Group variants by color and size for selection UI
+  const variantGroups = useMemo(() => {
+    const groups = {
+      colors: new Set(),
+      sizes: new Set()
+    };
+    
+    processedVariants.forEach(v => {
+      if (v.color) groups.colors.add(v.color);
+      if (v.size) groups.sizes.add(v.size);
+    });
+    
+    return {
+      colors: Array.from(groups.colors).sort(),
+      sizes: Array.from(groups.sizes).sort()
+    };
+  }, [processedVariants]);
+  
+  // Auto-select first available variant if none selected
+  useEffect(() => {
+    if (processedVariants.length > 0 && !selectedVariant) {
+      setSelectedVariant(processedVariants[0]);
+    }
+  }, [processedVariants, selectedVariant]);
+  
+  // Update selected variant when color/size selection changes
+  const handleVariantSelection = (selectedColor, selectedSize) => {
+    const matchingVariant = processedVariants.find(v => {
+      const colorMatch = !selectedColor || v.color === selectedColor;
+      const sizeMatch = !selectedSize || v.size === selectedSize;
+      return colorMatch && sizeMatch;
+    });
+    
+    if (matchingVariant) {
+      setSelectedVariant(matchingVariant);
+    }
+  };
+  
+  // Use selected variant data or fallback to product data
+  const displayVariant = selectedVariant || (processedVariants.length > 0 ? processedVariants[0] : null);
+  const inventory = displayVariant?.stock ?? backend.inventoryQuantity;
+  const hsnCode = displayVariant?.hsnCode ?? backend.hsnCode;
+  const sku = displayVariant?.sku ?? backend.customSku;
+  const color = displayVariant?.color ?? backend.color;
+  const size = displayVariant?.size ?? backend.size;
   const variant = backend.variant;
   const description = backend.description;
   const productCategory = backend.productCategory || backend.businessCategory;
@@ -114,9 +199,16 @@ const ProductDetail = () => {
     return match ? match[1] : null;
   }, [storeSlug, currentStore?.storeLink]);
 
-  // Build image gallery - always include fallback image if available
+  // Build image gallery - prefer variant images if available, otherwise use product images
   const imageList = useMemo(() => {
-    const rawImages = currentProduct?.product?.productImages;
+    // First try variant-specific images
+    let rawImages = displayVariant?.images || [];
+    
+    // Fallback to product images if no variant images
+    if (!rawImages || rawImages.length === 0) {
+      rawImages = currentProduct?.product?.productImages || [];
+    }
+    
     let normalizedImages = [];
 
     if (Array.isArray(rawImages)) {
@@ -150,7 +242,7 @@ const ProductDetail = () => {
     const imagesToUse = imgs.length > 0 ? imgs : (fallbackImage ? [fallbackImage] : [primary]);
     const uniqueImages = Array.from(new Set([primary, ...imagesToUse].filter(Boolean)));
     return uniqueImages;
-  }, [currentProduct, fallbackImage, backend.sizeChartImage]);
+  }, [currentProduct, fallbackImage, backend.sizeChartImage, displayVariant]);
 
   useEffect(() => {
     if (imageList && imageList.length > 0) {
@@ -175,9 +267,9 @@ const ProductDetail = () => {
     );
   };
 
-  const priceToShow = currentProduct?.price || fallbackPrice || 0;
-  const originalPriceToShow =
-    currentProduct?.originalPrice || fallbackOriginalPrice || priceToShow;
+  // Use variant price if variant is selected, otherwise use product price
+  const priceToShow = displayVariant?.price ?? currentProduct?.price ?? fallbackPrice ?? 0;
+  const originalPriceToShow = displayVariant?.mrp ?? currentProduct?.originalPrice ?? fallbackOriginalPrice ?? priceToShow;
   const brandToShow = currentProduct?.brand || fallbackBrand;
   const categoryToShow = currentProduct?.category || fallbackCategory;
 
@@ -207,22 +299,22 @@ const ProductDetail = () => {
       id: productIdParam
     };
 
-    // SmartBiz: Get variantId if available (prefer first active variant)
-    const variants = backend.variants || backend.productVariants || [];
-    const firstActiveVariant = Array.isArray(variants) && variants.length > 0 
-      ? variants.find(v => v.isActive !== false && v.stock > 0) || variants[0]
-      : null;
-    const variantId = firstActiveVariant?.variantId || firstActiveVariant?.id || null;
+    // Use selected variant if available, otherwise use first available variant
+    const variantToAdd = selectedVariant || (processedVariants.length > 0 ? processedVariants[0] : null);
+    const variantId = variantToAdd?.variantId || null;
+    const variantPrice = variantToAdd?.price || parseFloat(productToAdd.price);
 
     addToCart(
       {
         name: productToAdd.name,
-        price: parseFloat(productToAdd.price),
+        price: variantPrice,
         image: selectedImage || productToAdd.image || fallbackImage,
         brand: productToAdd.brand || currentStore?.name || 'Store',
         quantity: 1,
         productId: productToAdd.id,
-        variantId: variantId // SmartBiz: include variantId if available
+        variantId: variantId, // SmartBiz: include variantId if available
+        color: variantToAdd?.color,
+        size: variantToAdd?.size
       },
       currentStore?.storeId || currentStore?.id,
       currentStore?.sellerId
@@ -589,12 +681,135 @@ const ProductDetail = () => {
           </div>
           <p style={{ color: '#888', marginTop: '-0.5rem' }}>Inclusive of all taxes</p>
 
+          {/* Variant Selection UI (Amazon-style) */}
+          {processedVariants.length > 0 && (
+            <div style={{ marginBottom: '1.5rem' }}>
+              {/* Color Selection */}
+              {variantGroups.colors.length > 0 && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Color:</span>
+                    {selectedVariant?.color && (
+                      <span style={{ fontSize: '0.9rem', color: isDarkMode ? 'rgba(245,245,245,0.72)' : '#666' }}>
+                        {selectedVariant.color}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {variantGroups.colors.map((colorOption) => {
+                      const isSelected = selectedVariant?.color === colorOption;
+                      const hasStock = processedVariants.some(v => v.color === colorOption && v.stock > 0);
+                      return (
+                        <button
+                          key={colorOption}
+                          onClick={() => handleVariantSelection(colorOption, selectedVariant?.size)}
+                          disabled={!hasStock}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            border: `2px solid ${isSelected ? 'var(--vibrant-pink)' : (isDarkMode ? 'rgba(255,255,255,0.2)' : '#e5e7eb')}`,
+                            borderRadius: '8px',
+                            background: isSelected 
+                              ? 'var(--vibrant-pink)' 
+                              : (isDarkMode ? 'var(--nav-bg)' : '#fff'),
+                            color: isSelected ? '#fff' : (isDarkMode ? 'var(--text-color)' : '#111827'),
+                            cursor: hasStock ? 'pointer' : 'not-allowed',
+                            opacity: hasStock ? 1 : 0.5,
+                            fontWeight: isSelected ? 600 : 400,
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (hasStock && !isSelected) {
+                              e.currentTarget.style.borderColor = 'var(--vibrant-pink)';
+                              e.currentTarget.style.background = isDarkMode ? 'rgba(230, 21, 128, 0.1)' : '#fce7f3';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.borderColor = isDarkMode ? 'rgba(255,255,255,0.2)' : '#e5e7eb';
+                              e.currentTarget.style.background = isDarkMode ? 'var(--nav-bg)' : '#fff';
+                            }
+                          }}
+                        >
+                          {colorOption}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Size Selection */}
+              {variantGroups.sizes.length > 0 && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Size:</span>
+                    {selectedVariant?.size && (
+                      <span style={{ fontSize: '0.9rem', color: isDarkMode ? 'rgba(245,245,245,0.72)' : '#666' }}>
+                        {selectedVariant.size}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {variantGroups.sizes.map((sizeOption) => {
+                      const isSelected = selectedVariant?.size === sizeOption;
+                      const hasStock = processedVariants.some(v => 
+                        v.size === sizeOption && 
+                        v.stock > 0 &&
+                        (!selectedVariant?.color || v.color === selectedVariant.color)
+                      );
+                      return (
+                        <button
+                          key={sizeOption}
+                          onClick={() => handleVariantSelection(selectedVariant?.color, sizeOption)}
+                          disabled={!hasStock}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            border: `2px solid ${isSelected ? 'var(--vibrant-pink)' : (isDarkMode ? 'rgba(255,255,255,0.2)' : '#e5e7eb')}`,
+                            borderRadius: '8px',
+                            background: isSelected 
+                              ? 'var(--vibrant-pink)' 
+                              : (isDarkMode ? 'var(--nav-bg)' : '#fff'),
+                            color: isSelected ? '#fff' : (isDarkMode ? 'var(--text-color)' : '#111827'),
+                            cursor: hasStock ? 'pointer' : 'not-allowed',
+                            opacity: hasStock ? 1 : 0.5,
+                            fontWeight: isSelected ? 600 : 400,
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (hasStock && !isSelected) {
+                              e.currentTarget.style.borderColor = 'var(--vibrant-pink)';
+                              e.currentTarget.style.background = isDarkMode ? 'rgba(230, 21, 128, 0.1)' : '#fce7f3';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.borderColor = isDarkMode ? 'rgba(255,255,255,0.2)' : '#e5e7eb';
+                              e.currentTarget.style.background = isDarkMode ? 'var(--nav-bg)' : '#fff';
+                            }
+                          }}
+                        >
+                          {sizeOption}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="product-detail-info-grid">
             <DetailItem label="SKU" value={sku} />
             <DetailItem label="HSN" value={hsnCode} />
-            <DetailItem label="Color" value={color} />
-            <DetailItem label="Size" value={size} />
-            <DetailItem label="Variant" value={variant} />
+            {!processedVariants.length && (
+              <>
+                <DetailItem label="Color" value={color} />
+                <DetailItem label="Size" value={size} />
+                <DetailItem label="Variant" value={variant} />
+              </>
+            )}
             <DetailItem label="Category" value={productCategory || categoryToShow} />
             <DetailItem
               label="Stock"

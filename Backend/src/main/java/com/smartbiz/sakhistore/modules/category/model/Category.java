@@ -43,6 +43,13 @@ public class Category {
     private Boolean isActive = true;
 
     // =======================
+    // CATEGORY TRENDING (SmartBiz: Featured on homepage)
+    // Used to highlight trending categories on website
+    // =======================
+    @Column(name = "is_trending", nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean isTrending = false;
+
+    // =======================
     // CATEGORY ORDER (SmartBiz: order index for sorting)
     // =======================
     @Column(name = "order_index", nullable = false, columnDefinition = "INTEGER DEFAULT 0")
@@ -77,13 +84,19 @@ public class Category {
     // ============================
     // Getters & Setters
     // ============================
-    @JsonProperty("categoryId")
+    // JPA getter (for database access)
     public Long getCategory_id() {
         return category_id;
     }
 
     public void setCategory_id(Long category_id) {
         this.category_id = category_id;
+    }
+
+    // JSON getter (for API serialization) - explicitly named for Jackson
+    @JsonProperty("categoryId")
+    public Long getCategoryId() {
+        return category_id;
     }
 
     public String getCategoryImage() {
@@ -180,6 +193,14 @@ public class Category {
 
     public void setSeller(SellerDetails seller) {
         this.seller = seller;
+    }
+
+    public Boolean getIsTrending() {
+        return isTrending != null ? isTrending : false;
+    }
+
+    public void setIsTrending(Boolean isTrending) {
+        this.isTrending = isTrending != null ? isTrending : false;
     }
 
     public Category() {}

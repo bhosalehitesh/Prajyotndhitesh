@@ -27,3 +27,4 @@ WHERE table_name = 'products' AND column_name = 'is_bestseller';
 
 
 
+

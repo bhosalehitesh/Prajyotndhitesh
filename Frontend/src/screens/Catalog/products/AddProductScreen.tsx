@@ -34,7 +34,7 @@ import {launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse} fr
 
 import ViewShot, {captureRef} from 'react-native-view-shot';
 
-import { createProduct, uploadProductWithImages, updateProduct, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, fetchCategories, CategoryDto, uploadCategoryWithImages } from '../../../utils/api';
+import { createProduct, uploadProductWithImages, updateProduct, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, fetchCategories, CategoryDto } from '../../../utils/api';
 import { storage } from '../../../authentication/storage';
 
 
@@ -52,7 +52,8 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
   const isEditMode = route?.params?.mode === 'edit';
 
-  const existing = route?.params?.productjhgf;
+  // Support both 'product' and 'productjhgf' parameter names for backward compatibility
+  const existing = route?.params?.product || route?.params?.productjhgf;
 
 
 
@@ -128,11 +129,8 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   const [categoryOpen, setCategoryOpen] = useState(false);
 
   const [productCategoryOpen, setProductCategoryOpen] = useState(false);
-
-  const [newCategoryOpen, setNewCategoryOpen] = useState(false);
-
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newProductCategoryOpen, setNewProductCategoryOpen] = useState(false);
+  const [newProductCategoryName, setNewProductCategoryName] = useState('');
 
   const [images, setImages] = useState<string[]>(existing?.images || []);
 
@@ -256,48 +254,83 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
     loadCategories();
   }, []);
 
-  // Load images and categoryId from existing product in edit mode
+  // Load all product data from existing product in edit mode
   useEffect(() => {
     if (isEditMode && existing) {
+      console.log('🔄 [AddProductScreen] Loading existing product data:', {
+        id: existing.id,
+        title: existing.title,
+        hasImages: !!(existing.images || existing.productImages || existing.imageUrl),
+        categoryId: existing.categoryId || existing.category_id,
+      });
+
+      // Always update all form fields from existing data in edit mode (overwrite current values)
+      // This ensures all fields are pre-filled with existing product data
+      if (existing.title) setName(existing.title);
+      if (existing.description !== undefined) setDescription(existing.description || '');
+      if (existing.price != null) setPrice(String(existing.price));
+      if (existing.mrp != null) setMrp(String(existing.mrp));
+      if (existing.businessCategory) setBusinessCategory(existing.businessCategory);
+      if (existing.productCategory) setProductCategory(existing.productCategory);
+      if (existing.inventoryQuantity != null) setQuantity(String(existing.inventoryQuantity));
+      if (existing.sku !== undefined) setSku(existing.sku || '');
+      if (existing.size !== undefined) setSize(existing.size || '');
+      if (existing.hsnCode !== undefined) setHsn(existing.hsnCode || '');
+      
+      // Handle colors - always set from existing data
+      if (existing.color) {
+        const colorArray = existing.color
+          .split(',')
+          .map((c: string) => c.trim())
+          .filter((c: string) => c);
+        setColors(colorArray);
+      } else {
+        setColors([]);
+      }
+
+      // Handle bestSeller flag
+      if (existing.bestSeller !== undefined || existing.isBestseller !== undefined) {
+        const isBestSeller = existing.bestSeller ?? existing.isBestseller ?? false;
+        setBestSeller(isBestSeller);
+      }
+
       // Try multiple possible image fields from backend
       const existingImages = existing.images || 
                             existing.productImages || 
                             (existing.imageUrl ? [existing.imageUrl] : []);
-      if (existingImages.length > 0 && images.length === 0) {
+      if (existingImages.length > 0) {
         console.log('📸 [AddProductScreen] Loading existing product images:', existingImages.length);
         setImages(existingImages);
       }
       
       // Set selected category if available (check multiple field names)
-      if (!selectedCategoryId) {
-        const categoryIdValue = (existing as any).categoryId ?? 
-                               (existing as any).category_id ?? 
-                               null;
+      const categoryIdValue = (existing as any).categoryId ?? 
+                           (existing as any).category_id ?? 
+                           null;
+      
+      if (categoryIdValue != null) {
+        const catId = typeof categoryIdValue === 'number' 
+          ? categoryIdValue 
+          : (typeof categoryIdValue === 'string' ? Number(categoryIdValue) : null);
         
-        if (categoryIdValue != null) {
-          const catId = typeof categoryIdValue === 'number' 
-            ? categoryIdValue 
-            : (typeof categoryIdValue === 'string' ? Number(categoryIdValue) : null);
-          
-          if (catId && !isNaN(catId)) {
-            console.log('📁 [AddProductScreen] Setting existing categoryId:', catId);
-            setSelectedCategoryId(catId);
-          } else {
-            console.warn('⚠️ [AddProductScreen] Invalid categoryId value:', categoryIdValue);
-          }
+        if (catId && !isNaN(catId)) {
+          console.log('📁 [AddProductScreen] Setting existing categoryId:', catId);
+          setSelectedCategoryId(catId);
         } else {
-          // This is just a warning - product can still be updated without categoryId
-          // The backend will keep the existing category if none is provided
-          console.log('ℹ️ [AddProductScreen] No categoryId in product object (this is OK for updates):', {
-            productId: (existing as any).id,
-            productName: (existing as any).title,
-            existingKeys: Object.keys(existing || {}),
-            note: 'Product will update successfully - backend keeps existing category',
-          });
+          console.warn('⚠️ [AddProductScreen] Invalid categoryId value:', categoryIdValue);
         }
+      } else {
+        // This is just a warning - product can still be updated without categoryId
+        // The backend will keep the existing category if none is provided
+        console.log('ℹ️ [AddProductScreen] No categoryId in product object (this is OK for updates):', {
+          productId: (existing as any).id,
+          productName: (existing as any).title,
+          existingKeys: Object.keys(existing || {}),
+          note: 'Product will update successfully - backend keeps existing category',
+        });
       }
     }
-  }, [isEditMode, existing, selectedCategoryId, images.length]);
+  }, [isEditMode, existing?.id]); // Only re-run when product ID changes to avoid infinite loops
 
   // Require at least name, price, images, business category, and product category.
   // For edit mode: images are optional (they stay as-is in backend)
@@ -309,7 +342,12 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   const hasBusinessCategory = businessCategory.trim().length > 0;
   const hasProductCategory = productCategory.trim().length > 0;
   
-  const canSubmit = hasName && hasPrice && hasImages && hasBusinessCategory && hasProductCategory;
+  // Validate that selling price is less than MRP (if MRP is provided)
+  const priceNum = price.trim() ? Number(price.trim()) : 0;
+  const mrpNum = mrp.trim() ? Number(mrp.trim()) : 0;
+  const isPriceValid = !mrp.trim() || mrpNum === 0 || priceNum < mrpNum; // If MRP is not set or is 0, allow any price. Otherwise, price must be less than MRP.
+  
+  const canSubmit = hasName && hasPrice && hasImages && hasBusinessCategory && hasProductCategory && isPriceValid;
   
   // Debug logging for edit mode
   if (isEditMode && !canSubmit) {
@@ -532,6 +570,8 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         Alert.alert('Validation Error', 'Business Category is required');
       } else if (!productCategory.trim().length) {
         Alert.alert('Validation Error', 'Product Category is required');
+      } else if (!isPriceValid) {
+        Alert.alert('Validation Error', 'Selling price must be less than MRP');
       }
       return;
     }
@@ -860,7 +900,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
           </View>
 
-          <View style={styles.boxField}>
+          <View style={[styles.boxField, !isPriceValid && styles.boxFieldError]}>
 
             <View style={styles.boxLeftIcon}><Text style={styles.currency}>₹</Text></View>
 
@@ -883,6 +923,9 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           </View>
 
         </View>
+        {!isPriceValid && mrp.trim() && (
+          <Text style={styles.errorText}>Selling price must be less than MRP</Text>
+        )}
 
 
 
@@ -896,8 +939,9 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
 
 
-        {/* Product Category */}
+        {/* Product Category (Text field for organization - not a database category) */}
         <Text style={styles.sectionLabel}>Product Category <Text style={styles.required}>*</Text></Text>
+        <Text style={styles.helperBody}>Select a product category for organization (this is just a text field, not a database category)</Text>
         <TouchableOpacity
           style={styles.dropdown}
           onPress={() => {
@@ -913,25 +957,21 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
           </Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.addSecondary} onPress={() => setNewProductCategoryOpen(true)}>
+          <IconSymbol name="add" size={18} color="#e61580" />
+          <Text style={styles.addSecondaryText}>Add New Product Category</Text>
+        </TouchableOpacity>
+
 
         {/* Database Category Selection (MANDATORY for SmartBiz-style catalog) */}
         <Text style={styles.sectionHeader}>Database Category</Text>
-        <Text style={styles.helperBody}>Select a category from your created categories (required)</Text>
+        <Text style={styles.helperBody}>Select a category from your created categories (required). Create categories from the Categories tab.</Text>
         <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryPickerOpen(true)}>
           <Text style={{color: selectedCategoryId ? '#111827' : '#6c757d'}}>
             {selectedCategoryId 
               ? databaseCategories.find(c => c.category_id === selectedCategoryId)?.categoryName || 'Category Selected'
               : 'Select Category (Required)'}
           </Text>
-        </TouchableOpacity>
-
-
-        <TouchableOpacity style={styles.addSecondary} onPress={() => setNewCategoryOpen(true)}>
-
-          <IconSymbol name="add" size={18} color="#e61580" />
-
-          <Text style={styles.addSecondaryText}>Add New Product Category</Text>
-
         </TouchableOpacity>
 
 
@@ -1166,10 +1206,18 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
             }
 
+            // Ensure we have the product ID for the variant
+            const productId = existing?.id || existing?.productsId || null;
+            if (!productId) {
+              Alert.alert('Error', 'Product ID is missing. Cannot add variant.');
+              return;
+            }
+
             navigation.navigate('AddVariant', {
-
-              baseProduct: existing,
-
+              baseProduct: {
+                ...existing,
+                id: productId, // Ensure ID is set
+              },
             });
 
           }}>
@@ -1196,7 +1244,9 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
         <TouchableOpacity style={styles.checkRow} onPress={() => setBestSeller(!bestSeller)}>
 
-          <View style={[styles.checkbox, bestSeller && styles.checkboxChecked]} />
+          <View style={[styles.checkbox, bestSeller && styles.checkboxChecked]}>
+            {bestSeller && <IconSymbol name="checkmark" size={14} color="#FFFFFF" />}
+          </View>
 
           <Text style={styles.checkLabel}>Mark as Best Seller</Text>
 
@@ -1472,6 +1522,79 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
       </Modal>
 
+      {/* Add New Product Category Modal (Text field only - does not create database category) */}
+      <Modal transparent visible={newProductCategoryOpen} animationType="slide" onRequestClose={() => {
+        setNewProductCategoryOpen(false);
+        setNewProductCategoryName('');
+      }}>
+        <View style={styles.centerOverlay}>
+          <View style={styles.listCard}>
+            <View style={styles.listHeader}>
+              <Text style={styles.listTitle}>Add New Product Category</Text>
+              <TouchableOpacity onPress={() => {
+                setNewProductCategoryOpen(false);
+                setNewProductCategoryName('');
+              }}>
+                <Text style={{fontSize:28, fontWeight:'bold'}}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={{padding: 20}}>
+              <Text style={{fontSize: 14, color: '#6c757d', marginBottom: 12}}>
+                Enter a product category name. This is just a text field for organization and will not create a database category.
+              </Text>
+              
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#E5E7EB',
+                  borderRadius: 8,
+                  padding: 12,
+                  color: '#111827',
+                  fontSize: 16,
+                }}
+                placeholder="Enter Product Category Name"
+                placeholderTextColor="#9CA3AF"
+                value={newProductCategoryName}
+                onChangeText={setNewProductCategoryName}
+                maxLength={50}
+                autoFocus
+              />
+              
+              <Text style={{textAlign: 'right', color: '#9CA3AF', marginTop: 4, fontSize: 12}}>
+                {newProductCategoryName.length}/50
+              </Text>
+              
+              <TouchableOpacity
+                style={{
+                  backgroundColor: newProductCategoryName.trim() ? '#e61580' : '#D1D5DB',
+                  padding: 14,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                  marginTop: 20,
+                }}
+                disabled={!newProductCategoryName.trim()}
+                onPress={() => {
+                  const trimmedName = newProductCategoryName.trim();
+                  if (trimmedName) {
+                    setProductCategory(trimmedName);
+                    setNewProductCategoryName('');
+                    setNewProductCategoryOpen(false);
+                  }
+                }}
+              >
+                <Text style={{
+                  color: newProductCategoryName.trim() ? '#FFFFFF' : '#9CA3AF',
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                }}>
+                  Add Product Category
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Database Category Picker Modal */}
       <Modal transparent visible={categoryPickerOpen} animationType="slide" onRequestClose={() => setCategoryPickerOpen(false)}>
@@ -1498,6 +1621,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
                     ]} 
                     onPress={() => { 
                       setSelectedCategoryId(category.category_id); 
+                      setProductCategory(category.categoryName); // Auto-fill product category with selected database category name
                       setCategoryPickerOpen(false);
                       console.log('Selected category:', category.categoryName, 'ID:', category.category_id);
                     }}
@@ -1518,123 +1642,6 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       </Modal>
 
 
-      {/* Create Category Modal */}
-
-      <Modal transparent visible={newCategoryOpen} animationType="slide" onRequestClose={() => setNewCategoryOpen(false)}>
-
-        <View style={styles.centerOverlay}>
-
-          <View style={styles.createCategoryCard}>
-
-            <Text style={styles.createCategoryTitle}>Create a Category</Text>
-
-            
-
-            <View style={{marginTop: 16}}>
-
-              <Text style={styles.categoryLabel}>Category Name*</Text>
-
-              <TextInput
-
-                style={styles.categoryInput}
-
-                placeholder="Enter Category Name"
-
-                placeholderTextColor="#9CA3AF"
-
-                value={newCategoryName}
-
-                onChangeText={setNewCategoryName}
-
-                maxLength={30}
-
-              />
-
-              <Text style={{textAlign: 'right', color: '#9CA3AF', marginTop: 4}}>
-
-                {newCategoryName.length}/30
-
-              </Text>
-
-            </View>
-
-
-
-            <View style={styles.createCategoryButtons}>
-              <TouchableOpacity
-                style={[styles.createCategoryBtn, (!newCategoryName.trim() || isCreatingCategory) && styles.createCategoryBtnDisabled]}
-                disabled={!newCategoryName.trim() || isCreatingCategory}
-                onPress={async () => {
-                  // Prevent multiple submissions
-                  if (isCreatingCategory) {
-                    return;
-                  }
-
-                  const trimmedName = newCategoryName.trim();
-                  if (!trimmedName) {
-                    return;
-                  }
-
-                  // Require a business category so the new database category is properly grouped
-                  if (!businessCategory) {
-                    Alert.alert(
-                      'Select Business Category',
-                      'Please choose a Business Category before creating a database category.',
-                    );
-                    return;
-                  }
-
-                  setIsCreatingCategory(true);
-                  try {
-                    // Create real database category (no image, minimal fields)
-                    const createdCategory = await uploadCategoryWithImages({
-                      categoryName: trimmedName,
-                      businessCategory,
-                      description: '',
-                      seoTitleTag: trimmedName,
-                      seoMetaDescription: '',
-                      imageUri: null,
-                    });
-
-                    // Update UI:
-                    // 1) Fill Product Category text
-                    // 2) Add to local databaseCategories list
-                    // 3) Auto-select it as Database Category
-                    setProductCategory(trimmedName);
-                    setDatabaseCategories(prev => [...prev, createdCategory]);
-                    if (createdCategory && typeof createdCategory.category_id === 'number') {
-                      setSelectedCategoryId(createdCategory.category_id);
-                    }
-
-                    setNewCategoryName('');
-                    setNewCategoryOpen(false);
-                    Alert.alert('Success', 'Category created and selected successfully.');
-                  } catch (error: any) {
-                    console.error('Failed to create category from AddProductScreen', error);
-                    const message =
-                      error?.message || 'Failed to create category. Please try again.';
-                    Alert.alert('Error', message);
-                  } finally {
-                    setIsCreatingCategory(false);
-                  }
-                }}
-              >
-                <Text
-                  style={[
-                    styles.createCategoryBtnText,
-                    (!newCategoryName.trim() || isCreatingCategory) && styles.createCategoryBtnTextDisabled,
-                  ]}
-                >
-                  {isCreatingCategory ? 'Creating...' : 'Add Category'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-          </View>
-
-        </View>
-
-      </Modal>
 
 
 
@@ -2164,11 +2171,15 @@ const styles = StyleSheet.create({
 
   boxField: {flex: 1, flexDirection: 'row', borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, overflow: 'hidden'},
 
+  boxFieldError: {borderColor: '#EF4444', borderWidth: 2},
+
   boxLeftIcon: {width: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa', borderRightWidth: 1, borderRightColor: '#dee2e6'},
 
   currency: {fontWeight: 'bold', color: '#111827'},
 
   boxInput: {flex: 1, paddingHorizontal: 12, color: '#111827'},
+
+  errorText: {color: '#EF4444', fontSize: 12, marginTop: 4, marginLeft: 4},
 
 
 
@@ -2202,7 +2213,7 @@ const styles = StyleSheet.create({
 
   checkRow: {flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12},
 
-  checkbox: {width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF'},
+  checkbox: {width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center'},
 
   checkboxChecked: {backgroundColor: '#e61580', borderColor: '#e61580'},
 
@@ -2257,25 +2268,6 @@ const styles = StyleSheet.create({
   emptyText: {padding: 20, textAlign: 'center', color: '#6c757d'},
 
 
-  // Create Category Modal
-
-  createCategoryCard: {backgroundColor:'#FFFFFF', borderRadius:12, padding:20, width:'90%'},
-
-  createCategoryTitle: {fontSize:18, fontWeight:'bold', color:'#111827'},
-
-  categoryLabel: {fontWeight:'600', color:'#111827', marginBottom:8},
-
-  categoryInput: {borderWidth:1, borderColor:'#E5E7EB', borderRadius:8, padding:12, color:'#111827'},
-
-  createCategoryButtons: {marginTop:20, gap:12},
-
-  createCategoryBtn: {backgroundColor:'#e61580', padding:14, borderRadius:8, alignItems:'center'},
-
-  createCategoryBtnDisabled: {backgroundColor:'#D1D5DB'},
-
-  createCategoryBtnText: {color:'#FFFFFF', fontWeight:'bold'},
-
-  createCategoryBtnTextDisabled: {color:'#9CA3AF'},
 
 
 

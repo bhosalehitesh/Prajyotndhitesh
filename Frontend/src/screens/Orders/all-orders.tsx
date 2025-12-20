@@ -63,13 +63,13 @@ const AllOrders = () => {
         ListEmptyComponent={
           <View style={styles.emptyList}>
             <View style={styles.placeholderCircle} />
-            <Text style={styles.noOrdersText}>You don't have any orders yet</Text>
-            <Text style={styles.subText}>
-              Share your website link with customers to get more orders
-            </Text>
-          </View>
+        <Text style={styles.noOrdersText}>You don't have any orders yet</Text>
+        <Text style={styles.subText}>
+          Share your website link with customers to get more orders
+        </Text>
+      </View>
         }
-      />
+        />
     </View>
   );
 };

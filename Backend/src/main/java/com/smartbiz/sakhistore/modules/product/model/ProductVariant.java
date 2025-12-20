@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -199,6 +200,14 @@ public class ProductVariant {
         }
         return map;
     }
+    
+    /**
+     * Get attributes for JSON response (expose as Map for frontend)
+     */
+    @JsonProperty("attributes")
+    public Map<String, String> getAttributesForJson() {
+        return getAttributes();
+    }
 
     public Double getMrp() {
         return mrp;
@@ -271,8 +280,33 @@ public class ProductVariant {
     /**
      * Get product ID for JSON response (avoid lazy loading issues)
      */
+    @JsonProperty("productId")
     public Long getProductId() {
         return product != null ? product.getProductsId() : null;
+    }
+    
+    /**
+     * Get variant ID for JSON response
+     */
+    @JsonProperty("variantId")
+    public Long getVariantIdForJson() {
+        return variantId;
+    }
+    
+    /**
+     * Get selling price for JSON (alias for sellingPrice)
+     */
+    @JsonProperty("price")
+    public Double getPriceForJson() {
+        return sellingPrice;
+    }
+    
+    /**
+     * Get stock for JSON (alias for stock)
+     */
+    @JsonProperty("stock")
+    public Integer getStockForJson() {
+        return stock;
     }
 
     /**

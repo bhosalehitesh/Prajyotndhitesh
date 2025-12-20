@@ -320,7 +320,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
       } else if (viewCollectionProducts && targetCollectionId) {
         // Viewing a specific collection
         try {
-          apiProducts = await fetchProductsByCollection(targetCollectionId);
+        apiProducts = await fetchProductsByCollection(targetCollectionId);
         } catch (err: any) {
           console.error('❌ [ProductsScreen] Failed to load collection products:', err);
           // If collection doesn't exist or access denied, show empty list instead of crashing
@@ -340,26 +340,51 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
         apiProducts = await fetchProducts();
       }
 
-      // Debug: Log first product to see what fields are available
+      // Debug: Log products to see category information
       if (apiProducts.length > 0) {
         console.log('🔍 [ProductsScreen] Sample product from API:', {
           productsId: apiProducts[0].productsId,
           productName: apiProducts[0].productName,
           categoryId: (apiProducts[0] as any).categoryId,
           category_id: (apiProducts[0] as any).category_id,
+          category: (apiProducts[0] as any).category,
           allKeys: Object.keys(apiProducts[0] || {}),
         });
+        
+        // Count products with categoryId
+        const productsWithCategory = apiProducts.filter((p: any) => 
+          p.categoryId || p.category_id || (p.category && (p.category.category_id || p.category.categoryId))
+        );
+        console.log(`📊 [ProductsScreen] Products with categoryId: ${productsWithCategory.length} / ${apiProducts.length}`);
+        
+        // If viewing a category, log category matching info
+        if (targetCategoryId) {
+          const targetId = Number(targetCategoryId);
+          const matchingProducts = apiProducts.filter((p: any) => {
+            const pCategoryId = p.categoryId ?? p.category_id ?? (p.category?.category_id ?? p.category?.categoryId ?? null);
+            return pCategoryId != null && Number(pCategoryId) === targetId;
+          });
+          console.log(`🎯 [ProductsScreen] Products matching categoryId ${targetId}: ${matchingProducts.length} / ${apiProducts.length}`);
+        }
       }
 
-      const mapped = apiProducts.map(p => {
+      const mapped = apiProducts.map((p, index) => {
         // Extract categoryId from multiple possible sources
         const categoryIdValue = (p as any).categoryId ??
           (p as any).category_id ??
+          (p as any).category?.category_id ??
+          (p as any).category?.categoryId ??
           null;
 
+        // Ensure productsId is always valid - use index as fallback for uniqueness
+        const productId = p.productsId ?? (p as any).id ?? null;
+        const uniqueId = (productId !== null && productId !== undefined) 
+          ? String(productId) 
+          : `product-${index}`;
+
         return {
-          id: String(p.productsId),
-          title: p.productName,
+          id: uniqueId,
+          title: p.productName || `Product ${index + 1}`,
           price: p.sellingPrice ?? 0,
           mrp: p.mrp ?? undefined,
           inStock: (p.inventoryQuantity ?? 0) > 0,
@@ -442,7 +467,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
         apiProducts = await fetchProducts();
       } else if (viewCollectionProducts && targetCollectionId) {
         try {
-          apiProducts = await fetchProductsByCollection(targetCollectionId);
+        apiProducts = await fetchProductsByCollection(targetCollectionId);
         } catch (err: any) {
           console.error('❌ [ProductsScreen] Failed to load collection products in refresh:', err);
           // If collection doesn't exist or access denied, show empty list instead of crashing
@@ -468,16 +493,24 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
         });
       }
 
-      const mapped = apiProducts.map(p => {
+      const mapped = apiProducts.map((p, index) => {
         // Extract categoryId from multiple possible sources
         const categoryIdValue = p.categoryId ??
           p.category_id ??
           (p as any).categoryId ??
           (p as any).category_id ??
+          (p as any).category?.category_id ??
+          (p as any).category?.categoryId ??
           null;
+        
+        // Ensure productsId is always valid - use index as fallback for uniqueness
+        const productId = (p as any).productsId ?? p.productsId ?? (p as any).id ?? null;
+        const uniqueId = (productId !== null && productId !== undefined) 
+          ? String(productId) 
+          : `product-${index}`;
 
         const mappedProduct = {
-          id: String(p.productsId),
+          id: uniqueId,
           title: p.productName,
           price: p.sellingPrice ?? 0,
           mrp: p.mrp ?? undefined,
@@ -581,11 +614,6 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
 
   // Also load products on mount
   React.useEffect(() => {
-    console.log('🚀 Component mounted, loading products...', {
-      addToCollectionMode,
-      addToCategoryMode,
-      routeParams: route?.params,
-    });
     loadProducts();
   }, []);
 
@@ -688,27 +716,76 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
     }
     // Category filter (when navigated from Categories screen)
     // Priority: categoryId > categoryName > businessFilter
-    if (targetCategoryId && !addToCategoryMode) {
+    if ((targetCategoryId || route?.params?.categoryName) && !addToCategoryMode) {
       // Filter by categoryId if targetCategoryId is present (most accurate)
-      const targetId = Number(targetCategoryId);
+      // Handle both numeric IDs and fallback string IDs
+      let targetId: number | null = null;
+      if (targetCategoryId) {
+        const targetIdStr = String(targetCategoryId);
+        
+        // Try to parse as number, but also handle fallback IDs like "category-0-Cream"
+        if (!targetIdStr.startsWith('category-') && targetIdStr !== 'null' && targetIdStr !== 'undefined') {
+          const parsed = Number(targetCategoryId);
+          if (!isNaN(parsed)) {
+            targetId = parsed;
+          }
+        }
+      }
+      
       const targetName = (route?.params?.categoryName || '').toLowerCase().trim();
 
       // SmartBiz: Filter by ID *OR* Name to handle duplicate categories
+      // Also handle products that might not have categoryId set yet
+      const beforeFilter = items.length;
       items = items.filter(p => {
-        // Check by ID
-        const pCategoryId = (p as any).categoryId ?? (p as any).category_id ?? null;
-        if (pCategoryId != null && Number(pCategoryId) === targetId) return true;
+        // Check by ID (most accurate) - only if we have a valid numeric targetId
+        if (targetId != null) {
+          const pCategoryId = (p as any).categoryId ?? (p as any).category_id ?? null;
+          if (pCategoryId != null) {
+            const productCatId = Number(pCategoryId);
+            if (!isNaN(productCatId) && productCatId === targetId) {
+              return true;
+            }
+          }
+        }
 
-        // Check by Name (Inclusive OR)
+        // Check by Name (Inclusive OR) - fallback if ID doesn't match or isn't numeric
+        // This is critical when categoryId is null
+        // Use case-insensitive partial matching for better compatibility
         if (targetName) {
           const pCatName = (p.productCategory || '').toLowerCase().trim();
-          if (pCatName === targetName) return true;
+          const targetNameLower = targetName.toLowerCase().trim();
+          
+          // Exact match
+          if (pCatName === targetNameLower) {
+            return true;
+          }
+          
+          // Partial match (category name contains productCategory or vice versa)
+          // This handles cases where names might have slight variations
+          if (pCatName && targetNameLower) {
+            if (pCatName.includes(targetNameLower) || targetNameLower.includes(pCatName)) {
+              return true;
+            }
+          }
         }
 
         return false;
       });
-
-      console.log(`🔍 Category filter applied (ID: ${targetId}, Name: ${targetName}), results: ${items.length}`);
+      
+      // If no products matched and we have products, log detailed warning for debugging
+      if (items.length === 0 && beforeFilter > 0) {
+        const sampleUnmatched = products.slice(0, 5).map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          categoryId: (p as any).categoryId ?? (p as any).category_id ?? 'null',
+          productCategory: p.productCategory || 'null',
+        }));
+        console.warn(`⚠️ [ProductsScreen] Category filter returned 0 products out of ${beforeFilter} total.`);
+        console.warn(`⚠️ [ProductsScreen] Target categoryId: ${targetId || targetCategoryId || 'null'}, Target name: "${targetName}"`);
+        console.warn(`⚠️ [ProductsScreen] Sample products:`, sampleUnmatched);
+        console.warn(`⚠️ [ProductsScreen] This might indicate a data mismatch - category name "${targetName}" doesn't match any productCategory values.`);
+      }
     } else if (categoryFilter) {
       // Category name matching
       const cat = categoryFilter.toLowerCase().trim();
@@ -988,7 +1065,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
               <IconSymbol
                 name={showSelectedOnly ? "checkmark-circle" : "checkmark-circle-outline"}
                 size={22}
-                color={showSelectedOnly ? "#FFFFFF" : "#6B7280"}
+                color={showSelectedOnly ? "#FFFFFF" : "#6c757d"}
               />
             </TouchableOpacity>
           )}
@@ -997,7 +1074,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
         {!addToCollectionMode && !addToCategoryMode && (
           <View style={styles.filterButtons}>
             <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterOpen(true)}>
-              <IconSymbol name="options-outline" size={20} color="#111827" />
+              <IconSymbol name="options-outline" size={20} color="#333333" />
             </TouchableOpacity>
             <TouchableOpacity style={[styles.filterButton, styles.sortButton]} onPress={() => setIsSortOpen(true)}>
               <IconSymbol name="swap-vertical" size={20} color="#10B981" />
@@ -1020,9 +1097,9 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
             return true;
           })
           .slice(0, pageSize)
-          .map(item => (
+          .map((item, index) => (
             <TouchableOpacity
-              key={item.id}
+              key={item.id || `product-${index}`}
               style={styles.card}
               activeOpacity={0.8}
               onPress={() => {
@@ -1069,11 +1146,20 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
                     <>
                       {item.variantCount && item.variantCount > 0 ? (
                         <Text style={styles.variantCountText}>
-                          {item.variantCount} variant{item.variantCount > 1 ? 's' : ''} • {item.variants?.filter((v: any) => v.inStock).length ?? 0} in stock
+                          {item.variantCount} variant{item.variantCount > 1 ? 's' : ''} • {(() => {
+                            // Calculate total stock from all variants
+                            const totalStock = item.variants?.reduce((sum: number, v: any) => {
+                              return sum + (v.inventoryQuantity || 0);
+                            }, 0) ?? 0;
+                            return `${totalStock} in stock`;
+                          })()}
                         </Text>
                       ) : (
                         <Text style={styles.variantCountText}>
-                          {item.inStock ? 'In stock' : 'Out of stock'}
+                          {(() => {
+                            const stock = item.inventoryQuantity ?? 0;
+                            return stock > 0 ? `${stock} in stock` : 'Out of stock';
+                          })()}
                         </Text>
                       )}
                     </>
@@ -1283,7 +1369,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
                 onPress={() => setPageSize(prev => prev + 20)}>
                 <Text style={styles.addButtonText}>Load more</Text>
               </TouchableOpacity>
-              <Text style={{ color: '#6B7280', fontSize: 12 }}>
+              <Text style={{ color: '#6c757d', fontSize: 12 }}>
                 Showing {Math.min(pageSize, groupedProducts.length)} of {groupedProducts.length}
               </Text>
             </View>
@@ -1784,7 +1870,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF4FA',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     backgroundColor: '#e61580',
@@ -1825,8 +1911,8 @@ const styles = StyleSheet.create({
   statusText: { color: '#065F46', fontWeight: '600', fontSize: 12 },
   countersRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   counterCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  counterValue: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  counterLabel: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  counterValue: { fontSize: 18, fontWeight: '700', color: '#333333' },
+  counterLabel: { fontSize: 12, color: '#6c757d', marginTop: 4 },
   searchSection: {
     flexDirection: 'row',
     padding: 15,
@@ -1872,7 +1958,7 @@ const styles = StyleSheet.create({
   card: { marginHorizontal: 16, marginTop: 12, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
   thumbImage: { width: 60, height: 60, borderRadius: 8, marginRight: 8 },
   thumbPlaceholder: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#E5E7EB', marginRight: 8, alignItems: 'center', justifyContent: 'center' },
-  title: { fontWeight: '600', color: '#111827' },
+  title: { fontWeight: '600', color: '#333333' },
   variantCountText: { marginTop: 2, fontSize: 13, color: '#6c757d' },
   price: { fontWeight: 'bold', color: '#111827' },
   mrp: { textDecorationLine: 'line-through', color: '#9CA3AF' },
@@ -1896,13 +1982,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#111827', // Dark border
+    borderColor: '#333333', // Dark border
     justifyContent: 'center',
     alignItems: 'center',
   },
   selectionCheckboxSelected: {
     backgroundColor: '#111827', // Dark fill
-    borderColor: '#111827',
+    borderColor: '#333333',
   },
   saveSelectionButton: {
     backgroundColor: '#111827', // Dark button from screenshot
@@ -1950,7 +2036,7 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14 },
   actionText: { color: '#111827', fontSize: 16 },
   sheetHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: '#333333' },
   clearAll: { color: '#10B981', fontWeight: '600' },
   sheetBody: { flexDirection: 'row', minHeight: 260 },
   sheetTabs: { width: 120, borderRightWidth: 1, borderRightColor: '#dee2e6' },
@@ -1962,7 +2048,7 @@ const styles = StyleSheet.create({
   optionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   optionLabel: { flex: 1, color: '#4B5563', fontSize: 16, marginLeft: 10 },
   optionCount: { color: '#9CA3AF' },
-  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#9CA3AF', justifyContent: 'center', alignItems: 'center' },
+  radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#6c757d', justifyContent: 'center', alignItems: 'center' },
   radioOuterActive: { borderColor: '#e61580' },
   radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#e61580' },
   checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF' },
