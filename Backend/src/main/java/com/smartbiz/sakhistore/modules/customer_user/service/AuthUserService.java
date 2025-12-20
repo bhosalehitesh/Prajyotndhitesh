@@ -127,6 +127,32 @@ public class AuthUserService {
     }
 
     // ===========================================================
+    // ⭐ UPDATE USER EMAIL
+    // ===========================================================
+    public User updateUserEmail(Long id, String email) {
+        User user = userRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Validate email format
+        if (email != null && !email.trim().isEmpty()) {
+            // Basic email validation
+            if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+                throw new RuntimeException("Invalid email format: " + email);
+            }
+            user.setEmail(email.trim());
+        } else {
+            // Allow clearing email
+            user.setEmail(null);
+        }
+        
+        // Use saveAndFlush to ensure email is immediately persisted to database
+        User savedUser = userRepo.saveAndFlush(user);
+        System.out.println("✅ [AuthUserService] Email updated for user ID: " + id + " to: " + savedUser.getEmail());
+        System.out.println("   Email flushed to database - ready for immediate use");
+        return savedUser;
+    }
+
+    // ===========================================================
     // ⭐ GET USER BY ID
     // ===========================================================
     public User getUserById(Long id) {
@@ -153,7 +179,28 @@ public class AuthUserService {
 
         // Update email if provided
         if (addressData.containsKey("email")) {
-            user.setEmail((String) addressData.get("email"));
+            String newEmail = (String) addressData.get("email");
+            String oldEmail = user.getEmail();
+            
+            // Handle null/empty email
+            if (newEmail != null && !newEmail.trim().isEmpty()) {
+                newEmail = newEmail.trim();
+                // Basic email validation
+                if (!newEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+                    System.err.println("⚠️ Invalid email format: " + newEmail);
+                    throw new RuntimeException("Invalid email format: " + newEmail);
+                }
+                user.setEmail(newEmail);
+                System.out.println("✅ [AuthUserService] Email updated for user ID: " + user.getId());
+                System.out.println("   Old Email: " + (oldEmail != null ? oldEmail : "NULL"));
+                System.out.println("   New Email: " + newEmail);
+            } else {
+                // Allow clearing email (set to null)
+                user.setEmail(null);
+                System.out.println("✅ [AuthUserService] Email cleared for user ID: " + user.getId());
+                System.out.println("   Old Email: " + (oldEmail != null ? oldEmail : "NULL"));
+                System.out.println("   New Email: NULL");
+            }
         }
 
         // Update address fields
@@ -189,7 +236,19 @@ public class AuthUserService {
             user.setWhatsappUpdates((Boolean) addressData.get("whatsappUpdates"));
         }
 
-        return userRepo.save(user);
+        User savedUser = userRepo.save(user);
+        
+        // Log email update confirmation
+        if (addressData.containsKey("email")) {
+            System.out.println("📝 [AuthUserService] User saved to database (by phone)");
+            System.out.println("   User ID: " + savedUser.getId());
+            System.out.println("   Phone: " + savedUser.getPhone());
+            System.out.println("   Email in DB: " + (savedUser.getEmail() != null ? savedUser.getEmail() : "NULL"));
+            System.out.println("   Verification: Email field matches = " + 
+                (savedUser.getEmail() != null && savedUser.getEmail().equals(user.getEmail())));
+        }
+        
+        return savedUser;
     }
 
     // ===========================================================
@@ -226,7 +285,30 @@ public class AuthUserService {
 
         // Update email if provided
         if (addressData.containsKey("email")) {
-            user.setEmail((String) addressData.get("email"));
+            String newEmail = (String) addressData.get("email");
+            String oldEmail = user.getEmail();
+            
+            // Handle null/empty email
+            if (newEmail != null && !newEmail.trim().isEmpty()) {
+                newEmail = newEmail.trim();
+                // Basic email validation
+                if (!newEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+                    System.err.println("⚠️ Invalid email format: " + newEmail);
+                    throw new RuntimeException("Invalid email format: " + newEmail);
+                }
+                user.setEmail(newEmail);
+                System.out.println("✅ [AuthUserService] Email updated for user phone: " + phone);
+                System.out.println("   User ID: " + user.getId());
+                System.out.println("   Old Email: " + (oldEmail != null ? oldEmail : "NULL"));
+                System.out.println("   New Email: " + newEmail);
+            } else {
+                // Allow clearing email (set to null)
+                user.setEmail(null);
+                System.out.println("✅ [AuthUserService] Email cleared for user phone: " + phone);
+                System.out.println("   User ID: " + user.getId());
+                System.out.println("   Old Email: " + (oldEmail != null ? oldEmail : "NULL"));
+                System.out.println("   New Email: NULL");
+            }
         }
 
         // Update address fields
@@ -262,7 +344,19 @@ public class AuthUserService {
             user.setWhatsappUpdates((Boolean) addressData.get("whatsappUpdates"));
         }
 
-        return userRepo.save(user);
+        // Use saveAndFlush to ensure email is immediately persisted to database
+        User savedUser = userRepo.saveAndFlush(user);
+        
+        // Log email update confirmation
+        if (addressData.containsKey("email")) {
+            System.out.println("📝 [AuthUserService] User saved to database (by phone)");
+            System.out.println("   User ID: " + savedUser.getId());
+            System.out.println("   Phone: " + savedUser.getPhone());
+            System.out.println("   Email in DB: " + (savedUser.getEmail() != null ? savedUser.getEmail() : "NULL"));
+            System.out.println("   Verification: Email saved and flushed to database successfully");
+        }
+        
+        return savedUser;
     }
 
 	

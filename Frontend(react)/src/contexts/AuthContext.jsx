@@ -167,6 +167,70 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async (userId = null, phone = null) => {
+    try {
+      const API_BASE = getBackendUrl();
+      let fullUserData = null;
+      
+      if (userId) {
+        // Fetch by user ID
+        const response = await fetch(`${API_BASE}/user/${userId}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+          fullUserData = await response.json();
+        }
+      } else if (phone && user) {
+        // Fetch by phone
+        const { getUserByPhone } = await import('../utils/api');
+        const token = user.token || localStorage.getItem('authToken');
+        fullUserData = await getUserByPhone(phone, token);
+      } else if (user && user.id) {
+        // Use current user ID
+        const response = await fetch(`${API_BASE}/user/${user.id}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+          fullUserData = await response.json();
+        }
+      }
+      
+      if (fullUserData) {
+        const updatedUser = {
+          ...user,
+          id: fullUserData.id || user.id,
+          userId: fullUserData.id || user.id,
+          name: fullUserData.fullName || user.name,
+          fullName: fullUserData.fullName || user.fullName,
+          phone: fullUserData.phone || user.phone,
+          email: fullUserData.email || user.email,
+          token: user.token,
+          pincode: fullUserData.pincode || user.pincode,
+          flatOrHouseNo: fullUserData.flatOrHouseNo || user.flatOrHouseNo,
+          areaOrStreet: fullUserData.areaOrStreet || user.areaOrStreet,
+          landmark: fullUserData.landmark || user.landmark,
+          city: fullUserData.city || user.city,
+          state: fullUserData.state || user.state,
+          addressType: fullUserData.addressType || user.addressType,
+          whatsappUpdates: fullUserData.whatsappUpdates !== undefined ? fullUserData.whatsappUpdates : user.whatsappUpdates,
+          enabled: fullUserData.enabled !== undefined ? fullUserData.enabled : user.enabled,
+          createdAt: fullUserData.createdAt || user.createdAt,
+          updatedAt: fullUserData.updatedAt || user.updatedAt
+        };
+        
+        console.log('🔄 Refreshing user data:', updatedUser);
+        setUser(updatedUser);
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        return updatedUser;
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
+    return user;
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('currentUser');
@@ -179,6 +243,7 @@ export const AuthProvider = ({ children }) => {
     sendOTP,
     verifyOTP,
     logout,
+    refreshUser,
     isAuthenticated: !!user
   };
 

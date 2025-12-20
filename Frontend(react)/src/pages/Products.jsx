@@ -16,8 +16,9 @@ const Products = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Read category from URL params (now expects slug, not name)
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
+  // Read parameters from URL
+  const selectedCategory = searchParams.get('category') || '';
+  const selectedCollection = searchParams.get('collection') || '';
 
   const actualSlug = slug || storeSlug || currentStore?.slug;
 
@@ -40,10 +41,10 @@ const Products = () => {
       try {
         const slugToUse = actualSlug;
         console.log('Fetching products for slug:', slugToUse, 'category:', selectedCategory);
-        
+
         const data = await getStoreProducts(slugToUse, selectedCategory || null);
         console.log('Received products:', Array.isArray(data) ? data.length : 'not array');
-        
+
         if (Array.isArray(data) && data.length > 0) {
           const transformedProducts = transformProducts(data, currentStore?.name || 'Store');
 
@@ -53,8 +54,20 @@ const Products = () => {
             const backend = p.product || {};
             const productActive = backend.isActive !== false;
             const categoryActive = backend.category ? backend.category.isActive !== false : true;
+
+            // Collection Filter (if selectedCollection is provided)
+            if (selectedCollection) {
+              const collections = backend.collections || [];
+              const matchesCollection = collections.some(c =>
+                (c.slug || c.name || c.collectionName || '').toLowerCase() === selectedCollection.toLowerCase()
+              );
+              if (!matchesCollection) return false;
+            }
+
             const totalStock = typeof backend.totalStock === 'number' ? backend.totalStock : backend.inventoryQuantity;
             const hasStock = totalStock == null || Number(totalStock) > 0;
+
+            // For collection-specific views, we might want to show out of stock, but for now sticking to store policy
             return productActive && categoryActive && hasStock;
           });
 
@@ -76,7 +89,7 @@ const Products = () => {
     };
 
     fetchProducts();
-  }, [actualSlug, selectedCategory, storeLoading, currentStore]);
+  }, [actualSlug, selectedCategory, selectedCollection, storeLoading, currentStore]);
 
   const handleProductClick = (product) => {
     // ALWAYS use /store/:slug/product/detail pattern for consistency
@@ -109,27 +122,33 @@ const Products = () => {
   }
 
   return (
-    <div className="container" style={{padding: '2rem 0'}}>
+    <div className="container" style={{ padding: '2rem 0' }}>
       <StoreError />
-      {selectedCategory && (
-        <div style={{display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '2rem'}}>
-          <button 
-            onClick={() => setSelectedCategory('')}
-            style={{padding: '0.5rem 1rem', cursor: 'pointer'}}
+      {(selectedCategory || selectedCollection) && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '2rem', gap: '1rem' }}>
+          {selectedCategory && (
+            <span style={{ fontSize: '0.9rem', color: '#666' }}>Category: <strong>{selectedCategory}</strong></span>
+          )}
+          {selectedCollection && (
+            <span style={{ fontSize: '0.9rem', color: '#666' }}>Collection: <strong>{selectedCollection}</strong></span>
+          )}
+          <button
+            onClick={() => navigate(`${actualSlug ? `/store/${actualSlug}` : ''}/products`)}
+            style={{ padding: '0.5rem 1rem', cursor: 'pointer', borderRadius: '4px', border: '1px solid #ddd' }}
           >
-            Clear Filter
+            Clear Filters
           </button>
         </div>
       )}
 
       {products.length === 0 ? (
-        <div style={{textAlign: 'center', padding: '3rem'}}>
+        <div style={{ textAlign: 'center', padding: '3rem' }}>
           <p>No products found for this store.</p>
         </div>
       ) : (
         <div className="products-grid">
           {products.map((product) => (
-            <div key={product.id} onClick={() => handleProductClick(product)} style={{cursor: 'pointer'}}>
+            <div key={product.id} onClick={() => handleProductClick(product)} style={{ cursor: 'pointer' }}>
               <ProductCard product={product} />
             </div>
           ))}

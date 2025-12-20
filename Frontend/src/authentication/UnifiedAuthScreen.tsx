@@ -11,13 +11,15 @@ import {
   TouchableOpacity,
   Alert,
   Dimensions,
+  Image,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
 import { signup, verifyOtp, login as apiLogin, sendLoginOtp, loginWithOtp, getSellerDetails, getCurrentSellerStoreDetails, API_BASE_URL } from '../utils/api';
 import { useAuth } from './AuthContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface UnifiedAuthScreenProps {
   onAuthenticated: () => void;
@@ -28,9 +30,9 @@ type SignInMethod = 'password' | 'otp';
 
 const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }) => {
   const { login } = useAuth();
-  const [authMode, setAuthMode] = useState<AuthMode>('signup');
+  const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [signInMethod, setSignInMethod] = useState<SignInMethod>('password');
-  
+
   // Sign Up fields
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -40,14 +42,14 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
   const [step, setStep] = useState<'details' | 'verification'>('details');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState('');
-  
+
   // Sign In fields
   const [signInMobile, setSignInMobile] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
   const [signInOtp, setSignInOtp] = useState('');
   const [signInOtpSent, setSignInOtpSent] = useState<string>('');
   const [showSignInPassword, setShowSignInPassword] = useState(false);
-  
+
   const [loading, setLoading] = useState(false);
 
   // Sign Up validations
@@ -88,7 +90,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
 
     try {
       console.log('Starting signup process...', { fullName, phone: cleanMobile });
-      
+
       // Call backend API to signup and get OTP
       const otpCode = await signup({
         fullName,
@@ -109,11 +111,11 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       setLoading(false);
       console.error('Signup error in handleVerifyMobile:', error);
       let errorMessage = 'Failed to send OTP. Please try again.';
-      
+
       if (error instanceof Error) {
         const msg = error.message.toLowerCase();
         console.log('Error message:', msg);
-        
+
         if (msg.includes('timeout') || msg.includes('timed out')) {
           errorMessage = `Request timed out. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`;
         } else if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
@@ -126,7 +128,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
           errorMessage = error.message || 'Failed to send OTP. Please try again.';
         }
       }
-      
+
       console.log('Showing error alert:', errorMessage);
       Alert.alert('Signup Error', errorMessage);
     }
@@ -154,7 +156,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
       await storage.setItem('userName', authResponse.fullName || `${firstName} ${lastName}`);
       await storage.setItem('userPassword', password);
-      
+
       // Validate and store userId - must be a valid number > 0
       if (authResponse.userId && typeof authResponse.userId === 'number' && authResponse.userId > 0) {
         await storage.setItem('userId', authResponse.userId.toString());
@@ -162,7 +164,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
         console.error('Invalid userId in verifyOtp response:', authResponse.userId);
         throw new Error('Signup failed: Invalid user ID received');
       }
-      
+
       // Fetch and store seller details and store details
       try {
         if (authResponse.userId) {
@@ -172,7 +174,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
             await storage.setItem('userName', sellerDetails.fullName || authResponse.fullName || `${firstName} ${lastName}`);
             await storage.setItem('sellerDetails', JSON.stringify(sellerDetails));
           }
-          
+
           // Fetch store details (may not exist for new users)
           const storeDetails = await getCurrentSellerStoreDetails();
           if (storeDetails) {
@@ -185,10 +187,10 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
         console.warn('Could not fetch user details after signup:', error);
         // Continue with signup even if details fetch fails
       }
-      
+
       // Mark this as a sign-up (new user) - they may need onboarding
       await storage.setItem('isSignIn', 'false');
-      
+
       setLoading(false);
       onAuthenticated();
     } catch (error) {
@@ -270,10 +272,10 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
 
       setLoading(true);
       const cleanMobile = signInMobile.replace(/\D/g, '');
-      
+
       try {
         console.log('Attempting login with:', { phone: cleanMobile });
-        
+
         // Login with backend API
         const authResponse = await apiLogin({
           phone: cleanMobile,
@@ -286,21 +288,21 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
         if (!authResponse) {
           throw new Error('Login failed: No response from server');
         }
-        
+
         if (!authResponse.token) {
           console.error('Login failed: No token in response', authResponse);
           throw new Error('Login failed: Invalid response from server - no token received');
         }
 
         console.log('Storing authentication data...');
-        
+
         // Store authentication data
         await login(authResponse.token);
         await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
         await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
         await storage.setItem('userName', authResponse.fullName || '');
         await storage.setItem('userPassword', signInPassword);
-        
+
         // Validate and store userId - must be a valid number > 0
         if (authResponse.userId && typeof authResponse.userId === 'number' && authResponse.userId > 0) {
           await storage.setItem('userId', authResponse.userId.toString());
@@ -308,7 +310,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
           console.error('Invalid userId in login response:', authResponse.userId);
           throw new Error('Login failed: Invalid user ID received');
         }
-        
+
         // Fetch and store seller details and store details
         try {
           if (authResponse.userId) {
@@ -318,7 +320,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
               await storage.setItem('userName', sellerDetails.fullName || authResponse.fullName || '');
               await storage.setItem('sellerDetails', JSON.stringify(sellerDetails));
             }
-            
+
             // Fetch store details
             const storeDetails = await getCurrentSellerStoreDetails();
             if (storeDetails) {
@@ -335,23 +337,23 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
           console.warn('Could not fetch user details after login:', error);
           // Continue with login even if details fetch fails
         }
-        
+
         // Mark this as a sign-in (not sign-up) so onboarding can be skipped
         await storage.setItem('isSignIn', 'true');
-      
+
         console.log('Login successful, calling onAuthenticated...');
         setLoading(false);
         onAuthenticated();
       } catch (error) {
         setLoading(false);
         console.error('Login error details:', error);
-        
+
         let errorMessage = 'Failed to sign in. Please check your credentials.';
-        
+
         if (error instanceof Error) {
           const msg = error.message.toLowerCase();
           console.log('Error message:', msg);
-          
+
           if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch') || msg.includes('network request failed')) {
             errorMessage = `Network error. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`;
           } else if (msg.includes('not found') || msg.includes('seller not found') || msg.includes('account not found')) {
@@ -367,83 +369,83 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
           console.error('Unknown error type:', typeof error, error);
           errorMessage = 'An unexpected error occurred. Please try again.';
         }
-        
+
         console.log('Showing error alert:', errorMessage);
         Alert.alert('Login Error', errorMessage);
       }
-      } else {
-        // OTP-based sign-in
-        if (!isSignInOtpValid) {
-          Alert.alert('Validation', 'Please enter a valid 6-digit OTP.');
-          return;
+    } else {
+      // OTP-based sign-in
+      if (!isSignInOtpValid) {
+        Alert.alert('Validation', 'Please enter a valid 6-digit OTP.');
+        return;
+      }
+
+      setLoading(true);
+      const cleanMobile = signInMobile.replace(/\D/g, '');
+
+      try {
+        const authResponse = await loginWithOtp(cleanMobile, signInOtp);
+
+        // Store authentication data
+        await login(authResponse.token);
+        await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
+        await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
+        await storage.setItem('userName', authResponse.fullName || '');
+
+        // Validate and store userId - must be a valid number > 0
+        if (authResponse.userId && typeof authResponse.userId === 'number' && authResponse.userId > 0) {
+          await storage.setItem('userId', authResponse.userId.toString());
+        } else {
+          console.error('Invalid userId in loginWithOtp response:', authResponse.userId);
+          throw new Error('Login failed: Invalid user ID received');
         }
 
-        setLoading(true);
-        const cleanMobile = signInMobile.replace(/\D/g, '');
-
+        // Fetch and store seller details and store details
         try {
-          const authResponse = await loginWithOtp(cleanMobile, signInOtp);
+          if (authResponse.userId) {
+            // Fetch seller details
+            const sellerDetails = await getSellerDetails(authResponse.userId);
+            if (sellerDetails) {
+              await storage.setItem('userName', sellerDetails.fullName || authResponse.fullName || '');
+              await storage.setItem('sellerDetails', JSON.stringify(sellerDetails));
+            }
 
-          // Store authentication data
-          await login(authResponse.token);
-          await storage.setItem(AUTH_TOKEN_KEY, authResponse.token);
-          await storage.setItem(AUTH_PHONE_KEY, cleanMobile);
-          await storage.setItem('userName', authResponse.fullName || '');
-          
-          // Validate and store userId - must be a valid number > 0
-          if (authResponse.userId && typeof authResponse.userId === 'number' && authResponse.userId > 0) {
-            await storage.setItem('userId', authResponse.userId.toString());
-          } else {
-            console.error('Invalid userId in loginWithOtp response:', authResponse.userId);
-            throw new Error('Login failed: Invalid user ID received');
-          }
-          
-          // Fetch and store seller details and store details
-          try {
-            if (authResponse.userId) {
-              // Fetch seller details
-              const sellerDetails = await getSellerDetails(authResponse.userId);
-              if (sellerDetails) {
-                await storage.setItem('userName', sellerDetails.fullName || authResponse.fullName || '');
-                await storage.setItem('sellerDetails', JSON.stringify(sellerDetails));
-              }
-              
-              // Fetch store details
-              const storeDetails = await getCurrentSellerStoreDetails();
-              if (storeDetails) {
-                await storage.setItem('storeName', storeDetails.storeName || '');
-                await storage.setItem('storeLink', storeDetails.storeLink || '');
-                await storage.setItem('storeId', storeDetails.storeId?.toString() || '');
-                // Save logo URL if available
-                if (storeDetails.logoUrl) {
-                  await storage.setItem('storeLogoUrl', storeDetails.logoUrl);
-                }
+            // Fetch store details
+            const storeDetails = await getCurrentSellerStoreDetails();
+            if (storeDetails) {
+              await storage.setItem('storeName', storeDetails.storeName || '');
+              await storage.setItem('storeLink', storeDetails.storeLink || '');
+              await storage.setItem('storeId', storeDetails.storeId?.toString() || '');
+              // Save logo URL if available
+              if (storeDetails.logoUrl) {
+                await storage.setItem('storeLogoUrl', storeDetails.logoUrl);
               }
             }
-          } catch (error) {
-            console.warn('Could not fetch user details after OTP login:', error);
-            // Continue with login even if details fetch fails
           }
-          
-          await storage.setItem('isSignIn', 'true');
-
-          setLoading(false);
-          onAuthenticated();
         } catch (error) {
-          setLoading(false);
-          const errorMessage = error instanceof Error ? error.message : 'OTP verification failed';
-          
-          if (errorMessage.includes('Invalid OTP') || errorMessage.includes('Incorrect')) {
-            Alert.alert('Error', 'Incorrect OTP. Please try again.');
-          } else if (errorMessage.includes('expired')) {
-            Alert.alert('Error', 'OTP expired. Please request a new one.');
-          } else if (errorMessage.includes('not found')) {
-            Alert.alert('Error', 'No account found with this mobile number. Please sign up first.');
-          } else {
-            Alert.alert('Error', errorMessage);
-          }
+          console.warn('Could not fetch user details after OTP login:', error);
+          // Continue with login even if details fetch fails
+        }
+
+        await storage.setItem('isSignIn', 'true');
+
+        setLoading(false);
+        onAuthenticated();
+      } catch (error) {
+        setLoading(false);
+        const errorMessage = error instanceof Error ? error.message : 'OTP verification failed';
+
+        if (errorMessage.includes('Invalid OTP') || errorMessage.includes('Incorrect')) {
+          Alert.alert('Error', 'Incorrect OTP. Please try again.');
+        } else if (errorMessage.includes('expired')) {
+          Alert.alert('Error', 'OTP expired. Please request a new one.');
+        } else if (errorMessage.includes('not found')) {
+          Alert.alert('Error', 'No account found with this mobile number. Please sign up first.');
+        } else {
+          Alert.alert('Error', errorMessage);
         }
       }
+    }
   };
 
   const handleForgotPassword = async () => {
@@ -454,7 +456,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
 
     const cleanMobile = signInMobile.replace(/\D/g, '');
     const storedPhone = await storage.getItem(AUTH_PHONE_KEY);
-    
+
     if (!storedPhone || storedPhone !== cleanMobile) {
       Alert.alert(
         'Account Not Found',
@@ -485,846 +487,484 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+    <LinearGradient colors={['#ff85b3', '#a30f5b']} style={styles.container}>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardView}
         >
-          {/* Header with Logo */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Text style={styles.logoText}>S</Text>
-            </View>
-              <Text style={styles.logoTextMain}>Sakhi</Text>
-            </View>
-          </View>
-
-          {/* Welcome Text */}
-          <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeText}>Welcome Sellers!</Text>
-          </View>
-
-          {/* Toggle Buttons */}
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity
-              style={[styles.toggleButton, authMode === 'signup' && styles.toggleButtonActive]}
-              onPress={() => {
-                setAuthMode('signup');
-                setStep('details');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.toggleText, authMode === 'signup' && styles.toggleTextActive]}>
-                Create Account
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Top Section: Logo & Welcome Text */}
+            <View style={styles.topSection}>
+              <View style={styles.logoSquircle}>
+                <Image
+                  source={require('../assets/images/logo.png.jpg')}
+                  style={styles.logoImage}
+                // resizeMode="contain" // Handled in style
+                />
+              </View>
+              <Text style={styles.welcomeTitleWhite}>Welcome!</Text>
+              <Text style={styles.welcomeSubtitleWhite}>
+                {authMode === 'signin' ? 'Let’s continue growing your business' : 'Sign up to get started'}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleButton, authMode === 'signin' && styles.toggleButtonActive]}
-              onPress={() => {
-                setAuthMode('signin');
-                setSignInMethod('password');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.toggleText, authMode === 'signin' && styles.toggleTextActive]}>
-                Sign In
-              </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
 
-          {/* Main Card */}
-          <View style={styles.card}>
-            {authMode === 'signup' ? (
-              // Sign Up Form
-              step === 'verification' ? (
+            {/* Floating White Card */}
+            <View style={styles.floatingCard}>
+              {authMode === 'signin' ? (
+                // SIGN IN FORM
                 <View>
-                  <Text style={styles.verificationTitle}>Verify mobile number</Text>
-                  <Text style={styles.verificationSubtext}>
-                    IN +91 {mobileNumber}
-                    <Text style={styles.changeText} onPress={() => setStep('details')}>
-                      {' '}Change
-                    </Text>
-                  </Text>
-                  <Text style={styles.verificationHelp}>
-                    We've sent a One Time Password (OTP) to the mobile number above. Please enter it to complete verification.
-                  </Text>
-
-                  {/* Demo OTP Display Box */}
-                  {otpSent && (
-                    <View style={styles.demoOtpContainer}>
-                      <View style={styles.demoOtpBox}>
-                        <Text style={styles.demoOtpLabel}>Demo OTP (for testing):</Text>
-                        <Text style={styles.demoOtpCode}>{otpSent}</Text>
-                        <TouchableOpacity
-                          style={styles.autoFillButton}
-                          onPress={() => {
-                            setOtp(otpSent);
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <MaterialCommunityIcons name="content-copy" size={16} color="#ffffff" />
-                          <Text style={styles.autoFillText}>Auto Fill</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-
-                  <Text style={[styles.label, styles.labelMargin]}>Enter OTP</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="6-digit code"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="number-pad"
-                    value={otp}
-                    onChangeText={(text) => setOtp(text.replace(/\D/g, '').slice(0, 6))}
-                    maxLength={6}
-                  />
-
-                  <TouchableOpacity
-                    style={[styles.primaryButton, (!isSignUpOtpValid || loading) && styles.buttonDisabled]}
-                    onPress={handleVerifyOtp}
-                    disabled={!isSignUpOtpValid || loading}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.primaryButtonText}>
-                      {loading ? 'Verifying...' : 'Verify and Create Account'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.resendButton}
-                    onPress={handleResendOtp}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.resendText}>Resend OTP</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View>
-                  <View style={styles.nameRow}>
-                    <View style={styles.nameField}>
-                      <Text style={styles.label}>First name</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="First name"
-                        value={firstName}
-                        onChangeText={setFirstName}
-                        autoCapitalize="words"
-                        placeholderTextColor="#9ca3af"
-                      />
-                    </View>
-                    <View style={[styles.nameField, styles.nameFieldRight]}>
-                      <Text style={styles.label}>Last name</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Last name"
-                        value={lastName}
-                        onChangeText={setLastName}
-                        autoCapitalize="words"
-                        placeholderTextColor="#9ca3af"
-                      />
-                    </View>
-                  </View>
-
-                  <Text style={[styles.label, styles.labelMargin]}>Mobile number</Text>
-                  <View style={styles.mobileRow}>
-                    <View style={styles.countryCodeContainer}>
-                      <Text style={styles.countryCode}>IN +91</Text>
-                    </View>
+                  {/* Mobile Input (Username equivalent) */}
+                  <View style={styles.inputContainer}>
+                    <MaterialCommunityIcons name="account-outline" size={24} color="#6c757d" style={styles.inputIcon} />
                     <TextInput
-                      style={styles.mobileInput}
-                      placeholder="Enter 10-digit number"
+                      style={styles.input}
+                      placeholder="Mobile Number"
                       placeholderTextColor="#9ca3af"
                       keyboardType="phone-pad"
-                      value={mobileNumber}
-                      onChangeText={(text) => setMobileNumber(text.replace(/\D/g, '').slice(0, 10))}
+                      value={signInMobile}
+                      onChangeText={(text) => setSignInMobile(text.replace(/\D/g, '').slice(0, 10))}
                       maxLength={10}
                     />
                   </View>
 
-                  <Text style={[styles.label, styles.labelMargin]}>Create a password</Text>
-                  <View style={styles.passwordContainer}>
-                    <TextInput
-                      style={styles.passwordInput}
-                      placeholder="Enter password"
-                      placeholderTextColor="#9ca3af"
-                      secureTextEntry={!showPassword}
-                      value={password}
-                      onChangeText={setPassword}
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity
-                      style={styles.showPasswordButton}
-                      onPress={() => setShowPassword(!showPassword)}
-                    >
-                      <MaterialCommunityIcons
-                        name={showPassword ? 'eye-off' : 'eye'}
-                        size={20}
-                        color="#6b7280"
-                      />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.infoContainer}>
-                    <View style={styles.infoIcon}>
-                      <Text style={styles.infoIconText}>i</Text>
+                  {signInMethod === 'password' ? (
+                    <View>
+                      {/* Password Input */}
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="lock-outline" size={24} color="#6c757d" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Password"
+                          placeholderTextColor="#9ca3af"
+                          secureTextEntry={!showSignInPassword}
+                          value={signInPassword}
+                          onChangeText={setSignInPassword}
+                          autoCapitalize="none"
+                        />
+                        <TouchableOpacity onPress={() => setShowSignInPassword(!showSignInPassword)}>
+                          <MaterialCommunityIcons
+                            name={showSignInPassword ? 'eye-off' : 'eye'}
+                            size={24}
+                            color="#9ca3af"
+                          />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <Text style={styles.infoText}>Passwords must be at least 6 characters.</Text>
-                  </View>
+                  ) : (
+                    <View>
+                      {/* OTP Input */}
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="message-lock-outline" size={24} color="#6c757d" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Enter OTP"
+                          placeholderTextColor="#9ca3af"
+                          keyboardType="number-pad"
+                          value={signInOtp}
+                          onChangeText={(text) => setSignInOtp(text.replace(/\D/g, '').slice(0, 6))}
+                          maxLength={6}
+                        />
+                      </View>
 
-                  <TouchableOpacity
-                    style={styles.checkboxContainer}
-                    onPress={() => setShowPassword(!showPassword)}
-                    activeOpacity={0.7}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <View style={[styles.checkbox, showPassword && styles.checkboxChecked]}>
-                      {showPassword && (
-                        <MaterialCommunityIcons name="check" size={12} color="#ffffff" />
+                      {/* Pre-login OTP Send Button placed cleaner */}
+                      {!signInOtpSent && (
+                        <TouchableOpacity onPress={handleSendSignInOtp} style={{ alignSelf: 'flex-end', marginBottom: 10 }}>
+                          <Text style={{ color: '#e61580', fontWeight: 'bold' }}>Get OTP</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Demo OTP Box */}
+                      {signInOtpSent && signInOtpSent.length > 0 && (
+                        <View style={styles.demoOtpBox}>
+                          <Text style={styles.demoOtpText}>{signInOtpSent}</Text>
+                          <TouchableOpacity onPress={() => setSignInOtp(signInOtpSent)}>
+                            <Text style={{ color: '#6c757d', fontSize: 12, marginTop: 4 }}>Tap to Auto-Fill</Text>
+                          </TouchableOpacity>
+                        </View>
                       )}
                     </View>
-                    <Text style={styles.checkboxText}>Show password</Text>
-                  </TouchableOpacity>
+                  )}
 
-                  <Text style={styles.verificationText}>
-                    To verify your number, we will send you a text message with a temporary code. Message and data rates may apply.
-                  </Text>
-
+                  {/* Primary LOGIN Button */}
                   <TouchableOpacity
-                    style={[styles.primaryButton, (!isSignUpFormValid || loading) && styles.buttonDisabled]}
-                    onPress={handleVerifyMobile}
-                    disabled={!isSignUpFormValid || loading}
+                    style={[
+                      styles.primaryButton,
+                      loading && styles.buttonDisabled
+                    ]}
+                    onPress={handleSignIn}
+                    disabled={loading}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.primaryButtonText}>
-                      {loading ? 'Sending...' : 'Verify mobile number'}
+                      {loading ? 'PROCESSING...' : 'LOGIN'}
                     </Text>
                   </TouchableOpacity>
 
-                  <Text style={styles.termsText}>
-                  By continuing, you agree to Sakhi's{' '}
-                    <Text style={styles.linkText} onPress={handleTermsPress}>
-                      Terms and conditions of use
-                    </Text>{' '}
-                    and{' '}
-                    <Text style={styles.linkText} onPress={handlePrivacyPress}>
-                      Privacy Policy
-                    </Text>
-                    .
-                  </Text>
-                </View>
-              )
-            ) : (
-              // Sign In Form
-              <View>
-                <Text style={styles.alreadyCustomer}>Already a customer?</Text>
-
-                <Text style={[styles.label, styles.labelMargin]}>Mobile number</Text>
-                <View style={styles.mobileRow}>
-                  <View style={styles.countryCodeContainer}>
-                    <Text style={styles.countryCode}>IN +91</Text>
-                  </View>
-                  <TextInput
-                    style={styles.mobileInput}
-                    placeholder="Enter 10-digit number"
-                    placeholderTextColor="#9ca3af"
-                    keyboardType="phone-pad"
-                    value={signInMobile}
-                    onChangeText={(text) => setSignInMobile(text.replace(/\D/g, '').slice(0, 10))}
-                    maxLength={10}
-                  />
-                </View>
-
-                {signInMethod === 'password' ? (
-                  <>
-                    <Text style={[styles.label, styles.labelMargin]}>Password</Text>
-                    <View style={styles.passwordContainer}>
-                      <TextInput
-                        style={styles.passwordInput}
-                        placeholder="Enter your password"
-                        placeholderTextColor="#9ca3af"
-                        secureTextEntry={!showSignInPassword}
-                        value={signInPassword}
-                        onChangeText={setSignInPassword}
-                        autoCapitalize="none"
-                      />
-                      <TouchableOpacity
-                        style={styles.showPasswordButton}
-                        onPress={() => setShowSignInPassword(!showSignInPassword)}
-                      >
-                        <MaterialCommunityIcons
-                          name={showSignInPassword ? 'eye-off' : 'eye'}
-                          size={20}
-                          color="#6b7280"
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity
-                      style={styles.forgotPasswordButton}
-                      onPress={handleForgotPassword}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
-                    {/* Demo OTP Display Box for Sign In */}
-                    {signInOtpSent && signInOtpSent.length > 0 && (
-                      <View style={styles.demoOtpContainer}>
-                        <View style={styles.demoOtpBox}>
-                          <Text style={styles.demoOtpLabel}>DEMO OTP (FOR TESTING):</Text>
-                          <Text style={styles.demoOtpCode}>{signInOtpSent}</Text>
-                          <TouchableOpacity
-                            style={styles.autoFillButton}
-                            onPress={() => {
-                              setSignInOtp(signInOtpSent);
-                            }}
-                            activeOpacity={0.7}
-                          >
-                            <MaterialCommunityIcons name="content-copy" size={16} color="#ffffff" />
-                            <Text style={styles.autoFillText}>Auto Fill</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    )}
-
-                    <Text style={[styles.label, styles.labelMargin]}>Enter OTP</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="6-digit code"
-                      placeholderTextColor="#9ca3af"
-                      keyboardType="number-pad"
-                      value={signInOtp}
-                      onChangeText={(text) => setSignInOtp(text.replace(/\D/g, '').slice(0, 6))}
-                      maxLength={6}
-                    />
-
-                    {!signInOtpSent || signInOtpSent === '' ? (
-                      <TouchableOpacity
-                        style={styles.sendOtpButton}
-                        onPress={handleSendSignInOtp}
-                        disabled={!isSignInMobileValid || loading}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.sendOtpText}>Send OTP</Text>
+                  {/* Footer Row: Forgot Password & Sign Up */}
+                  <View style={styles.footerRow}>
+                    {signInMethod === 'password' ? (
+                      <TouchableOpacity onPress={handleForgotPassword}>
+                        <Text style={styles.footerLinkRed}>Forgot Password?</Text>
                       </TouchableOpacity>
                     ) : (
-                      <TouchableOpacity
-                        style={styles.resendOtpButton}
-                        onPress={handleSendSignInOtp}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.resendOtpText}>Resend OTP</Text>
+                      <TouchableOpacity onPress={() => setSignInMethod('password')}>
+                        <Text style={styles.footerLinkRed}>Use Password</Text>
                       </TouchableOpacity>
                     )}
-                  </>
-                )}
 
-                <View style={styles.methodToggle}>
-                  <TouchableOpacity
-                    style={styles.methodOption}
-                    onPress={() => {
-                      setSignInMethod('password');
-                      setSignInOtpSent('');
-                      setSignInOtp('');
-                    }}
-                  >
-                    <Text style={styles.methodOptionText}>Use Password</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.methodSeparator}>or</Text>
-                  <TouchableOpacity
-                    style={styles.methodOption}
-                    onPress={() => {
-                      setSignInMethod('otp');
-                      if ((!signInOtpSent || signInOtpSent === '') && isSignInMobileValid) {
-                        handleSendSignInOtp();
-                      }
-                    }}
-                  >
-                    <Text style={styles.methodOptionText}>Use OTP</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity onPress={() => {
+                      setAuthMode('signup');
+                      setStep('details');
+                    }}>
+                      <Text style={styles.footerLinkRed}>Sign Up</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Toggle Sign In Method */}
+                  {signInMethod === 'password' && (
+                    <View style={{ alignItems: 'center', marginTop: 25 }}>
+                      <TouchableOpacity
+                        onPress={() => setSignInMethod('otp')}
+                        style={{
+                          backgroundColor: '#fce7f3', // Faint pink background
+                          borderRadius: 30,
+                          paddingVertical: 10,
+                          paddingHorizontal: 20,
+                        }}
+                      >
+                        <Text style={{ color: '#e61580', fontWeight: 'bold', fontSize: 14, fontFamily: 'Poppins-Medium' }}>
+                          Login With OTP
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
                 </View>
+              ) : (
+                // SIGN UP FORM
+                <View>
+                  {step === 'details' ? (
+                    <View>
+                      {/* Name Inputs */}
+                      <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <View style={[styles.inputContainer, { flex: 1 }]}>
+                          <MaterialCommunityIcons name="account-outline" size={24} color="#6c757d" style={styles.inputIcon} />
+                          <TextInput
+                            style={styles.input}
+                            placeholder="First Name"
+                            placeholderTextColor="#9ca3af"
+                            value={firstName}
+                            onChangeText={setFirstName}
+                          />
+                        </View>
+                        <View style={[styles.inputContainer, { flex: 1 }]}>
+                          <TextInput
+                            style={styles.input}
+                            placeholder="Last Name"
+                            placeholderTextColor="#9ca3af"
+                            value={lastName}
+                            onChangeText={setLastName}
+                          />
+                        </View>
+                      </View>
 
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    ((signInMethod === 'password' && (!isSignInMobileValid || !isSignInPasswordValid)) ||
-                     (signInMethod === 'otp' && (!isSignInMobileValid || !isSignInOtpValid)) ||
-                     loading) &&
-                      styles.buttonDisabled,
-                  ]}
-                  onPress={handleSignIn}
-                  disabled={
-                    (signInMethod === 'password' && (!isSignInMobileValid || !isSignInPasswordValid)) ||
-                    (signInMethod === 'otp' && (!isSignInMobileValid || !isSignInOtpValid)) ||
-                    loading
-                  }
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {loading ? 'Signing in...' : 'Continue'}
-                  </Text>
-                </TouchableOpacity>
+                      {/* Mobile Input */}
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="phone-outline" size={24} color="#6c757d" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Mobile Number"
+                          placeholderTextColor="#9ca3af"
+                          keyboardType="phone-pad"
+                          value={mobileNumber}
+                          onChangeText={(text) => setMobileNumber(text.replace(/\D/g, '').slice(0, 10))}
+                          maxLength={10}
+                        />
+                      </View>
 
-                <Text style={styles.termsText}>
-                  By continuing, you agree to Sakhi's{' '}
-                  <Text style={styles.linkText} onPress={handleTermsPress}>
-                    Terms and conditions of use
-                  </Text>{' '}
-                  and{' '}
-                  <Text style={styles.linkText} onPress={handlePrivacyPress}>
-                    Privacy Policy
-                  </Text>
-                  .
-                </Text>
-              </View>
-            )}
-          </View>
+                      {/* Password Input */}
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="lock-outline" size={24} color="#6c757d" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Create Password"
+                          placeholderTextColor="#9ca3af"
+                          secureTextEntry={!showPassword}
+                          value={password}
+                          onChangeText={setPassword}
+                        />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                          <MaterialCommunityIcons
+                            name={showPassword ? 'eye-off' : 'eye'}
+                            size={24}
+                            color="#9ca3af"
+                          />
+                        </TouchableOpacity>
+                      </View>
 
-          {/* Footer Copyright */}
-          <Text style={styles.copyright}>
-            © 2025 Sakhi. All rights reserved.
-          </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                      {/* Terms */}
+                      <Text style={{ fontSize: 12, color: '#6c757d', marginVertical: 10, textAlign: 'center' }}>
+                        By signing up, you agree to our Terms & Conditions.
+                      </Text>
+
+                      {/* Primary Action Button */}
+                      <TouchableOpacity
+                        style={[
+                          styles.primaryButton,
+                          loading && styles.buttonDisabled
+                        ]}
+                        onPress={handleVerifyMobile}
+                        disabled={loading}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.primaryButtonText}>
+                          {loading ? 'PROCESSING...' : 'SEND OTP'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Footer Row: Back to Sign In */}
+                      <View style={[styles.footerRow, { justifyContent: 'center', marginTop: 15 }]}>
+                        <Text style={{ color: '#6c757d' }}>Already have an account? </Text>
+                        <TouchableOpacity onPress={() => {
+                          setAuthMode('signin');
+                          setSignInMethod('password');
+                        }}>
+                          <Text style={styles.footerLinkRed}>Sign In</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <View>
+                      {/* OTP Verification Step */}
+                      <Text style={{ textAlign: 'center', marginBottom: 20, color: '#6c757d' }}>
+                        Enter the OTP sent to +91 {mobileNumber}
+                      </Text>
+
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons name="message-lock-outline" size={24} color="#6c757d" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Enter 6-digit OTP"
+                          placeholderTextColor="#9ca3af"
+                          keyboardType="number-pad"
+                          value={otp}
+                          onChangeText={(text) => setOtp(text.replace(/\D/g, '').slice(0, 6))}
+                          maxLength={6}
+                        />
+                      </View>
+
+                      {/* Demo OTP Box */}
+                      {otpSent && (
+                        <View style={styles.demoOtpBox}>
+                          <Text style={styles.demoOtpText}>{otpSent}</Text>
+                          <TouchableOpacity onPress={() => setOtp(otpSent)}>
+                            <Text style={{ color: '#6c757d', fontSize: 12, marginTop: 4 }}>Tap to Auto-Fill</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
+                      <TouchableOpacity
+                        style={[
+                          styles.primaryButton,
+                          loading && styles.buttonDisabled
+                        ]}
+                        onPress={handleVerifyOtp}
+                        disabled={loading}
+                      >
+                        <Text style={styles.primaryButtonText}>
+                          {loading ? 'VERIFYING...' : 'VERIFY & SIGN UP'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 }}>
+                        <TouchableOpacity onPress={handleResendOtp}>
+                          <Text style={styles.footerLinkRed}>Resend OTP</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setStep('details')}>
+                          <Text style={styles.footerLinkRed}>Change Details</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+
+            {/* Copyright Footer - outside card */}
+            <Text style={styles.copyrightWhite}>
+              © 2025 Sakhi. All rights reserved.
+            </Text>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#e61580', // Bright pink background
+  },
+  safeArea: {
+    flex: 1,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    flexGrow: 1,
+    justifyContent: 'center', // Center card vertically if possible
+    paddingBottom: 30,
   },
-  header: {
+
+  // Header Section
+  topSection: {
     alignItems: 'center',
+    marginBottom: 30,
     marginTop: 40,
-    marginBottom: 24,
   },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  logoCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  logoSquircle: {
+    width: 160,
+    height: 160,
+    borderRadius: 40, // Squircle shape
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
+    overflow: 'hidden',
   },
-  logoText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#e61580',
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+    transform: [{ scale: 1.1 }],
   },
-  logoTextMain: {
-    fontSize: 32,
+  welcomeTitleWhite: {
+    fontSize: 38,
     fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
     color: '#ffffff',
-    letterSpacing: -0.5,
+    marginBottom: 10,
+    textAlign: 'center',
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
-  welcomeContainer: {
-    marginHorizontal: Math.max(16, SCREEN_WIDTH * 0.04),
-    marginTop: 8,
-    marginBottom: 12,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    marginHorizontal: Math.max(16, SCREEN_WIDTH * 0.04),
-    marginBottom: 16,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  toggleButtonActive: {
-    backgroundColor: '#e61580', // Bright pink
-  },
-  toggleText: {
+  welcomeSubtitleWhite: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#6b7280',
+    color: 'rgba(255,255,255, 0.95)', // Increased opacity
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
-  toggleTextActive: {
-    color: '#ffffff',
-  },
-  card: {
+
+  // Floating Card
+  floatingCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    marginHorizontal: Math.max(16, SCREEN_WIDTH * 0.04),
-    marginTop: 8,
-    padding: Math.max(20, SCREEN_WIDTH * 0.05),
+    marginHorizontal: 20,
+    borderRadius: 30, // Very rounded card
+    padding: 25,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  labelMargin: {
-    marginTop: 16,
-  },
-  nameRow: {
+
+  // Input Fields - Pill Shaped
+  inputContainer: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    backgroundColor: '#f9f9f9', // Slightly gray/off-white for input bg to stand out on white card
+    borderRadius: 30, // Pill shape
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    height: 55,
+    borderColor: '#eee',
+    borderWidth: 1,
   },
-  nameField: {
-    flex: 1,
-  },
-  nameFieldRight: {
-    marginLeft: 0,
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    borderWidth: 1.5,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1a1a1a',
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  mobileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  countryCodeContainer: {
-    borderWidth: 1.5,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    backgroundColor: '#f8f9fa',
-  },
-  countryCode: {
-    fontSize: 16,
-    color: '#1a1a1a',
-    fontWeight: '500',
-  },
-  mobileInput: {
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
     fontSize: 16,
-    color: '#1a1a1a',
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    color: '#333333',
+    height: '100%',
   },
-  passwordContainer: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  passwordInput: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1a1a1a',
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  showPasswordButton: {
-    position: 'absolute',
-    right: 12,
-    padding: 4,
-  },
-  infoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  infoIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#e61580', // Bright pink
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  infoIconText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#1a1a1a',
-    flex: 1,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingVertical: 4,
-    minHeight: 44,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#e61580', // Bright pink
-    marginRight: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-  },
-  checkboxChecked: {
-    backgroundColor: '#e61580', // Bright pink
-  },
-  checkboxText: {
-    fontSize: 14,
-    color: '#1a1a1a',
-  },
-  verificationText: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginBottom: 20,
-    lineHeight: 18,
-  },
+
+  // Buttons - Pill Shaped
   primaryButton: {
-    backgroundColor: '#e61580', // Bright pink
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: '#e61580', // Red/Pink
+    borderRadius: 30, // Pill shape
+    height: 55,
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 20,
     shadowColor: '#e61580',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 5,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   primaryButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#ffffff',
-  },
-  termsText: {
-    fontSize: 12,
-    color: '#6b7280',
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-  linkText: {
-    color: '#e61580', // Bright pink
-    textDecorationLine: 'underline',
-  },
-  alreadyCustomer: {
-    fontSize: 14,
-    color: '#1a1a1a',
-    marginBottom: 16,
-  },
-  forgotPasswordButton: {
-    alignSelf: 'flex-start',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: '#e61580', // Bright pink
-    textDecorationLine: 'underline',
-  },
-  sendOtpButton: {
-    alignSelf: 'flex-start',
-    marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  sendOtpText: {
-    fontSize: 14,
-    color: '#e61580', // Bright pink
-    fontWeight: '500',
-  },
-  resendOtpButton: {
-    alignSelf: 'flex-start',
-    marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  resendOtpText: {
-    fontSize: 14,
-    color: '#e61580', // Bright pink
-    textDecorationLine: 'underline',
-  },
-  resendButton: {
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  resendText: {
-    fontSize: 14,
-    color: '#e61580', // Bright pink
-    textDecorationLine: 'underline',
-  },
-  methodToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 16,
-    gap: 12,
-  },
-  methodOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  methodOptionText: {
-    fontSize: 14,
-    color: '#e61580', // Bright pink
-    fontWeight: '500',
-  },
-  methodSeparator: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  verificationTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  verificationSubtext: {
-    fontSize: 16,
-    color: '#1a1a1a',
-    marginBottom: 12,
-  },
-  changeText: {
-    color: '#e61580', // Bright pink
-    textDecorationLine: 'underline',
-  },
-  verificationHelp: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  demoOtpContainer: {
-    marginBottom: 20,
-  },
-  demoOtpBox: {
-    backgroundColor: '#fff5f9', // Light pink background
-    borderWidth: 2,
-    borderColor: '#e61580', // Bright pink border
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#e61580',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  demoOtpLabel: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginBottom: 10,
-    fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
-  demoOtpCode: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#e61580', // Bright pink
-    letterSpacing: 8,
-    marginBottom: 16,
-    fontFamily: 'monospace',
-  },
-  autoFillButton: {
+
+  // Footer
+  footerRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#e61580', // Bright pink background
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    gap: 8,
-    shadowColor: '#e61580',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    marginTop: 5,
   },
-  autoFillText: {
-    fontSize: 14,
-    color: '#ffffff',
+  footerLinkRed: {
+    color: '#e61580',
     fontWeight: '600',
+    fontSize: 14,
+    fontFamily: 'Poppins-Medium',
   },
-  copyright: {
-    fontSize: 11,
-    color: '#ffffff', // White text for visibility on pink background
+
+  // Extras
+  demoOtpBox: {
+    backgroundColor: '#fce7f3',
+    padding: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  demoOtpText: {
+    color: '#e61580',
+    fontWeight: 'bold',
+    fontSize: 18,
+    letterSpacing: 2,
+  },
+  copyrightWhite: {
+    marginTop: 30,
     textAlign: 'center',
-    marginTop: 24,
-    marginBottom: 16,
-    opacity: 0.8,
+    color: 'rgba(255,255,255, 0.7)',
+    fontSize: 12,
   },
 });
 
 export default UnifiedAuthScreen;
-

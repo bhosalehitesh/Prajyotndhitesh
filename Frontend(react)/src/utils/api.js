@@ -10,17 +10,17 @@ import { API_CONFIG } from '../constants';
  */
 export const getBackendUrl = () => {
   const hostname = window.location.hostname;
-  
+
   // Always use localhost when running on same machine (browser on dev machine)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return API_CONFIG.BASE_URL; // http://localhost:8080/api
   }
-  
+
   // For remote access (mobile device, other devices on network):
   // Always connect to the backend server IP (where backend is actually running)
   // Update this IP if your backend server's IP changes
   const BACKEND_SERVER_IP = '192.168.1.34'; // Backend server IP - update if changed
-  
+
   // If accessing frontend from any IP (including mobile), use backend server IP
   return `http://${BACKEND_SERVER_IP}:8080/api`;
 };
@@ -55,7 +55,7 @@ const handleResponse = async (response) => {
         // Keep default error message
       }
     }
-    
+
     // Add status code to error for better debugging
     const error = new Error(errorMessage);
     error.status = response.status;
@@ -83,7 +83,7 @@ export const apiRequest = async (endpoint, options = {}) => {
   try {
     const API_BASE = getBackendUrl();
     const url = `${API_BASE}${endpoint}`;
-    
+
     const defaultOptions = {
       headers: {
         'Content-Type': 'application/json',
@@ -191,7 +191,7 @@ export const getCategories = async () => {
  * Search products
  */
 export const searchProducts = async (query) => {
-  return apiRequest(`/products/search?q=${encodeURIComponent(query)}`);
+  return apiRequest(`/products/Find By Product Name?name=${encodeURIComponent(query)}`);
 };
 
 // ==================== STORE-RELATED FUNCTIONS (SELLER-WISE) ====================
@@ -205,11 +205,11 @@ export const getStoreBySlug = async (storeSlug) => {
   if (!storeSlug || storeSlug.trim() === '') {
     throw new Error('Store slug is required');
   }
-  
+
   // Normalize slug (backend does this too, but let's be consistent)
   const normalizedSlug = storeSlug.trim();
   console.log('📡 [API] Fetching store for slug:', normalizedSlug);
-  
+
   try {
     const store = await apiRequest(`/public/store/${encodeURIComponent(normalizedSlug)}`);
     console.log('✅ [API] Store fetched successfully:', store?.storeName || store?.name);
@@ -251,13 +251,13 @@ export const getStoreFeatured = async (storeSlug) => {
   const endpoint = `/public/store/${encodeURIComponent(normalizedSlug)}/featured`;
   const API_BASE = getBackendUrl();
   const fullUrl = `${API_BASE}${endpoint}`;
-  
+
   console.log('📡 [API] Fetching featured products:', {
     slug: normalizedSlug,
     endpoint: endpoint,
     fullUrl: fullUrl
   });
-  
+
   try {
     const products = await apiRequest(endpoint);
     console.log('✅ [API] Featured products fetched:', {
@@ -337,7 +337,7 @@ export const getStoreCategories = async (storeSlug) => {
     endpoint: endpoint,
     fullUrl: fullUrl
   });
-  
+
   try {
     const categories = await apiRequest(endpoint);
     console.log('✅ [API] Store categories fetched:', {
@@ -370,13 +370,13 @@ export const getStoreCollections = async (storeSlug) => {
   const endpoint = `/public/store/${encodeURIComponent(normalizedSlug)}/collections`;
   const API_BASE = getBackendUrl();
   const fullUrl = `${API_BASE}${endpoint}`;
-  
+
   console.log('📡 [API] Fetching store collections:', {
     slug: normalizedSlug,
     endpoint: endpoint,
     fullUrl: fullUrl
   });
-  
+
   try {
     const collections = await apiRequest(endpoint);
     console.log('✅ [API] Store collections fetched:', {
@@ -414,32 +414,32 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
   if (!userId || !address || !mobile) {
     throw new Error('userId, address, and mobile are required for placing orders');
   }
-  
+
   const params = new URLSearchParams({
     userId: String(userId),
     address: address,
     mobile: String(mobile)
   });
-  
+
   if (storeId) {
     params.append('storeId', String(storeId));
   }
   if (sellerId) {
     params.append('sellerId', String(sellerId));
   }
-  
+
   // Backend endpoint is at /orders/place (not /api/orders/place)
   // So we need to call it directly without the /api prefix
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
-  const baseUrl = (hostname === 'localhost' || hostname === '127.0.0.1') 
-    ? 'http://localhost:8080' 
+  const baseUrl = (hostname === 'localhost' || hostname === '127.0.0.1')
+    ? 'http://localhost:8080'
     : `${protocol}//${hostname}:8080`;
-  
+
   const url = `${baseUrl}/orders/place?${params.toString()}`;
   console.log('Placing order at:', url);
   console.log('Order parameters:', { userId, address, mobile, storeId, sellerId });
-  
+
   try {
     // Backend uses @RequestParam, so we send query parameters
     // Don't set Content-Type: application/json for query params
@@ -448,7 +448,7 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
       // No Content-Type header needed for query parameters
       // Spring will parse @RequestParam from query string
     });
-    
+
     if (!response.ok) {
       let errorText = '';
       try {
@@ -456,24 +456,24 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
       } catch (e) {
         errorText = response.statusText || 'Unknown error';
       }
-      
+
       console.error('Order placement failed:', {
         status: response.status,
         statusText: response.statusText,
         error: errorText,
         url: url
       });
-      
+
       // Parse error message from response
       let errorMessage = 'Failed to place order';
       let errorDetails = '';
-      
+
       try {
         if (errorText) {
           const errorJson = JSON.parse(errorText);
           errorMessage = errorJson.message || errorJson.error || errorMessage;
           errorDetails = errorJson.details || errorJson.trace || '';
-          
+
           // Log full error for debugging
           console.error('Backend error details:', {
             message: errorMessage,
@@ -488,7 +488,7 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
           errorMessage = errorText.substring(0, 200); // Limit length
         }
       }
-      
+
       // Provide user-friendly error messages
       if (response.status === 500) {
         // Check for specific error patterns
@@ -501,26 +501,26 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
         if (errorMessage.includes('LazyInitializationException') || errorMessage.includes('could not initialize')) {
           throw new Error('Server error: Data loading issue. Please try again.');
         }
-        
+
         // Show the actual error message from backend
-        const userMessage = errorMessage.length > 100 
-          ? errorMessage.substring(0, 100) + '...' 
+        const userMessage = errorMessage.length > 100
+          ? errorMessage.substring(0, 100) + '...'
           : errorMessage;
         throw new Error(`Server error: ${userMessage}. Please check backend logs for details.`);
       }
-      
+
       throw new Error(errorMessage);
     }
-    
+
     return handleResponse(response);
   } catch (error) {
     console.error('Error in placeOrder:', error);
-    
+
     // Handle connection errors
     if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('ERR_CONNECTION_REFUSED'))) {
       throw new Error('Cannot connect to server. Please ensure the backend server is running on port 8080.');
     }
-    
+
     // Re-throw with better message if it's already our custom error
     if (error.message && (error.message.includes('Cart not found') || error.message.includes('cart'))) {
       throw new Error('Your cart is empty. Please add items to cart before placing an order.');
@@ -548,11 +548,11 @@ export const getOrder = async (orderId) => {
 export const updateUserAddress = async (userId, addressData, token) => {
   const API_BASE = getBackendUrl();
   const url = `${API_BASE}/user/update-address/${userId}`;
-  
+
   console.log('updateUserAddress - Full URL:', url);
   console.log('updateUserAddress - Request body:', addressData);
   console.log('updateUserAddress - Has token:', !!token);
-  
+
   return apiRequest(`/user/update-address/${userId}`, {
     method: 'PUT',
     headers: {
@@ -573,23 +573,23 @@ export const updateUserAddress = async (userId, addressData, token) => {
 export const updateUserAddressByPhone = async (phone, addressData, token = null) => {
   const API_BASE = getBackendUrl();
   const url = `${API_BASE}/user/update-address-by-phone/${phone}`;
-  
+
   console.log('updateUserAddressByPhone - Full URL:', url);
   console.log('updateUserAddressByPhone - Phone:', phone);
   console.log('updateUserAddressByPhone - Address Data:', JSON.stringify(addressData, null, 2));
   console.log('updateUserAddressByPhone - Has token:', !!token);
-  
+
   try {
     // Since endpoint is public, try with token first if available, but don't require it
     const headers = {
       'Content-Type': 'application/json'
     };
-    
+
     // Only add Authorization header if token exists and is valid
     if (token && token.trim() !== '') {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     const result = await apiRequest(`/user/update-address-by-phone/${phone}`, {
       method: 'PUT',
       headers: headers,
@@ -616,7 +616,7 @@ export const updateUserAddressByPhone = async (phone, addressData, token = null)
         throw retryError;
       }
     }
-    
+
     console.error('updateUserAddressByPhone - Error:', error);
     console.error('updateUserAddressByPhone - Error URL:', url);
     console.error('updateUserAddressByPhone - Error details:', {

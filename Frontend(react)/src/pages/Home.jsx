@@ -67,7 +67,7 @@ const Home = () => {
           sellerId: currentStore.sellerId,
           storeName: currentStore.name
         });
-        
+
         // Try to fetch featured products first, but fallback to all products if none found
         let products = [];
         try {
@@ -80,7 +80,7 @@ const Home = () => {
         } catch (featuredError) {
           console.warn('⚠️ [HOME] Error fetching featured products, trying all products:', featuredError);
         }
-        
+
         // If no featured products, fetch all products instead
         if (!Array.isArray(products) || products.length === 0) {
           console.log('🏠 [HOME] No featured products found, fetching all products...');
@@ -95,7 +95,7 @@ const Home = () => {
             products = [];
           }
         }
-        
+
         if (Array.isArray(products) && products.length > 0) {
           // Transform backend product format to frontend format using utility
           const transformedProducts = transformProducts(products, currentStore?.name || 'Store');
@@ -215,17 +215,17 @@ const Home = () => {
         console.log('🔍 [HOME] Fetching collections for slug:', actualSlug);
         const data = await getStoreCollections(actualSlug);
         const collectionsArray = Array.isArray(data) ? data : [];
-        
+
         console.log('📦 [HOME] Collections API Response:', {
           isArray: Array.isArray(data),
           count: collectionsArray.length,
         });
-        
+
         if (collectionsArray.length > 0) {
           console.log('✅ [HOME] Collections received:', collectionsArray.length);
           console.log('📦 [HOME] First collection sample:', collectionsArray[0]);
         }
-        
+
         setCollections(collectionsArray);
       } catch (err) {
         console.error('❌ [HOME] Error fetching collections:', err);
@@ -413,6 +413,44 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Trust Bar Section - As per provided design */}
+      <section className="trust-bar-section">
+        <div className="container">
+          <div className="trust-bar-container">
+            <div className="trust-item">
+              <span className="trust-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 17 4 12 9 7"></polyline>
+                  <path d="M20 12H4"></path>
+                </svg>
+              </span>
+              <span>Easy Returns</span>
+            </div>
+
+            <div className="trust-item">
+              <span className="trust-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
+              </span>
+              <span>Cash on Delivery</span>
+            </div>
+
+            <div className="trust-item">
+              <span className="trust-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
+              </span>
+              <span>Lowest Prices</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
       {/* Featured Products */}
       <section className="biggest-deals" style={{ marginTop: '3rem' }}>
         <div className="container">
@@ -512,26 +550,26 @@ const Home = () => {
                   collection.image_url ||
                   collection.image ||
                   null;
-                
+
                 // Get starting price if available
                 const startingPrice = collection.startingPrice || collection.starting_price || null;
-                
+
                 const basePath = actualSlug ? `/store/${actualSlug}` : '';
                 const collectionSlug = collection.slug || collection.collectionName || collection.name;
-                const collectionPath = collectionSlug 
+                const collectionPath = collectionSlug
                   ? `${basePath}/products?collection=${encodeURIComponent(collectionSlug)}`
                   : getNavPath(ROUTES.PRODUCTS);
 
                 return (
-                  <div 
-                    key={collection.collectionId || collection.collection_id || collection.id || index} 
-                    className="deal-card" 
+                  <div
+                    key={collection.collectionId || collection.collection_id || collection.id || index}
+                    className="deal-card"
                     onClick={() => navigate(collectionPath)}
                   >
                     <div className="image-wrapper">
                       {collectionImage && collectionImage.trim() !== '' ? (
-                        <img 
-                          src={collectionImage} 
+                        <img
+                          src={collectionImage}
                           alt={collectionName}
                           onError={(e) => {
                             // Hide image on error, show placeholder
@@ -554,10 +592,10 @@ const Home = () => {
                           color: '#9ca3af',
                           gap: '8px'
                         }}>
-                          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{opacity: 0.5}}>
-                            <path d="M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z" fill="currentColor"/>
+                          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.5 }}>
+                            <path d="M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z" fill="currentColor" />
                           </svg>
-                          <span style={{fontSize: '0.875rem', fontWeight: 500}}>Image Missing</span>
+                          <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Image Missing</span>
                         </div>
                       )}
                       <div className="overlay">
@@ -580,10 +618,10 @@ const Home = () => {
                         top: 0,
                         left: 0
                       }}>
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{opacity: 0.5}}>
-                          <path d="M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z" fill="currentColor"/>
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.5 }}>
+                          <path d="M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z" fill="currentColor" />
                         </svg>
-                        <span style={{fontSize: '0.875rem', fontWeight: 500}}>Image Missing</span>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Image Missing</span>
                       </div>
                     </div>
                   </div>
@@ -607,17 +645,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Features */}
-      <section className="features-section">
-        <div className="container features-grid">
-          {FEATURES.map((feature) => (
-            <div key={feature.id} className="feature-item">
-              <img src={feature.image} alt={feature.name} />
-              <p>{feature.name}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Flash Sale Banner */}
       <section className="flash-sale-section" style={{ padding: '24px 0' }}>
@@ -657,7 +684,7 @@ const Home = () => {
           </form>
         </div>
       </section>
-    </div>
+    </div >
   );
 };
 
