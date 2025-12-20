@@ -5,6 +5,7 @@ import { useWishlist } from '../contexts/WishlistContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../contexts/StoreContext';
+import { getStoreProducts } from '../utils/api';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ const Header = () => {
   const { isDarkMode, toggleTheme } = useTheme();
   const { storeSlug, currentStore } = useStore();
   const logoUrl = currentStore?.logo;
-  
+
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showOTPForm, setShowOTPForm] = useState(false);
   const [phone, setPhone] = useState('');
@@ -24,10 +25,14 @@ const Header = () => {
   const [profileSidebarOpen, setProfileSidebarOpen] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+  const [allCollections, setAllCollections] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
 
   const cartCount = getCartItemCount();
   // Get wishlist count filtered by current store's sellerId
-  const wishlistCount = currentStore?.sellerId 
+  const wishlistCount = currentStore?.sellerId
     ? getWishlistCountBySeller(currentStore.sellerId)
     : wishlist.length; // Fallback to total count if no store context
 
@@ -37,6 +42,71 @@ const Header = () => {
       setTimeout(() => setShowLoginModal(true), 500);
     }
   }, [location.pathname, user]);
+
+  // Fetch products, categories, and collections for search suggestions
+  useEffect(() => {
+    if (showSearchModal) {
+      const slug = storeSlug || currentStore?.slug;
+      if (slug) {
+        const fetchData = async () => {
+          try {
+            // Use existing api imports or assume they are available via useStore or local
+            const { getStoreProducts, getStoreCategories, getStoreCollections } = await import('../utils/api');
+
+            if (allProducts.length === 0) {
+              const prodData = await getStoreProducts(slug);
+              if (Array.isArray(prodData)) setAllProducts(prodData);
+            }
+            if (allCategories.length === 0) {
+              const catData = await getStoreCategories(slug);
+              if (Array.isArray(catData)) setAllCategories(catData);
+            }
+            if (allCollections.length === 0) {
+              const colData = await getStoreCollections(slug);
+              if (Array.isArray(colData)) setAllCollections(colData);
+            }
+          } catch (error) {
+            console.error('Failed to preload search data', error);
+          }
+        };
+        fetchData();
+      }
+    }
+  }, [showSearchModal, storeSlug, currentStore, allProducts.length, allCategories.length, allCollections.length]);
+
+  // Filter suggestions across products, categories, and collections
+  useEffect(() => {
+    if (searchQuery.trim().length > 1) {
+      const lowerQ = searchQuery.toLowerCase();
+
+      // 1. Match Products
+      const productMatches = (allProducts || [])
+        .filter(p => {
+          const name = (p.name || p.productName || '').toLowerCase();
+          const rawCat = p.productCategory || p.category || p.businessCategory;
+          const catName = (typeof rawCat === 'object' ? rawCat?.name : String(rawCat || '')).toLowerCase();
+          return name.includes(lowerQ) || catName.includes(lowerQ);
+        })
+        .slice(0, 4)
+        .map(p => ({ ...p, type: 'product' }));
+
+      // 2. Match Categories
+      const categoryMatches = (allCategories || [])
+        .filter(c => (c.name || c.categoryName || '').toLowerCase().includes(lowerQ))
+        .slice(0, 2)
+        .map(c => ({ ...c, type: 'category' }));
+
+      // 3. Match Collections
+      const collectionMatches = (allCollections || [])
+        .filter(c => (c.name || c.collectionName || '').toLowerCase().includes(lowerQ))
+        .slice(0, 2)
+        .map(c => ({ ...c, type: 'collection' }));
+
+      setSuggestions([...categoryMatches, ...collectionMatches, ...productMatches]);
+    } else {
+      setSuggestions([]);
+    }
+  }, [searchQuery, allProducts, allCategories, allCollections]);
 
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
@@ -71,10 +141,37 @@ const Header = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      const basePath = storeSlug ? `/store/${storeSlug}` : '';
+      navigate(`${basePath}/search?q=${encodeURIComponent(searchQuery)}`);
       setShowSearchModal(false);
       setSearchQuery('');
+      setSuggestions([]);
     }
+  };
+
+  const handleSuggestionClick = (item) => {
+    const slug = storeSlug || currentStore?.slug;
+    const basePath = slug ? `/store/${slug}` : '';
+
+    if (item.type === 'category') {
+      const catSlug = item.slug || item.categorySlug || item.name || item.categoryName;
+      navigate(`${basePath}/products?category=${encodeURIComponent(catSlug)}`);
+    } else if (item.type === 'collection') {
+      navigate(`${basePath}/collections/${item.id || item.collectionId}`);
+    } else {
+      const detailPath = `${basePath}/product/detail`;
+      const params = new URLSearchParams({
+        id: item.id || item.productId,
+        name: item.name || item.productName || '',
+        price: item.price || item.sellingPrice || '',
+        image: item.image || (Array.isArray(item.productImages) ? item.productImages[0] : '')
+      });
+      navigate(`${detailPath}?${params.toString()}`);
+    }
+
+    setShowSearchModal(false);
+    setSearchQuery('');
+    setSuggestions([]);
   };
 
   return (
@@ -90,27 +187,27 @@ const Header = () => {
                   e.target.nextElementSibling.style.display = 'block';
                 }} />
               ) : null}
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" style={{display: user ? 'none' : 'block'}}>
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ display: user ? 'none' : 'block' }}>
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
             </div>
             <div className={`avatar desktop-avatar ${logoUrl ? 'has-logo' : ''}`} aria-hidden="true">
-              <Link 
-                to={storeSlug ? `/store/${storeSlug}` : '/'} 
+              <Link
+                to={storeSlug ? `/store/${storeSlug}` : '/'}
                 style={{
-                  textDecoration:'none',
-                  color:'inherit',
-                  display:'flex',
-                  alignItems:'center',
-                  justifyContent:'center',
-                  width:'100%',
-                  height:'100%',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%',
                 }}
               >
                 {logoUrl ? (
-                  <img 
-                    src={logoUrl} 
+                  <img
+                    src={logoUrl}
                     alt={currentStore?.name || currentStore?.storeName || 'Store logo'}
                     className="store-logo-img"
                     style={{
@@ -131,33 +228,190 @@ const Header = () => {
                 )}
               </Link>
             </div>
+
             <div className="divider"></div>
+
             <nav className="main-nav" aria-label="Main">
-              <Link 
-                to={storeSlug ? `/store/${storeSlug}/categories` : '/categories'} 
+              <Link
+                to={storeSlug ? `/store/${storeSlug}/categories` : '/categories'}
                 className={`nav-item ${location.pathname.includes('/categories') ? 'active' : ''}`}
               >
                 Categories
               </Link>
-              <Link 
-                to={storeSlug ? `/store/${storeSlug}/featured` : '/featured'} 
+              <Link
+                to={storeSlug ? `/store/${storeSlug}/featured` : '/featured'}
                 className={`nav-item ${location.pathname.includes('/featured') ? 'active' : ''}`}
               >
                 Featured
               </Link>
-              <Link 
-                to={storeSlug ? `/store/${storeSlug}/products` : '/products'} 
+              <Link
+                to={storeSlug ? `/store/${storeSlug}/products` : '/products'}
                 className={`nav-item ${location.pathname.includes('/products') ? 'active' : ''}`}
               >
                 Products
               </Link>
             </nav>
           </div>
+
+          {showSearchModal && (
+            <div style={{ flex: 1, margin: '0 20px', maxWidth: '600px', position: 'relative' }}>
+              <form onSubmit={handleSearch} style={{ width: '100%' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: '#f1f3f4',
+                  borderRadius: showSearchModal && suggestions.length > 0 ? '8px 8px 0 0' : '8px',
+                  padding: '0 12px',
+                  height: '40px',
+                  width: '100%'
+                }}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#5f6368" strokeWidth="2" style={{ marginRight: '10px' }}>
+                    <circle cx="11" cy="11" r="6"></circle>
+                    <path d="M21 21l-4.35-4.35" strokeLinecap="round"></path>
+                  </svg>
+
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Try Saree, Kurti or Search by Product Code"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
+                    style={{
+                      flex: 1,
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '14px',
+                      color: '#202124',
+                      background: 'transparent',
+                      height: '100%'
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowSearchModal(false)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: '#5f6368'
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+              </form>
+
+              {/* Auto-suggestions Dropdown */}
+              {suggestions.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: '#fff',
+                  borderTop: '1px solid #e8eaed',
+                  borderRadius: '0 0 8px 8px',
+                  boxShadow: '0 4px 6px rgba(32,33,36,0.28)',
+                  zIndex: 2000,
+                  overflow: 'hidden',
+                  paddingBottom: '8px'
+                }}>
+                  {suggestions.map((item, idx) => {
+                    const itemName = item.name || item.productName || item.categoryName || item.collectionName || '';
+                    const itemImage = item.image || (Array.isArray(item.productImages) ? item.productImages[0] : item.categoryImage || item.collectionImage);
+                    const itemType = item.type || 'product';
+                    const category = item.productCategory || item.category || item.businessCategory;
+                    const catName = typeof category === 'object' ? (category.name || '') : String(category || '');
+
+                    return (
+                      <div
+                        key={`${itemType}-${item.id || item.productId || item.category_id || item.collectionId || idx}`}
+                        onClick={() => handleSuggestionClick(item)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 16px',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.1s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f3f4'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                      >
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '4px',
+                          overflow: 'hidden',
+                          marginRight: '12px',
+                          backgroundColor: '#f1f3f4',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {itemImage ? (
+                            <img src={itemImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : itemType === 'category' ? (
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="#9aa0a6"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" /></svg>
+                          ) : itemType === 'collection' ? (
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="#9aa0a6"><path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9H10.07L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z" /></svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="#9aa0a6"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                          <span style={{ fontSize: '14px', color: '#202124', fontWeight: '500', lineHeight: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {itemName}
+                            <span style={{
+                              fontSize: '10px',
+                              backgroundColor: itemType === 'category' ? '#e8f0fe' : itemType === 'collection' ? '#fef7e0' : '#f1f3f4',
+                              color: itemType === 'category' ? '#1967d2' : itemType === 'collection' ? '#b06000' : '#5f6368',
+                              padding: '1px 6px',
+                              borderRadius: '10px',
+                              textTransform: 'uppercase',
+                              fontWeight: '700'
+                            }}>
+                              {itemType}
+                            </span>
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#5f6368' }}>
+                            {itemType === 'product' ? (catName || 'Product') : itemType === 'category' ? 'Store Category' : 'Product Collection'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div
+                    onClick={handleSearch}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      color: '#1a73e8',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      borderTop: '1px solid #f1f3f4',
+                      marginTop: '4px'
+                    }}
+                  >
+                    See all results for "{searchQuery}"
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div className="right-group">
             <div className="dark-mode-toggle-container">
               <label className="dark-mode-toggle" title="Toggle Dark Mode">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   className="toggle-input"
                   checked={isDarkMode}
                   onChange={toggleTheme}
@@ -189,9 +443,9 @@ const Header = () => {
               </svg>
             </button>
 
-            <button 
-              className="icon-btn" 
-              onClick={() => navigate(storeSlug ? `/store/${storeSlug}/wishlist` : '/wishlist')} 
+            <button
+              className="icon-btn"
+              onClick={() => navigate(storeSlug ? `/store/${storeSlug}/wishlist` : '/wishlist')}
               title="Wishlist"
             >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
@@ -200,9 +454,9 @@ const Header = () => {
               {wishlistCount > 0 && <span className="wishlist-count">{wishlistCount}</span>}
             </button>
 
-            <button 
-              className="icon-btn" 
-              onClick={() => navigate(storeSlug ? `/store/${storeSlug}/cart` : '/cart')} 
+            <button
+              className="icon-btn"
+              onClick={() => navigate(storeSlug ? `/store/${storeSlug}/cart` : '/cart')}
               title="Cart"
             >
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
@@ -232,7 +486,7 @@ const Header = () => {
                       e.target.nextElementSibling.style.display = 'block';
                     }} />
                   ) : null}
-                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" style={{display: user ? 'none' : 'block'}}>
+                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ display: user ? 'none' : 'block' }}>
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
                   </svg>
@@ -245,7 +499,7 @@ const Header = () => {
                 </svg>
               </button>
             </div>
-            
+
             <div className="mobile-sidebar-delivery">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -255,32 +509,32 @@ const Header = () => {
             </div>
 
             <nav className="mobile-sidebar-nav">
-              <Link 
-                to={storeSlug ? `/store/${storeSlug}` : '/'} 
+              <Link
+                to={storeSlug ? `/store/${storeSlug}` : '/'}
                 className={`mobile-sidebar-nav-item ${location.pathname === '/' || location.pathname === `/store/${storeSlug}` ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {(location.pathname === '/' || location.pathname === `/store/${storeSlug}`) && <span className="mobile-nav-indicator"></span>}
                 <span>Homepage</span>
               </Link>
-              <Link 
-                to={storeSlug ? `/store/${storeSlug}/featured` : '/featured'} 
+              <Link
+                to={storeSlug ? `/store/${storeSlug}/featured` : '/featured'}
                 className={`mobile-sidebar-nav-item ${location.pathname.includes('/featured') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {location.pathname.includes('/featured') && <span className="mobile-nav-indicator"></span>}
                 <span>Featured Products</span>
               </Link>
-              <Link 
-                to={storeSlug ? `/store/${storeSlug}/products` : '/products'} 
+              <Link
+                to={storeSlug ? `/store/${storeSlug}/products` : '/products'}
                 className={`mobile-sidebar-nav-item ${location.pathname.includes('/products') && !location.pathname.includes('/product/detail') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {location.pathname.includes('/products') && !location.pathname.includes('/product/detail') && <span className="mobile-nav-indicator"></span>}
                 <span>All Products</span>
               </Link>
-              <Link 
-                to={storeSlug ? `/store/${storeSlug}/categories` : '/categories'} 
+              <Link
+                to={storeSlug ? `/store/${storeSlug}/categories` : '/categories'}
                 className={`mobile-sidebar-nav-item ${location.pathname.includes('/categories') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -290,8 +544,8 @@ const Header = () => {
                 </svg>
                 <span>Categories</span>
               </Link>
-              <Link 
-                to={storeSlug ? `/store/${storeSlug}/collections` : '/collections'} 
+              <Link
+                to={storeSlug ? `/store/${storeSlug}/collections` : '/collections'}
                 className={`mobile-sidebar-nav-item ${location.pathname.includes('/collections') ? 'active' : ''}`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -336,13 +590,13 @@ const Header = () => {
                 <form className="login-form" onSubmit={handlePhoneSubmit}>
                   <div className="form-group">
                     <label htmlFor="loginPhone">Phone Number</label>
-                    <input 
-                      type="tel" 
-                      id="loginPhone" 
-                      placeholder="Enter 10-digit phone number" 
-                      required 
-                      pattern="[0-9]{10}" 
-                      maxLength="10" 
+                    <input
+                      type="tel"
+                      id="loginPhone"
+                      placeholder="Enter 10-digit phone number"
+                      required
+                      pattern="[0-9]{10}"
+                      maxLength="10"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                     />
@@ -357,16 +611,16 @@ const Header = () => {
                 <form className="login-form" onSubmit={handleOTPSubmit}>
                   <div className="form-group">
                     <label htmlFor="otpInput">Enter OTP</label>
-                    <input 
-                      type="text" 
-                      id="otpInput" 
-                      placeholder="Enter OTP" 
-                      required 
-                      pattern="[0-9]{6}" 
+                    <input
+                      type="text"
+                      id="otpInput"
+                      placeholder="Enter OTP"
+                      required
+                      pattern="[0-9]{6}"
                       maxLength="6"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      style={{textAlign: 'center', fontSize: '1.2rem', letterSpacing: '8px', fontWeight: '600'}}
+                      style={{ textAlign: 'center', fontSize: '1.2rem', letterSpacing: '8px', fontWeight: '600' }}
                     />
                   </div>
                   <button type="submit" className="login-submit-btn">Verify and Continue</button>
@@ -413,9 +667,9 @@ const Header = () => {
                   </svg>
                   <span>My Orders</span>
                 </Link>
-                <Link 
-                  to={storeSlug ? `/store/${storeSlug}/wishlist` : '/wishlist'} 
-                  className="profile-sidebar-item" 
+                <Link
+                  to={storeSlug ? `/store/${storeSlug}/wishlist` : '/wishlist'}
+                  className="profile-sidebar-item"
                   onClick={() => setProfileSidebarOpen(false)}
                 >
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -423,9 +677,9 @@ const Header = () => {
                   </svg>
                   <span>My Wishlist</span>
                 </Link>
-                <Link 
-                  to={storeSlug ? `/store/${storeSlug}/cart` : '/cart'} 
-                  className="profile-sidebar-item" 
+                <Link
+                  to={storeSlug ? `/store/${storeSlug}/cart` : '/cart'}
+                  className="profile-sidebar-item"
                   onClick={() => setProfileSidebarOpen(false)}
                 >
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -459,7 +713,7 @@ const Header = () => {
                   <span>Help & FAQ</span>
                 </Link>
                 {user && (
-                  <div className="profile-sidebar-item" onClick={handleLogout} style={{cursor: 'pointer'}}>
+                  <div className="profile-sidebar-item" onClick={handleLogout} style={{ cursor: 'pointer' }}>
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                       <polyline points="16 17 21 12 16 7"></polyline>
@@ -472,34 +726,6 @@ const Header = () => {
             </div>
           </div>
         </>
-      )}
-
-      {/* Search Modal */}
-      {showSearchModal && (
-        <div className="search-modal" style={{display: 'flex'}} onClick={() => setShowSearchModal(false)}>
-          <div className="search-modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Search Products</h3>
-            <form onSubmit={handleSearch} style={{position: 'relative', marginBottom: '20px'}}>
-              <input 
-                type="text" 
-                className="search-input" 
-                placeholder="Search for products..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-                style={{width: '100%', padding: '12px 40px 12px 16px', border: '2px solid rgba(0,0,0,0.1)', borderRadius: '8px', fontSize: '1rem'}}
-              />
-              <button 
-                type="button" 
-                className="search-close" 
-                onClick={() => setShowSearchModal(false)}
-                style={{position: 'absolute', top: '50%', right: '12px', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer'}}
-              >
-                &times;
-              </button>
-            </form>
-          </div>
-        </div>
       )}
     </>
   );
