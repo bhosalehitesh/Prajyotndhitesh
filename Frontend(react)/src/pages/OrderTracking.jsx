@@ -12,7 +12,7 @@ const OrderTracking = () => {
   const navigate = useNavigate();
   const { currentStore } = useStore();
   const orderId = searchParams.get('orderId');
-  
+
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -97,7 +97,7 @@ const OrderTracking = () => {
 
   if (error) {
     return (
-      <div className="container" style={{padding: '2rem 0'}}>
+      <div className="container" style={{ padding: '2rem 0' }}>
         <ErrorMessage message={error} />
         <button
           onClick={() => {
@@ -122,9 +122,9 @@ const OrderTracking = () => {
 
   if (!order) {
     return (
-      <div className="container" style={{padding: '2rem 0', textAlign: 'center'}}>
+      <div className="container" style={{ padding: '2rem 0', textAlign: 'center' }}>
         <h2>Order not found</h2>
-        <p style={{color: '#666', marginBottom: '1.5rem'}}>
+        <p style={{ color: '#666', marginBottom: '1.5rem' }}>
           The order you're looking for doesn't exist or you don't have permission to view it.
         </p>
         <button
@@ -150,12 +150,16 @@ const OrderTracking = () => {
   const orderItems = order.orderItems || [];
   const orderStatus = order.orderStatus || order.status || 'PLACED';
   const orderDate = order.creationTime || order.orderDate || order.createdAt;
+<<<<<<< HEAD
   const displayOrderId = order.OrdersId || order.orderId || order.id;
+=======
+  const resolvedOrderId = order.OrdersId || order.orderId || order.id;
+>>>>>>> 54ac9891540679f649608df5ab3bdf44aea4e092
   const statusSteps = getStatusSteps(orderStatus);
 
   return (
-    <div className="container" style={{padding: '2rem 0'}}>
-      <div style={{marginBottom: '2rem'}}>
+    <div className="container" style={{ padding: '2rem 0' }}>
+      <div style={{ marginBottom: '2rem' }}>
         <button
           onClick={() => {
             const storeSlug = currentStore?.slug;
@@ -173,10 +177,15 @@ const OrderTracking = () => {
         >
           ← Back to Orders
         </button>
+<<<<<<< HEAD
         <h1 style={{marginBottom: '0.5rem', fontSize: '2rem', fontWeight: 'bold'}}>
           Track Order #{displayOrderId}
+=======
+        <h1 style={{ marginBottom: '0.5rem', fontSize: '2rem', fontWeight: 'bold' }}>
+          Track Order #{resolvedOrderId}
+>>>>>>> 54ac9891540679f649608df5ab3bdf44aea4e092
         </h1>
-        <p style={{color: '#666', marginBottom: '2rem'}}>
+        <p style={{ color: '#666', marginBottom: '2rem' }}>
           Placed on {formatDate(orderDate)}
         </p>
       </div>
@@ -190,16 +199,16 @@ const OrderTracking = () => {
         border: '1px solid #e0e0e0',
         boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
       }}>
-        <h2 style={{marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: '600'}}>
+        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: '600' }}>
           Order Status
         </h2>
-        <div style={{position: 'relative', paddingLeft: '2rem'}}>
+        <div style={{ position: 'relative', paddingLeft: '2rem' }}>
           {statusSteps.map((step, index) => {
             const isActive = step.completed || statusSteps.findIndex(s => s.status === orderStatus.toLowerCase()) >= index;
             const isCurrent = step.status === orderStatus.toLowerCase();
-            
+
             return (
-              <div key={step.status} style={{position: 'relative', marginBottom: index < statusSteps.length - 1 ? '2rem' : '0'}}>
+              <div key={step.status} style={{ position: 'relative', marginBottom: index < statusSteps.length - 1 ? '2rem' : '0' }}>
                 {/* Vertical Line */}
                 {index < statusSteps.length - 1 && (
                   <div style={{
@@ -258,16 +267,21 @@ const OrderTracking = () => {
         border: '1px solid #e0e0e0',
         boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
       }}>
-        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'flex-start'}}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
           <div>
-            <h2 style={{margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: '600'}}>
+            <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: '600' }}>
               Order Details
             </h2>
+<<<<<<< HEAD
             <p style={{color: '#666', margin: '0 0 0.5rem 0', fontSize: '0.9rem'}}>
               Order #{displayOrderId}
+=======
+            <p style={{ color: '#666', margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>
+              Order #{resolvedOrderId}
+>>>>>>> 54ac9891540679f649608df5ab3bdf44aea4e092
             </p>
           </div>
-          <div style={{textAlign: 'right'}}>
+          <div style={{ textAlign: 'right' }}>
             <p style={{
               fontSize: '1.75rem',
               fontWeight: 'bold',
@@ -298,12 +312,12 @@ const OrderTracking = () => {
             backgroundColor: '#f9f9f9',
             borderRadius: '8px',
           }}>
-            <h3 style={{margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600'}}>Shipping Address</h3>
-            <p style={{margin: 0, color: '#666', fontSize: '0.9rem'}}>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600' }}>Shipping Address</h3>
+            <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
               📍 {order.address}
             </p>
             {order.mobile && (
-              <p style={{margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.9rem'}}>
+              <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.9rem' }}>
                 📞 {order.mobile}
               </p>
             )}
@@ -313,10 +327,10 @@ const OrderTracking = () => {
         {/* Order Items */}
         {orderItems.length > 0 && (
           <div>
-            <h3 style={{margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '600'}}>
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', fontWeight: '600' }}>
               Order Items ({orderItems.length})
             </h3>
-            <div style={{display: 'flex', flexDirection: 'column', gap: '0.75rem'}}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {orderItems.map((item, index) => {
                 const productName = item.product?.productName || item.product?.name || item.name || `Product ${index + 1}`;
                 const quantity = item.quantity || 0;
@@ -332,16 +346,16 @@ const OrderTracking = () => {
                       borderRadius: '8px',
                     }}
                   >
-                    <div style={{flex: 1}}>
-                      <p style={{margin: 0, fontWeight: '500', fontSize: '1rem'}}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: '500', fontSize: '1rem' }}>
                         {productName}
                       </p>
-                      <p style={{margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.9rem'}}>
+                      <p style={{ margin: '0.5rem 0 0 0', color: '#666', fontSize: '0.9rem' }}>
                         Quantity: {quantity} × {formatCurrency(price)} each
                       </p>
                     </div>
-                    <div style={{textAlign: 'right', marginLeft: '1rem'}}>
-                      <p style={{margin: 0, fontWeight: '600', fontSize: '1.1rem'}}>
+                    <div style={{ textAlign: 'right', marginLeft: '1rem' }}>
+                      <p style={{ margin: 0, fontWeight: '600', fontSize: '1.1rem' }}>
                         {formatCurrency(price * quantity)}
                       </p>
                     </div>
@@ -361,7 +375,7 @@ const OrderTracking = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <span style={{color: '#666', fontSize: '0.95rem'}}>
+          <span style={{ color: '#666', fontSize: '0.95rem' }}>
             Payment Status: <strong style={{
               color: order.paymentStatus === 'PAID' ? '#10B981' : '#f39c12',
               fontSize: '1rem',
