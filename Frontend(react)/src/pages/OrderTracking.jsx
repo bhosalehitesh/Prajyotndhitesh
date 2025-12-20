@@ -150,7 +150,7 @@ const OrderTracking = () => {
   const orderItems = order.orderItems || [];
   const orderStatus = order.orderStatus || order.status || 'PLACED';
   const orderDate = order.creationTime || order.orderDate || order.createdAt;
-  const resolvedOrderId = order.OrdersId || order.orderId || order.id;
+  const displayOrderId = order.OrdersId || order.orderId || order.id;
   const statusSteps = getStatusSteps(orderStatus);
 
   return (
@@ -174,7 +174,7 @@ const OrderTracking = () => {
           ← Back to Orders
         </button>
         <h1 style={{ marginBottom: '0.5rem', fontSize: '2rem', fontWeight: 'bold' }}>
-          Track Order #{resolvedOrderId}
+          Track Order #{displayOrderId}
         </h1>
         <p style={{ color: '#666', marginBottom: '2rem' }}>
           Placed on {formatDate(orderDate)}
@@ -264,7 +264,7 @@ const OrderTracking = () => {
               Order Details
             </h2>
             <p style={{ color: '#666', margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>
-              Order #{resolvedOrderId}
+              Order #{displayOrderId}
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>

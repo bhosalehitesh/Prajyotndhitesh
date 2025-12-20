@@ -142,3 +142,7 @@ If you have XAMPP or WAMP installed:
    - Verify `my.ini` or `my.cnf` has correct port setting
    - Usually in: `C:\ProgramData\MySQL\MySQL Server X.X\`
 
+
+
+
+

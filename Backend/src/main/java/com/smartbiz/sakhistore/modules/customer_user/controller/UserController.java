@@ -130,6 +130,38 @@ public class UserController {
     }
 
     // ======================================================
+    // ⭐ UPDATE USER EMAIL
+    // ======================================================
+    @PutMapping("/update-email/{id}")
+    public ResponseEntity<?> updateUserEmail(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        try {
+            String email = body.get("email");
+            
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("📧 UPDATE USER EMAIL REQUEST");
+            System.out.println("=".repeat(60));
+            System.out.println("User ID: " + id);
+            System.out.println("New Email: " + (email != null ? email : "NULL"));
+            System.out.println("=".repeat(60) + "\n");
+
+            User updated = authUserService.updateUserEmail(id, email);
+            
+            System.out.println("✅ Email updated successfully!");
+            System.out.println("   User ID: " + updated.getId());
+            System.out.println("   New Email: " + updated.getEmail());
+            System.out.println("=".repeat(60) + "\n");
+
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            System.err.println("❌ Error updating email: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ======================================================
     // ⭐ GET USER BY ID
     // ======================================================
     @GetMapping("/{id}")
@@ -179,9 +211,81 @@ public class UserController {
             @PathVariable String phone,
             @RequestBody Map<String, Object> addressData) {
 
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println("📝 UPDATE USER ADDRESS BY PHONE REQUEST");
+        System.out.println("=".repeat(60));
+        System.out.println("Phone: " + phone);
+        System.out.println("Address Data Keys: " + addressData.keySet());
+        if (addressData.containsKey("email")) {
+            Object emailObj = addressData.get("email");
+            String emailStr = emailObj != null ? emailObj.toString() : null;
+            System.out.println("📧 Email in request: " + (emailStr != null ? emailStr : "NULL"));
+            System.out.println("📧 Email type: " + (emailObj != null ? emailObj.getClass().getSimpleName() : "NULL"));
+        } else {
+            System.out.println("⚠️ No email field in request!");
+        }
+        System.out.println("=".repeat(60) + "\n");
+
         try {
             User updated = authUserService.updateUserAddressByPhone(phone, addressData);
+            
+            // Verify email was actually saved by fetching fresh from database
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("🔍 VERIFYING EMAIL SAVE IN DATABASE");
+            System.out.println("=".repeat(60));
+            try {
+                User verifiedUser = authUserService.getUserById(updated.getId());
+                System.out.println("   User ID: " + verifiedUser.getId());
+                System.out.println("   Email in response object: " + (updated.getEmail() != null ? updated.getEmail() : "NULL"));
+                System.out.println("   Email in database (verified): " + (verifiedUser.getEmail() != null ? verifiedUser.getEmail() : "NULL"));
+                
+                if (verifiedUser.getEmail() != null && !verifiedUser.getEmail().trim().isEmpty()) {
+                    System.out.println("   ✅ Email successfully saved and verified in database!");
+                } else {
+                    System.out.println("   ⚠️ Email is NULL in database - may need to check save operation");
+                }
+            } catch (Exception verifyError) {
+                System.err.println("   ⚠️ Could not verify email in database: " + verifyError.getMessage());
+            }
+            System.out.println("=".repeat(60) + "\n");
+            
+            System.out.println("✅ [UserController] User updated successfully");
+            System.out.println("   User ID: " + updated.getId());
+            System.out.println("   Phone: " + updated.getPhone());
+            System.out.println("   Email in response: " + (updated.getEmail() != null ? updated.getEmail() : "NULL"));
+            System.out.println("=".repeat(60) + "\n");
+            
             return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            System.err.println("❌ [UserController] Error updating user: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ======================================================
+    // ⭐ VERIFY USER EMAIL IN DATABASE (DEBUG ENDPOINT)
+    // ======================================================
+    @GetMapping("/verify-email/{id}")
+    public ResponseEntity<?> verifyUserEmail(@PathVariable Long id) {
+        try {
+            User user = authUserService.getUserById(id);
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("userId", id);
+            response.put("email", user.getEmail());
+            response.put("emailExists", user.getEmail() != null && !user.getEmail().trim().isEmpty());
+            response.put("phone", user.getPhone());
+            response.put("fullName", user.getFullName());
+            
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("🔍 EMAIL VERIFICATION FOR USER");
+            System.out.println("=".repeat(60));
+            System.out.println("User ID: " + id);
+            System.out.println("Email in DB: " + (user.getEmail() != null ? user.getEmail() : "NULL"));
+            System.out.println("Email exists: " + (user.getEmail() != null && !user.getEmail().trim().isEmpty()));
+            System.out.println("=".repeat(60) + "\n");
+            
+            return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
