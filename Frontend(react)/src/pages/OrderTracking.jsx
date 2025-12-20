@@ -150,7 +150,7 @@ const OrderTracking = () => {
   const orderItems = order.orderItems || [];
   const orderStatus = order.orderStatus || order.status || 'PLACED';
   const orderDate = order.creationTime || order.orderDate || order.createdAt;
-  const displayOrderId = order.OrdersId || order.orderId || order.id;
+  const displayOrderId = order.OrdersId || order.orderId || order.id || orderId;
   const statusSteps = getStatusSteps(orderStatus);
 
   return (

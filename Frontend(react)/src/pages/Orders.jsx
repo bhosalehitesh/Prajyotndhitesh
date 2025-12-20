@@ -199,10 +199,10 @@ const Orders = () => {
               <div
                 key={orderId}
                 onClick={() => handleOrderClick(orderId)}
-                style={{
-                  border: '1px solid #e0e0e0',
+              style={{
+                border: '1px solid #e0e0e0',
                   borderRadius: '12px',
-                  padding: '1.5rem',
+                padding: '1.5rem',
                   backgroundColor: '#fff',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
@@ -215,8 +215,8 @@ const Orders = () => {
                 onMouseLeave={(e) => {
                   e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
                   e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
+              }}
+            >
                 <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'flex-start'}}>
                   <div style={{flex: 1}}>
                     <h3 style={{margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: '600'}}>
@@ -224,13 +224,13 @@ const Orders = () => {
                     </h3>
                     <p style={{color: '#666', margin: '0 0 0.5rem 0', fontSize: '0.9rem'}}>
                       Placed on {formatDate(orderDate)}
-                    </p>
+                  </p>
                     {order.address && (
                       <p style={{color: '#666', margin: '0.25rem 0', fontSize: '0.85rem'}}>
                         📍 {order.address}
-                      </p>
-                    )}
-                  </div>
+                    </p>
+                  )}
+                </div>
                   <div style={{textAlign: 'right', marginLeft: '1rem'}}>
                     <p style={{
                       fontSize: '1.5rem',
@@ -238,8 +238,8 @@ const Orders = () => {
                       margin: '0 0 0.5rem 0',
                       color: '#10B981'
                     }}>
-                      {formatCurrency(order.totalAmount || order.amount || 0)}
-                    </p>
+                    {formatCurrency(order.totalAmount || order.amount || 0)}
+                  </p>
                     <span style={{
                       display: 'inline-block',
                       padding: '0.25rem 0.75rem',
@@ -282,7 +282,7 @@ const Orders = () => {
                             <div style={{flex: 1}}>
                               <p style={{margin: 0, fontWeight: '500', fontSize: '0.95rem'}}>
                                 {productName}
-                              </p>
+                  </p>
                               <p style={{margin: '0.25rem 0 0 0', color: '#666', fontSize: '0.85rem'}}>
                                 Quantity: {quantity}
                               </p>
@@ -298,8 +298,8 @@ const Orders = () => {
                           </div>
                         );
                       })}
-                    </div>
-                  </div>
+                </div>
+              </div>
                 )}
 
                 <div style={{
@@ -335,7 +335,7 @@ const Orders = () => {
                     Track Order
                   </button>
                 </div>
-              </div>
+            </div>
             );
           })}
         </div>

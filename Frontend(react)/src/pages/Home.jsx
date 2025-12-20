@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BANNERS, CATEGORIES, DEALS, FEATURES, ROUTES, STORAGE_KEYS } from '../constants';
 import { useStore } from '../contexts/StoreContext';
-import { getStoreFeatured, getStoreBanners, getStoreProducts, getStoreCollections } from '../utils/api';
-import { transformProducts } from '../utils/format';
+import { getStoreFeatured, getStoreBanners, getStoreProducts, getStoreCollections, getStoreTrendingCategories } from '../utils/api';
+import { transformProducts, groupProductsByBaseId } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/ui/Loading';
 import StoreError from '../components/StoreError';
@@ -20,6 +20,7 @@ const Home = () => {
   const [loading, setLoading] = useState(false);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [collections, setCollections] = useState([]);
+  const [trendingCategories, setTrendingCategories] = useState([]);
 
   // Determine the actual store slug (from route params or context)
   const actualSlug = slug || storeSlug || currentStore?.slug;
@@ -113,14 +114,18 @@ const Home = () => {
             return productActive && categoryActive && hasStock;
           });
 
+          // Group products by base product ID (to avoid showing multiple entries for products with variants)
+          const groupedProducts = groupProductsByBaseId(visibleProducts);
+
           console.log('🏠 [HOME] Transformed products:', {
             count: transformedProducts.length,
             visibleCount: visibleProducts.length,
+            groupedCount: groupedProducts.length,
             firstTransformed: transformedProducts[0],
             firstVisible: visibleProducts[0],
           });
 
-          setFeaturedProducts(visibleProducts);
+          setFeaturedProducts(groupedProducts);
         } else {
           console.warn('⚠️ [HOME] No products returned for slug:', slugToUse);
           console.warn('⚠️ [HOME] Check backend API: http://localhost:8080/api/public/store/' + slugToUse + '/products');
@@ -231,6 +236,45 @@ const Home = () => {
 
     fetchCollections();
   }, [actualSlug, storeLoading, currentStore]);
+
+  // Fetch trending categories for the store
+  useEffect(() => {
+    const fetchTrendingCategories = async () => {
+      if (!actualSlug) {
+        console.log('🏠 [HOME] No slug available, skipping trending categories fetch');
+        setTrendingCategories([]);
+        return;
+      }
+
+      if (storeLoading) {
+        return;
+      }
+
+      try {
+        console.log('🔍 [HOME] Fetching trending categories for slug:', actualSlug);
+        const data = await getStoreTrendingCategories(actualSlug);
+        const categoriesArray = Array.isArray(data) ? data : [];
+        
+        console.log('📦 [HOME] Trending Categories API Response:', {
+          isArray: Array.isArray(data),
+          count: categoriesArray.length,
+        });
+        
+        if (categoriesArray.length > 0) {
+          console.log('✅ [HOME] Trending categories received:', categoriesArray.length);
+          console.log('📦 [HOME] First trending category sample:', categoriesArray[0]);
+        }
+        
+        setTrendingCategories(categoriesArray);
+      } catch (err) {
+        console.error('❌ [HOME] Error fetching trending categories:', err);
+        // Don't show error to user, just use empty array
+        setTrendingCategories([]);
+      }
+    };
+
+    fetchTrendingCategories();
+  }, [actualSlug, storeLoading]);
 
   useEffect(() => {
     const total = banners.length || 1;
@@ -457,19 +501,34 @@ const Home = () => {
       </section>
 
       {/* Trending Categories */}
-      <section className="trending-section">
-        <div className="container">
-          <h2 className="section-title">Trending Categories</h2>
-          <div className="trending-grid">
-            {CATEGORIES.slice(0, 2).map((category) => (
-              <div key={category.id} className="category-card" onClick={() => navigate(getNavPath(ROUTES.CATEGORIES))}>
-                <img src={category.image} alt={category.name} />
-                <p>{category.name}</p>
-              </div>
-            ))}
+      {trendingCategories.length > 0 && (
+        <section className="trending-section">
+          <div className="container">
+            <h2 className="section-title">Trending Categories</h2>
+            <div className="trending-grid">
+              {trendingCategories.map((category) => {
+                const categoryName = category.categoryName || category.name || 'Category';
+                const categoryImage = category.categoryImage || category.image || '/assets/categories/default.jpg';
+                const categorySlug = category.slug || categoryName.toLowerCase().replace(/\s+/g, '-');
+                
+                return (
+                  <div 
+                    key={category.categoryId || category.id || categoryName} 
+                    className="category-card" 
+                    onClick={() => {
+                      const basePath = actualSlug ? `/store/${actualSlug}` : '';
+                      navigate(`${basePath}/categories?category=${categorySlug}`);
+                    }}
+                  >
+                    <img src={categoryImage} alt={categoryName} />
+                    <p>{categoryName}</p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Collections */}
       <section className="biggest-deals">

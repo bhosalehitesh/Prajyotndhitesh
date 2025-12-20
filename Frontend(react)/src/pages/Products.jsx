@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../contexts/StoreContext';
 import { getStoreProducts } from '../utils/api';
-import { transformProducts } from '../utils/format';
+import { transformProducts, groupProductsByBaseId } from '../utils/format';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/ui/Loading';
 import ErrorMessage from '../components/ui/ErrorMessage';
@@ -71,8 +71,11 @@ const Products = () => {
             return productActive && categoryActive && hasStock;
           });
 
-          console.log('Transformed products:', transformedProducts.length, 'Visible:', visibleProducts.length);
-          setProducts(visibleProducts);
+          // Group products by base product ID (to avoid showing multiple entries for products with variants)
+          const groupedProducts = groupProductsByBaseId(visibleProducts);
+          
+          console.log('Transformed products:', transformedProducts.length, 'Visible:', visibleProducts.length, 'Grouped:', groupedProducts.length);
+          setProducts(groupedProducts);
         } else {
           console.warn('No products returned for slug:', slugToUse);
           setProducts([]);

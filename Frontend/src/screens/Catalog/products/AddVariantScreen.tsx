@@ -13,7 +13,6 @@ import {
   Alert,
 } from 'react-native';
 import IconSymbol from '../../../components/IconSymbol';
-import ColorPicker from '../../../components/ColorPicker';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {uploadProductWithImages} from '../../../utils/api';
 
@@ -50,7 +49,6 @@ const AddVariantScreen: React.FC<AddVariantScreenProps> = ({
     base?.price != null && !isNaN(base.price) ? String(base.price) : '',
   );
   const [color, setColor] = useState('');
-  const [colorHex, setColorHex] = useState('#000000');
   const [size, setSize] = useState('');
   const [quantity, setQuantity] = useState('');
   const [sku, setSku] = useState('');
@@ -58,12 +56,13 @@ const AddVariantScreen: React.FC<AddVariantScreenProps> = ({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const hasColorOrSize = color.trim().length > 0 || size.trim().length > 0;
+  // Color is required, size is optional
+  const hasColor = color.trim().length > 0;
   const canSubmit =
     !!base &&
     images.length > 0 &&
     price.trim().length > 0 &&
-    hasColorOrSize;
+    hasColor;
 
   const handleCamera = async () => {
     try {
@@ -125,10 +124,10 @@ const AddVariantScreen: React.FC<AddVariantScreenProps> = ({
 
   const handleAddVariant = async () => {
     if (!base || !canSubmit) {
-      if (!hasColorOrSize) {
+      if (!hasColor) {
         Alert.alert(
-          'Add color or size',
-          'You must add colour or size before adding a new variant.',
+          'Color required',
+          'You must add a color before adding a new variant.',
         );
       }
       return;
@@ -146,7 +145,7 @@ const AddVariantScreen: React.FC<AddVariantScreenProps> = ({
         productCategory: base.productCategory,
         inventoryQuantity: quantity ? Number(quantity) : undefined,
         customSku: sku || undefined,
-        color: color || colorHex || undefined,
+        color: color || undefined,
         size: size || undefined,
         hsnCode: hsn || undefined,
         seoTitleTag: base.title,
@@ -218,31 +217,35 @@ const AddVariantScreen: React.FC<AddVariantScreenProps> = ({
         {/* What's Different? */}
         <Text style={styles.sectionHeader}>What's Different?</Text>
         <Text style={styles.helperBody}>
-          Add colour or size information about this variant
+          Add color information about this variant
         </Text>
 
-        <ColorPicker
-          colorName={color}
-          hexCode={colorHex}
-          onColorNameChange={setColor}
-          onHexCodeChange={setColorHex}
-          onColorChange={hex => setColorHex(hex)}
+        <Text style={styles.sectionLabel}>Color <Text style={styles.required}>*</Text></Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Color (Required)"
+          placeholderTextColor="#9CA3AF"
+          value={color}
+          onChangeText={setColor}
+          maxLength={50}
         />
         <Text style={styles.helper}>Maximum 50 characters</Text>
 
+        <Text style={styles.sectionLabel}>Size <Text style={styles.optional}>(Optional)</Text></Text>
         <TextInput
           style={styles.input}
-          placeholder="Enter Size"
+          placeholder="Enter Size (Optional)"
           placeholderTextColor="#9CA3AF"
           value={size}
           onChangeText={setSize}
+          maxLength={50}
         />
         <Text style={styles.helper}>Maximum 50 characters</Text>
 
-        {!hasColorOrSize && (
+        {!hasColor && (
           <View style={styles.validationBox}>
             <Text style={styles.validationText}>
-              You must add colour or size before adding a new variant.
+              You must add a color before adding a new variant.
             </Text>
           </View>
         )}
@@ -423,6 +426,9 @@ const styles = StyleSheet.create({
   baseName: {fontSize: 16, fontWeight: '600', color: '#111827'},
   baseMeta: {fontSize: 12, color: '#6b7280', marginTop: 4},
   sectionHeader: {marginTop: 16, fontWeight: 'bold', color: '#111827'},
+  sectionLabel: {fontWeight: 'bold', color: '#111827', marginTop: 12},
+  optional: {color: '#9CA3AF', fontWeight: 'normal'},
+  required: {color: '#EF4444', fontWeight: 'bold'},
   helperBody: {color: '#6c757d', marginTop: 6},
   helper: {color: '#9CA3AF', marginTop: 6},
   input: {

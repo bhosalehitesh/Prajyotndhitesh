@@ -1,6 +1,7 @@
 package com.smartbiz.sakhistore.modules.order.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -10,18 +11,16 @@ import org.springframework.stereotype.Repository;
 import com.smartbiz.sakhistore.modules.order.model.Orders;
 import com.smartbiz.sakhistore.modules.customer_user.model.User;
 
-import java.util.Optional;
-
 @Repository
 public interface OrdersRepository extends JpaRepository<Orders, Long> {
 
        List<Orders> findByUser(User user);
 
-       // Get order by ID with user eagerly fetched
-       @Query("SELECT o FROM Orders o " +
-                     "LEFT JOIN FETCH o.user " +
-                     "WHERE o.OrdersId = :id")
-       Optional<Orders> findByIdWithUser(@Param("id") Long id);
+    // Get order by ID with user eagerly fetched
+    @Query("SELECT o FROM Orders o " +
+           "LEFT JOIN FETCH o.user " +
+           "WHERE o.OrdersId = :id")
+    Optional<Orders> findByIdWithUser(@Param("id") Long id);
 
        // Find orders where any order item's product belongs to a specific seller
        // LEFT JOIN FETCH user to eagerly load user data for customerName/customerPhone

@@ -203,6 +203,26 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
           <span className="product-card-category">{product.category.toUpperCase()}</span>
         )}
         <h3 className="product-card-name">{product.name}</h3>
+        {/* Show variant count if product has multiple variants */}
+        {(() => {
+          const backend = product.product || {};
+          const variants = backend.variants || backend.productVariants || [];
+          const variantCount = variants.length || product.variantCount || 0;
+          
+          if (variantCount > 1) {
+            return (
+              <div style={{ 
+                fontSize: '0.85rem', 
+                color: '#666', 
+                marginBottom: '0.5rem',
+                fontWeight: 500
+              }}>
+                {variantCount} variants available
+              </div>
+            );
+          }
+          return null;
+        })()}
         <div className="product-card-price">
           <span className="product-card-current-price">{formatPrice(product.price)}</span>
           {product.originalPrice && product.originalPrice > product.price && (

@@ -335,6 +335,61 @@ public class PublicStoreController {
     }
 
     /**
+     * Get trending categories for a store by slug (public endpoint)
+     * Example: GET /api/public/store/brownn_boys/categories/trending
+     */
+    @GetMapping("/{slug}/categories/trending")
+    public ResponseEntity<?> getStoreTrendingCategories(@PathVariable String slug) {
+        try {
+            System.out.println("🔍 [Trending Categories API] Fetching trending categories for slug: " + slug);
+            
+            // Find store by slug
+            StoreDetails store = storeService.findBySlug(slug);
+            
+            if (store == null) {
+                System.out.println("❌ [Trending Categories API] Store not found for slug: " + slug);
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Check if store has a seller
+            if (store.getSeller() == null) {
+                System.out.println("⚠️ [Trending Categories API] Store has no seller linked");
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            // Get seller ID from store
+            Long sellerId = store.getSeller().getSellerId();
+            
+            if (sellerId == null) {
+                System.out.println("⚠️ [Trending Categories API] Seller ID is null");
+                return ResponseEntity.ok(new java.util.ArrayList<>());
+            }
+            
+            // Get categories by seller
+            List<Category> categories = categoryService.allCategories(sellerId);
+            
+            // SmartBiz: Filter for ACTIVE and TRENDING categories, ordered by orderIndex
+            List<Category> trendingCategories = categories.stream()
+                    .filter(c -> (c.getIsActive() == null || c.getIsActive()) && 
+                                (c.getIsTrending() != null && c.getIsTrending()))
+                    .sorted((c1, c2) -> Integer.compare(c1.getOrderIndex(), c2.getOrderIndex()))
+                    .toList();
+            
+            System.out.println("✅ [Trending Categories API] Trending categories found: " + trendingCategories.size());
+            
+            return ResponseEntity.ok(trendingCategories);
+        } catch (NoSuchElementException e) {
+            System.err.println("❌ [Trending Categories API] Store not found: " + slug);
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            // Log error and return empty list instead of error
+            System.err.println("❌ [Trending Categories API] Error fetching trending categories for store slug: " + slug);
+            e.printStackTrace();
+            return ResponseEntity.ok(new java.util.ArrayList<>());
+        }
+    }
+
+    /**
      * Get collections for a store by slug (public endpoint)
      * SmartBiz: Only ACTIVE collections, ordered by orderIndex (same as categories)
      * Example: GET /api/public/store/brownn_boys/collections

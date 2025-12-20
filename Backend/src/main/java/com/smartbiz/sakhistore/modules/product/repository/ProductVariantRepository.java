@@ -40,4 +40,11 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
 
     // Find variants by product with stock > 0
     List<ProductVariant> findByProduct_ProductsIdAndStockGreaterThan(Long productId, Integer stock);
+    
+    // Fetch variants for multiple products (called separately to avoid cartesian product)
+    @Query("SELECT v FROM ProductVariant v " +
+           "WHERE v.product.productsId IN :productIds " +
+           "AND v.isActive = true " +
+           "ORDER BY v.product.productsId, v.variantId")
+    List<ProductVariant> findVariantsByProductIds(@Param("productIds") List<Long> productIds);
 }

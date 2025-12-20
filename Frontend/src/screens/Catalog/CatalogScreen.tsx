@@ -210,7 +210,7 @@ const CatalogScreen: React.FC<CatalogScreenProps> = ({navigation}) => {
             style={[styles.fabOption, styles.fabOptionTop]}
             onPress={() => handleFabOption('Product')}>
             <View style={styles.fabOptionContent}>
-              <IconSymbol name="bag" size={18} color="#4B5563" />
+              <IconSymbol name="bag" size={18} color="#6c757d" />
               <Text style={styles.fabOptionText}>Product</Text>
             </View>
           </TouchableOpacity>
@@ -220,7 +220,7 @@ const CatalogScreen: React.FC<CatalogScreenProps> = ({navigation}) => {
             style={[styles.fabOption, styles.fabOptionMiddle]}
             onPress={() => handleFabOption('Category')}>
             <View style={styles.fabOptionContent}>
-              <IconSymbol name="tag" size={18} color="#4B5563" />
+              <IconSymbol name="tag" size={18} color="#6c757d" />
               <Text style={styles.fabOptionText}>Category</Text>
             </View>
           </TouchableOpacity>
@@ -230,7 +230,7 @@ const CatalogScreen: React.FC<CatalogScreenProps> = ({navigation}) => {
             style={[styles.fabOption, styles.fabOptionBottom]}
             onPress={() => handleFabOption('Collection')}>
             <View style={styles.fabOptionContent}>
-              <IconSymbol name="folder" size={18} color="#4B5563" />
+              <IconSymbol name="folder" size={18} color="#6c757d" />
               <Text style={styles.fabOptionText}>Collection</Text>
             </View>
           </TouchableOpacity>
@@ -250,7 +250,7 @@ const CatalogScreen: React.FC<CatalogScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF4FA',
+    backgroundColor: '#f8f9fa',
   },
   header: {
     backgroundColor: '#e61580',
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FFF4FA',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 3,
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     flex: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#dee2e6',
     borderTopLeftRadius: 20,
     borderBottomLeftRadius: 20,
   },
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
   },
   arrowIcon: {
     fontSize: 24,
-    color: '#10B981',
+    color: '#6c757d',
     fontWeight: 'bold',
   },
   fab: {
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   fabOptionText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#4B5563',
+    color: '#6c757d',
     marginLeft: 8,
   },
   notificationHeader: {
@@ -506,22 +506,22 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#6c757d',
     marginBottom: 4,
   },
   summaryValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#333333',
   },
   summaryDivider: {
     width: 1,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: '#dee2e6',
     marginHorizontal: 8,
   },
   viewToggle: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#f8f9fa',
     borderRadius: 8,
     padding: 4,
     marginBottom: 16,
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   toggleButtonText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#6B7280',
+    color: '#6c757d',
   },
   toggleButtonTextActive: {
     color: '#e61580',
@@ -575,18 +575,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#dee2e6',
   },
   categoryTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#333333',
     marginLeft: 6,
     flex: 1,
   },
   categoryCount: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#6c757d',
     fontWeight: '500',
   },
   stockItem: {
@@ -613,12 +613,12 @@ const styles = StyleSheet.create({
   },
   stockItemName: {
     fontSize: 14,
-    color: '#1F2937',
+    color: '#333333',
     fontWeight: '500',
   },
   stockItemCategory: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#6c757d',
     marginTop: 2,
   },
   outOfStockBadge: {
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
   },
   noAlertsText: {
     fontSize: 14,
-    color: '#10B981',
+    color: '#6c757d',
     marginTop: 8,
     fontWeight: '500',
   },

@@ -561,7 +561,8 @@ export interface ProductDto {
 }
 
 export interface CategoryDto {
-  category_id: number;
+  categoryId?: number; // Backend returns this via @JsonProperty("categoryId")
+  category_id?: number; // Legacy field name (for backward compatibility)
   categoryName: string;
   businessCategory?: string;
   description?: string;
@@ -569,6 +570,9 @@ export interface CategoryDto {
   seoTitleTag?: string;
   seoMetaDescription?: string;
   socialSharingImage?: string | null;
+  isTrending?: boolean; // Trending category flag
+  isActive?: boolean; // Active status
+  slug?: string; // Category slug for URL
 }
 
 export interface CollectionDto {
@@ -940,6 +944,12 @@ export const fetchCategories = async (): Promise<CategoryDto[]> => {
     throw new Error('Invalid categories response from server');
   }
 
+  // Debug: Log first category to see what fields are actually returned
+  if (payload.length > 0) {
+    console.log('🔍 [API] Raw category response sample:', JSON.stringify(payload[0], null, 2));
+    console.log('🔍 [API] Category keys:', Object.keys(payload[0]));
+  }
+
   return payload as CategoryDto[];
 };
 
@@ -1006,6 +1016,36 @@ export const updateCategory = async (
  * Delete a category by id.
  * Backend: DELETE /api/category/{id}
  */
+export const updateCategoryTrendingStatus = async (
+  categoryId: string | number,
+  isTrending: boolean
+): Promise<CategoryDto> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof categoryId === 'string' ? categoryId : String(categoryId);
+  const url = `${API_BASE_URL}/api/category/${id}/trending`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ isTrending }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Failed to update category trending status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating category trending status:', error);
+    throw error;
+  }
+};
+
 export const deleteCategory = async (categoryId: string | number): Promise<void> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const id = typeof categoryId === 'string' ? categoryId : String(categoryId);
