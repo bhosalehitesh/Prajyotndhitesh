@@ -14,57 +14,57 @@ const Cart = () => {
   const cartLockedStoreId = cartStoreId || (getCartStoreId ? getCartStoreId() : null);
   const currentStoreId = cartLockedStoreId || currentStore?.storeId || currentStore?.id;
   const currentSellerId = currentStore?.sellerId;
-  
+
   const filteredCart = React.useMemo(() => {
     // If no store context at all, show all items
     if (!currentStoreId && !currentSellerId && !cartStoreId) {
       console.log('🛒 [Cart] No store filter - showing all items:', cart.length);
       return cart;
     }
-    
+
     const filtered = cart.filter(item => {
       // Match by storeId or sellerId (cart items might have either)
       const itemStoreId = item.storeId;
       const itemSellerId = item.sellerId;
-      
+
       // If item has no storeId or sellerId, include it (legacy items or guest cart)
       if (!itemStoreId && !itemSellerId) {
         console.log('🛒 [Cart] Item has no storeId/sellerId, including:', item.name);
         return true;
       }
-      
+
       // Priority 1: Match by cartStoreId (cart's locked store)
       if (cartStoreId && itemStoreId) {
         const matches = String(itemStoreId) === String(cartStoreId);
         if (matches) return true;
       }
-      
+
       // Priority 2: Match by currentStoreId
       if (currentStoreId && itemStoreId) {
         const matches = String(itemStoreId) === String(currentStoreId);
         if (matches) return true;
       }
-      
+
       // Priority 3: Match by sellerId
       if (currentSellerId && itemSellerId) {
         const matches = String(itemSellerId) === String(currentSellerId);
         if (matches) return true;
       }
-      
+
       // If we have cartStoreId but item doesn't match, exclude it
       // But if we only have currentStoreId (not cartStoreId), be more lenient
       if (cartStoreId && itemStoreId && String(itemStoreId) !== String(cartStoreId)) {
         return false;
       }
-      
+
       // If no cartStoreId but we have items without storeId, include them
       if (!cartStoreId && !itemStoreId && !itemSellerId) {
         return true;
       }
-      
+
       return false;
     });
-    
+
     // If filtering resulted in empty cart but we have items, show all items with a warning
     if (filtered.length === 0 && cart.length > 0) {
       console.warn('🛒 [Cart] Filtering resulted in empty cart but cart has items. Showing all items.');
@@ -81,7 +81,7 @@ const Cart = () => {
       // Return all items if filtering is too strict
       return cart;
     }
-    
+
     console.log('🛒 [Cart] Filtering cart:', {
       totalItems: cart.length,
       filteredItems: filtered.length,
@@ -91,7 +91,7 @@ const Cart = () => {
       itemStoreIds: cart.map(i => i.storeId),
       itemSellerIds: cart.map(i => i.sellerId)
     });
-    
+
     return filtered;
   }, [cart, cartStoreId, currentStoreId, currentSellerId]);
 
@@ -138,39 +138,128 @@ const Cart = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #e5e7eb', color: '#9ca3af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>○</div>
             <span style={{ fontWeight: '600', color: '#9ca3af' }}>Payment</span>
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+      </div>
 
       <h1 style={{ marginBottom: '2rem', fontSize: '1.8rem', fontWeight: '700' }}>
         {currentStore?.name ? `${currentStore.name} - Cart` : 'Shopping Cart'}
       </h1>
 
       {filteredCart.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ fontSize: '1.2rem', color: '#666' }}>
-            {currentStore?.name 
-              ? `Your cart is empty for ${currentStore.name}. Add items to continue.`
-              : 'Your cart is empty'}
+        <div style={{
+          textAlign: 'center',
+          padding: '3.5rem 1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          {/* Windy Bag Illustration */}
+          <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
+            {/* Bag Body */}
+            <div style={{
+              width: '90px',
+              height: '105px',
+              backgroundColor: '#ff3f6c',
+              borderRadius: '10px',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 8px 16px rgba(255, 63, 108, 0.2)',
+              animation: 'float 3s ease-in-out infinite'
+            }}>
+              {/* Bag Handles */}
+              <div style={{
+                position: 'absolute',
+                top: '-20px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '38px',
+                height: '32px',
+                border: '3px solid #535766',
+                borderBottom: 'none',
+                borderRadius: '20px 20px 0 0'
+              }}></div>
+
+              {/* Bag Logo/Icon */}
+              <svg viewBox="0 0 24 24" width="45" height="45" fill="white" style={{ opacity: 0.9 }}>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2V7h2v10z" />
+              </svg>
+            </div>
+
+            {/* Wind Effect Lines */}
+            <div style={{
+              position: 'absolute',
+              left: '-45px',
+              top: '40%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              <div style={{ width: '30px', height: '2px', backgroundColor: '#eaeaec', borderRadius: '10px' }}></div>
+              <div style={{ width: '22px', height: '2px', backgroundColor: '#eaeaec', borderRadius: '10px', marginLeft: '8px' }}></div>
+              <div style={{ width: '26px', height: '2px', backgroundColor: '#eaeaec', borderRadius: '10px' }}></div>
+            </div>
+
+            {/* Shadow beneath bag */}
+            <div style={{
+              width: '60px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(0,0,0,0.05)',
+              margin: '15px auto 0',
+              filter: 'blur(3px)'
+            }}></div>
+          </div>
+
+          <h2 style={{
+            fontSize: '1.2rem',
+            fontWeight: '700',
+            color: 'var(--text-color, #282c3f)',
+            marginBottom: '0.4rem'
+          }}>
+            Hey, it feels so light!
+          </h2>
+          <p style={{
+            fontSize: '0.9rem',
+            color: 'var(--text-secondary, #94969f)',
+            marginBottom: '1.5rem'
+          }}>
+            There is nothing in your bag. Let's add some items.
           </p>
-          {currentStore && storeSlug && (
-            <button
-              onClick={() => navigate(getRoute(ROUTES.PRODUCTS, storeSlug))}
-              style={{
-                marginTop: '1rem',
-                padding: '0.75rem 1.5rem',
-                background: '#f97316',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600'
-              }}
-            >
-              Browse Products
-            </button>
-          )}
+
+          <button
+            onClick={() => navigate(getRoute(ROUTES.WISHLIST, storeSlug))}
+            style={{
+              padding: '0.8rem 1.6rem',
+              background: 'transparent',
+              color: '#ff3f6c',
+              border: '1px solid #ff3f6c',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: '700',
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase',
+              transition: 'background 0.2s'
+            }}
+            onMouseOver={(e) => e.target.style.background = 'rgba(255, 63, 108, 0.05)'}
+            onMouseOut={(e) => e.target.style.background = 'transparent'}
+          >
+            Add Items From Wishlist
+          </button>
+
+          <style>
+            {`
+              @keyframes float {
+                0% { transform: translateY(0px) rotate(0deg); }
+                50% { transform: translateY(-10px) rotate(-2deg); }
+                100% { transform: translateY(0px) rotate(0deg); }
+              }
+            `}
+          </style>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '2rem', alignItems: 'flex-start' }}>
@@ -179,7 +268,7 @@ const Cart = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '700' }}>Order Items</h2>
               <span style={{ color: '#666', fontSize: '0.95rem' }}>{filteredCart.length} {filteredCart.length === 1 ? 'Item' : 'Items'}</span>
-          </div>
+            </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '600px', overflowY: 'auto', paddingRight: '0.5rem' }}>
               {filteredCart.map((item) => {
