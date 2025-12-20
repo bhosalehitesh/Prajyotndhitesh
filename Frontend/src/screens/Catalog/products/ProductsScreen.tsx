@@ -386,7 +386,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
     } catch (error: any) {
       const errorMessage = error?.message || 'Failed to load products';
       console.error('❌ [ProductsScreen] Failed to load products:', error);
-      
+
       // If it's a collection products error, show a more specific message
       if (errorMessage.includes('collection products')) {
         console.warn('⚠️ [ProductsScreen] Collection products error - this may be expected if collection is empty or invalid');
@@ -514,7 +514,7 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
     } catch (error: any) {
       const errorMessage = error?.message || 'Failed to refresh products';
       console.error('❌ [ProductsScreen] Failed to refresh products:', error);
-      
+
       // If it's a collection products error, show empty list instead of crashing
       if (errorMessage.includes('collection products')) {
         console.warn('⚠️ [ProductsScreen] Collection products error during refresh - showing empty list');
