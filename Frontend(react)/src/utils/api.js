@@ -282,6 +282,47 @@ export const getStoreFeatured = async (storeSlug) => {
  * @param {string} storeSlug - Store slug
  * @returns {Promise<Array>} Array of categories
  */
+export const getStoreTrendingCategories = async (storeSlug) => {
+  if (!storeSlug || storeSlug.trim() === '') {
+    throw new Error('Store slug is required');
+  }
+  const normalizedSlug = storeSlug.trim();
+  const endpoint = `/public/store/${encodeURIComponent(normalizedSlug)}/categories/trending`;
+  const API_BASE = getBackendUrl();
+  const fullUrl = `${API_BASE}${endpoint}`;
+
+  console.log('📡 [API] Fetching trending categories:', {
+    slug: normalizedSlug,
+    url: fullUrl
+  });
+
+  try {
+    const response = await fetch(fullUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [API] Error fetching trending categories:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      throw new Error(`Failed to fetch trending categories: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ [API] Trending categories fetched:', Array.isArray(data) ? data.length : 'not array');
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('❌ [API] Network error fetching trending categories:', error);
+    throw error;
+  }
+};
+
 export const getStoreCategories = async (storeSlug) => {
   if (!storeSlug || storeSlug.trim() === '') {
     throw new Error('Store slug is required');
@@ -290,7 +331,7 @@ export const getStoreCategories = async (storeSlug) => {
   const endpoint = `/public/store/${encodeURIComponent(normalizedSlug)}/categories`;
   const API_BASE = getBackendUrl();
   const fullUrl = `${API_BASE}${endpoint}`;
-  
+
   console.log('📡 [API] Fetching store categories:', {
     slug: normalizedSlug,
     endpoint: endpoint,
