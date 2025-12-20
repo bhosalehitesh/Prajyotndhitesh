@@ -5,7 +5,10 @@ import com.smartbiz.sakhistore.modules.order.repository.OrdersRepository;
 import com.smartbiz.sakhistore.modules.order.repository.OrderItemsRepository;
 import com.smartbiz.sakhistore.modules.cart.repository.CartRepository;
 import com.smartbiz.sakhistore.modules.customer_user.model.User;
+import com.smartbiz.sakhistore.modules.customer_user.repository.UserRepository;
 import com.smartbiz.sakhistore.modules.order.model.Orders;
+import com.smartbiz.sakhistore.modules.order.model.OrderInvoiceHTMLBuilder;
+import com.smartbiz.sakhistore.modules.inventory.model.PdfGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.smartbiz.sakhistore.modules.order.model.OrderStatus;
@@ -14,10 +17,8 @@ import com.smartbiz.sakhistore.modules.payment.model.PaymentStatus;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 
-
-
-
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class OrdersService {
@@ -34,16 +35,43 @@ public class OrdersService {
     @Autowired
     private StoreDetailsRepo storeDetailsRepo;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private OrderEmailService orderEmailService;
+
     // ===============================
     // Create Order From Cart
     // ===============================
     public Orders placeOrder(User user, String address, Long mobile, Long storeId, Long sellerId) {
 
-        Cart cart = cartRepository.findByUser(user)
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println("🛒 PLACING ORDER - USER EMAIL CHECK");
+        System.out.println("=".repeat(60));
+        System.out.println("User ID: " + user.getId());
+        
+        // ALWAYS fetch the LATEST user object from database to get most recent email
+        User fullUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        System.out.println("📧 Email in database: " + (fullUser.getEmail() != null ? fullUser.getEmail() : "NULL"));
+        System.out.println("📧 Email from request user object: " + (user.getEmail() != null ? user.getEmail() : "NULL"));
+        
+        if (fullUser.getEmail() == null || fullUser.getEmail().trim().isEmpty()) {
+            System.out.println("⚠️ WARNING: User does not have an email in database!");
+            System.out.println("   Order will be placed but invoice email will not be sent.");
+            System.out.println("   User should update their email in profile/checkout.");
+        } else {
+            System.out.println("✅ User has email in database: " + fullUser.getEmail());
+        }
+        System.out.println("=".repeat(60) + "\n");
+
+        Cart cart = cartRepository.findByUser(fullUser)
                 .orElseThrow(() -> new RuntimeException("Cart not found for user"));
 
         Orders order = new Orders();
-        order.setUser(user);
+        order.setUser(fullUser);  // Use full user object with LATEST email from database
         order.setAddress(address);
         order.setMobile(mobile);
         order.setOrderStatus(OrderStatus.PLACED);
@@ -112,12 +140,76 @@ public class OrdersService {
         order.setSellerId(extractedSellerId);
         order.setStoreId(extractedStoreId);
 
-        // Save order (+ items)
+        // Save order (+ items) to database
         Orders savedOrder = ordersRepository.save(order);
 
         // Empty cart after order creation
         cart.getItems().clear();
         cartRepository.save(cart);
+
+        // ===============================
+        // Generate PDF and Send Email
+        // ===============================
+        try {
+            // ALWAYS fetch fresh user from database to get latest email
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("🔄 [OrdersService] REFRESHING USER DATA FROM DATABASE");
+            System.out.println("=".repeat(60));
+            System.out.println("Order ID: #" + savedOrder.getOrdersId());
+            System.out.println("User ID: " + fullUser.getId());
+            
+            // Fetch the LATEST user data from database (in case email was updated)
+            User latestUser = userRepository.findById(fullUser.getId())
+                    .orElseThrow(() -> new RuntimeException("User not found in database"));
+            
+            System.out.println("📧 Email from database: " + (latestUser.getEmail() != null ? latestUser.getEmail() : "NULL"));
+            System.out.println("📧 Email from order user: " + (fullUser.getEmail() != null ? fullUser.getEmail() : "NULL"));
+            
+            // Update the order's user with latest email
+            if (latestUser.getEmail() != null && !latestUser.getEmail().trim().isEmpty()) {
+                fullUser.setEmail(latestUser.getEmail());
+                System.out.println("✅ Updated order user with latest email from database: " + latestUser.getEmail());
+            } else {
+                System.out.println("⚠️ No email found in database for user ID: " + latestUser.getId());
+                System.out.println("   User needs to add email address to their profile.");
+            }
+            System.out.println("=".repeat(60) + "\n");
+            
+            // Fetch order with user and items for PDF generation
+            Orders orderWithDetails = ordersRepository.findByIdWithUser(savedOrder.getOrdersId())
+                    .orElse(savedOrder);
+            
+            // Ensure order has the latest user email
+            if (orderWithDetails.getUser() != null && latestUser.getEmail() != null) {
+                orderWithDetails.getUser().setEmail(latestUser.getEmail());
+            }
+
+            // Debug: Check if user and email exist
+            System.out.println("\n🔍 [OrdersService] Final check before sending email for Order #" + orderWithDetails.getOrdersId());
+            if (orderWithDetails.getUser() != null) {
+                System.out.println("   User ID: " + orderWithDetails.getUser().getId());
+                System.out.println("   User Name: " + orderWithDetails.getUser().getFullName());
+                System.out.println("   User Phone: " + orderWithDetails.getUser().getPhone());
+                System.out.println("   User Email: " + (orderWithDetails.getUser().getEmail() != null ? orderWithDetails.getUser().getEmail() : "NULL/EMPTY"));
+            } else {
+                System.out.println("   ❌ User is NULL for this order!");
+            }
+
+            // Generate PDF invoice
+            System.out.println("\n📄 [OrdersService] Generating PDF invoice for Order #" + orderWithDetails.getOrdersId());
+            String htmlContent = OrderInvoiceHTMLBuilder.build(orderWithDetails);
+            byte[] pdfBytes = PdfGenerator.generatePdfBytes(htmlContent);
+            System.out.println("✅ [OrdersService] PDF generated successfully (" + pdfBytes.length + " bytes)");
+
+            // Send email with PDF attachment
+            orderEmailService.sendOrderInvoiceEmail(orderWithDetails, pdfBytes);
+
+        } catch (Exception e) {
+            // Log error but don't fail the order placement
+            System.err.println("⚠️ [OrdersService] Failed to generate PDF or send email: " + e.getMessage());
+            e.printStackTrace();
+            // Order is already saved, so we continue
+        }
 
         return savedOrder;
     }
@@ -127,8 +219,8 @@ public class OrdersService {
     // ===============================
     public Orders getOrder(Long id) {
         // Use findByIdWithUser to eagerly load user for customerName/customerPhone getters
-        return ordersRepository.findByIdWithUser(id)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+        Optional<Orders> orderOpt = ordersRepository.findByIdWithUser(id);
+        return orderOpt.orElseThrow(() -> new RuntimeException("Order not found"));
     }
 
     // ===============================
@@ -157,5 +249,12 @@ public class OrdersService {
     // ===============================
     public List<Orders> getOrdersBySellerId(Long sellerId) {
         return ordersRepository.findBySellerId(sellerId);
+    }
+
+    // ===============================
+    // Test Email Method (for debugging)
+    // ===============================
+    public void sendTestEmail(Orders order, byte[] pdfBytes) {
+        orderEmailService.sendOrderInvoiceEmail(order, pdfBytes);
     }
 }

@@ -33,7 +33,7 @@ const ConfirmOrder = () => {
   const location = useLocation();
   const { cart, getCartTotal, updateQuantity, removeFromCart } = useCart();
   const { storeSlug, currentStore, getStoreId } = useStore();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const { isDarkMode } = useTheme();
   
   const [address, setAddress] = useState(null);
@@ -103,6 +103,8 @@ const ConfirmOrder = () => {
             // Set as current address if no address is set yet
             if (!address) {
               setAddress(dbAddress);
+              // Mark as saved since it's from database
+              setIsAddressSaved(true);
             }
             
             // If address from database matches current address, mark as saved
@@ -249,6 +251,8 @@ const ConfirmOrder = () => {
           // Set as current address if no address is set yet
           if (!address) {
             setAddress(parsedAddress);
+            // Mark as saved since it's from localStorage
+            setIsAddressSaved(true);
           }
         }
       } catch (e) {
@@ -821,6 +825,32 @@ const ConfirmOrder = () => {
         }
       }
 
+      // CRITICAL: Save email to database BEFORE placing order if email was provided in address
+      if (address && address.emailId && address.emailId.trim() !== '') {
+        console.log('📧 Saving email to database before placing order:', address.emailId);
+        try {
+          const userPhone = user.phone;
+          if (userPhone) {
+            const addressData = {
+              email: address.emailId.trim(),
+              phone: userPhone
+            };
+            const token = user.token || localStorage.getItem('authToken');
+            await updateUserAddressByPhone(userPhone, addressData, token);
+            console.log('✅ Email saved to database before placing order');
+            
+            // Refresh user object to get latest email
+            if (refreshUser) {
+              await refreshUser(user.userId || user.id, userPhone);
+              console.log('✅ User object refreshed with new email');
+            }
+          }
+        } catch (emailError) {
+          console.warn('⚠️ Could not save email before placing order:', emailError);
+          // Continue with order placement even if email save fails
+        }
+      }
+
       // First, place the order
       const order = await placeOrder(
         user.userId || user.id,
@@ -933,6 +963,40 @@ const ConfirmOrder = () => {
       const updatedUser = await updateUserAddressByPhone(userPhone, addressData, token);
       
       console.log('Address saved successfully:', updatedUser);
+      console.log('📧 Updated email in response:', updatedUser.email);
+      
+      // Refresh user object in AuthContext and localStorage
+      if (updatedUser && updatedUser.email) {
+        try {
+          if (refreshUser) {
+            await refreshUser(updatedUser.id, userPhone);
+            console.log('✅ User object refreshed with new email');
+          } else {
+            // Manually update user object if refreshUser is not available
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const updatedUserObj = {
+              ...currentUser,
+              email: updatedUser.email,
+              fullName: updatedUser.fullName || currentUser.fullName,
+              ...updatedUser
+            };
+            localStorage.setItem('currentUser', JSON.stringify(updatedUserObj));
+            console.log('✅ User object manually updated with new email:', updatedUserObj.email);
+          }
+        } catch (refreshError) {
+          console.warn('Could not refresh user object:', refreshError);
+          // Fallback: manually update user object
+          const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+          const updatedUserObj = {
+            ...currentUser,
+            email: updatedUser.email,
+            fullName: updatedUser.fullName || currentUser.fullName,
+            ...updatedUser
+          };
+          localStorage.setItem('currentUser', JSON.stringify(updatedUserObj));
+          console.log('✅ User object manually updated (fallback) with new email:', updatedUserObj.email);
+        }
+      }
       
       // Create saved address object with unique ID
       const savedAddress = {
@@ -1220,8 +1284,8 @@ const ConfirmOrder = () => {
                         setAddress(addr);
                         localStorage.setItem('selectedAddress', JSON.stringify(addr));
                         setShowAddressList(false);
-                        // Reset saved status when selecting a different address
-                        setIsAddressSaved(false);
+                        // Mark as saved since this is a saved address from database/localStorage
+                        setIsAddressSaved(true);
                       }}
                       style={{
                         padding: '16px',

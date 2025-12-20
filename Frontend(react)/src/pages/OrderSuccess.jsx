@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../contexts/StoreContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ROUTES, getRoute } from '../constants/routes';
+import Toast from '../components/ui/Toast';
 
 const OrderSuccess = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const OrderSuccess = () => {
   
   const [orderData, setOrderData] = useState(null);
   const [address, setAddress] = useState(null);
+  const [showEmailToast, setShowEmailToast] = useState(false);
 
   useEffect(() => {
     // Get order data from location state
@@ -22,6 +24,16 @@ const OrderSuccess = () => {
         contactInfo: location.state.contactInfo
       });
       setAddress(location.state.address);
+      
+      // Show email sent notification
+      const email = location.state.contactInfo?.email || location.state.address?.emailId;
+      if (email) {
+        setShowEmailToast(true);
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+          setShowEmailToast(false);
+        }, 5000);
+      }
     } else {
       // If no order data, redirect to home
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
@@ -75,16 +87,27 @@ const OrderSuccess = () => {
   const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
 
   return (
-    <div className="container" style={{ 
-      padding: '3rem 0', 
-      maxWidth: '800px', 
-      margin: '0 auto',
-      minHeight: '60vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
+    <>
+      {/* Email Sent Toast Notification */}
+      {showEmailToast && (
+        <Toast
+          message="📧 Invoice email sent successfully! Check your inbox for order details."
+          type="success"
+          onClose={() => setShowEmailToast(false)}
+          duration={5000}
+        />
+      )}
+
+      <div className="container" style={{ 
+        padding: '3rem 0', 
+        maxWidth: '800px', 
+        margin: '0 auto',
+        minHeight: '60vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
       {/* Success Icon */}
       <div style={{
         width: '80px',
@@ -130,6 +153,55 @@ const OrderSuccess = () => {
       }}>
         Order ID: #{String(orderData.orderId)}
       </div>
+
+      {/* Email Sent Notification Box */}
+      {(address?.emailId || orderData?.contactInfo?.email) && (
+        <div style={{
+          background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
+          padding: '20px',
+          borderRadius: '12px',
+          marginBottom: '24px',
+          width: '100%',
+          border: '2px solid #4caf50',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: '#4caf50',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" strokeWidth="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              color: '#2e7d32',
+              margin: '0 0 4px 0'
+            }}>
+              📧 Invoice Email Sent Successfully!
+            </p>
+            <p style={{
+              fontSize: '0.85rem',
+              color: '#388e3c',
+              margin: 0,
+              lineHeight: '1.5'
+            }}>
+              Your order invoice has been sent to <strong>{address?.emailId || orderData?.contactInfo?.email}</strong>. 
+              Please check your inbox (and spam folder) for the PDF invoice.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* WhatsApp Confirmation Box */}
       <div style={{
@@ -301,6 +373,7 @@ const OrderSuccess = () => {
         Continue Shopping
       </button>
     </div>
+    </>
   );
 };
 

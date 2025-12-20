@@ -34,6 +34,7 @@ public class SecurityConfig {
             "/api/**",
             "/api/auth/**",
             "/api/**",
+            "/orders/**",  // Allow all order endpoints (including test-email)
             "/orders/update-status/**",
             "/api/sellers/**",
             "/api/products/**",
@@ -51,7 +52,12 @@ public class SecurityConfig {
             "/swagger-resources/**",
             "api/sellers/signup seller",
             "/webjars/**",
-            "/api/health"
+            "/api/health",
+            // Test email endpoints
+            "/orders/test-email-simple",
+            "/orders/test-email/**",
+            // User email verification
+            "/api/user/verify-email/**"
     };
 
     @Bean
@@ -63,23 +69,43 @@ public class SecurityConfig {
                 // Enable CORS - MUST be before authorization
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // Authorization rules
+                // Authorization rules - Swagger endpoints FIRST (highest priority)
                 .authorizeHttpRequests(auth -> auth
+                                // Swagger/OpenAPI endpoints - NO AUTHENTICATION REQUIRED
+                                .requestMatchers(
+                                    "/v3/api-docs/**",
+                                    "/swagger-ui/**",
+                                    "/swagger-ui.html",
+                                    "/swagger-resources/**",
+                                    "/webjars/**",
+                                    "/swagger-ui/index.html",
+                                    "/swagger-ui/swagger-ui.css",
+                                    "/swagger-ui/swagger-ui-bundle.js",
+                                    "/swagger-ui/swagger-ui-standalone-preset.js"
+                                ).permitAll()
+                                // All other public endpoints
                                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                                 // Explicitly allow all payment endpoints with any method
                                 .requestMatchers("/payment/**").permitAll()
-                                .anyRequest().
-                               // authenticated()
-                        permitAll()
+                                // Allow everything else (no authentication required)
+                                .anyRequest().permitAll()
                 )
+
+                // Disable HTTP Basic Authentication
+                .httpBasic(httpBasic -> httpBasic.disable())
+                
+                // Disable form login
+                .formLogin(formLogin -> formLogin.disable())
 
                 // Stateless sessions for JWT
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 );
 
-        // (Optional) disable frame options if you're testing H2 Console
-        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
+        // Disable frame options for Swagger UI
+        http.headers(headers -> headers
+                .frameOptions(frame -> frame.disable())
+        );
 
         return http.build();
     }
