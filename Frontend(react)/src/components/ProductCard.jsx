@@ -76,17 +76,29 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
     e.stopPropagation();
     e.preventDefault(); // Prevent any default behavior
     
-    // Immediately remove/add - function handles optimistic updates
-    if (isInWishlist(product.id)) {
-      // Remove immediately - state updates synchronously
-      removeFromWishlist(product.id);
-    } else {
-      // Add immediately - state updates synchronously
-      addToWishlist({
-        ...product,
-        id: product.id || `${product.name}_${Date.now()}`,
-        sellerId: currentStore?.sellerId, // Include sellerId for filtering
-      });
+    try {
+      const productId = product?.id || product?.productId;
+      
+      if (!productId) {
+        console.error('❌ [ProductCard] Cannot toggle wishlist: missing product ID');
+        return;
+      }
+      
+      // Immediately remove/add - function handles optimistic updates
+      if (isInWishlist(productId)) {
+        // Remove immediately - state updates synchronously
+        removeFromWishlist(productId);
+      } else {
+        // Add immediately - state updates synchronously
+        addToWishlist({
+          ...product,
+          id: productId,
+          productId: productId, // Ensure productId is explicitly set
+          sellerId: currentStore?.sellerId, // Include sellerId for filtering
+        });
+      }
+    } catch (error) {
+      console.error('❌ [ProductCard] Error toggling wishlist:', error);
     }
   };
 
@@ -212,13 +224,13 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
             <button
               className="product-card-wishlist-btn"
               onClick={handleWishlistToggle}
-              aria-label={isInWishlist(product.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+              aria-label={isInWishlist(product?.id || product?.productId) ? 'Remove from wishlist' : 'Add to wishlist'}
             >
               <svg
                 viewBox="0 0 24 24"
                 width="18"
                 height="18"
-                fill={isInWishlist(product.id) ? 'currentColor' : 'none'}
+                fill={isInWishlist(product?.id || product?.productId) ? 'currentColor' : 'none'}
                 stroke="currentColor"
                 strokeWidth="2"
               >

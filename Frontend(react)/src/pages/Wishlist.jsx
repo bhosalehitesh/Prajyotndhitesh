@@ -52,9 +52,6 @@ const Wishlist = () => {
 
   return (
     <div className="container" style={{padding: '2rem 0'}}>
-      <h1 style={{ marginBottom: '2rem', fontSize: '1.8rem', fontWeight: '700' }}>
-        {currentStore?.name ? `${currentStore.name} - Wishlist` : 'My Wishlist'}
-      </h1>
       {filteredWishlist.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}>
           <p style={{ fontSize: '1.2rem', color: '#666' }}>

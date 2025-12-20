@@ -140,11 +140,15 @@ const Checkout = () => {
           return;
         }
         
+        // Always set customer name and phone from user data
+        const userName = userData.fullName || userData.name || user.fullName || user.name || '';
+        const userPhoneNumber = userData.phone || userPhone;
+        
         // If user has address data in database, use it
         if (userData && (userData.pincode || userData.flatOrHouseNo || userData.areaOrStreet)) {
           setFormData({
-            customerName: userData.fullName || '',
-            mobileNumber: userData.phone || userPhone,
+            customerName: userName,
+            mobileNumber: userPhoneNumber,
             pincode: userData.pincode || '',
             houseNumber: userData.flatOrHouseNo || '',
             areaStreet: userData.areaOrStreet || '',
@@ -156,6 +160,13 @@ const Checkout = () => {
           });
           setIsAddressSaved(true);
           return; // Don't load from localStorage if we got data from DB
+        } else {
+          // Even if no address data, always set name and phone from user data
+          setFormData(prev => ({
+            ...prev,
+            customerName: userName || prev.customerName,
+            mobileNumber: userPhoneNumber || prev.mobileNumber
+          }));
         }
       } catch (error) {
         console.error('Error loading user address from database:', error);
@@ -179,8 +190,9 @@ const Checkout = () => {
           
           // Only load if phone matches or if no phone in saved address (legacy data)
           if (!address.mobileNumber || address.mobileNumber === userPhone) {
+            const userName = user.fullName || user.name || address.customerName || '';
             setFormData({
-              customerName: address.customerName || '',
+              customerName: userName,
               mobileNumber: userPhone, // Always use logged-in user's phone
               pincode: address.pincode || '',
               houseNumber: address.houseNumber || '',
@@ -242,15 +254,19 @@ const Checkout = () => {
     }));
   };
 
-  // Auto-fill phone number when user logs in
+  // Auto-fill phone number and customer name from user data (runs immediately when user is available)
   useEffect(() => {
-    if (isAuthenticated && user?.phone && !formData.mobileNumber) {
+    if (isAuthenticated && user) {
+      const userName = user.fullName || user.name || '';
+      const userPhone = user.phone || '';
+      
       setFormData(prev => ({
         ...prev,
-        mobileNumber: user.phone
+        customerName: userName || prev.customerName,
+        mobileNumber: userPhone || prev.mobileNumber
       }));
     }
-  }, [isAuthenticated, user?.phone]);
+  }, [isAuthenticated, user?.fullName, user?.name, user?.phone]);
 
   const handlePincodeChange = (e) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 6);
@@ -649,22 +665,61 @@ const Checkout = () => {
                 type="text"
                 name="customerName"
                 value={formData.customerName}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  // If user is logged in, prevent changing customer name
+                  if (isAuthenticated && user) {
+                    const userName = user.fullName || user.name;
+                    if (userName && e.target.value !== userName) {
+                      alert(`Customer name cannot be changed. Your registered name is ${userName}.`);
+                      setFormData(prev => ({
+                        ...prev,
+                        customerName: userName
+                      }));
+                      return;
+                    }
+                  }
+                  handleInputChange(e);
+                }}
                 placeholder="Name"
                 required
+                readOnly={isAuthenticated && user && (user.fullName || user.name) ? true : false}
                 style={{
                   width: '100%',
                   padding: '12px',
                   border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)'}`,
                   borderRadius: '8px',
                   fontSize: '0.95rem',
-                  background: isDarkMode ? '#0e0e0e' : '#fff',
+                  background: isAuthenticated && user && (user.fullName || user.name)
+                    ? (isDarkMode ? 'rgba(255,255,255,0.05)' : '#f0f0f0')
+                    : (isDarkMode ? '#0e0e0e' : '#fff'),
                   color: isDarkMode ? '#f5f5f5' : '#111',
-                  transition: 'border-color 0.2s'
+                  transition: 'border-color 0.2s',
+                  cursor: isAuthenticated && user && (user.fullName || user.name) ? 'not-allowed' : 'text'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#ff6d2e'}
+                onFocus={(e) => {
+                  if (!(isAuthenticated && user && (user.fullName || user.name))) {
+                    e.target.style.borderColor = '#ff6d2e';
+                  }
+                }}
                 onBlur={(e) => e.target.style.borderColor = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)'}
               />
+              {isAuthenticated && user && (user.fullName || user.name) && (
+                <p style={{ 
+                  fontSize: '0.8rem', 
+                  color: '#ff6d2e', 
+                  margin: '4px 0 0 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                  </svg>
+                  Customer name is locked to your registered name: {user.fullName || user.name}
+                </p>
+              )}
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

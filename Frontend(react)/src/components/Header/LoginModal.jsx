@@ -9,12 +9,14 @@ const LoginModal = ({
   show, 
   showOTPForm, 
   phone, 
+  customerName,
   otp, 
   demoOtp,
   onClose, 
   onPhoneSubmit, 
   onOTPSubmit, 
   onPhoneChange, 
+  onCustomerNameChange,
   onOtpChange,
   onBack 
 }) => {
@@ -107,8 +109,6 @@ const LoginModal = ({
             position: 'relative',
             zIndex: 1
           }}>
-            {/* Test element to verify rendering */}
-            <div style={{ color: 'red', fontSize: '12px', marginBottom: '10px' }}>DEBUG: Modal content rendering</div>
             <h2 style={{ 
               fontSize: '1.75rem', 
               fontWeight: 700, 
@@ -142,7 +142,33 @@ const LoginModal = ({
               style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                <label htmlFor="loginPhone" style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1a73e8', display: 'block' }}>Phone Number</label>
+                <label htmlFor="customerName" style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1a73e8', display: 'block' }}>Customer Name *</label>
+                <input 
+                  type="text" 
+                  id="customerName" 
+                  placeholder="Name" 
+                  required 
+                  value={customerName || ''}
+                  onChange={(e) => {
+                    console.log('Customer name input changed:', e.target.value);
+                    if (onCustomerNameChange) {
+                      onCustomerNameChange(e);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '2px solid rgba(0, 0, 0, 0.1)',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    color: '#333',
+                    backgroundColor: '#fff',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                <label htmlFor="loginPhone" style={{ fontSize: '0.9rem', fontWeight: 600, color: '#1a73e8', display: 'block' }}>Mobile Number *</label>
                 <input 
                   type="tel" 
                   id="loginPhone" 

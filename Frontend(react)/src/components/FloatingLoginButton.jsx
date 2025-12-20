@@ -11,6 +11,7 @@ const FloatingLoginButton = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showOTPForm, setShowOTPForm] = useState(false);
   const [phone, setPhone] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [demoOtp, setDemoOtp] = useState('');
@@ -29,6 +30,7 @@ const FloatingLoginButton = () => {
     setShowLoginModal(true);
     setShowOTPForm(false);
     setPhone('');
+    setCustomerName('');
     setOtp('');
     console.log('Set showLoginModal to true');
   };
@@ -41,6 +43,12 @@ const FloatingLoginButton = () => {
   // Handle phone number submission
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate customer name
+    if (!customerName || customerName.trim() === '') {
+      alert('Please enter your name');
+      return;
+    }
     
     // Validate phone number
     if (!phone || phone.length !== 10) {
@@ -90,15 +98,15 @@ const FloatingLoginButton = () => {
     setIsLoading(true);
     try {
       console.log('Verifying OTP for phone:', phone, 'OTP:', otp);
-      // Pass default fullName (backend requires it for new users)
-      // Using "User" + last 4 digits as default
-      const defaultFullName = `User ${phone.slice(-4)}`;
-      console.log('Sending fullName:', defaultFullName);
-      const userData = await verifyOTP(phone, otp, defaultFullName);
+      // Use customerName as fullName
+      const fullName = customerName.trim();
+      console.log('Sending fullName:', fullName);
+      const userData = await verifyOTP(phone, otp, fullName);
       console.log('OTP verified successfully, user:', userData);
       setShowLoginModal(false);
       setShowOTPForm(false);
       setPhone('');
+      setCustomerName('');
       setOtp('');
       // Show success message
       alert(`Login successful! Welcome ${userData.fullName || userData.name || 'User'}!`);
@@ -119,6 +127,7 @@ const FloatingLoginButton = () => {
     setShowLoginModal(false);
     setShowOTPForm(false);
     setPhone('');
+    setCustomerName('');
     setOtp('');
     setDemoOtp('');
   };
@@ -171,6 +180,7 @@ const FloatingLoginButton = () => {
         show={showLoginModal}
         showOTPForm={showOTPForm}
         phone={phone}
+        customerName={customerName}
         otp={otp}
         demoOtp={demoOtp}
         onClose={handleCloseLoginModal}
@@ -179,6 +189,9 @@ const FloatingLoginButton = () => {
         onPhoneChange={(e) => {
           const value = e.target.value.replace(/\D/g, ''); // Only allow digits
           setPhone(value);
+        }}
+        onCustomerNameChange={(e) => {
+          setCustomerName(e.target.value);
         }}
         onOtpChange={(e) => {
           const value = e.target.value.replace(/\D/g, ''); // Only allow digits

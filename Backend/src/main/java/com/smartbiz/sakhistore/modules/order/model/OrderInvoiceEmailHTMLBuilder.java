@@ -274,7 +274,7 @@ public class OrderInvoiceEmailHTMLBuilder {
     }
     
     private static String buildFallbackEmailTemplate(Orders order, String customerName, String invoiceNumber, 
-                                                     String orderId, String grandTotal, String invoiceDate) {
+                                                     String orderId, String grandTotal, String invoiceDate) {image.pngimage.png
         return """
 <!DOCTYPE html>
 <html>

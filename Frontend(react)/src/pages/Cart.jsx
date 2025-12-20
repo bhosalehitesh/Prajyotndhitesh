@@ -142,10 +142,6 @@ const Cart = () => {
         </div>
       </div>
 
-      <h1 style={{ marginBottom: '2rem', fontSize: '1.8rem', fontWeight: '700' }}>
-        {currentStore?.name ? `${currentStore.name} - Cart` : 'Shopping Cart'}
-      </h1>
-
       {filteredCart.length === 0 ? (
         <div style={{
           textAlign: 'center',

@@ -20,6 +20,7 @@ const Header = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showOTPForm, setShowOTPForm] = useState(false);
   const [phone, setPhone] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [otp, setOtp] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileSidebarOpen, setProfileSidebarOpen] = useState(false);
@@ -110,6 +111,19 @@ const Header = () => {
 
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate customer name
+    if (!customerName || customerName.trim() === '') {
+      alert('Please enter your name');
+      return;
+    }
+    
+    // Validate phone number
+    if (!phone || phone.length !== 10) {
+      alert('Please enter a valid 10-digit phone number');
+      return;
+    }
+    
     try {
       await sendOTP(phone);
       setShowOTPForm(true);
@@ -121,10 +135,13 @@ const Header = () => {
   const handleOTPSubmit = async (e) => {
     e.preventDefault();
     try {
-      await verifyOTP(phone, otp);
+      // Use customerName as fullName
+      const fullName = customerName.trim();
+      await verifyOTP(phone, otp, fullName);
       setShowLoginModal(false);
       setShowOTPForm(false);
       setPhone('');
+      setCustomerName('');
       setOtp('');
       window.location.reload();
     } catch (error) {
@@ -478,19 +495,58 @@ const Header = () => {
           <div className="mobile-sidebar-overlay active" onClick={() => setMobileMenuOpen(false)}></div>
           <div className="mobile-sidebar active">
             <div className="mobile-sidebar-header">
-              <div className="mobile-sidebar-profile">
-                <div className="mobile-sidebar-avatar">
-                  {user ? (
-                    <img src="/assets/default-avatar.png" alt="Profile" onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextElementSibling.style.display = 'block';
-                    }} />
-                  ) : null}
-                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ display: user ? 'none' : 'block' }}>
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                </div>
+              <div className="mobile-sidebar-profile" style={{ flex: 1 }}>
+                {user ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
+                    <div className="mobile-sidebar-avatar" style={{ 
+                      width: '50px', 
+                      height: '50px', 
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--vibrant-pink, #e83b8f)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '20px',
+                      fontWeight: 'bold',
+                      flexShrink: 0
+                    }}>
+                      {(() => {
+                        const displayName = user.fullName || user.name || '';
+                        return displayName ? displayName.charAt(0).toUpperCase() : 'U';
+                      })()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ 
+                        fontSize: '16px', 
+                        fontWeight: '600', 
+                        color: 'var(--text-color, #333)',
+                        marginBottom: '4px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {user.fullName || user.name || 'Guest'}
+                      </div>
+                      <div style={{ 
+                        fontSize: '13px', 
+                        color: 'var(--text-secondary, #666)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {user.phone || user.mobileNumber || 'No phone'}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mobile-sidebar-avatar">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-secondary, #999)' }}>
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
+                )}
               </div>
               <button className="mobile-sidebar-close" onClick={() => setMobileMenuOpen(false)} aria-label="Close Menu">
                 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -589,7 +645,18 @@ const Header = () => {
                 <p className="login-subtitle">Login or create an account</p>
                 <form className="login-form" onSubmit={handlePhoneSubmit}>
                   <div className="form-group">
-                    <label htmlFor="loginPhone">Phone Number</label>
+                    <label htmlFor="customerName">Customer Name *</label>
+                    <input
+                      type="text"
+                      id="customerName"
+                      placeholder="Name"
+                      required
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="loginPhone">Mobile Number *</label>
                     <input
                       type="tel"
                       id="loginPhone"
@@ -646,18 +713,99 @@ const Header = () => {
               </button>
             </div>
             <div className="profile-sidebar-content">
-              <div className="profile-sidebar-user">
-                <div className="profile-sidebar-avatar">
-                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
+              {user && (
+                <div className="profile-sidebar-user" style={{ padding: '20px', borderBottom: '1px solid rgba(0,0,0,0.1)', marginBottom: '16px' }}>
+                  <div className="profile-sidebar-avatar" style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>
+                    <div style={{
+                      width: '60px',
+                      height: '60px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--vibrant-pink, #e83b8f)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '24px',
+                      fontWeight: 'bold'
+                    }}>
+                      {(user.fullName || user.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="profile-sidebar-info" style={{ textAlign: 'center' }}>
+                    <div className="profile-sidebar-name" style={{ 
+                      fontSize: '18px', 
+                      fontWeight: '600', 
+                      color: 'var(--text-color, #333)',
+                      marginBottom: '8px'
+                    }}>
+                      {user.fullName || user.name || 'Guest'}
+                    </div>
+                    <div className="profile-sidebar-phone" style={{ 
+                      fontSize: '14px', 
+                      color: 'var(--text-secondary, #666)',
+                      marginBottom: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                      </svg>
+                      {user.phone || user.mobileNumber || 'No phone'}
+                    </div>
+                    {user.email && (
+                      <div className="profile-sidebar-email" style={{ 
+                        fontSize: '14px', 
+                        color: 'var(--text-secondary, #666)',
+                        marginBottom: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                          <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                        {user.email}
+                      </div>
+                    )}
+                    {(user.city || user.state) && (
+                      <div className="profile-sidebar-location" style={{ 
+                        fontSize: '14px', 
+                        color: 'var(--text-secondary, #666)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        marginTop: '8px'
+                      }}>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                          <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        {[user.city, user.state].filter(Boolean).join(', ') || 'Address not set'}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="profile-sidebar-info">
-                  <div className="profile-sidebar-name">{user ? user.name : 'Hello User'}</div>
-                  <div className="profile-sidebar-phone">{user ? user.phone : '+1234567890'}</div>
+              )}
+              {!user && (
+                <div className="profile-sidebar-user" style={{ padding: '20px', borderBottom: '1px solid rgba(0,0,0,0.1)', marginBottom: '16px', textAlign: 'center' }}>
+                  <div className="profile-sidebar-avatar" style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>
+                    <svg viewBox="0 0 24 24" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-secondary, #999)' }}>
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
+                  <div className="profile-sidebar-info">
+                    <div className="profile-sidebar-name" style={{ fontSize: '16px', color: 'var(--text-secondary, #666)' }}>
+                      Please sign in to view your profile
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="profile-sidebar-menu">
                 <Link to="/orders" className="profile-sidebar-item" onClick={() => setProfileSidebarOpen(false)}>
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
