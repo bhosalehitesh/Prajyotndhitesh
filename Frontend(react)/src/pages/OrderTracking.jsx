@@ -150,11 +150,7 @@ const OrderTracking = () => {
   const orderItems = order.orderItems || [];
   const orderStatus = order.orderStatus || order.status || 'PLACED';
   const orderDate = order.creationTime || order.orderDate || order.createdAt;
-<<<<<<< HEAD
   const displayOrderId = order.OrdersId || order.orderId || order.id;
-=======
-  const resolvedOrderId = order.OrdersId || order.orderId || order.id;
->>>>>>> 54ac9891540679f649608df5ab3bdf44aea4e092
   const statusSteps = getStatusSteps(orderStatus);
 
   return (
@@ -177,13 +173,8 @@ const OrderTracking = () => {
         >
           ← Back to Orders
         </button>
-<<<<<<< HEAD
-        <h1 style={{marginBottom: '0.5rem', fontSize: '2rem', fontWeight: 'bold'}}>
-          Track Order #{displayOrderId}
-=======
         <h1 style={{ marginBottom: '0.5rem', fontSize: '2rem', fontWeight: 'bold' }}>
-          Track Order #{resolvedOrderId}
->>>>>>> 54ac9891540679f649608df5ab3bdf44aea4e092
+          Track Order #{displayOrderId}
         </h1>
         <p style={{ color: '#666', marginBottom: '2rem' }}>
           Placed on {formatDate(orderDate)}
@@ -272,13 +263,8 @@ const OrderTracking = () => {
             <h2 style={{ margin: '0 0 0.5rem 0', fontSize: '1.5rem', fontWeight: '600' }}>
               Order Details
             </h2>
-<<<<<<< HEAD
-            <p style={{color: '#666', margin: '0 0 0.5rem 0', fontSize: '0.9rem'}}>
-              Order #{displayOrderId}
-=======
             <p style={{ color: '#666', margin: '0 0 0.5rem 0', fontSize: '0.9rem' }}>
-              Order #{resolvedOrderId}
->>>>>>> 54ac9891540679f649608df5ab3bdf44aea4e092
+              Order #{displayOrderId}
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
