@@ -8,8 +8,8 @@ html, body {
   height: 100%;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: var(--text-color);
-  background-color: var(--pastel-pink-bg);
-  transition: background-color 0.3s, color 0.3s;
+  background-color: var(--bg-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* ===== Page Layout ===== */
@@ -61,86 +61,148 @@ main {
 
 /* ===== Variables ===== */
 :root {
-  /* Pastel Pink Theme Colors */
-  --pastel-pink-bg: #FCEEF3;
+  /* Modern Purple-Pink Gradient Theme - Light Mode */
+  /* Primary Colors - Vibrant Purple-Pink Gradient */
+  --primary: #8B5CF6;
+  --primary-dark: #7C3AED;
+  --primary-light: #A78BFA;
+  --accent: #EC4899;
+  --accent-light: #F472B6;
+  --secondary: #6366F1;
+  --secondary-dark: #4F46E5;
+  
+  /* Background Colors - Modern Neutral Tones */
+  --bg-color: #FAFAFA;
+  --bg-light: #FFFFFF;
+  --pastel-pink-bg: #FAFAFA;
   --white-content: #FFFFFF;
-  --vibrant-pink: #E83B8F;
-  --vibrant-pink-alt: #E02B81;
-  --light-pink: #F6D3DD;
-  --light-pink-alt: #FBEAE3;
-  --text-dark: #1A1A1A;
-  --text-dark-alt: #333333;
-  --text-secondary: #666666;
-  --text-secondary-alt: #777777;
-
+  --light-hero: #F9FAFB;
+  --muted-white: #F3F4F6;
+  
+  /* Text Colors - High Contrast for Readability */
+  --text-color: #1F2937;
+  --text-dark: #111827;
+  --text-dark-alt: #1F2937;
+  --text-secondary: #6B7280;
+  --text-secondary-alt: #9CA3AF;
+  
+  /* Legacy Pink Variables (for backward compatibility) */
+  --vibrant-pink: #8B5CF6;
+  --vibrant-pink-alt: #EC4899;
+  --light-pink: #EDE9FE;
+  --light-pink-alt: #F3F4F6;
   --dark-brown: var(--text-dark);
-  --light-hero: #FCEEF3;
-  --muted-white: #FBEAE3;
-  --accent: #E83B8F;
-
-  --bg-color: #FCEEF3;
-  --text-color: #1A1A1A;
+  
+  /* UI Elements */
   --nav-bg: #FFFFFF;
   --card-bg: #FFFFFF;
   --footer-bg: #FFFFFF;
-  --footer-text: #1A1A1A;
-  --link-color: #E83B8F;
+  --footer-text: #1F2937;
+  --link-color: #8B5CF6;
   --overlay-bg: rgba(0,0,0,0.1);
+  
+  /* Borders & Shadows */
+  --border-color: #E5E7EB;
+  --border-light: #F3F4F6;
+  --shadow-sm: rgba(0, 0, 0, 0.05);
+  --shadow-md: rgba(0, 0, 0, 0.1);
+  --shadow-lg: rgba(0, 0, 0, 0.15);
 }
 
 /* Ensure light mode variables are always available */
 html:not(.dark-mode),
 body:not(.dark-mode) {
-  --pastel-pink-bg: #FCEEF3;
+  /* Modern Purple-Pink Gradient Theme - Light Mode */
+  --primary: #8B5CF6;
+  --primary-dark: #7C3AED;
+  --primary-light: #A78BFA;
+  --accent: #EC4899;
+  --accent-light: #F472B6;
+  --secondary: #6366F1;
+  --secondary-dark: #4F46E5;
+  
+  --bg-color: #FAFAFA;
+  --bg-light: #FFFFFF;
+  --pastel-pink-bg: #FAFAFA;
   --white-content: #FFFFFF;
-  --vibrant-pink: #E83B8F;
-  --vibrant-pink-alt: #E02B81;
-  --light-pink: #F6D3DD;
-  --light-pink-alt: #FBEAE3;
-  --text-dark: #1A1A1A;
-  --text-dark-alt: #333333;
-  --text-secondary: #666666;
-  --text-secondary-alt: #777777;
-
-  --bg-color: #FCEEF3;
-  --text-color: #1A1A1A;
+  --light-hero: #F9FAFB;
+  --muted-white: #F3F4F6;
+  
+  --text-color: #1F2937;
+  --text-dark: #111827;
+  --text-dark-alt: #1F2937;
+  --text-secondary: #6B7280;
+  --text-secondary-alt: #9CA3AF;
+  
+  --vibrant-pink: #8B5CF6;
+  --vibrant-pink-alt: #EC4899;
+  --light-pink: #EDE9FE;
+  --light-pink-alt: #F3F4F6;
+  --dark-brown: var(--text-dark);
+  
   --nav-bg: #FFFFFF;
   --card-bg: #FFFFFF;
   --footer-bg: #FFFFFF;
-  --footer-text: #1A1A1A;
-  --link-color: #E83B8F;
+  --footer-text: #1F2937;
+  --link-color: #8B5CF6;
   --overlay-bg: rgba(0,0,0,0.1);
-  --light-hero: #FCEEF3;
-  --muted-white: #FBEAE3;
-  --accent: #E83B8F;
+  
+  --border-color: #E5E7EB;
+  --border-light: #F3F4F6;
+  --shadow-sm: rgba(0, 0, 0, 0.05);
+  --shadow-md: rgba(0, 0, 0, 0.1);
+  --shadow-lg: rgba(0, 0, 0, 0.15);
 }
 
 /* ===== Dark Mode Variables ===== */
 html.dark-mode,
 body.dark-mode {
-  /* Dark Theme Colors - Elegant dark with subtle pink accents */
-  --pastel-pink-bg: #1a1418;
-  --white-content: #2a1f26;
-  --vibrant-pink: #E83B8F;
-  --vibrant-pink-alt: #F49BC8;
-  --light-pink: #3d2d35;
-  --light-pink-alt: #2d2128;
-  --text-dark: #f5f5f5;
-  --text-dark-alt: #e0e0e0;
-  --text-secondary: #b0b0b0;
-  --text-secondary-alt: #999999;
-
-  --bg-color: #1a1418;
-  --text-color: #f5f5f5;
-  --nav-bg: #2a1f26;
-  --card-bg: #2a1f26;
-  --footer-bg: #2a1f26;
-  --footer-text: #f5f5f5;
-  --link-color: #E83B8F;
+  /* Modern Purple-Pink Gradient Theme - Dark Mode */
+  /* Primary Colors - Same vibrant colors, work great on dark */
+  --primary: #8B5CF6;
+  --primary-dark: #A78BFA;
+  --primary-light: #C4B5FD;
+  --accent: #EC4899;
+  --accent-light: #F9A8D4;
+  --secondary: #818CF8;
+  --secondary-dark: #6366F1;
+  
+  /* Background Colors - Rich Dark Tones */
+  --bg-color: #0F172A;
+  --bg-light: #1E293B;
+  --pastel-pink-bg: #0F172A;
+  --white-content: #1E293B;
+  --light-hero: #1E293B;
+  --muted-white: #334155;
+  
+  /* Text Colors - Light for Dark Background */
+  --text-color: #F1F5F9;
+  --text-dark: #FFFFFF;
+  --text-dark-alt: #E2E8F0;
+  --text-secondary: #94A3B8;
+  --text-secondary-alt: #64748B;
+  
+  /* Legacy Pink Variables (for backward compatibility) */
+  --vibrant-pink: #8B5CF6;
+  --vibrant-pink-alt: #EC4899;
+  --light-pink: #1E293B;
+  --light-pink-alt: #334155;
+  --dark-brown: var(--text-color);
+  
+  /* UI Elements */
+  --nav-bg: #1E293B;
+  --card-bg: #1E293B;
+  --footer-bg: #1E293B;
+  --footer-text: #F1F5F9;
+  --link-color: #A78BFA;
   --overlay-bg: rgba(0,0,0,0.7);
-  --light-hero: #2d2128;
-  --muted-white: #3d2d35;
-  --accent: #E83B8F;
+  
+  /* Borders & Shadows */
+  --border-color: #334155;
+  --border-light: #475569;
+  --shadow-sm: rgba(0, 0, 0, 0.3);
+  --shadow-md: rgba(0, 0, 0, 0.5);
+  --shadow-lg: rgba(0, 0, 0, 0.7);
 }
 
 /* Apply dark mode background to html element for full page coverage */
@@ -161,6 +223,60 @@ html:not(.dark-mode) {
 
 body:not(.dark-mode) {
   background-color: var(--bg-color) !important;
+}
+
+/* ===== Modern Gradient Utilities ===== */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-bg-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+}
+
+.gradient-bg-secondary {
+  background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+}
+
+.gradient-border {
+  border: 2px solid transparent;
+  background: linear-gradient(var(--card-bg), var(--card-bg)) padding-box,
+              linear-gradient(135deg, var(--primary), var(--accent)) border-box;
+}
+
+/* Modern Button Styles with Gradients */
+.btn-gradient {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+}
+
+.btn-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.btn-gradient:active {
+  transform: translateY(0);
+}
+
+/* Modern Card with Gradient Accent */
+.card-gradient-accent {
+  border-left: 4px solid;
+  border-image: linear-gradient(135deg, var(--primary), var(--accent)) 1;
+  background: var(--card-bg);
+  box-shadow: 0 2px 8px var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.card-gradient-accent:hover {
+  box-shadow: 0 4px 16px var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 /* ===== Layout Helpers ===== */
@@ -191,11 +307,15 @@ body:not(.dark-mode) {
   position: relative;
 }
 
-/* Redesigned Navbar - Light Pink Accent Stripe */
+/* Redesigned Navbar - Modern Purple Accent Stripe */
 .topbar.redesigned-navbar {
-  background-color: #FFFFFF;
-  box-shadow: none;
-  border-bottom: 1px solid rgba(232, 59, 143, 0.1);
+  background-color: var(--nav-bg);
+  box-shadow: 0 1px 3px var(--shadow-sm);
+  border-bottom: 2px solid transparent;
+  background-image: linear-gradient(var(--nav-bg), var(--nav-bg)), 
+                    linear-gradient(90deg, var(--primary), var(--accent));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
 }
 
 .topbar.redesigned-navbar .navbar-accent-stripe {
@@ -1183,8 +1303,8 @@ body.dark-mode .biggest-deals .section-title {
 
 /* ===== Footer ===== */
 .site-footer {
-  background-color: #1A1A1A;
-  color: #FFFFFF;
+  background: linear-gradient(180deg, var(--footer-bg) 0%, var(--footer-bg) 100%);
+  color: var(--footer-text);
   padding: 0;
   margin-top: auto !important; /* Push footer to bottom - force with !important */
   flex-shrink: 0 !important; /* Prevent footer from shrinking */
@@ -1192,14 +1312,18 @@ body.dark-mode .biggest-deals .section-title {
   position: relative;
   z-index: 1;
   clear: both; /* Clear any floats */
-  transition: background-color 0.3s, color 0.3s;
-  border-top: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  border-top: 3px solid transparent;
+  background-image: 
+    linear-gradient(var(--footer-bg), var(--footer-bg)),
+    linear-gradient(90deg, var(--primary), var(--accent));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: 0 -4px 20px rgba(139, 92, 246, 0.1);
 }
 
 body.dark-mode .site-footer {
-  background-color: #1A1A1A;
-  color: #FFFFFF;
-  border-top: none;
+  box-shadow: 0 -4px 20px rgba(139, 92, 246, 0.2);
 }
 
 /* Ensure footer positioning works on all pages - footer appears AFTER all content */
@@ -1277,7 +1401,10 @@ body > .page-wrapper > .site-footer {
 .footer-brand-name {
   font-size: 28px;
   font-weight: 700;
-  color: #FFFFFF;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin: 0 0 16px 0;
   line-height: 1.2;
   letter-spacing: -0.5px;
@@ -1286,7 +1413,7 @@ body > .page-wrapper > .site-footer {
 .footer-brand-description {
   font-size: 15px;
   line-height: 1.6;
-  color: #CCCCCC;
+  color: var(--text-secondary);
   margin: 0;
   max-width: 450px;
 }
@@ -1303,19 +1430,21 @@ body > .page-wrapper > .site-footer {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background-color: #FFFFFF;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #1A1A1A;
+  color: #FFFFFF;
   text-decoration: none;
-  transition: transform 0.3s ease, background-color 0.3s ease;
+  transition: all 0.3s ease;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
 
 .social-icon:hover {
-  transform: translateY(-2px);
-  background-color: #F0F0F0;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.5);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent-light) 100%);
 }
 
 .social-icon svg {
@@ -1332,9 +1461,22 @@ body > .page-wrapper > .site-footer {
 .footer-heading {
   font-size: 18px;
   font-weight: 600;
-  color: #FFFFFF;
+  color: var(--footer-text);
   margin: 0 0 24px 0;
   letter-spacing: -0.3px;
+  position: relative;
+  padding-bottom: 8px;
+}
+
+.footer-heading::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 2px;
 }
 
 .footer-links {
@@ -1351,16 +1493,33 @@ body > .page-wrapper > .site-footer {
 }
 
 .footer-links li a {
-  color: #CCCCCC;
+  color: var(--text-secondary);
   text-decoration: none;
   font-size: 15px;
   font-weight: 400;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
   display: inline-block;
+  position: relative;
+}
+
+.footer-links li a::before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 1px;
+  bottom: -2px;
+  left: 0;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  transition: width 0.3s ease;
 }
 
 .footer-links li a:hover {
-  color: #FFFFFF;
+  color: var(--primary);
+  padding-left: 4px;
+}
+
+.footer-links li a:hover::before {
+  width: 100%;
 }
 
 /* Contact Info */
@@ -1374,29 +1533,43 @@ body > .page-wrapper > .site-footer {
   margin: 0;
   font-size: 15px;
   line-height: 1.5;
-  color: #CCCCCC;
+  color: var(--text-secondary);
 }
 
 .contact-line a {
-  color: #CCCCCC;
+  color: var(--text-secondary);
   text-decoration: none;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .contact-line a:hover {
-  color: #FFFFFF;
+  color: var(--primary);
+  padding-left: 4px;
 }
 
 /* Footer Bottom */
 .footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-color);
   padding: 32px 60px;
-  background-color: rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, var(--footer-bg) 0%, var(--bg-light) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.footer-bottom::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary), var(--accent), transparent);
+  opacity: 0.5;
 }
 
 body.dark-mode .footer-bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, var(--footer-bg) 0%, rgba(30, 41, 59, 0.8) 100%);
 }
 
 .footer-bottom-content {
@@ -1416,7 +1589,7 @@ body.dark-mode .footer-bottom {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #CCCCCC;
+  color: var(--text-secondary);
 }
 
 .payment-label,
@@ -1430,8 +1603,11 @@ body.dark-mode .footer-bottom {
 }
 
 .payment-method {
-  color: #E83B8F;
-  font-weight: 500;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
 }
 
 .smartbiz-logo {
@@ -1455,7 +1631,7 @@ body.dark-mode .footer-bottom {
 }
 
 .footer-login-btn {
-  background: var(--vibrant-pink);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   color: #fff;
   border: none;
   border-radius: 50px;
@@ -1463,17 +1639,17 @@ body.dark-mode .footer-bottom {
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(232, 59, 143, 0.3);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
 }
 
 .footer-login-btn:hover {
-  background: var(--vibrant-pink-alt);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(232, 59, 143, 0.4);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent-light) 100%);
 }
 
 .footer-login-btn:active {
