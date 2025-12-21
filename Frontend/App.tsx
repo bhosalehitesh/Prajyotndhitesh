@@ -166,7 +166,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 // Main Stack Navigator (includes tabs + modal screens)
 function MainStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator 
+      initialRouteName="MainTabs"
+      screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="StoreAppearance" component={StoreAppearanceScreen} />
       <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
@@ -178,6 +180,7 @@ function MainStack() {
 function TabNavigator() {
   return (
     <Tab.Navigator
+      initialRouteName="Home"
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
@@ -222,6 +225,8 @@ function AppContent(): JSX.Element {
       // If this session is an EXPLICIT SIGN-IN, always skip onboarding and go to home
       if (isSignInFlag === 'true') {
         console.log('🔍 App mount onboarding check: signed-in user, skipping onboarding');
+        // Ensure onboarding is marked as completed so user goes directly to home
+        await storage.setItem('onboardingCompleted', 'true');
         setShowOnboarding(false);
         setCheckingOnboarding(false);
         return;
@@ -270,6 +275,8 @@ function AppContent(): JSX.Element {
           // If user is SIGNING IN (existing user), ALWAYS skip onboarding and go to home
           if (isSignIn === 'true') {
             console.log('✅ User signed IN - skipping onboarding, going to home');
+            // Clear any onboarding flags to ensure we go to home
+            await storage.setItem('onboardingCompleted', 'true');
             setShowOnboarding(false);
             setCheckingOnboarding(false);
             return;

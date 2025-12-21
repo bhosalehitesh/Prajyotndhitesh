@@ -16,7 +16,7 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { AUTH_TOKEN_KEY, AUTH_PHONE_KEY, storage } from './storage';
-import { signup, verifyOtp, login as apiLogin, sendLoginOtp, loginWithOtp, getSellerDetails, getCurrentSellerStoreDetails, API_BASE_URL } from '../utils/api';
+import { signup, verifyOtp, login as apiLogin, sendLoginOtp, loginWithOtp, getSellerDetails, getCurrentSellerStoreDetails, API_BASE_URL, sendForgotPasswordOtp, verifyForgotPasswordOtp, resetPassword } from '../utils/api';
 import { useAuth } from './AuthContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -50,6 +50,14 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
   const [signInOtpSent, setSignInOtpSent] = useState<string>('');
   const [showSignInPassword, setShowSignInPassword] = useState(false);
 
+  // Forgot Password fields
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<'phone' | 'otp' | 'reset'>('phone');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
 
   // Sign Up validations
@@ -76,6 +84,15 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
   const isSignInOtpValid = useMemo(() => {
     return /^\d{6}$/.test(signInOtp);
   }, [signInOtp]);
+
+  // Forgot Password validations
+  const isNewPasswordValid = useMemo(() => {
+    return newPassword.length >= 6;
+  }, [newPassword]);
+
+  const isConfirmPasswordValid = useMemo(() => {
+    return confirmPassword === newPassword && confirmPassword.length >= 6;
+  }, [confirmPassword, newPassword]);
 
   // Sign Up Functions
   const handleVerifyMobile = async () => {
@@ -454,28 +471,131 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
       return;
     }
 
+    setLoading(true);
     const cleanMobile = signInMobile.replace(/\D/g, '');
-    const storedPhone = await storage.getItem(AUTH_PHONE_KEY);
 
-    if (!storedPhone || storedPhone !== cleanMobile) {
+    try {
+      console.log('📱 [Forgot Password] Requesting OTP for:', cleanMobile);
+      
+      // Call backend API to send forgot password OTP
+      const otpCode = await sendForgotPasswordOtp(cleanMobile);
+      
+      setSignInOtpSent(otpCode || '');
+      setIsForgotPassword(true);
+      setForgotPasswordStep('otp');
+      setSignInPassword('');
+      setSignInOtp('');
+      
+      Alert.alert(
+        'OTP Sent',
+        `We've sent an OTP to ${signInMobile}. Please enter it to reset your password.${otpCode ? `\n\nOTP (Dev): ${otpCode}` : ''}`,
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send OTP. Please try again.';
+      console.error('❌ [Forgot Password] Error:', errorMessage);
+      
+      if (errorMessage.includes('not found')) {
       Alert.alert(
         'Account Not Found',
         'No account found with this mobile number. Please sign up first.',
         [{ text: 'OK' }]
       );
+      } else {
+        Alert.alert('Error', errorMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyForgotPasswordOtp = async () => {
+    if (!isSignInOtpValid) {
+      Alert.alert('Validation', 'Please enter a valid 6-digit OTP.');
       return;
     }
 
-    // Generate OTP for password reset
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    setSignInOtpSent(otpCode);
-    setSignInMethod('otp');
-    setSignInPassword('');
+    setLoading(true);
+    const cleanMobile = signInMobile.replace(/\D/g, '');
+
+    try {
+      console.log('📱 [Forgot Password] Verifying OTP for:', cleanMobile);
+      
+      // Verify OTP with backend
+      await verifyForgotPasswordOtp(cleanMobile, signInOtp);
+      
+      // Move to password reset step
+      setForgotPasswordStep('reset');
+      setSignInOtp('');
+      
+      Alert.alert('Success', 'OTP verified! Please enter your new password.', [{ text: 'OK' }]);
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : 'OTP verification failed. Please try again.';
+      console.error('❌ [Forgot Password] OTP verification error:', errorMessage);
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!isNewPasswordValid) {
+      Alert.alert('Validation', 'Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (!isConfirmPasswordValid) {
+      Alert.alert('Validation', 'Passwords do not match. Please try again.');
+      return;
+    }
+
+    setLoading(true);
+    const cleanMobile = signInMobile.replace(/\D/g, '');
+
+    try {
+      console.log('📱 [Reset Password] Resetting password for:', cleanMobile);
+      
+      // Reset password (backend returns token but we won't use it - user needs to login)
+      const authResponse = await resetPassword(cleanMobile, newPassword);
+      
+      console.log('✅ [Reset Password] Password reset successful');
+      
+      // Validate response to ensure password was reset
+      if (!authResponse || !authResponse.token) {
+        throw new Error('Password reset failed: Invalid response from server');
+      }
+
+      // Reset all forgot password states
+      setIsForgotPassword(false);
+      setForgotPasswordStep('phone');
+      setNewPassword('');
+      setConfirmPassword('');
+      setSignInOtp('');
+      setSignInOtpSent('');
+      // Keep the mobile number in the login field so user can easily login
+      // setSignInMobile(''); // Don't clear mobile - user can login with it
+      setSignInPassword(''); // Clear password field
+      setSignInMethod('password'); // Switch back to password login method
+
+      // Show success message and return to login screen
     Alert.alert(
-      'OTP Sent',
-      `We've sent an OTP to ${signInMobile}. Use this OTP to sign in.\n\nOTP: ${otpCode}`,
-      [{ text: 'OK' }]
-    );
+        'Password Reset Successful', 
+        'Your password has been reset successfully. Please login with your new password.',
+        [{ 
+          text: 'OK', 
+          onPress: () => {
+            // User will now be on login screen and can login with new password
+            console.log('✅ User returned to login screen after password reset');
+          }
+        }]
+      );
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : 'Password reset failed. Please try again.';
+      console.error('❌ [Reset Password] Error:', errorMessage);
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTermsPress = () => {
@@ -516,7 +636,146 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
             {/* Floating White Card */}
             <View style={styles.floatingCard}>
               {authMode === 'signin' ? (
-                // SIGN IN FORM
+                // SIGN IN FORM OR FORGOT PASSWORD FLOW
+                <View>
+                  {isForgotPassword ? (
+                    // FORGOT PASSWORD FLOW
+                    <View>
+                      {/* Back Button */}
+                      <TouchableOpacity
+                        onPress={() => {
+                          setIsForgotPassword(false);
+                          setForgotPasswordStep('phone');
+                          setSignInOtp('');
+                          setNewPassword('');
+                          setConfirmPassword('');
+                        }}
+                        style={{ marginBottom: 15, alignSelf: 'flex-start' }}
+                      >
+                        <MaterialCommunityIcons name="arrow-left" size={24} color="#e61580" />
+                      </TouchableOpacity>
+
+                      <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#111', marginBottom: 10, textAlign: 'center' }}>
+                        Reset Password
+                      </Text>
+
+                      {forgotPasswordStep === 'otp' ? (
+                        // OTP VERIFICATION STEP
+                        <View>
+                          <Text style={{ textAlign: 'center', marginBottom: 20, color: '#6c757d' }}>
+                            Enter the OTP sent to +91 {signInMobile}
+                          </Text>
+
+                          <View style={styles.inputContainer}>
+                            <MaterialCommunityIcons name="message-lock-outline" size={24} color="#6c757d" style={styles.inputIcon} />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Enter OTP"
+                              placeholderTextColor="#9ca3af"
+                              keyboardType="number-pad"
+                              value={signInOtp}
+                              onChangeText={(text) => setSignInOtp(text.replace(/\D/g, '').slice(0, 6))}
+                              maxLength={6}
+                            />
+                          </View>
+
+                          {/* Demo OTP Box */}
+                          {signInOtpSent && signInOtpSent.length > 0 && (
+                            <View style={styles.demoOtpBox}>
+                              <Text style={styles.demoOtpText}>{signInOtpSent}</Text>
+                              <TouchableOpacity onPress={() => setSignInOtp(signInOtpSent)}>
+                                <Text style={{ color: '#6c757d', fontSize: 12, marginTop: 4 }}>Tap to Auto-Fill</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
+
+                          <TouchableOpacity
+                            style={[
+                              styles.primaryButton,
+                              (!isSignInOtpValid || loading) && styles.buttonDisabled
+                            ]}
+                            onPress={handleVerifyForgotPasswordOtp}
+                            disabled={!isSignInOtpValid || loading}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.primaryButtonText}>
+                              {loading ? 'VERIFYING...' : 'VERIFY OTP'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : forgotPasswordStep === 'reset' ? (
+                        // PASSWORD RESET STEP
+                        <View>
+                          <Text style={{ textAlign: 'center', marginBottom: 20, color: '#6c757d' }}>
+                            Enter your new password
+                          </Text>
+
+                          {/* New Password Input */}
+                          <View style={styles.inputContainer}>
+                            <MaterialCommunityIcons name="lock-outline" size={24} color="#6c757d" style={styles.inputIcon} />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="New Password"
+                              placeholderTextColor="#9ca3af"
+                              secureTextEntry={!showNewPassword}
+                              value={newPassword}
+                              onChangeText={setNewPassword}
+                              autoCapitalize="none"
+                            />
+                            <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+                              <MaterialCommunityIcons
+                                name={showNewPassword ? 'eye-off' : 'eye'}
+                                size={24}
+                                color="#9ca3af"
+                              />
+                            </TouchableOpacity>
+                          </View>
+
+                          {/* Confirm Password Input */}
+                          <View style={[styles.inputContainer, { marginTop: 15 }]}>
+                            <MaterialCommunityIcons name="lock-check-outline" size={24} color="#6c757d" style={styles.inputIcon} />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Confirm Password"
+                              placeholderTextColor="#9ca3af"
+                              secureTextEntry={!showConfirmPassword}
+                              value={confirmPassword}
+                              onChangeText={setConfirmPassword}
+                              autoCapitalize="none"
+                            />
+                            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                              <MaterialCommunityIcons
+                                name={showConfirmPassword ? 'eye-off' : 'eye'}
+                                size={24}
+                                color="#9ca3af"
+                              />
+                            </TouchableOpacity>
+                          </View>
+
+                          {confirmPassword.length > 0 && !isConfirmPasswordValid && (
+                            <Text style={{ color: '#e61580', fontSize: 12, marginTop: 5 }}>
+                              Passwords do not match
+                            </Text>
+                          )}
+
+                          <TouchableOpacity
+                            style={[
+                              styles.primaryButton,
+                              (!isConfirmPasswordValid || loading) && styles.buttonDisabled
+                            ]}
+                            onPress={handleResetPassword}
+                            disabled={!isConfirmPasswordValid || loading}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.primaryButtonText}>
+                              {loading ? 'RESETTING...' : 'RESET PASSWORD'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
+                    </View>
+                  ) : (
+                    // NORMAL SIGN IN FORM
                 <View>
                   {/* Mobile Input (Username equivalent) */}
                   <View style={styles.inputContainer}>
@@ -624,6 +883,8 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
                       <Text style={styles.footerLinkRed}>Sign Up</Text>
                     </TouchableOpacity>
                   </View>
+                    </View>
+                  )}
 
                   {/* Toggle Sign In Method */}
                   {signInMethod === 'password' && (

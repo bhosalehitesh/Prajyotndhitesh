@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, FlatList, StyleSheet, Text, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, FlatList, StyleSheet, Text, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import OrderCard from '../../components/orders/OrderCard';
 import { useOrders } from './useOrders';
@@ -28,8 +28,29 @@ const OrdersList: React.FC<OrdersListProps> = ({ status, emptyMessage }) => {
   const handleOrderPress = (orderId: string) => {
     // Find the order to get the numeric OrdersId
     const order = orders.find(o => o.id === orderId);
-    const numericId = order?.ordersId || orderId;
-    navigation.navigate('OrderDetails' as never, { orderId: String(numericId) } as never);
+    
+    // Check if order exists and has a valid numeric ID
+    if (!order) {
+      console.error('❌ [OrdersList] Order not found:', orderId);
+      return;
+    }
+    
+    // Only navigate if we have a valid numeric order ID (not temp- IDs)
+    if (order.ordersId && order.ordersId > 0) {
+      navigation.navigate('OrderDetails' as never, { orderId: String(order.ordersId) } as never);
+    } else {
+      console.error('❌ [OrdersList] Order does not have a valid numeric ID:', {
+        orderId,
+        ordersId: order.ordersId,
+        orderNumber: order.orderNumber
+      });
+      // Show error to user
+      Alert.alert(
+        'Invalid Order',
+        'This order does not have a valid ID. Please refresh the orders list.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const onRefresh = async () => {

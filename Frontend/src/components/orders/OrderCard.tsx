@@ -1,36 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-
-type OrderStatus =
-  | 'pending'
-  | 'accepted'
-  | 'shipped'
-  | 'pickup_ready'
-  | 'delivered'
-  | 'canceled'
-  | 'rejected';
-
-type PaymentStatus = 'paid' | 'pending' | 'unpaid' | 'refunded';
-
-type OrderItem = {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-  totalPrice: number;
-};
-
-export type Order = {
-  id: string;
-  orderNumber: string;
-  customerName: string;
-  orderDate: string;
-  status: OrderStatus;
-  items: OrderItem[];
-  totalAmount: number;
-  paymentStatus: PaymentStatus;
-  shippingAddress?: string;
-};
+import { Order } from '../../screens/Orders/types';
 
 interface OrderCardProps {
   order: Order;
@@ -38,10 +8,15 @@ interface OrderCardProps {
 }
 
 const OrderCard = ({ order, onPress }: OrderCardProps) => {
+  // Check if order has a valid numeric ID (not temp- IDs)
+  const hasValidId = order.id && !order.id.startsWith('temp-') && order.ordersId && order.ordersId > 0;
+  
   return (
     <TouchableOpacity 
-      style={styles.card}
-      onPress={() => onPress?.(order.id)}
+      style={[styles.card, !hasValidId && styles.cardDisabled]}
+      onPress={() => hasValidId ? onPress?.(order.id) : undefined}
+      disabled={!hasValidId}
+      activeOpacity={hasValidId ? 0.7 : 1}
     >
       <View style={styles.header}>
         <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
@@ -62,6 +37,13 @@ const OrderCard = ({ order, onPress }: OrderCardProps) => {
         <Text style={styles.itemCount}>{order.items.length} items</Text>
         <Text style={styles.totalAmount}>₹{order.totalAmount}</Text>
       </View>
+
+      {order.status === 'rejected' && order.rejectionReason && (
+        <View style={styles.rejectionReasonContainer}>
+          <Text style={styles.rejectionReasonLabel}>Rejection Reason:</Text>
+          <Text style={styles.rejectionReasonText}>{order.rejectionReason}</Text>
+        </View>
+      )}
 
       <Text style={styles.paymentStatus}>
         Payment: {order.paymentStatus.toUpperCase()}
@@ -103,6 +85,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  cardDisabled: {
+    opacity: 0.6,
   },
   header: {
     flexDirection: 'row',
@@ -148,6 +133,26 @@ const styles = StyleSheet.create({
   paymentStatus: {
     fontSize: 12,
     color: '#666',
+  },
+  rejectionReasonContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+    padding: 10,
+    backgroundColor: '#fee2e2',
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: '#c0392b',
+  },
+  rejectionReasonLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#c0392b',
+    marginBottom: 4,
+  },
+  rejectionReasonText: {
+    fontSize: 13,
+    color: '#7f1d1d',
+    lineHeight: 18,
   },
 });
 

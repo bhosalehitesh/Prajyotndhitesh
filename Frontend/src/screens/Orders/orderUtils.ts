@@ -21,6 +21,8 @@ const mapOrderStatus = (backendStatus: OrderDto['orderStatus']): OrderStatus => 
       return 'delivered';
     case 'CANCELLED':
       return 'canceled';
+    case 'REJECTED':
+      return 'rejected';
     default:
       return 'pending';
   }
@@ -119,14 +121,56 @@ export const transformOrder = (backendOrder: OrderDto, index?: number): Order =>
     totalAmount: backendOrder.totalAmount || 0,
     paymentStatus: mapPaymentStatus(backendOrder.paymentStatus),
     shippingAddress: backendOrder.address,
+    rejectionReason: backendOrder.rejectionReason,
   };
 };
 
 /**
  * Transform array of backend orders to frontend orders
+ * Filters out orders without valid IDs (OrdersId must be a positive number)
+ * This prevents "Invalid order ID" errors when clicking on orders
  */
 export const transformOrders = (backendOrders: OrderDto[]): Order[] => {
-  return backendOrders.map((order, index) => transformOrder(order, index));
+  // Log backend orders to debug invalid IDs
+  const invalidBackendOrders = backendOrders.filter(order => 
+    !order.OrdersId || order.OrdersId <= 0
+  );
+  
+  if (invalidBackendOrders.length > 0) {
+    console.warn('⚠️ [transformOrders] Backend returned orders with invalid OrdersId:', 
+      invalidBackendOrders.map(o => ({
+        OrdersId: o.OrdersId,
+        totalAmount: o.totalAmount,
+        orderStatus: o.orderStatus,
+        creationTime: o.creationTime
+      }))
+    );
+  }
+  
+  // Transform all orders
+  const transformed = backendOrders.map((order, index) => transformOrder(order, index));
+  
+  // Filter out orders with invalid IDs (temp- IDs or missing ordersId)
+  const validOrders = transformed.filter((order) => {
+    const hasValidId = order.ordersId && order.ordersId > 0 && !order.id.startsWith('temp-');
+    if (!hasValidId) {
+      console.warn('⚠️ [transformOrders] Filtering out order with invalid ID:', {
+        id: order.id,
+        ordersId: order.ordersId,
+        orderNumber: order.orderNumber,
+        customerName: order.customerName
+      });
+    }
+    return hasValidId;
+  });
+  
+  if (transformed.length !== validOrders.length) {
+    console.warn(`⚠️ [transformOrders] Filtered out ${transformed.length - validOrders.length} orders with invalid IDs out of ${transformed.length} total`);
+  } else {
+    console.log(`✅ [transformOrders] All ${validOrders.length} orders have valid IDs`);
+  }
+  
+  return validOrders;
 };
 
 /**
@@ -150,4 +194,3 @@ export const groupOrdersByStatus = (orders: Order[]) => {
     rejected: filterOrdersByStatus(orders, 'rejected'),
   };
 };
-

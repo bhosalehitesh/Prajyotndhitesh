@@ -233,9 +233,18 @@ public class OrdersService {
     // ===============================
     // Update Order Status
     // ===============================
-    public Orders updateOrderStatus(Long id, OrderStatus status) {
+    public Orders updateOrderStatus(Long id, OrderStatus status, String rejectionReason) {
         Orders order = getOrder(id);
         order.setOrderStatus(status);
+        
+        // Store rejection reason if provided and status is REJECTED
+        if (status == com.smartbiz.sakhistore.modules.order.model.OrderStatus.REJECTED && rejectionReason != null && !rejectionReason.trim().isEmpty()) {
+            order.setRejectionReason(rejectionReason.trim());
+        } else if (status != com.smartbiz.sakhistore.modules.order.model.OrderStatus.REJECTED) {
+            // Clear rejection reason if order is not rejected
+            order.setRejectionReason(null);
+        }
+        
         return ordersRepository.save(order);
     }
 

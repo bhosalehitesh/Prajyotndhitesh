@@ -28,6 +28,7 @@ export interface Order {
   totalAmount: number;
   paymentStatus: PaymentStatus;
   shippingAddress?: string;
+  rejectionReason?: string;
 }
 
 

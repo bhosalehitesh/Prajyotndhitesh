@@ -150,7 +150,8 @@ const OrderTracking = () => {
   const orderItems = order.orderItems || [];
   const orderStatus = order.orderStatus || order.status || 'PLACED';
   const orderDate = order.creationTime || order.orderDate || order.createdAt;
-  const orderId = order.OrdersId || order.orderId || order.id;
+  // orderId is already declared from URL params on line 14, so we use that
+  // If we need the order's ID from the fetched object, we can use: order.OrdersId || order.orderId || order.id || orderId
   const statusSteps = getStatusSteps(orderStatus);
 
   return (

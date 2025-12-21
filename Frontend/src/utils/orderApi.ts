@@ -25,17 +25,19 @@ export interface OrderDto {
   OrdersId: number;
   totalAmount: number;
   paymentStatus: 'PENDING' | 'PAID' | 'FAILED';
-  orderStatus: 'PLACED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  orderStatus: 'PLACED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REJECTED';
   creationTime: string;
   mobile: number;
   address: string;
   storeId?: number;
   sellerId?: number;
   orderItems?: OrderItemDto[];
-  // Customer info from backend getters (customerName, customerPhone, customerId)
+  rejectionReason?: string;
+  // Customer info from backend getters (customerName, customerPhone, customerId, customerEmail)
   customerName?: string;
   customerPhone?: string;
   customerId?: number;
+  customerEmail?: string;
   // Legacy user object (may not be present due to @JsonIgnore)
   user?: {
     id: number;
@@ -144,17 +146,23 @@ export const getOrderById = async (orderId: string | number): Promise<OrderDto> 
 
 /**
  * Update order status
- * Backend: PUT /orders/update-status/{id}?status={status}
+ * Backend: PUT /orders/update-status/{id}?status={status}&rejectionReason={reason}
  */
 export const updateOrderStatus = async (
   orderId: string | number,
-  status: 'PLACED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+  status: 'PLACED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REJECTED',
+  rejectionReason?: string
 ): Promise<OrderDto> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const id = typeof orderId === 'string' ? orderId : String(orderId);
-  const url = `${API_BASE_URL}/orders/update-status/${id}?status=${status}`;
+  
+  // Build URL with status and optional rejection reason
+  let url = `${API_BASE_URL}/orders/update-status/${id}?status=${status}`;
+  if (rejectionReason && status === 'REJECTED') {
+    url += `&rejectionReason=${encodeURIComponent(rejectionReason)}`;
+  }
 
-  console.log('📡 [API] Updating order status:', { url, orderId: id, status });
+  console.log('📡 [API] Updating order status:', { url, orderId: id, status, rejectionReason });
 
   const response = await fetch(url, {
     method: 'PUT',

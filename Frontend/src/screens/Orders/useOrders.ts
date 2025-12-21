@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Orders Hook
  * Fetches and manages orders for the seller
  */
@@ -41,10 +41,22 @@ export const useOrders = (): UseOrdersReturn => {
       // Fetch orders from backend
       const backendOrders: OrderDto[] = await getSellerOrders(sellerId);
 
-      console.log('📦 [useOrders] Fetched orders:', backendOrders.length);
+      console.log('📦 [useOrders] Fetched orders from backend:', backendOrders.length);
+      
+      // Debug: Log sample order to check OrdersId
+      if (backendOrders.length > 0) {
+        console.log('📦 [useOrders] Sample order from backend:', {
+          OrdersId: backendOrders[0].OrdersId,
+          orderStatus: backendOrders[0].orderStatus,
+          totalAmount: backendOrders[0].totalAmount,
+          creationTime: backendOrders[0].creationTime
+        });
+      }
 
-      // Transform backend orders to frontend format
+      // Transform backend orders to frontend format (this will filter out invalid orders)
       const transformedOrders = transformOrders(backendOrders);
+
+      console.log('📦 [useOrders] Valid orders after transformation:', transformedOrders.length);
 
       setOrders(transformedOrders);
     } catch (err) {
@@ -68,4 +80,3 @@ export const useOrders = (): UseOrdersReturn => {
     refetch: fetchOrders,
   };
 };
-

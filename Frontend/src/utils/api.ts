@@ -511,6 +511,189 @@ export const loginWithOtp = async (phone: string, otpCode: string): Promise<Auth
 
 /**
  * =============================
+ * FORGOT PASSWORD APIs
+ * =============================
+ */
+
+/**
+ * Send OTP for forgot password.
+ * Backend: POST /api/sellers/forgot-password-seller
+ * Body: { phone }
+ * Returns: { message, otp }
+ */
+export const sendForgotPasswordOtp = async (phone: string): Promise<string> => {
+  const url = `${API_BASE_URL}/api/sellers/forgot-password-seller`;
+  const cleanPhone = phone.replace(/\D/g, '');
+
+  try {
+    console.log('📱 [Forgot Password] Sending OTP to:', cleanPhone);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 20000);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: cleanPhone,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || `Failed to send forgot password OTP (${response.status})`;
+      throw new Error(message);
+    }
+
+    // Backend returns { message, otp } - OTP is for dev/testing
+    const otp = payload?.otp || '';
+    if (otp) {
+      console.log('✅ [Forgot Password] OTP sent:', otp);
+    }
+
+    return otp;
+  } catch (error: any) {
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      console.error('Network error during sendForgotPasswordOtp:', error);
+      throw new Error(
+        `Network request failed. Backend URL: ${API_BASE_URL}. Please check your connection.`,
+      );
+    }
+    throw error;
+  }
+};
+
+/**
+ * Verify OTP for forgot password.
+ * Backend: POST /api/sellers/verify-forgot-otp-seller
+ * Body: { phone, code }
+ * Returns: { message }
+ */
+export const verifyForgotPasswordOtp = async (phone: string, otpCode: string): Promise<boolean> => {
+  const url = `${API_BASE_URL}/api/sellers/verify-forgot-otp-seller`;
+  const cleanPhone = phone.replace(/\D/g, '');
+
+  try {
+    console.log('📱 [Forgot Password] Verifying OTP for:', cleanPhone);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: cleanPhone,
+        code: otpCode,
+      }),
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || 'OTP verification failed';
+      throw new Error(message);
+    }
+
+    console.log('✅ [Forgot Password] OTP verified successfully');
+    return true;
+  } catch (error: any) {
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      console.error('Network error during verifyForgotPasswordOtp:', error);
+      throw new Error(
+        `Network request failed. Backend URL: ${API_BASE_URL}. Please check your connection.`,
+      );
+    }
+    throw error;
+  }
+};
+
+/**
+ * Reset password after OTP verification.
+ * Backend: POST /api/sellers/reset-password-seller
+ * Body: { phone, newPassword }
+ * Returns: AuthResponse with token (backend returns token, but frontend should redirect to login)
+ * Note: The backend returns a token, but the frontend should NOT auto-login the user.
+ * Instead, redirect to login screen so user can login with their new password.
+ */
+export const resetPassword = async (phone: string, newPassword: string): Promise<AuthResponse> => {
+  const url = `${API_BASE_URL}/api/sellers/reset-password-seller`;
+  const cleanPhone = phone.replace(/\D/g, '');
+
+  try {
+    console.log('📱 [Reset Password] Resetting password for:', cleanPhone);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        phone: cleanPhone,
+        newPassword: newPassword,
+      }),
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || payload?.error || 'Password reset failed';
+      throw new Error(message);
+    }
+
+    if (!payload || typeof payload !== 'object' || !payload.token) {
+      throw new Error('Invalid password reset response from server');
+    }
+
+    // Validate userId/sellerId from payload
+    const userId =
+      typeof payload.userId === 'number' && payload.userId > 0
+        ? payload.userId
+        : typeof payload.sellerId === 'number' && payload.sellerId > 0
+        ? payload.sellerId
+        : null;
+
+    if (userId === null || isNaN(userId) || userId <= 0) {
+      console.error('Invalid userId in resetPassword response:', payload);
+      throw new Error('Password reset failed: User ID not received from server');
+    }
+
+    console.log('✅ [Reset Password] Password reset successful');
+
+    return {
+      token: payload.token,
+      userId: userId,
+      fullName: payload.fullName ?? '',
+      phone: payload.phone ?? cleanPhone,
+    };
+  } catch (error: any) {
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
+      console.error('Network error during resetPassword:', error);
+      throw new Error(
+        `Network request failed. Backend URL: ${API_BASE_URL}. Please check your connection.`,
+      );
+    }
+    throw error;
+  }
+};
+
+/**
+ * =============================
  * STORE DETAILS APIs
  * =============================
  */

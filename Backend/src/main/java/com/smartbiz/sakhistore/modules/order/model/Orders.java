@@ -8,6 +8,7 @@ import com.smartbiz.sakhistore.modules.customer_user.model.User;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -22,7 +23,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
-import jakarta.persistence.SequenceGenerator;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -31,8 +31,7 @@ import lombok.Setter;
 @Setter
 public class Orders {
     @Id
-    @GeneratedValue(generator = "orderId")
-//	@SequenceGenerator(initialValue = 101001,allocationSize = 1,name = "orderId")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long OrdersId;
 
     private Double totalAmount;
@@ -61,6 +60,10 @@ public class Orders {
     // Store and Seller IDs for seller app visibility
     private Long storeId;
     private Long sellerId;
+
+    // Rejection reason (stored when order is rejected)
+    @Column(length = 1000)
+    private String rejectionReason;
 
     @OneToMany(mappedBy = "orders", cascade = CascadeType.ALL)
     @JsonManagedReference  // Parent side - serialize this
@@ -138,6 +141,7 @@ public class Orders {
         this.address = address;
     }
 
+    @JsonProperty("OrdersId")
     public Long getOrdersId() {
         return OrdersId;
     }
@@ -170,6 +174,14 @@ public class Orders {
         this.sellerId = sellerId;
     }
 
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
     // ===============================
     // Customer Info Getters (for JSON serialization)
     // These allow access to user info without serializing the full user object
@@ -197,5 +209,13 @@ public class Orders {
      */
     public Long getCustomerId() {
         return user != null ? user.getId() : null;
+    }
+
+    /**
+     * Get customer email from user object
+     * This will be included in JSON response even though user is @JsonIgnore
+     */
+    public String getCustomerEmail() {
+        return user != null ? user.getEmail() : null;
     }
 }
