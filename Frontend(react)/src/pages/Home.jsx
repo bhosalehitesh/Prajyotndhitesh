@@ -533,7 +533,7 @@ const Home = () => {
       {/* Collections */}
       <section className="biggest-deals">
         <div className="container">
-          <h2 className="section-title">Collection</h2>
+          <h2 className="section-title">Trending Collection</h2>
           <div className="deals-grid">
             {collections.length > 0 ? (
               collections.map((collection, index) => {

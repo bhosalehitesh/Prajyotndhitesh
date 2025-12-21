@@ -223,7 +223,9 @@ const Header = () => {
         <div className="topbar-inner container">
           <div className="left-group">
             {/* Mobile menu button - hidden on desktop */}
-            <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle Menu">☰</button>
+            <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle Menu">
+              <span>☰</span>
+            </button>
             
             {/* Profile Icon - Far Left - Opens Sidebar */}
             <button 
@@ -300,7 +302,7 @@ const Header = () => {
                     <circle cx="18" cy="20" r="1.4"></circle>
                   </svg>
                 </div>
-                <span className="navbar-logo-text">{currentStore?.name || currentStore?.storeName || 'Store'}</span>
+                <span className="navbar-logo-text">{(currentStore?.name || currentStore?.storeName || 'Store').toUpperCase()}</span>
               </div>
             </Link>
 
@@ -313,19 +315,19 @@ const Header = () => {
                 to={storeSlug ? `/store/${storeSlug}/categories` : '/categories'}
                 className={`nav-item redesigned-nav-item ${location.pathname.includes('/categories') ? 'active' : ''}`}
               >
-                Categories
+                <span>Categories</span>
               </Link>
               <Link
                 to={storeSlug ? `/store/${storeSlug}/featured` : '/featured'}
                 className={`nav-item redesigned-nav-item ${location.pathname.includes('/featured') ? 'active' : ''}`}
               >
-                Featured
+                <span>Featured</span>
               </Link>
               <Link
                 to={storeSlug ? `/store/${storeSlug}/products` : '/products'}
                 className={`nav-item redesigned-nav-item ${location.pathname.includes('/products') ? 'active' : ''}`}
               >
-                Products
+                <span>Products</span>
               </Link>
             </nav>
           </div>

@@ -114,11 +114,6 @@ const Footer = () => {
                   <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                 </svg>
               </a>
-              <a href={socialLinks.app} target="_blank" rel="noopener noreferrer" className="social-icon" aria-label="App">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                  <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C1.79 15.25 4.18 5.87 9.99 5.87c1.15 0 2.18.16 3.1.5.4.15.76.33 1.1.55.34-.22.7-.4 1.1-.55.92-.34 1.95-.5 3.1-.5 5.81 0 8.2 9.38 2.66 14.41zm-2.82-17.3c-.15-.07-.3-.13-.46-.18-.4-.12-.8-.2-1.2-.25-.2-.02-.4-.04-.6-.05C11.5 2.5 10.5 3.5 10.5 4.5c0 .5.2 1 .5 1.5.3.5.6 1 1 1.5.2.3.4.5.6.8.2-.3.4-.5.6-.8.4-.5.7-1 1-1.5.3-.5.5-1 .5-1.5 0-1-1-2-1.97-2.75-.1-.05-.2-.1-.3-.15z"/>
-                </svg>
-              </a>
             </div>
           </div>
 
@@ -157,10 +152,6 @@ const Footer = () => {
               <span className="payment-label">We accept</span>
               <span className="payment-icon">💳</span>
               <span className="payment-method">Cash on Delivery</span>
-            </div>
-            <div className="powered-by">
-              <span className="powered-label">Built with</span>
-              <img src="/assets/SmartBiz.png" alt="Smartbiz by Sakhi" className="smartbiz-logo" />
             </div>
           </div>
         </div>
