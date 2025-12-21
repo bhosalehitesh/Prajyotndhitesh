@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 /**
@@ -12,6 +12,7 @@ const LoginModal = ({
   customerName,
   otp, 
   demoOtp,
+  actionMessage,
   onClose, 
   onPhoneSubmit, 
   onOTPSubmit, 
@@ -20,8 +21,17 @@ const LoginModal = ({
   onOtpChange,
   onBack 
 }) => {
-  console.log('LoginModal render - show:', show, 'showOTPForm:', showOTPForm, 'phone:', phone, 'otp:', otp);
-  console.log('LoginModal props:', { show, showOTPForm, phone, otp, onClose: !!onClose, onPhoneSubmit: !!onPhoneSubmit, onOTPSubmit: !!onOTPSubmit });
+  console.log('LoginModal render - show:', show, 'showOTPForm:', showOTPForm, 'phone:', phone, 'otp:', otp, 'demoOtp:', demoOtp);
+  console.log('LoginModal props:', { show, showOTPForm, phone, otp, demoOtp, onClose: !!onClose, onPhoneSubmit: !!onPhoneSubmit, onOTPSubmit: !!onOTPSubmit });
+  
+  // Auto-fill OTP field with demoOtp when it becomes available and otp is empty
+  useEffect(() => {
+    if (demoOtp && !otp && showOTPForm && onOtpChange) {
+      console.log('Auto-filling OTP with demo OTP:', demoOtp);
+      const syntheticEvent = { target: { value: demoOtp } };
+      onOtpChange(syntheticEvent);
+    }
+  }, [demoOtp, showOTPForm]);
   
   if (!show) {
     console.log('LoginModal: show is false, returning null');
@@ -127,7 +137,7 @@ const LoginModal = ({
               display: 'block',
               visibility: 'visible',
               lineHeight: '1.4'
-            }}>Login or create an account</p>
+            }}>{actionMessage || 'Login or create an account'}</p>
             <form 
               className="login-form" 
               onSubmit={(e) => {
@@ -234,37 +244,15 @@ const LoginModal = ({
             <p style={{ fontSize: '0.95rem', color: '#1a73e8', margin: '0 0 16px 0', textAlign: 'center', display: 'block', visibility: 'visible', lineHeight: '1.4' }}>We have sent a code by SMS to your phone.</p>
             {demoOtp && (
               <div style={{
-                backgroundColor: '#e3f2fd',
-                border: '2px solid #1a73e8',
+                backgroundColor: '#F6D3DD',
+                border: '2px solid #E83B8F',
                 borderRadius: '8px',
                 padding: '12px 16px',
                 marginBottom: '20px',
                 textAlign: 'center'
               }}>
                 <p style={{ fontSize: '0.85rem', color: '#666', margin: '0 0 8px 0', fontWeight: 600 }}>Demo OTP (for testing):</p>
-                <p style={{ fontSize: '1.5rem', color: '#1a73e8', margin: 0, fontWeight: 700, letterSpacing: '4px', fontFamily: 'monospace' }}>{demoOtp}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onOtpChange) {
-                      const syntheticEvent = { target: { value: demoOtp } };
-                      onOtpChange(syntheticEvent);
-                    }
-                  }}
-                  style={{
-                    marginTop: '8px',
-                    padding: '6px 12px',
-                    backgroundColor: '#1a73e8',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  Use This OTP
-                </button>
+                <p style={{ fontSize: '1.5rem', color: '#E83B8F', margin: 0, fontWeight: 700, letterSpacing: '4px', fontFamily: 'monospace' }}>{demoOtp}</p>
               </div>
             )}
             <form onSubmit={(e) => {

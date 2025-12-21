@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { useLoginPrompt } from './LoginPromptContext';
 import { getWishlist, addToWishlistAPI, removeFromWishlistAPI } from '../utils/api';
 
 const WishlistContext = createContext();
@@ -14,6 +15,7 @@ export const useWishlist = () => {
 
 export const WishlistProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
+  const { promptLogin } = useLoginPrompt();
   const [wishlist, setWishlist] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -113,6 +115,18 @@ export const WishlistProvider = ({ children }) => {
 
   const addToWishlist = async (item) => {
     try {
+      // Check authentication first - show login modal if not authenticated
+      if (!isAuthenticated) {
+        console.log('🔒 [Wishlist] User not authenticated, showing login modal');
+        promptLogin(
+          () => addToWishlist(item),
+          'Please login to add items to your wishlist'
+        );
+        return;
+      }
+      
+      console.log('✅ [Wishlist] User is authenticated, proceeding with add to wishlist');
+
       const productId = item?.productId || item?.id;
       
       if (!productId) {
@@ -148,19 +162,7 @@ export const WishlistProvider = ({ children }) => {
       
       setWishlist(updatedWishlist);
 
-      // For guest users, immediately update localStorage
-      if (!isAuthenticated) {
-        try {
-          localStorage.setItem('wishlist', JSON.stringify(updatedWishlist));
-        } catch (error) {
-          console.error('❌ [Wishlist] Error updating localStorage:', error);
-          // Revert on error
-          setWishlist(previousWishlist);
-          return;
-        }
-      }
-
-      // Sync to backend in background for authenticated users
+      // Sync to backend for authenticated users
       if (isAuthenticated && user?.userId && productId) {
         // Convert productId to number if it's a string
         const numericProductId = typeof productId === 'string' ? parseInt(productId, 10) : productId;

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { useLoginPrompt } from './LoginPromptContext';
 import { getCart, addToCartAPI, addVariantToCartAPI, updateCartQuantity, updateVariantCartQuantity, removeFromCartAPI, removeVariantFromCartAPI, clearCartAPI } from '../utils/api';
 
 const CartContext = createContext();
@@ -14,6 +15,7 @@ export const useCart = () => {
 
 export const CartProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
+  const { promptLogin } = useLoginPrompt();
   const [cart, setCart] = useState([]);
   const [cartStoreId, setCartStoreId] = useState(null); // Store ID that cart is locked to
   const [cartSellerId, setCartSellerId] = useState(null); // Seller ID that cart is locked to
@@ -159,7 +161,19 @@ export const CartProvider = ({ children }) => {
    * @param {number|string} sellerId - Seller ID (REQUIRED for store locking)
    */
   const addToCart = async (item, storeId = null, sellerId = null) => {
-      // CART LOCKING RULE: Cart is locked to one seller/store
+    // Check authentication first - show login modal if not authenticated
+    if (!isAuthenticated) {
+      console.log('🔒 [Cart] User not authenticated, showing login modal');
+      promptLogin(
+        () => addToCart(item, storeId, sellerId),
+        'Please login to add items to your cart'
+      );
+      return;
+    }
+    
+    console.log('✅ [Cart] User is authenticated, proceeding with add to cart');
+
+    // CART LOCKING RULE: Cart is locked to one seller/store
     if (cartStoreId && storeId && cartStoreId !== String(storeId)) {
       console.warn('⚠️ Different store detected. Clearing cart and starting fresh.');
       if (isAuthenticated && user?.userId) {
@@ -231,10 +245,7 @@ export const CartProvider = ({ children }) => {
         // Fallback to local state update
         addToCartLocal(item, storeId, sellerId);
       }
-    } else {
-      // Guest user - update local state only
-      addToCartLocal(item, storeId, sellerId);
-      }
+    }
   };
 
   const addToCartLocal = (item, storeId = null, sellerId = null) => {
