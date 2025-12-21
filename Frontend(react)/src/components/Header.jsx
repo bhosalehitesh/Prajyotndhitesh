@@ -5,7 +5,9 @@ import { useWishlist } from '../contexts/WishlistContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useStore } from '../contexts/StoreContext';
+import { useLoginPrompt } from '../contexts/LoginPromptContext';
 import { getStoreProducts } from '../utils/api';
+import LoginModal from './Header/LoginModal';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -15,13 +17,13 @@ const Header = () => {
   const { user, sendOTP, verifyOTP, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const { storeSlug, currentStore } = useStore();
+  const { showLoginModal, closeLoginModal, executePendingAction, actionMessage, promptLogin } = useLoginPrompt();
   const logoUrl = currentStore?.logo;
-
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showOTPForm, setShowOTPForm] = useState(false);
   const [phone, setPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [otp, setOtp] = useState('');
+  const [demoOtp, setDemoOtp] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileSidebarOpen, setProfileSidebarOpen] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -37,10 +39,12 @@ const Header = () => {
     ? getWishlistCountBySeller(currentStore.sellerId)
     : wishlist.length; // Fallback to total count if no store context
 
+  // Note: Login modal is now controlled by LoginPromptContext
+  // This useEffect is kept for backward compatibility but won't show modal automatically
   useEffect(() => {
     // Check if user should see login modal on home page
     if (location.pathname === '/' && !user && !localStorage.getItem('hasSeenLogin')) {
-      setTimeout(() => setShowLoginModal(true), 500);
+      // Modal is now controlled by LoginPromptContext, so we don't set it here
     }
   }, [location.pathname, user]);
 
@@ -125,7 +129,16 @@ const Header = () => {
     }
     
     try {
-      await sendOTP(phone);
+      const response = await sendOTP(phone);
+      // Extract demo OTP from response if available
+      if (response && response.otp) {
+        setDemoOtp(response.otp);
+        // Auto-fill the OTP input field with demo OTP
+        setOtp(response.otp);
+        console.log('Demo OTP received:', response.otp);
+      } else {
+        setDemoOtp('');
+      }
       setShowOTPForm(true);
     } catch (error) {
       alert(error.message || 'Failed to send OTP');
@@ -138,12 +151,22 @@ const Header = () => {
       // Use customerName as fullName
       const fullName = customerName.trim();
       await verifyOTP(phone, otp, fullName);
-      setShowLoginModal(false);
       setShowOTPForm(false);
       setPhone('');
       setCustomerName('');
       setOtp('');
-      window.location.reload();
+      setDemoOtp('');
+      closeLoginModal();
+      
+      // Execute pending action (e.g., add to cart/wishlist) after successful login
+      setTimeout(() => {
+        executePendingAction();
+      }, 100);
+      
+      // Small delay before reload to allow pending action to execute
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     } catch (error) {
       alert(error.message || 'Invalid OTP');
     }
@@ -193,10 +216,51 @@ const Header = () => {
 
   return (
     <>
-      <header className="topbar">
+      <header className="topbar redesigned-navbar">
+        {/* Light pink accent stripe at top */}
+        <div className="navbar-accent-stripe"></div>
+        
         <div className="topbar-inner container">
           <div className="left-group">
+            {/* Mobile menu button - hidden on desktop */}
             <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle Menu">☰</button>
+            
+            {/* Profile Icon - Far Left - Opens Sidebar */}
+            <button 
+              className="profile-icon-btn"
+              onClick={() => {
+                console.log('Profile icon clicked, opening sidebar');
+                setProfileSidebarOpen(true);
+              }}
+              title="Menu"
+              aria-label="Open Menu"
+            >
+              {user ? (
+                <img 
+                  src="/assets/default-avatar.png" 
+                  alt="Profile" 
+                  className="profile-avatar-img"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextElementSibling.style.display = 'block';
+                  }} 
+                />
+              ) : null}
+              <svg 
+                viewBox="0 0 24 24" 
+                width="24" 
+                height="24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="1.5"
+                style={{ display: user ? 'none' : 'block' }}
+              >
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </button>
+            
+            {/* Mobile header avatar - for mobile view */}
             <div className="mobile-header-avatar" onClick={() => setMobileMenuOpen(true)}>
               {user ? (
                 <img src="/assets/default-avatar.png" alt="Profile" onError={(e) => {
@@ -209,61 +273,57 @@ const Header = () => {
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
             </div>
-            <div className={`avatar desktop-avatar ${logoUrl ? 'has-logo' : ''}`} aria-hidden="true">
-              <Link
-                to={storeSlug ? `/store/${storeSlug}` : '/'}
-                style={{
-                  textDecoration: 'none',
-                  color: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  height: '100%',
-                }}
-              >
+
+            {/* Logo with Shopping Bag Icon */}
+            <Link
+              to={storeSlug ? `/store/${storeSlug}` : '/'}
+              className="navbar-logo-link"
+              aria-label="Home"
+            >
+              <div className="navbar-logo">
                 {logoUrl ? (
                   <img
                     src={logoUrl}
                     alt={currentStore?.name || currentStore?.storeName || 'Store logo'}
-                    className="store-logo-img"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                      padding: '4px',
-                    }}
+                    className="navbar-logo-img"
                     onError={(e) => {
                       console.error('Failed to load store logo:', logoUrl);
                       e.target.style.display = 'none';
+                      e.target.nextElementSibling.style.display = 'flex';
                     }}
                   />
-                ) : (
-                  <span>
-                    {(currentStore?.name || currentStore?.storeName || 'V').charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </Link>
-            </div>
+                ) : null}
+                <div className="navbar-logo-default" style={{ display: logoUrl ? 'none' : 'flex' }}>
+                  <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#E83B8F" strokeWidth="1.5">
+                    <path d="M6 6h15l-1.5 9h-12z" strokeLinejoin="round"></path>
+                    <circle cx="10" cy="20" r="1.4"></circle>
+                    <circle cx="18" cy="20" r="1.4"></circle>
+                  </svg>
+                </div>
+                <span className="navbar-logo-text">{currentStore?.name || currentStore?.storeName || 'Store'}</span>
+              </div>
+            </Link>
 
-            <div className="divider"></div>
+            {/* Vertical Separator */}
+            <div className="navbar-divider"></div>
 
-            <nav className="main-nav" aria-label="Main">
+            {/* Navigation Links */}
+            <nav className="main-nav redesigned-nav" aria-label="Main">
               <Link
                 to={storeSlug ? `/store/${storeSlug}/categories` : '/categories'}
-                className={`nav-item ${location.pathname.includes('/categories') ? 'active' : ''}`}
+                className={`nav-item redesigned-nav-item ${location.pathname.includes('/categories') ? 'active' : ''}`}
               >
                 Categories
               </Link>
               <Link
                 to={storeSlug ? `/store/${storeSlug}/featured` : '/featured'}
-                className={`nav-item ${location.pathname.includes('/featured') ? 'active' : ''}`}
+                className={`nav-item redesigned-nav-item ${location.pathname.includes('/featured') ? 'active' : ''}`}
               >
                 Featured
               </Link>
               <Link
                 to={storeSlug ? `/store/${storeSlug}/products` : '/products'}
-                className={`nav-item ${location.pathname.includes('/products') ? 'active' : ''}`}
+                className={`nav-item redesigned-nav-item ${location.pathname.includes('/products') ? 'active' : ''}`}
               >
                 Products
               </Link>
@@ -424,17 +484,18 @@ const Header = () => {
               )}
             </div>
           )}
-          <div className="right-group">
-            <div className="dark-mode-toggle-container">
-              <label className="dark-mode-toggle" title="Toggle Dark Mode">
+          <div className="right-group redesigned-right-group">
+            {/* Dark Mode Toggle - Oval Switch Style */}
+            <div className="dark-mode-toggle-container redesigned-toggle">
+              <label className="dark-mode-toggle redesigned-dark-toggle" title="Toggle Dark Mode">
                 <input
                   type="checkbox"
                   className="toggle-input"
                   checked={isDarkMode}
                   onChange={toggleTheme}
                 />
-                <span className="toggle-track">
-                  <svg className="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <span className="toggle-track redesigned-toggle-track">
+                  <svg className="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16">
                     <circle cx="12" cy="12" r="4"></circle>
                     <line x1="12" y1="1" x2="12" y2="3"></line>
                     <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -445,46 +506,51 @@ const Header = () => {
                     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                   </svg>
-                  <svg className="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg className="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="16" height="16">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                   </svg>
-                  <span className="toggle-indicator"></span>
+                  <span className="toggle-indicator redesigned-toggle-indicator"></span>
                 </span>
               </label>
             </div>
 
-            <button className="icon-btn" onClick={() => setShowSearchModal(true)} title="Search Products">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor">
-                <circle cx="11" cy="11" r="6" strokeWidth="1.6"></circle>
-                <path d="M21 21l-4.35-4.35" strokeWidth="1.6" strokeLinecap="round"></path>
+            {/* Search Icon */}
+            <button 
+              className="icon-btn redesigned-icon-btn" 
+              onClick={() => setShowSearchModal(true)} 
+              title="Search Products"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="11" cy="11" r="6"></circle>
+                <path d="M21 21l-4.35-4.35" strokeLinecap="round"></path>
               </svg>
             </button>
 
+            {/* Wishlist Icon */}
             <button
-              className="icon-btn"
+              className="icon-btn redesigned-icon-btn"
               onClick={() => navigate(storeSlug ? `/store/${storeSlug}/wishlist` : '/wishlist')}
               title="Wishlist"
             >
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeWidth="1.5" strokeLinejoin="round"></path>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinejoin="round"></path>
               </svg>
-              {wishlistCount > 0 && <span className="wishlist-count">{wishlistCount}</span>}
+              {wishlistCount > 0 && <span className="wishlist-count redesigned-badge">{wishlistCount}</span>}
             </button>
 
+            {/* Cart Icon with Red Badge */}
             <button
-              className="icon-btn"
+              className="icon-btn redesigned-icon-btn redesigned-cart-btn"
               onClick={() => navigate(storeSlug ? `/store/${storeSlug}/cart` : '/cart')}
               title="Cart"
             >
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor">
-                <path d="M6 6h15l-1.5 9h-12z" strokeWidth="1.5" strokeLinejoin="round"></path>
-                <circle cx="10" cy="20" r="1.4" strokeWidth="1.5"></circle>
-                <circle cx="18" cy="20" r="1.4" strokeWidth="1.5"></circle>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M6 6h15l-1.5 9h-12z" strokeLinejoin="round"></path>
+                <circle cx="10" cy="20" r="1.4"></circle>
+                <circle cx="18" cy="20" r="1.4"></circle>
               </svg>
-              {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
+              {cartCount > 0 && <span className="cart-count redesigned-badge redesigned-cart-badge">{cartCount}</span>}
             </button>
-
-            {/* Profile icon removed as requested */}
           </div>
         </div>
       </header>
@@ -615,7 +681,7 @@ const Header = () => {
 
             <div className="mobile-sidebar-footer">
               {!user ? (
-                <button className="mobile-sidebar-signin-btn" onClick={() => { setShowLoginModal(true); setMobileMenuOpen(false); }}>
+                <button className="mobile-sidebar-signin-btn" onClick={() => { promptLogin(null, 'Please login to continue'); setMobileMenuOpen(false); }}>
                   Sign In
                 </button>
               ) : (
@@ -629,183 +695,207 @@ const Header = () => {
       )}
 
       {/* Login Modal */}
-      {showLoginModal && (
-        <div className="login-modal-overlay active" onClick={() => setShowLoginModal(false)}>
-          <div className="login-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="login-modal-close" onClick={() => setShowLoginModal(false)} aria-label="Close">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-
-            {!showOTPForm ? (
-              <div className="login-form-container">
-                <h2 className="login-title">Welcome Back</h2>
-                <p className="login-subtitle">Login or create an account</p>
-                <form className="login-form" onSubmit={handlePhoneSubmit}>
-                  <div className="form-group">
-                    <label htmlFor="customerName">Customer Name *</label>
-                    <input
-                      type="text"
-                      id="customerName"
-                      placeholder="Name"
-                      required
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="loginPhone">Mobile Number *</label>
-                    <input
-                      type="tel"
-                      id="loginPhone"
-                      placeholder="Enter 10-digit phone number"
-                      required
-                      pattern="[0-9]{10}"
-                      maxLength="10"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    />
-                  </div>
-                  <button type="submit" className="login-submit-btn">Get OTP</button>
-                </form>
-              </div>
-            ) : (
-              <div className="login-form-container">
-                <h2 className="login-title">Verify OTP</h2>
-                <p className="login-subtitle">We have sent a code by SMS to your phone.</p>
-                <form className="login-form" onSubmit={handleOTPSubmit}>
-                  <div className="form-group">
-                    <label htmlFor="otpInput">Enter OTP</label>
-                    <input
-                      type="text"
-                      id="otpInput"
-                      placeholder="Enter OTP"
-                      required
-                      pattern="[0-9]{6}"
-                      maxLength="6"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      style={{ textAlign: 'center', fontSize: '1.2rem', letterSpacing: '8px', fontWeight: '600' }}
-                    />
-                  </div>
-                  <button type="submit" className="login-submit-btn">Verify and Continue</button>
-                  <button type="button" className="login-back-btn" onClick={() => setShowOTPForm(false)}>Back</button>
-                </form>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <LoginModal
+        show={showLoginModal}
+        showOTPForm={showOTPForm}
+        phone={phone}
+        customerName={customerName}
+        otp={otp}
+        demoOtp={demoOtp}
+        actionMessage={actionMessage}
+        onClose={() => {
+          closeLoginModal();
+          setShowOTPForm(false);
+          setPhone('');
+          setOtp('');
+          setCustomerName('');
+          setDemoOtp('');
+        }}
+        onPhoneSubmit={handlePhoneSubmit}
+        onOTPSubmit={handleOTPSubmit}
+        onPhoneChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+        onCustomerNameChange={(e) => setCustomerName(e.target.value)}
+        onOtpChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        onBack={() => setShowOTPForm(false)}
+      />
 
       {/* Profile Sidebar */}
       {profileSidebarOpen && (
         <>
-          <div className="profile-sidebar-overlay" onClick={() => setProfileSidebarOpen(false)}></div>
-          <div className="profile-sidebar">
-            <div className="profile-sidebar-header">
-              <button className="profile-sidebar-close" onClick={() => setProfileSidebarOpen(false)} aria-label="Close Menu">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-            <div className="profile-sidebar-content">
-              {user && (
-                <div className="profile-sidebar-user" style={{ padding: '20px', borderBottom: '1px solid rgba(0,0,0,0.1)', marginBottom: '16px' }}>
-                  <div className="profile-sidebar-avatar" style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>
-                    <div style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--vibrant-pink, #e83b8f)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '24px',
-                      fontWeight: 'bold'
-                    }}>
-                      {(user.fullName || user.name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                  </div>
-                  <div className="profile-sidebar-info" style={{ textAlign: 'center' }}>
-                    <div className="profile-sidebar-name" style={{ 
-                      fontSize: '18px', 
-                      fontWeight: '600', 
-                      color: 'var(--text-color, #333)',
-                      marginBottom: '8px'
-                    }}>
-                      {user.fullName || user.name || 'Guest'}
-                    </div>
-                    <div className="profile-sidebar-phone" style={{ 
-                      fontSize: '14px', 
-                      color: 'var(--text-secondary, #666)',
-                      marginBottom: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px'
-                    }}>
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                      </svg>
-                      {user.phone || user.mobileNumber || 'No phone'}
-                    </div>
-                    {user.email && (
-                      <div className="profile-sidebar-email" style={{ 
-                        fontSize: '14px', 
-                        color: 'var(--text-secondary, #666)',
-                        marginBottom: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                      }}>
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                          <polyline points="22,6 12,13 2,6"></polyline>
-                        </svg>
-                        {user.email}
-                      </div>
-                    )}
-                    {(user.city || user.state) && (
-                      <div className="profile-sidebar-location" style={{ 
-                        fontSize: '14px', 
-                        color: 'var(--text-secondary, #666)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        marginTop: '8px'
-                      }}>
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                          <circle cx="12" cy="10" r="3"></circle>
-                        </svg>
-                        {[user.city, user.state].filter(Boolean).join(', ') || 'Address not set'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              {!user && (
-                <div className="profile-sidebar-user" style={{ padding: '20px', borderBottom: '1px solid rgba(0,0,0,0.1)', marginBottom: '16px', textAlign: 'center' }}>
-                  <div className="profile-sidebar-avatar" style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center' }}>
-                    <svg viewBox="0 0 24 24" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--text-secondary, #999)' }}>
+          <div className="profile-sidebar-overlay active" onClick={() => setProfileSidebarOpen(false)}></div>
+          <div className="profile-sidebar active">
+            {/* User Profile Details at Absolute Top (if logged in) */}
+            {user && (
+              <div className="profile-sidebar-user-top" style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '20px',
+                borderBottom: '1px solid rgba(0,0,0,0.1)',
+                marginBottom: '0'
+              }}>
+                {/* Close Button at Top Right */}
+                <button className="profile-sidebar-close" onClick={() => setProfileSidebarOpen(false)} aria-label="Close Menu" style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 10
+                }}>
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+                {/* Avatar */}
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  backgroundColor: '#E83B8F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                  fontSize: '24px',
+                  fontWeight: '700',
+                  flexShrink: 0
+                }}>
+                  {user.fullName || user.name ? (
+                    (user.fullName || user.name).charAt(0).toUpperCase()
+                  ) : (
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                       <circle cx="12" cy="7" r="4"></circle>
                     </svg>
+                  )}
+                </div>
+                {/* User Info */}
+                <div style={{ flex: 1, minWidth: 0, paddingRight: '32px' }}>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: '#1A1A1A',
+                    marginBottom: '4px',
+                    lineHeight: '1.4'
+                  }}>
+                    {user.fullName || user.name || 'Guest'}
                   </div>
-                  <div className="profile-sidebar-info">
-                    <div className="profile-sidebar-name" style={{ fontSize: '16px', color: 'var(--text-secondary, #666)' }}>
-                      Please sign in to view your profile
-                    </div>
+                  <div style={{
+                    fontSize: '14px',
+                    color: '#666666',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    lineHeight: '1.4'
+                  }}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.6 }}>
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    <span>{user.phone || user.mobileNumber || 'No phone'}</span>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
+            {/* Header with Close Button (if not logged in) */}
+            {!user && (
+              <div className="profile-sidebar-header" style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                padding: '16px 20px',
+                borderBottom: '1px solid rgba(0,0,0,0.1)'
+              }}>
+                <button className="profile-sidebar-close" onClick={() => setProfileSidebarOpen(false)} aria-label="Close Menu" style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+            )}
+            <div className="profile-sidebar-content" style={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              height: user ? 'calc(100% - 97px)' : 'calc(100% - 73px)',
+              overflowY: 'auto'
+            }}>
+
+              {/* Homepage Button - Same style as other items */}
+              <Link
+                to={storeSlug ? `/store/${storeSlug}` : '/'}
+                className={`profile-sidebar-item ${(location.pathname === '/' || location.pathname === `/store/${storeSlug}`) ? 'active' : ''}`}
+                onClick={() => setProfileSidebarOpen(false)}
+              >
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                <span>Homepage</span>
+              </Link>
+
+              {/* Navigation Links - All with consistent styling */}
+              <nav className="profile-sidebar-nav" style={{ marginBottom: '0' }}>
+                <Link
+                  to={storeSlug ? `/store/${storeSlug}/featured` : '/featured'}
+                  className={`profile-sidebar-item ${location.pathname.includes('/featured') ? 'active' : ''}`}
+                  onClick={() => setProfileSidebarOpen(false)}
+                >
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                  </svg>
+                  <span>Featured Products</span>
+                </Link>
+                <Link
+                  to={storeSlug ? `/store/${storeSlug}/products` : '/products'}
+                  className={`profile-sidebar-item ${(location.pathname.includes('/products') && !location.pathname.includes('/product/detail')) ? 'active' : ''}`}
+                  onClick={() => setProfileSidebarOpen(false)}
+                >
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="9" y1="3" x2="9" y2="21"></line>
+                  </svg>
+                  <span>All Products</span>
+                </Link>
+                <Link
+                  to={storeSlug ? `/store/${storeSlug}/categories` : '/categories'}
+                  className={`profile-sidebar-item ${location.pathname.includes('/categories') ? 'active' : ''}`}
+                  onClick={() => setProfileSidebarOpen(false)}
+                >
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                  <span>Categories</span>
+                </Link>
+                <Link
+                  to={storeSlug ? `/store/${storeSlug}/collections` : '/collections'}
+                  className={`profile-sidebar-item ${location.pathname.includes('/collections') ? 'active' : ''}`}
+                  onClick={() => setProfileSidebarOpen(false)}
+                >
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                  <span>Collections</span>
+                </Link>
+              </nav>
+
+
+              {/* Existing Menu Items */}
               <div className="profile-sidebar-menu">
                 <Link to="/orders" className="profile-sidebar-item" onClick={() => setProfileSidebarOpen(false)}>
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -817,7 +907,7 @@ const Header = () => {
                 </Link>
                 <Link
                   to={storeSlug ? `/store/${storeSlug}/wishlist` : '/wishlist'}
-                  className="profile-sidebar-item"
+                  className={`profile-sidebar-item ${location.pathname.includes('/wishlist') ? 'active' : ''}`}
                   onClick={() => setProfileSidebarOpen(false)}
                 >
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -827,7 +917,7 @@ const Header = () => {
                 </Link>
                 <Link
                   to={storeSlug ? `/store/${storeSlug}/cart` : '/cart'}
-                  className="profile-sidebar-item"
+                  className={`profile-sidebar-item ${location.pathname.includes('/cart') ? 'active' : ''}`}
                   onClick={() => setProfileSidebarOpen(false)}
                 >
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -837,13 +927,58 @@ const Header = () => {
                   </svg>
                   <span>Shopping Cart</span>
                 </Link>
-                <Link to="/order-tracking" className="profile-sidebar-item" onClick={() => setProfileSidebarOpen(false)}>
+                <Link 
+                  to="/order-tracking" 
+                  className={`profile-sidebar-item ${location.pathname.includes('/order-tracking') ? 'active' : ''}`} 
+                  onClick={() => setProfileSidebarOpen(false)}
+                >
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                     <circle cx="12" cy="10" r="3"></circle>
                   </svg>
                   <span>Track Order</span>
                 </Link>
+                
+                {/* Sign In Button at Bottom - Pink Color */}
+                {!user && (
+                  <>
+                    <div className="profile-sidebar-divider"></div>
+                    <button 
+                      className="profile-sidebar-signin-btn"
+                      onClick={() => {
+                        promptLogin(null, 'Please login to continue');
+                        setProfileSidebarOpen(false);
+                      }}
+                      style={{
+                        margin: '12px 20px',
+                        padding: '14px 20px',
+                        backgroundColor: '#E83B8F',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        width: 'calc(100% - 40px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        transition: 'background-color 0.2s',
+                        fontFamily: 'inherit'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#D02B81'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E83B8F'}
+                    >
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                      <span>Sign In</span>
+                    </button>
+                  </>
+                )}
+                
                 <div className="profile-sidebar-divider"></div>
                 <div className="profile-sidebar-item" onClick={toggleTheme}>
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">

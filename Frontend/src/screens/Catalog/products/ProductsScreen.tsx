@@ -1615,19 +1615,61 @@ const ProductsScreen: React.FC<ProductsScreenProps> = ({ navigation, route }) =>
               const currentBestSeller = activeProduct.bestSeller || false;
               setActionSheetOpen(false);
               try {
-                await updateProduct(activeProductId, {
-                  productName: activeProduct.title,
-                  sellingPrice: activeProduct.price,
-                  businessCategory: activeProduct.businessCategory || '',
-                  description: activeProduct.description || '',
-                  mrp: activeProduct.mrp,
-                  inventoryQuantity: activeProduct.inventoryQuantity || 0,
-                  customSku: activeProduct.sku,
-                  color: activeProduct.color,
-                  size: activeProduct.size,
-                  hsnCode: activeProduct.hsnCode,
-                  bestSeller: !currentBestSeller,
-                });
+                // Get categoryId - required by backend validation
+                const categoryId = activeProduct.categoryId || activeProduct.category_id;
+                
+                if (!categoryId) {
+                  // If categoryId is missing, fetch the product from backend to get current categoryId
+                  console.warn('⚠️ [ProductsScreen] Product missing categoryId, fetching from backend...', {
+                    productId: activeProductId,
+                    activeProduct: activeProduct
+                  });
+                  
+                  // Fetch current product data to get categoryId
+                  const currentProducts = await fetchProducts();
+                  const currentProduct = currentProducts.find(p => 
+                    String(p.productsId || (p as any).id) === String(activeProductId)
+                  );
+                  
+                  const finalCategoryId = currentProduct?.categoryId || currentProduct?.category_id;
+                  
+                  if (!finalCategoryId) {
+                    throw new Error('Product does not have a category assigned. Please assign a category first before updating.');
+                  }
+                  
+                  console.log('✅ [ProductsScreen] Found categoryId from backend:', finalCategoryId);
+                  
+                  await updateProduct(activeProductId, {
+                    productName: activeProduct.title,
+                    sellingPrice: activeProduct.price,
+                    businessCategory: activeProduct.businessCategory || '',
+                    description: activeProduct.description || '',
+                    mrp: activeProduct.mrp,
+                    inventoryQuantity: activeProduct.inventoryQuantity || 0,
+                    customSku: activeProduct.sku,
+                    color: activeProduct.color,
+                    size: activeProduct.size,
+                    hsnCode: activeProduct.hsnCode,
+                    bestSeller: !currentBestSeller,
+                    categoryId: finalCategoryId,
+                  });
+                } else {
+                  console.log('✅ [ProductsScreen] Using categoryId from activeProduct:', categoryId);
+                  await updateProduct(activeProductId, {
+                    productName: activeProduct.title,
+                    sellingPrice: activeProduct.price,
+                    businessCategory: activeProduct.businessCategory || '',
+                    description: activeProduct.description || '',
+                    mrp: activeProduct.mrp,
+                    inventoryQuantity: activeProduct.inventoryQuantity || 0,
+                    customSku: activeProduct.sku,
+                    color: activeProduct.color,
+                    size: activeProduct.size,
+                    hsnCode: activeProduct.hsnCode,
+                    bestSeller: !currentBestSeller,
+                    categoryId: categoryId,
+                  });
+                }
                 await loadProducts();
                 Alert.alert(
                   'Success',

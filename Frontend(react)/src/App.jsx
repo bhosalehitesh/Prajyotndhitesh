@@ -5,6 +5,7 @@ import { WishlistProvider } from './contexts/WishlistContext.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { StoreProvider } from './contexts/StoreContext.jsx';
+import { LoginPromptProvider } from './contexts/LoginPromptContext.jsx';
 
 // Layout
 import Layout from './components/Layout';
@@ -40,10 +41,11 @@ function App() {
       <Router>
         <ThemeProvider>
           <AuthProvider>
-            <StoreProvider>
-              <CartProvider>
-                <CartStoreSync />
-                <WishlistProvider>
+            <LoginPromptProvider>
+              <StoreProvider>
+                <CartProvider>
+                  <CartStoreSync />
+                  <WishlistProvider>
                   <Layout>
                     <Routes>
                       {/* 
@@ -104,6 +106,7 @@ function App() {
                 </WishlistProvider>
               </CartProvider>
             </StoreProvider>
+            </LoginPromptProvider>
           </AuthProvider>
         </ThemeProvider>
       </Router>

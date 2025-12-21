@@ -5,6 +5,7 @@ import { useWishlist } from '../../contexts/WishlistContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useStore } from '../../contexts/StoreContext';
+import { useLoginPrompt } from '../../contexts/LoginPromptContext';
 import { NAV_ITEMS } from '../../constants/routes';
 import { ROUTES, getRoute } from '../../constants/routes';
 import { STORAGE_KEYS } from '../../constants/config';
@@ -25,11 +26,12 @@ const Header = () => {
   const { user, sendOTP, verifyOTP, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const { storeSlug } = useStore();
+  const { showLoginModal, closeLoginModal, executePendingAction, actionMessage, promptLogin } = useLoginPrompt();
   
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showOTPForm, setShowOTPForm] = useState(false);
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
+  const [customerName, setCustomerName] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileSidebarOpen, setProfileSidebarOpen] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -39,11 +41,16 @@ const Header = () => {
   const wishlistCount = wishlist.length;
 
   useEffect(() => {
-    // Show login modal on home page for new users
-    if (location.pathname === ROUTES.HOME && !user && !localStorage.getItem(STORAGE_KEYS.HAS_SEEN_LOGIN)) {
-      setTimeout(() => setShowLoginModal(true), 500);
+    // Show login modal on home page for new users (only if not already shown by LoginPrompt)
+    if (location.pathname === ROUTES.HOME && !user && !localStorage.getItem(STORAGE_KEYS.HAS_SEEN_LOGIN) && !showLoginModal) {
+      // This is handled by LoginPromptContext now, but keep for backward compatibility
     }
-  }, [location.pathname, user]);
+  }, [location.pathname, user, showLoginModal]);
+
+  // Debug: Log when showLoginModal changes
+  useEffect(() => {
+    console.log('🎯 [Header] showLoginModal changed:', showLoginModal, 'actionMessage:', actionMessage);
+  }, [showLoginModal, actionMessage]);
 
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
@@ -55,15 +62,29 @@ const Header = () => {
     }
   };
 
+  const handleCustomerNameChange = (e) => {
+    setCustomerName(e.target.value);
+  };
+
   const handleOTPSubmit = async (e) => {
     e.preventDefault();
     try {
-      await verifyOTP(phone, otp);
-      setShowLoginModal(false);
+      await verifyOTP(phone, otp, customerName || null);
       setShowOTPForm(false);
       setPhone('');
       setOtp('');
-      window.location.reload();
+      setCustomerName('');
+      closeLoginModal();
+      
+      // Execute pending action (e.g., add to cart/wishlist) after successful login
+      setTimeout(() => {
+        executePendingAction();
+      }, 100);
+      
+      // Small delay before reload to allow pending action to execute
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     } catch (error) {
       alert(error.message || 'Invalid OTP');
     }
@@ -227,7 +248,7 @@ const Header = () => {
             </button>
             <button 
               className="mobile-login-btn" 
-              onClick={() => setShowLoginModal(true)}
+              onClick={() => promptLogin(null, 'Please login to continue')}
             >
               Login
             </button>
@@ -242,7 +263,7 @@ const Header = () => {
         user={user}
         storeSlug={storeSlug}
         onSignIn={() => {
-          setShowLoginModal(true);
+          promptLogin(null, 'Please login to continue');
           setMobileMenuOpen(false);
         }}
         onSignOut={handleLogout}
@@ -253,16 +274,21 @@ const Header = () => {
         show={showLoginModal}
         showOTPForm={showOTPForm}
         phone={phone}
+        customerName={customerName}
         otp={otp}
+        demoOtp={null}
+        actionMessage={actionMessage}
         onClose={() => {
-          setShowLoginModal(false);
+          closeLoginModal();
           setShowOTPForm(false);
           setPhone('');
           setOtp('');
+          setCustomerName('');
         }}
         onPhoneSubmit={handlePhoneSubmit}
         onOTPSubmit={handleOTPSubmit}
         onPhoneChange={handlePhoneChange}
+        onCustomerNameChange={handleCustomerNameChange}
         onOtpChange={handleOtpChange}
         onBack={() => setShowOTPForm(false)}
       />
