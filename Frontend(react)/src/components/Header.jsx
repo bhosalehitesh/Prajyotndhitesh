@@ -8,6 +8,7 @@ import { useStore } from '../contexts/StoreContext';
 import { useLoginPrompt } from '../contexts/LoginPromptContext';
 import { getStoreProducts } from '../utils/api';
 import LoginModal from './Header/LoginModal';
+import MobileBottomNav from './MobileBottomNav';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -115,19 +116,19 @@ const Header = () => {
 
   const handlePhoneSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate customer name
     if (!customerName || customerName.trim() === '') {
       alert('Please enter your name');
       return;
     }
-    
+
     // Validate phone number
     if (!phone || phone.length !== 10) {
       alert('Please enter a valid 10-digit phone number');
       return;
     }
-    
+
     try {
       const response = await sendOTP(phone);
       // Extract demo OTP from response if available
@@ -157,12 +158,12 @@ const Header = () => {
       setOtp('');
       setDemoOtp('');
       closeLoginModal();
-      
+
       // Execute pending action (e.g., add to cart/wishlist) after successful login
       setTimeout(() => {
         executePendingAction();
       }, 100);
-      
+
       // Small delay before reload to allow pending action to execute
       setTimeout(() => {
         window.location.reload();
@@ -219,62 +220,44 @@ const Header = () => {
       <header className="topbar redesigned-navbar">
         {/* Light pink accent stripe at top */}
         <div className="navbar-accent-stripe"></div>
-        
-        <div className="topbar-inner container">
+
+        <div className={`topbar-inner container ${showSearchModal ? 'search-active' : ''}`}>
           <div className="left-group">
             {/* Mobile menu button - hidden on desktop */}
             <button className="mobile-menu-btn" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle Menu">
               <span>☰</span>
             </button>
-            
-            {/* Profile Icon - Far Left - Opens Sidebar */}
-            <button 
+
+            {/* Profile Icon - Opens Sidebar */}
+            <button
               className="profile-icon-btn"
               onClick={() => {
-                console.log('Profile icon clicked, opening sidebar');
                 setProfileSidebarOpen(true);
               }}
               title="Menu"
               aria-label="Open Menu"
             >
               {user ? (
-                <img 
-                  src="/assets/default-avatar.png" 
-                  alt="Profile" 
-                  className="profile-avatar-img"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextElementSibling.style.display = 'block';
-                  }} 
-                />
-              ) : null}
-              <svg 
-                viewBox="0 0 24 24" 
-                width="24" 
-                height="24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="1.5"
-                style={{ display: user ? 'none' : 'block' }}
-              >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
+                <div className="user-initial-avatar">
+                  {(() => {
+                    const displayName = user.fullName || user.name || '';
+                    return displayName ? displayName.charAt(0).toUpperCase() : 'U';
+                  })()}
+                </div>
+              ) : (
+                <svg
+                  viewBox="0 0 24 24"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              )}
             </button>
-            
-            {/* Mobile header avatar - for mobile view */}
-            <div className="mobile-header-avatar" onClick={() => setMobileMenuOpen(true)}>
-              {user ? (
-                <img src="/assets/default-avatar.png" alt="Profile" onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextElementSibling.style.display = 'block';
-                }} />
-              ) : null}
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ display: user ? 'none' : 'block' }}>
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-            </div>
 
             {/* Logo with Shopping Bag Icon */}
             <Link
@@ -333,18 +316,10 @@ const Header = () => {
           </div>
 
           {showSearchModal && (
-            <div style={{ flex: 1, margin: '0 20px', maxWidth: '600px', position: 'relative' }}>
-              <form onSubmit={handleSearch} style={{ width: '100%' }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: '#f1f3f4',
-                  borderRadius: showSearchModal && suggestions.length > 0 ? '8px 8px 0 0' : '8px',
-                  padding: '0 12px',
-                  height: '40px',
-                  width: '100%'
-                }}>
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#5f6368" strokeWidth="2" style={{ marginRight: '10px' }}>
+            <div className="navbar-search-container">
+              <form onSubmit={handleSearch} className="navbar-search-form">
+                <div className="navbar-search-input-wrapper">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#5f6368" strokeWidth="2" className="search-icon-inside">
                     <circle cx="11" cy="11" r="6"></circle>
                     <path d="M21 21l-4.35-4.35" strokeLinecap="round"></path>
                   </svg>
@@ -356,53 +331,13 @@ const Header = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
-                    style={{
-                      flex: 1,
-                      border: 'none',
-                      outline: 'none',
-                      fontSize: '14px',
-                      color: '#202124',
-                      background: 'transparent',
-                      height: '100%'
-                    }}
                   />
-
-                  <button
-                    type="button"
-                    onClick={() => setShowSearchModal(false)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: '#5f6368'
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </button>
                 </div>
               </form>
 
               {/* Auto-suggestions Dropdown */}
               {suggestions.length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  backgroundColor: '#fff',
-                  borderTop: '1px solid #e8eaed',
-                  borderRadius: '0 0 8px 8px',
-                  boxShadow: '0 4px 6px rgba(32,33,36,0.28)',
-                  zIndex: 2000,
-                  overflow: 'hidden',
-                  paddingBottom: '8px'
-                }}>
+                <div className="search-suggestions-dropdown">
                   {suggestions.map((item, idx) => {
                     const itemName = item.name || item.productName || item.categoryName || item.collectionName || '';
                     const itemImage = item.image || (Array.isArray(item.productImages) ? item.productImages[0] : item.categoryImage || item.collectionImage);
@@ -441,7 +376,7 @@ const Header = () => {
                           ) : itemType === 'category' ? (
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="#9aa0a6"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" /></svg>
                           ) : itemType === 'collection' ? (
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="#9aa0a6"><path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9H10.07L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z" /></svg>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="#9aa0a6"><path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9H10.07L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01-4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM3 21.5h8v-8H3v8zm2-6h4v4H5v-4z" /></svg>
                           ) : (
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="#9aa0a6"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
                           )}
@@ -486,6 +421,7 @@ const Header = () => {
               )}
             </div>
           )}
+
           <div className="right-group redesigned-right-group">
             {/* Dark Mode Toggle - Oval Switch Style */}
             <div className="dark-mode-toggle-container redesigned-toggle">
@@ -516,21 +452,29 @@ const Header = () => {
               </label>
             </div>
 
-            {/* Search Icon */}
-            <button 
-              className="icon-btn redesigned-icon-btn" 
-              onClick={() => setShowSearchModal(true)} 
-              title="Search Products"
+            {/* Search Icon / Close Toggle */}
+            <button
+              className="icon-btn redesigned-icon-btn redesigned-search-btn"
+              onClick={() => setShowSearchModal(!showSearchModal)}
+              title={showSearchModal ? "Close Search" : "Search Products"}
+              style={{ color: showSearchModal ? '#E83B8F' : 'inherit' }}
             >
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <circle cx="11" cy="11" r="6"></circle>
-                <path d="M21 21l-4.35-4.35" strokeLinecap="round"></path>
-              </svg>
+              {showSearchModal ? (
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="11" cy="11" r="6"></circle>
+                  <path d="M21 21l-4.35-4.35" strokeLinecap="round"></path>
+                </svg>
+              )}
             </button>
 
             {/* Wishlist Icon */}
             <button
-              className="icon-btn redesigned-icon-btn"
+              className="icon-btn redesigned-icon-btn redesigned-wishlist-btn"
               onClick={() => navigate(storeSlug ? `/store/${storeSlug}/wishlist` : '/wishlist')}
               title="Wishlist"
             >
@@ -555,6 +499,8 @@ const Header = () => {
             </button>
           </div>
         </div>
+
+
       </header>
 
       {/* Mobile Sidebar Menu */}
@@ -566,9 +512,9 @@ const Header = () => {
               <div className="mobile-sidebar-profile" style={{ flex: 1 }}>
                 {user ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
-                    <div className="mobile-sidebar-avatar" style={{ 
-                      width: '50px', 
-                      height: '50px', 
+                    <div className="mobile-sidebar-avatar" style={{
+                      width: '50px',
+                      height: '50px',
                       borderRadius: '50%',
                       backgroundColor: 'var(--vibrant-pink, #e83b8f)',
                       display: 'flex',
@@ -585,9 +531,9 @@ const Header = () => {
                       })()}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ 
-                        fontSize: '16px', 
-                        fontWeight: '600', 
+                      <div style={{
+                        fontSize: '16px',
+                        fontWeight: '600',
                         color: 'var(--text-color, #333)',
                         marginBottom: '4px',
                         overflow: 'hidden',
@@ -596,8 +542,8 @@ const Header = () => {
                       }}>
                         {user.fullName || user.name || 'Guest'}
                       </div>
-                      <div style={{ 
-                        fontSize: '13px', 
+                      <div style={{
+                        fontSize: '13px',
                         color: 'var(--text-secondary, #666)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -831,8 +777,8 @@ const Header = () => {
                 </button>
               </div>
             )}
-            <div className="profile-sidebar-content" style={{ 
-              display: 'flex', 
+            <div className="profile-sidebar-content" style={{
+              display: 'flex',
               flexDirection: 'column',
               height: user ? 'calc(100% - 97px)' : 'calc(100% - 73px)',
               overflowY: 'auto'
@@ -929,9 +875,9 @@ const Header = () => {
                   </svg>
                   <span>Shopping Cart</span>
                 </Link>
-                <Link 
-                  to="/order-tracking" 
-                  className={`profile-sidebar-item ${location.pathname.includes('/order-tracking') ? 'active' : ''}`} 
+                <Link
+                  to="/order-tracking"
+                  className={`profile-sidebar-item ${location.pathname.includes('/order-tracking') ? 'active' : ''}`}
                   onClick={() => setProfileSidebarOpen(false)}
                 >
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -940,12 +886,12 @@ const Header = () => {
                   </svg>
                   <span>Track Order</span>
                 </Link>
-                
+
                 {/* Sign In Button at Bottom - Pink Color */}
                 {!user && (
                   <>
                     <div className="profile-sidebar-divider"></div>
-                    <button 
+                    <button
                       className="profile-sidebar-signin-btn"
                       onClick={() => {
                         promptLogin(null, 'Please login to continue');
@@ -980,7 +926,7 @@ const Header = () => {
                     </button>
                   </>
                 )}
-                
+
                 <div className="profile-sidebar-divider"></div>
                 <div className="profile-sidebar-item" onClick={toggleTheme}>
                   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -1012,6 +958,8 @@ const Header = () => {
           </div>
         </>
       )}
+      {/* Mobile Bottom Navigation - Sticky at footer */}
+      <MobileBottomNav onSearchClick={() => setShowSearchModal(true)} />
     </>
   );
 };
