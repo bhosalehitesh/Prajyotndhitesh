@@ -40,9 +40,15 @@ import OrderDetailsScreen from './src/screens/Orders/OrderDetailsScreen';
 import ShipOrderScreen from './src/screens/Orders/ShipOrderScreen';
 import SelfShipFormScreen from './src/screens/Orders/SelfShipFormScreen';
 import ThirdPartyFormScreen from './src/screens/Orders/ThirdPartyFormScreen';
+import OffersDiscountsScreen from './src/screens/Profile/Profile-tabs/Rdirect/OffersDiscountsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+
+// Wrapper for OffersDiscountsScreen to work with navigation
+function DiscountCouponsWrapper({ navigation }: any) {
+  return <OffersDiscountsScreen onBack={() => navigation.goBack()} />;
+}
 
 // Catalog Stack Navigator
 function CatalogStack() {
@@ -178,6 +184,7 @@ function MainStack() {
       <Stack.Screen name="ShipOrder" component={ShipOrderScreen} />
       <Stack.Screen name="SelfShipForm" component={SelfShipFormScreen} />
       <Stack.Screen name="ThirdPartyForm" component={ThirdPartyFormScreen} />
+      <Stack.Screen name="DiscountCoupons" component={DiscountCouponsWrapper} />
     </Stack.Navigator>
   );
 }

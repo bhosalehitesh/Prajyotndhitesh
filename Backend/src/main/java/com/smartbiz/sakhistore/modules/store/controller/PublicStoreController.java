@@ -18,6 +18,7 @@ import com.smartbiz.sakhistore.modules.collection.service.CollectionService;
 import com.smartbiz.sakhistore.modules.store.model.Banner;
 import com.smartbiz.sakhistore.modules.store.service.BannerService;
 import com.smartbiz.sakhistore.modules.product.repository.ProductVariantRepository;
+import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,6 +44,9 @@ public class PublicStoreController {
     
     @Autowired
     private ProductVariantRepository productVariantRepository;
+    
+    @Autowired
+    private ProductRepository productRepository;
 
     /**
      * Get store details by slug (public endpoint)
@@ -82,7 +86,8 @@ public class PublicStoreController {
     @GetMapping("/{slug}/products")
     public ResponseEntity<?> getStoreProducts(
             @PathVariable String slug,
-            @RequestParam(value = "category", required = false) String category) {
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "collection", required = false) String collection) {
         try {
             System.out.println("🔍 [DEBUG] Fetching products for slug: " + slug);
             
@@ -187,6 +192,75 @@ public class PublicStoreController {
                 }
 
                 System.out.println("🔍 [DEBUG] After category filter by slug (" + category + ") -> category_id (" + (matchedCategory != null ? matchedCategory.getCategory_id() : "null") + "): " + products.size() + " products (was " + beforeFilter + ")");
+            }
+            
+            // Filter by collection if provided (collection param can be SLUG or NAME)
+            if (collection != null && !collection.isEmpty()) {
+                int beforeFilter = products.size();
+                
+                // Try to resolve Collection by SLUG first, then by NAME if slug doesn't match
+                collection matchedCollection = collectionService.findBySlugAndSellerId(collection, sellerId);
+                
+                // If not found by slug, try to find by collection name (for backward compatibility)
+                if (matchedCollection == null) {
+                    System.out.println("⚠️ [DEBUG] Collection not found by slug: " + collection + ", trying by name...");
+                    try {
+                        // Try exact name match first
+                        matchedCollection = collectionService.findByNameAndSellerId(collection, sellerId);
+                        if (matchedCollection == null) {
+                            // Try case-insensitive search
+                            List<collection> allCollections = collectionService.allCollections(sellerId);
+                            matchedCollection = allCollections.stream()
+                                .filter(c -> {
+                                    String collectionName = c.getCollectionName();
+                                    if (collectionName == null) return false;
+                                    // Case-insensitive comparison
+                                    return collectionName.equalsIgnoreCase(collection);
+                                })
+                                .findFirst()
+                                .orElse(null);
+                        }
+                        
+                        if (matchedCollection != null) {
+                            System.out.println("✅ [DEBUG] Found collection by name: " + collection + " -> collection_id: " + matchedCollection.getCollectionId());
+                        } else {
+                            System.out.println("❌ [DEBUG] Collection not found by name either: " + collection);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("⚠️ [DEBUG] Error searching collection by name: " + e.getMessage());
+                    }
+                }
+                
+                if (matchedCollection != null) {
+                    Long resolvedCollectionId = matchedCollection.getCollectionId();
+                    System.out.println("🔍 [DEBUG] Filtering products by collection: " + collection + " -> collection_id: " + resolvedCollectionId);
+                    
+                    // Use repository query to find products by collection ID (more efficient than lazy loading)
+                    List<Product> productsInCollection = productRepository.findByCollections_CollectionId(resolvedCollectionId);
+                    System.out.println("📦 [DEBUG] Found " + productsInCollection.size() + " products in collection " + resolvedCollectionId);
+                    
+                    // Create a set of product IDs that belong to this collection for fast lookup
+                    java.util.Set<Long> productIdsInCollection = productsInCollection.stream()
+                        .map(Product::getProductsId)
+                        .filter(java.util.Objects::nonNull)
+                        .collect(java.util.stream.Collectors.toSet());
+                    
+                    // Filter products to only include those in the collection
+                    products = products.stream()
+                        .filter(p -> productIdsInCollection.contains(p.getProductsId()))
+                        .toList();
+                    
+                    System.out.println("✅ [DEBUG] After collection filter: " + products.size() + " products (was " + beforeFilter + ")");
+                } else {
+                    // If no matching collection found, return empty list
+                    System.out.println("⚠️ [DEBUG] Collection not found with slug/name: " + collection + " for seller: " + sellerId);
+                    System.out.println("⚠️ [DEBUG] Available collections for seller " + sellerId + ":");
+                    List<collection> allCollections = collectionService.allCollections(sellerId);
+                    allCollections.forEach(c -> {
+                        System.out.println("   - ID: " + c.getCollectionId() + ", Name: " + c.getCollectionName() + ", Slug: " + c.getSlug());
+                    });
+                    products = java.util.Collections.emptyList();
+                }
             }
             
             System.out.println("✅ [DEBUG] Returning " + products.size() + " products for slug: " + slug);

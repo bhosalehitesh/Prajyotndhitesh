@@ -47,6 +47,10 @@ export const mockHomeData: HomeScreenData = {
       action: 'StoreDetails',
     },
   ],
+  discountsCoupons: {
+    activeCount: 0,
+    totalCount: 0,
+  },
   features: [
     {
       id: '1',

@@ -21,16 +21,17 @@ import {
   Share,
   Image,
 } from 'react-native';
-import {useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import IconSymbol from '../../components/IconSymbol';
 import {useHomeData} from './useHomeData';
 import {OnboardingTask} from './types';
 
 interface HomeScreenProps {
-  navigation: any;
+  navigation?: any;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({navigation: navProp}) => {
+  const navigation = useNavigation() || navProp;
   const {data, loading, refetch} = useHomeData();
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
 
@@ -97,6 +98,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   const handleEditProfile = () => {
     // Navigate to Website Appearance / Store Appearance screen
     navigation.navigate('StoreAppearance');
+  };
+
+  const handleTodaysTasksPress = () => {
+    // Navigate to Orders tab
+    if (navigation) {
+      (navigation as any).navigate('Orders');
+    }
+  };
+
+  const handleDiscountsCouponsPress = () => {
+    // Navigate to Discount & Coupons screen
+    if (navigation) {
+      (navigation as any).navigate('DiscountCoupons');
+    }
   };
 
   return (
@@ -214,6 +229,47 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Today's Tasks Section */}
+        {data.todaysTasks && data.todaysTasks.newOrdersCount > 0 && (
+          <View style={styles.todaysTasksSection}>
+            <Text style={styles.sectionTitle}>Today's Tasks</Text>
+            <TouchableOpacity
+              style={styles.todaysTaskCard}
+              onPress={handleTodaysTasksPress}
+              activeOpacity={0.7}>
+              <View style={styles.todaysTaskContent}>
+                <IconSymbol name="document-text" size={24} color="#e61580" />
+                <Text style={styles.todaysTaskText}>
+                  {data.todaysTasks.newOrdersCount} New Orders
+                </Text>
+                <IconSymbol name="chevron-forward" size={20} color="#64748B" />
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Discounts & Coupons Section */}
+        <View style={styles.discountsSection}>
+          <Text style={styles.sectionTitle}>Discounts & Coupons</Text>
+          <TouchableOpacity
+            style={styles.discountsCard}
+            onPress={handleDiscountsCouponsPress}
+            activeOpacity={0.7}>
+            <View style={styles.discountsContent}>
+              <View style={styles.discountsIconContainer}>
+                <IconSymbol name="tag" size={24} color="#e61580" />
+              </View>
+              <View style={styles.discountsTextContainer}>
+                <Text style={styles.discountsTitle}>Manage Offers & Discounts</Text>
+                <Text style={styles.discountsSubtitle}>
+                  {data.discountsCoupons?.activeCount || 0} active offers
+                </Text>
+              </View>
+              <IconSymbol name="chevron-forward" size={20} color="#64748B" />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Sakhi Features Section */}
@@ -481,6 +537,71 @@ const styles = StyleSheet.create({
   },
   taskTextCompleted: {
     color: '#10B981',
+  },
+  todaysTasksSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  todaysTaskCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  todaysTaskContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  todaysTaskText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    flex: 1,
+    marginLeft: 12,
+  },
+  discountsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  discountsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  discountsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  discountsIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFF4FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  discountsTextContainer: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  discountsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  discountsSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
   },
   featuresSection: {
     paddingHorizontal: 20,

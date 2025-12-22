@@ -230,10 +230,17 @@ export const getStoreBySlug = async (storeSlug) => {
  * @param {string} category - Optional category filter
  * @returns {Promise<Array>} Array of products
  */
-export const getStoreProducts = async (storeSlug, category = null) => {
+export const getStoreProducts = async (storeSlug, category = null, collection = null) => {
   let endpoint = `/public/store/${encodeURIComponent(storeSlug)}/products`;
+  const params = new URLSearchParams();
   if (category) {
-    endpoint += `?category=${encodeURIComponent(category)}`;
+    params.append('category', category);
+  }
+  if (collection) {
+    params.append('collection', collection);
+  }
+  if (params.toString()) {
+    endpoint += `?${params.toString()}`;
   }
   return apiRequest(endpoint);
 };

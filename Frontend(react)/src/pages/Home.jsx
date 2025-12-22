@@ -555,10 +555,19 @@ const Home = () => {
                 const startingPrice = collection.startingPrice || collection.starting_price || null;
 
                 const basePath = actualSlug ? `/store/${actualSlug}` : '';
+                // Prefer slug, but fallback to collectionName for backward compatibility
                 const collectionSlug = collection.slug || collection.collectionName || collection.name;
                 const collectionPath = collectionSlug
                   ? `${basePath}/products?collection=${encodeURIComponent(collectionSlug)}`
                   : getNavPath(ROUTES.PRODUCTS);
+                
+                // Debug logging
+                console.log('🔍 [Home] Collection click:', {
+                  collectionName: collection.collectionName || collection.name,
+                  collectionSlug: collection.slug,
+                  usingSlug: collectionSlug,
+                  path: collectionPath
+                });
 
                 return (
                   <div

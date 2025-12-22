@@ -21,6 +21,7 @@ import {HomeScreenData, HomeScreenApiResponse} from './types';
 import {mockHomeData} from './mockData';
 import {storage} from '../../authentication/storage';
 import { getCurrentSellerStoreDetails } from '../../utils/api';
+import { getSellerOrders } from '../../utils/orderApi';
 
 interface UseHomeDataReturn {
   data: HomeScreenData | null;
@@ -121,6 +122,24 @@ export const useHomeData = (): UseHomeDataReturn => {
         }
       }
 
+      // Fetch new orders count for Today's Tasks
+      let newOrdersCount = 0;
+      try {
+        const userIdRaw = await storage.getItem('userId');
+        const sellerId = userIdRaw && !isNaN(Number(userIdRaw)) ? userIdRaw : null;
+        
+        if (sellerId) {
+          const orders = await getSellerOrders(sellerId);
+          // Count orders with status PLACED or PENDING (new orders)
+          newOrdersCount = orders.filter(
+            order => order.orderStatus === 'PLACED' || order.orderStatus === 'PENDING'
+          ).length;
+        }
+      } catch (error) {
+        console.warn('Could not fetch new orders count:', error);
+        // Continue with default count of 0
+      }
+
       // Create data with per-seller profile values or fallback to mock
       const homeData: HomeScreenData = {
         ...mockHomeData,
@@ -130,6 +149,13 @@ export const useHomeData = (): UseHomeDataReturn => {
           storeName: finalStoreName,
           storeLink: finalStoreLink,
           logoUrl: logoUrl || undefined,
+        },
+        todaysTasks: {
+          newOrdersCount: newOrdersCount,
+        },
+        discountsCoupons: {
+          activeCount: 0, // TODO: Fetch from backend API when available
+          totalCount: 0, // TODO: Fetch from backend API when available
         },
       };
 
