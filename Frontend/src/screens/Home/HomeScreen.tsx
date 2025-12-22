@@ -107,13 +107,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation: navProp}) => {
     }
   };
 
-  const handleDiscountsCouponsPress = () => {
-    // Navigate to Discount & Coupons screen
-    if (navigation) {
-      (navigation as any).navigate('DiscountCoupons');
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -249,28 +242,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation: navProp}) => {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Discounts & Coupons Section */}
-        <View style={styles.discountsSection}>
-          <Text style={styles.sectionTitle}>Discounts & Coupons</Text>
-          <TouchableOpacity
-            style={styles.discountsCard}
-            onPress={handleDiscountsCouponsPress}
-            activeOpacity={0.7}>
-            <View style={styles.discountsContent}>
-              <View style={styles.discountsIconContainer}>
-                <IconSymbol name="tag" size={24} color="#e61580" />
-              </View>
-              <View style={styles.discountsTextContainer}>
-                <Text style={styles.discountsTitle}>Manage Offers & Discounts</Text>
-                <Text style={styles.discountsSubtitle}>
-                  {data.discountsCoupons?.activeCount || 0} active offers
-                </Text>
-              </View>
-              <IconSymbol name="chevron-forward" size={20} color="#64748B" />
-            </View>
-          </TouchableOpacity>
-        </View>
 
         {/* Sakhi Features Section */}
         {data.features.length > 0 && (
@@ -562,46 +533,6 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     flex: 1,
     marginLeft: 12,
-  },
-  discountsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  discountsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  discountsContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  discountsIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FFF4FA',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  discountsTextContainer: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  discountsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
-    marginBottom: 4,
-  },
-  discountsSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
   },
   featuresSection: {
     paddingHorizontal: 20,
