@@ -9,4 +9,5 @@ import com.smartbiz.sakhistore.modules.payment.model.Payment;
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Payment findByPaymentId(String paymentId);
     Payment findByRazorpayOrderId(String razorpayOrderId);
+    Payment findByOrders_OrdersId(Long orderId);
 }

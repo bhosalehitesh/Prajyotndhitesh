@@ -37,6 +37,9 @@ import SelectProductsScreen from './src/screens/Catalog/collections/SelectProduc
 import SelectedProductsPreviewScreen from './src/screens/Catalog/collections/SelectedProductsPreviewScreen';
 import StoreAppearanceScreen from './src/screens/StoreAppearance/StoreAppearanceScreen';
 import OrderDetailsScreen from './src/screens/Orders/OrderDetailsScreen';
+import ShipOrderScreen from './src/screens/Orders/ShipOrderScreen';
+import SelfShipFormScreen from './src/screens/Orders/SelfShipFormScreen';
+import ThirdPartyFormScreen from './src/screens/Orders/ThirdPartyFormScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -172,6 +175,9 @@ function MainStack() {
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="StoreAppearance" component={StoreAppearanceScreen} />
       <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+      <Stack.Screen name="ShipOrder" component={ShipOrderScreen} />
+      <Stack.Screen name="SelfShipForm" component={SelfShipFormScreen} />
+      <Stack.Screen name="ThirdPartyForm" component={ThirdPartyFormScreen} />
     </Stack.Navigator>
   );
 }

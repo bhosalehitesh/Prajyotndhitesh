@@ -16,6 +16,7 @@ import com.smartbiz.sakhistore.modules.order.model.OrderItems;
 import com.smartbiz.sakhistore.modules.payment.model.PaymentStatus;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
+import com.smartbiz.sakhistore.modules.product.model.Product;
 
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +41,9 @@ public class OrdersService {
 
     @Autowired
     private OrderEmailService orderEmailService;
+
+    @Autowired(required = false)
+    private com.smartbiz.sakhistore.modules.payment.service.PaymentService paymentService;
 
     // ===============================
     // Create Order From Cart
@@ -67,8 +71,11 @@ public class OrdersService {
         }
         System.out.println("=".repeat(60) + "\n");
 
-        Cart cart = cartRepository.findByUser(fullUser)
-                .orElseThrow(() -> new RuntimeException("Cart not found for user"));
+        // Use eager loading query to fetch cart with products and sellers
+        // This prevents LazyInitializationException when accessing product.getSeller()
+        Cart cart = cartRepository.findByUserWithItemsAndProducts(fullUser)
+                .orElse(cartRepository.findByUser(fullUser)
+                        .orElseThrow(() -> new RuntimeException("Cart not found for user")));
 
         Orders order = new Orders();
         order.setUser(fullUser);  // Use full user object with LATEST email from database
@@ -90,12 +97,29 @@ public class OrdersService {
         }
         
         for (OrderItems item : cart.getItems()) {
-            if (item == null || item.getProduct() == null) {
-                throw new RuntimeException("Cart contains invalid item. Product is missing.");
+            if (item == null) {
+                System.err.println("⚠️ [OrdersService] Cart contains null item, skipping...");
+                continue;
+            }
+            
+            // Get product - either directly or from variant
+            Product product = item.getProduct();
+            if (product == null && item.getVariant() != null) {
+                product = item.getVariant().getProduct();
+                System.out.println("✅ [OrdersService] Got product from variant for cart item");
+            }
+            
+            if (product == null) {
+                System.err.println("❌ [OrdersService] Cart item has no product and no variant with product. Item ID: " + 
+                    (item.getOrderItemsId() != null ? item.getOrderItemsId() : "unknown"));
+                throw new RuntimeException("Cart contains invalid item. Product is missing. Please remove invalid items from cart and try again.");
             }
             
             OrderItems newOrderItem = new OrderItems();
-            newOrderItem.setProduct(item.getProduct());
+            newOrderItem.setProduct(product);
+            if (item.getVariant() != null) {
+                newOrderItem.setVariant(item.getVariant());
+            }
             newOrderItem.setQuantity(item.getQuantity());
             newOrderItem.setPrice(item.getPrice());
             newOrderItem.setOrders(order);
@@ -104,25 +128,57 @@ public class OrdersService {
             order.getOrderItems().add(newOrderItem);
 
             // Extract sellerId from product if not provided
-            if (extractedSellerId == null && item.getProduct() != null && item.getProduct().getSeller() != null) {
-                extractedSellerId = item.getProduct().getSeller().getSellerId();
+            try {
+                if (extractedSellerId == null && product != null) {
+                    // Force initialization of seller relationship if needed
+                    try {
+                        if (product.getSeller() != null) {
+                            extractedSellerId = product.getSeller().getSellerId();
+                            System.out.println("✅ [OrdersService] Extracted sellerId " + extractedSellerId + " from product (ID: " + 
+                                (product.getProductsId() != null ? product.getProductsId() : "unknown") + ")");
+                        } else {
+                            System.err.println("⚠️ [OrdersService] Product has no seller. Product ID: " + 
+                                (product.getProductsId() != null ? product.getProductsId() : "unknown"));
+                        }
+                    } catch (org.hibernate.LazyInitializationException e) {
+                        System.err.println("⚠️ [OrdersService] Lazy loading exception for seller. Product ID: " + 
+                            (product.getProductsId() != null ? product.getProductsId() : "unknown"));
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ [OrdersService] Error extracting sellerId: " + e.getMessage());
+                e.printStackTrace();
             }
             
             // Extract storeId from product's seller's store if not provided
-            if (extractedStoreId == null && item.getProduct() != null && item.getProduct().getSeller() != null) {
+            if (extractedStoreId == null && product != null) {
                 try {
-                    Long productSellerId = item.getProduct().getSeller().getSellerId();
-                    if (productSellerId != null) {
-                        // Find store by sellerId
-                        java.util.List<StoreDetails> stores = storeDetailsRepo.findBySeller_SellerId(productSellerId);
-                        if (stores != null && !stores.isEmpty()) {
-                            extractedStoreId = stores.get(0).getStoreId();
-                            System.out.println("✅ [OrdersService] Extracted storeId " + extractedStoreId + " from product's seller (sellerId: " + productSellerId + ")");
+                    // Check if seller is available
+                    if (product.getSeller() != null) {
+                        Long productSellerId = product.getSeller().getSellerId();
+                        if (productSellerId != null) {
+                            // Find store by sellerId
+                            java.util.List<StoreDetails> stores = storeDetailsRepo.findBySeller_SellerId(productSellerId);
+                            if (stores != null && !stores.isEmpty()) {
+                                extractedStoreId = stores.get(0).getStoreId();
+                                System.out.println("✅ [OrdersService] Extracted storeId " + extractedStoreId + " from product's seller (sellerId: " + productSellerId + ")");
+                            } else {
+                                System.err.println("⚠️ [OrdersService] No store found for sellerId: " + productSellerId);
+                            }
+                        } else {
+                            System.err.println("⚠️ [OrdersService] Product's seller has null sellerId. Product ID: " + 
+                                (product.getProductsId() != null ? product.getProductsId() : "unknown"));
                         }
+                    } else {
+                        System.err.println("⚠️ [OrdersService] Product has no seller. Product ID: " + 
+                            (product.getProductsId() != null ? product.getProductsId() : "unknown"));
                     }
+                } catch (org.hibernate.LazyInitializationException e) {
+                    System.err.println("⚠️ [OrdersService] Lazy loading exception when accessing seller. Product ID: " + 
+                        (product.getProductsId() != null ? product.getProductsId() : "unknown"));
                 } catch (Exception e) {
                     System.err.println("⚠️ [OrdersService] Could not extract storeId from product's seller: " + e.getMessage());
-                    // Continue - we'll validate storeId later
+                    e.printStackTrace();
                 }
             }
         }
@@ -133,7 +189,13 @@ public class OrdersService {
 
         // Validate storeId is not null
         if (extractedStoreId == null) {
-            throw new RuntimeException("Store ID is required but could not be determined. Please ensure products belong to a valid store.");
+            System.err.println("❌ [OrdersService] CRITICAL: StoreId is null after processing all cart items.");
+            System.err.println("   - Provided storeId parameter: " + storeId);
+            System.err.println("   - Cart items count: " + cart.getItems().size());
+            System.err.println("   - Products in cart may not have valid seller/store relationships.");
+            throw new RuntimeException("Store ID is required but could not be determined. " +
+                "Please ensure products belong to a valid store. " +
+                "If this error persists, contact support with order details.");
         }
 
         order.setTotalAmount(total);
@@ -216,11 +278,31 @@ public class OrdersService {
 
     // ===============================
     // Fetch Order by ID
+    // Automatically syncs payment status if payment is PAID
     // ===============================
     public Orders getOrder(Long id) {
         // Use findByIdWithUser to eagerly load user for customerName/customerPhone getters
         Optional<Orders> orderOpt = ordersRepository.findByIdWithUser(id);
-        return orderOpt.orElseThrow(() -> new RuntimeException("Order not found"));
+        Orders order = orderOpt.orElseThrow(() -> new RuntimeException("Order not found"));
+        
+        // Auto-sync payment status if order shows PENDING but payment is PAID
+        if (order.getPaymentStatus() == com.smartbiz.sakhistore.modules.payment.model.PaymentStatus.PENDING && paymentService != null) {
+            try {
+                boolean synced = paymentService.syncPaymentStatusForOrder(id);
+                if (synced) {
+                    // Re-fetch order to get updated status
+                    orderOpt = ordersRepository.findByIdWithUser(id);
+                    if (orderOpt.isPresent()) {
+                        order = orderOpt.get();
+                    }
+                }
+            } catch (Exception e) {
+                // Silently fail - don't break order fetching if sync fails
+                System.err.println("⚠️ Auto-sync failed for order #" + id + ": " + e.getMessage());
+            }
+        }
+        
+        return order;
     }
 
     // ===============================
@@ -245,6 +327,30 @@ public class OrdersService {
             order.setRejectionReason(null);
         }
         
+        // CRITICAL: Auto-sync payment status when order is DELIVERED
+        // If order is delivered, payment should be PAID (sync from Payment table)
+        if (status == com.smartbiz.sakhistore.modules.order.model.OrderStatus.DELIVERED && paymentService != null) {
+            try {
+                // Sync payment status from Payment table to Orders table
+                boolean synced = paymentService.syncPaymentStatusForOrder(id);
+                if (synced) {
+                    System.out.println("✅ Auto-synced payment status to PAID for delivered order #" + id);
+                    // Re-fetch order to get updated payment status
+                    order = ordersRepository.findById(id).orElse(order);
+                } else {
+                    // If sync didn't work, check if payment exists and is PAID
+                    // If order payment status is still PENDING but order is DELIVERED, 
+                    // it's likely the payment was successful but status wasn't synced
+                    if (order.getPaymentStatus() == PaymentStatus.PENDING) {
+                        System.out.println("⚠️ Order #" + id + " is DELIVERED but payment status is PENDING. Attempting sync...");
+                    }
+                }
+            } catch (Exception e) {
+                // Don't fail the order status update if sync fails
+                System.err.println("⚠️ Auto-sync payment status failed for order #" + id + ": " + e.getMessage());
+            }
+        }
+        
         return ordersRepository.save(order);
     }
 
@@ -265,5 +371,14 @@ public class OrdersService {
     // ===============================
     public void sendTestEmail(Orders order, byte[] pdfBytes) {
         orderEmailService.sendOrderInvoiceEmail(order, pdfBytes);
+    }
+
+    // ===============================
+    // Update Payment Status
+    // ===============================
+    public Orders updatePaymentStatus(Long id, PaymentStatus status) {
+        Orders order = getOrder(id);
+        order.setPaymentStatus(status);
+        return ordersRepository.save(order);
     }
 }

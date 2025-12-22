@@ -17,7 +17,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { getOrderById, updateOrderStatus, OrderDto } from '../../utils/orderApi';
 import { transformOrder } from './orderUtils';
@@ -39,8 +39,6 @@ const OrderDetailsScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [showShipModal, setShowShipModal] = useState(false);
-  const [shippingMethod, setShippingMethod] = useState<'self' | 'third-party' | null>(null);
   const [showSelfShipModal, setShowSelfShipModal] = useState(false);
   const [showThirdPartyModal, setShowThirdPartyModal] = useState(false);
   const [deliveryAgentName, setDeliveryAgentName] = useState('');
@@ -51,6 +49,15 @@ const OrderDetailsScreen = () => {
   useEffect(() => {
     fetchOrderDetails();
   }, [orderId]);
+
+  // Refresh order details when screen comes into focus (e.g., after shipping)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (orderId) {
+        fetchOrderDetails();
+      }
+    }, [orderId])
+  );
 
   const fetchOrderDetails = async () => {
     try {
@@ -107,7 +114,8 @@ const OrderDetailsScreen = () => {
               await updateOrderStatus(orderId, 'PROCESSING');
               // Refresh order details to show updated status
               await fetchOrderDetails();
-              Alert.alert('Success', 'Order accepted successfully!');
+              // Immediately navigate to ship order screen after accepting
+              navigation.navigate('ShipOrder' as never, { orderId } as never);
             } catch (err: any) {
               Alert.alert('Error', err.message || 'Failed to accept order');
             } finally {
@@ -120,26 +128,9 @@ const OrderDetailsScreen = () => {
   };
 
   const handleShipOrder = () => {
-    setShippingMethod(null);
-    setShowShipModal(true);
+    navigation.navigate('ShipOrder' as never, { orderId } as never);
   };
 
-  const handleShipContinue = () => {
-    if (!shippingMethod) {
-      Alert.alert('Selection Required', 'Please select a shipping method');
-      return;
-    }
-
-    // Close the shipping method selection modal
-    setShowShipModal(false);
-
-    // Open the appropriate form modal based on selection
-    if (shippingMethod === 'self') {
-      setShowSelfShipModal(true);
-    } else if (shippingMethod === 'third-party') {
-      setShowThirdPartyModal(true);
-    }
-  };
 
   const handleSelfShipSubmit = async () => {
     if (!deliveryAgentName.trim() || !deliveryAgentPhone.trim()) {
@@ -160,7 +151,6 @@ const OrderDetailsScreen = () => {
       // Reset form
       setDeliveryAgentName('');
       setDeliveryAgentPhone('');
-      setShippingMethod(null);
       
       Alert.alert('Success', 'Order has been marked as shipped via Self Ship');
     } catch (err: any) {
@@ -189,7 +179,6 @@ const OrderDetailsScreen = () => {
       // Reset form
       setPartnerName('');
       setTrackingId('');
-      setShippingMethod(null);
       
       Alert.alert('Success', `Order has been marked as shipped via ${partnerName}`);
     } catch (err: any) {
@@ -197,6 +186,34 @@ const OrderDetailsScreen = () => {
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleMarkAsDelivered = async () => {
+    if (!order) return;
+
+    Alert.alert(
+      'Mark as Delivered',
+      'Are you sure this order has been delivered?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Mark as Delivered',
+          onPress: async () => {
+            try {
+              setUpdating(true);
+              await updateOrderStatus(orderId, 'DELIVERED');
+              // Refresh order details to show updated status
+              await fetchOrderDetails();
+              Alert.alert('Success', 'Order has been marked as delivered!');
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to mark order as delivered');
+            } finally {
+              setUpdating(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleRejectOrder = () => {
@@ -543,6 +560,30 @@ const OrderDetailsScreen = () => {
           </View>
         )}
 
+        {/* Action Buttons for Shipped Orders */}
+        {order.status === 'shipped' && (
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.rejectButton]}
+              onPress={handleRejectOrder}
+              disabled={updating}
+            >
+              <Text style={styles.rejectButtonText}>Reject Order</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.deliveredButton]}
+              onPress={handleMarkAsDelivered}
+              disabled={updating}
+            >
+              {updating ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.deliveredButtonText}>Mark as delivered</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Rejection Reason Modal */}
         <Modal
           visible={showRejectModal}
@@ -586,88 +627,6 @@ const OrderDetailsScreen = () => {
                   ) : (
                     <Text style={styles.modalConfirmText}>Reject</Text>
                   )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Ship Order Modal */}
-        <Modal
-          visible={showShipModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowShipModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.shipModalContent}>
-              <View style={styles.shipModalHeader}>
-                <Text style={styles.shipModalTitle}>Ship Order</Text>
-                <TouchableOpacity
-                  onPress={() => setShowShipModal(false)}
-                  style={styles.closeButton}
-                >
-                  <MaterialCommunityIcons name="close" size={24} color="#333" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView 
-                style={styles.shipModalScrollView}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.shipModalScrollContent}
-              >
-                <Text style={styles.shipModalQuestion}>How will the order get shipped?</Text>
-                <Text style={styles.shipModalSubtext}>Select how you are going to ship this order</Text>
-
-                <View style={styles.shippingOptions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.shippingOption,
-                      shippingMethod === 'self' && styles.shippingOptionSelected
-                    ]}
-                    onPress={() => setShippingMethod('self')}
-                  >
-                    <View style={styles.radioButton}>
-                      {shippingMethod === 'self' && <View style={styles.radioButtonInner} />}
-                    </View>
-                    <Text style={styles.shippingOptionText}>Self Ship</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.shippingOption,
-                      shippingMethod === 'third-party' && styles.shippingOptionSelected
-                    ]}
-                    onPress={() => setShippingMethod('third-party')}
-                  >
-                    <View style={styles.radioButton}>
-                      {shippingMethod === 'third-party' && <View style={styles.radioButtonInner} />}
-                    </View>
-                    <View style={styles.shippingOptionContent}>
-                      <Text style={styles.shippingOptionText}>Third Party Service</Text>
-                      <Text style={styles.shippingOptionDescription}>
-                        Select this if you are using BlueDart or any other service to ship this order.
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-
-              <View style={styles.continueButtonContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.continueButton,
-                    shippingMethod && styles.continueButtonEnabled
-                  ]}
-                  onPress={handleShipContinue}
-                  disabled={!shippingMethod}
-                >
-                  <Text style={[
-                    styles.continueButtonText,
-                    shippingMethod && styles.continueButtonTextEnabled
-                  ]}>
-                    Continue
-                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1219,6 +1178,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#3498db',
   },
   shipButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  deliveredButton: {
+    backgroundColor: '#10B981',
+  },
+  deliveredButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',

@@ -489,17 +489,25 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
         }
       }
 
-      // Provide user-friendly error messages
+      // Provide user-friendly error messages based on status code
+      if (response.status === 400) {
+        // Bad request - validation errors
+        throw new Error(errorMessage || 'Invalid request. Please check your order details and try again.');
+      }
+      
       if (response.status === 500) {
         // Check for specific error patterns
         if (errorMessage.includes('Cart not found') || errorMessage.includes('cart')) {
           throw new Error('Your cart is empty or not found. Please add items to cart and try again.');
         }
-        if (errorMessage.includes('NullPointerException') || errorMessage.includes('null')) {
+        if (errorMessage.includes('NullPointerException') || errorMessage.includes('null') || errorMessage.includes('Missing required data')) {
           throw new Error('Server error: Missing required data. Please try refreshing the page and placing the order again.');
         }
         if (errorMessage.includes('LazyInitializationException') || errorMessage.includes('could not initialize')) {
           throw new Error('Server error: Data loading issue. Please try again.');
+        }
+        if (errorMessage.includes('Store ID is required') || errorMessage.includes('storeId')) {
+          throw new Error('Store information is missing. Please ensure you are shopping from a valid store page.');
         }
 
         // Show the actual error message from backend
@@ -509,7 +517,7 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
         throw new Error(`Server error: ${userMessage}. Please check backend logs for details.`);
       }
 
-      throw new Error(errorMessage);
+      throw new Error(errorMessage || 'Failed to place order. Please try again.');
     }
 
     return handleResponse(response);

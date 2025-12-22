@@ -31,17 +31,90 @@ public class OrdersController {
     // Place Order From Cart
     // ===============================
     @PostMapping("/place")
-    public Orders placeOrder(
+    public ResponseEntity<?> placeOrder(
             @RequestParam Long userId,
             @RequestParam String address,
             @RequestParam Long mobile,
             @RequestParam(required = false) Long storeId,
             @RequestParam(required = false) Long sellerId
     ) {
-        User user = new User();
-        user.setId(userId);
+        try {
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("🛒 PLACING ORDER - REQUEST RECEIVED");
+            System.out.println("=".repeat(60));
+            System.out.println("User ID: " + userId);
+            System.out.println("Address: " + (address != null ? address.substring(0, Math.min(50, address.length())) + "..." : "NULL"));
+            System.out.println("Mobile: " + mobile);
+            System.out.println("Store ID: " + storeId);
+            System.out.println("Seller ID: " + sellerId);
+            System.out.println("=".repeat(60) + "\n");
 
-        return ordersService.placeOrder(user, address, mobile, storeId, sellerId);
+            // Validate required parameters
+            if (userId == null) {
+                throw new IllegalArgumentException("User ID is required");
+            }
+            if (address == null || address.trim().isEmpty()) {
+                throw new IllegalArgumentException("Address is required");
+            }
+            if (mobile == null) {
+                throw new IllegalArgumentException("Mobile number is required");
+            }
+
+            User user = new User();
+            user.setId(userId);
+
+            Orders order = ordersService.placeOrder(user, address, mobile, storeId, sellerId);
+            
+            System.out.println("✅ Order placed successfully. Order ID: " + (order.getOrdersId() != null ? order.getOrdersId() : "N/A"));
+            System.out.println("=".repeat(60) + "\n");
+            
+            return ResponseEntity.ok(order);
+            
+        } catch (IllegalArgumentException e) {
+            System.err.println("\n" + "=".repeat(60));
+            System.err.println("❌ ORDER PLACEMENT FAILED - VALIDATION ERROR");
+            System.err.println("=".repeat(60));
+            System.err.println("Error: " + e.getMessage());
+            System.err.println("=".repeat(60) + "\n");
+            
+            java.util.Map<String, Object> error = new java.util.HashMap<>();
+            error.put("error", "VALIDATION_ERROR");
+            error.put("message", e.getMessage());
+            error.put("timestamp", java.time.LocalDateTime.now().toString());
+            return ResponseEntity.badRequest().body(error);
+            
+        } catch (RuntimeException e) {
+            System.err.println("\n" + "=".repeat(60));
+            System.err.println("❌ ORDER PLACEMENT FAILED - RUNTIME ERROR");
+            System.err.println("=".repeat(60));
+            System.err.println("Error: " + e.getMessage());
+            System.err.println("Error Type: " + e.getClass().getSimpleName());
+            e.printStackTrace();
+            System.err.println("=".repeat(60) + "\n");
+            
+            java.util.Map<String, Object> error = new java.util.HashMap<>();
+            error.put("error", "ORDER_PLACEMENT_FAILED");
+            error.put("message", e.getMessage() != null ? e.getMessage() : "Failed to place order");
+            error.put("errorType", e.getClass().getSimpleName());
+            error.put("timestamp", java.time.LocalDateTime.now().toString());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            
+        } catch (Exception e) {
+            System.err.println("\n" + "=".repeat(60));
+            System.err.println("❌ ORDER PLACEMENT FAILED - UNEXPECTED ERROR");
+            System.err.println("=".repeat(60));
+            System.err.println("Error: " + e.getMessage());
+            System.err.println("Error Type: " + e.getClass().getSimpleName());
+            e.printStackTrace();
+            System.err.println("=".repeat(60) + "\n");
+            
+            java.util.Map<String, Object> error = new java.util.HashMap<>();
+            error.put("error", "INTERNAL_SERVER_ERROR");
+            error.put("message", e.getMessage() != null ? e.getMessage() : "An unexpected error occurred while placing the order");
+            error.put("errorType", e.getClass().getSimpleName());
+            error.put("timestamp", java.time.LocalDateTime.now().toString());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     // ===============================
@@ -82,6 +155,15 @@ public class OrdersController {
     @GetMapping("/seller/{sellerId}")
     public List<Orders> getSellerOrders(@PathVariable Long sellerId) {
         return ordersService.getOrdersBySellerId(sellerId);
+    }
+
+    // ===============================
+    // Get All Orders
+    // Returns all orders in the system
+    // ===============================
+    @GetMapping("/all")
+    public List<Orders> getAllOrders() {
+        return ordersService.getAllOrders();
     }
 
     // ===============================
