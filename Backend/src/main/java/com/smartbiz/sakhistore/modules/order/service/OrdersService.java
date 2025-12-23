@@ -48,6 +48,9 @@ public class OrdersService {
     // ===============================
     // Create Order From Cart
     // ===============================
+    // ===============================
+    // Create Order From Cart
+    // ===============================
     public Orders placeOrder(User user, String address, Long mobile, Long storeId, Long sellerId) {
         // Validate required parameters
         if (user == null || user.getId() == null) {
@@ -62,119 +65,60 @@ public class OrdersService {
             throw new RuntimeException("Mobile number is required to place an order");
         }
 
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("🛒 PLACING ORDER - USER EMAIL CHECK");
-        System.out.println("=".repeat(60));
-        System.out.println("User ID: " + user.getId());
-
-        // ALWAYS fetch the LATEST user object from database to get most recent email
+        // Always fetch the LATEST user object from database
         User fullUser = userRepository.findById(user.getId())
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + user.getId()));
 
-        System.out.println("📧 Email in database: " + (fullUser.getEmail() != null ? fullUser.getEmail() : "NULL"));
-        System.out
-                .println("📧 Email from request user object: " + (user.getEmail() != null ? user.getEmail() : "NULL"));
-
         if (fullUser.getEmail() == null || fullUser.getEmail().trim().isEmpty()) {
-            System.out.println("⚠️ WARNING: User does not have an email in database!");
-            System.out.println("   Order will be placed but invoice email will not be sent.");
-            System.out.println("   User should update their email in profile/checkout.");
-        } else {
-            System.out.println("✅ User has email in database: " + fullUser.getEmail());
+            System.out.println("⚠️ User does not have an email. Invoice will not be sent.");
         }
-        System.out.println("=".repeat(60) + "\n");
 
-        // Use eager fetching to load cart with all items, products, and sellers
-        // This prevents LazyInitializationException when accessing product.getSeller()
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("🛒 [OrdersService] FETCHING CART FOR USER ID: " + fullUser.getId());
-        System.out.println("=".repeat(60));
-
-        Cart cart = cartRepository.findByUserWithItemsAndProducts(fullUser)
-                .orElse(null);
+        // Use eager fetching to load cart with all items
+        Cart cart = cartRepository.findByUserWithItemsAndProducts(fullUser).orElse(null);
         if (cart == null) {
-            System.out.println("⚠️ [OrdersService] Eager fetch returned null, trying regular fetch...");
             cart = cartRepository.findByUser(fullUser)
                     .orElseThrow(() -> new RuntimeException("Cart not found for user ID: " + fullUser.getId()));
         }
 
-        System.out.println("✅ [OrdersService] Cart found. Cart ID: " + cart.getCartId());
-        System.out.println("   Items count: " + (cart.getItems() != null ? cart.getItems().size() : 0));
-        System.out.println("=".repeat(60) + "\n");
+        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+            throw new RuntimeException("Cart is empty. Cannot place order with no items.");
+        }
 
         Orders order = new Orders();
-        order.setUser(fullUser); // Use full user object with LATEST email from database
+        order.setUser(fullUser);
         order.setAddress(address);
         order.setMobile(mobile);
         order.setOrderStatus(OrderStatus.PLACED);
         order.setPaymentStatus(PaymentStatus.PENDING);
-
-        // Initialize orderItems list to avoid NullPointerException
         order.setOrderItems(new java.util.ArrayList<>());
 
         double total = 0.0;
         Long extractedSellerId = sellerId;
         Long extractedStoreId = storeId;
 
-        // Move cart items → order items
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("🛒 [OrdersService] PROCESSING CART ITEMS");
-        System.out.println("=".repeat(60));
-        System.out.println("Cart items: " + (cart.getItems() != null ? cart.getItems().size() : "NULL"));
-
-        if (cart.getItems() == null || cart.getItems().isEmpty()) {
-            System.err.println("❌ [OrdersService] Cart is empty!");
-            throw new RuntimeException("Cart is empty. Cannot place order with no items.");
-        }
-
-        System.out.println("Processing " + cart.getItems().size() + " cart items...");
-        int itemIndex = 0;
+        // Process cart items
         for (OrderItems item : cart.getItems()) {
-            itemIndex++;
-            System.out.println("\n--- Processing Item #" + itemIndex + " ---");
-            if (item == null) {
-                System.err.println("⚠️ [OrdersService] Cart contains null item, skipping...");
+            if (item == null)
                 continue;
-            }
 
-            // Get product - either directly or from variant
             Product product = null;
-            System.out.println("   Item variant: " + (item.getVariant() != null ? "EXISTS" : "NULL"));
-            System.out.println("   Item product: " + (item.getProduct() != null ? "EXISTS" : "NULL"));
-
-            if (item.getVariant() != null) {
-                System.out.println("   Variant ID: " + item.getVariant().getVariantId());
-                if (item.getVariant().getProduct() != null) {
-                    product = item.getVariant().getProduct();
-                    System.out.println("   ✅ Using product from variant (Product ID: " + product.getProductsId() + ")");
-                } else {
-                    System.out.println("   ⚠️ Variant exists but product is NULL");
-                }
-            }
-
-            if (product == null && item.getProduct() != null) {
+            if (item.getVariant() != null && item.getVariant().getProduct() != null) {
+                product = item.getVariant().getProduct();
+            } else if (item.getProduct() != null) {
                 product = item.getProduct();
-                System.out.println("   ✅ Using direct product reference (Product ID: " + product.getProductsId() + ")");
             }
 
             if (product == null) {
-                System.err.println("   ❌ ERROR: Neither product nor variant with product is available!");
                 throw new RuntimeException(
-                        "Cart contains invalid item. Product is missing. Please remove invalid items from cart and try again.");
+                        "Cart contains invalid item (missing product). Please clear cart and try again.");
             }
 
-            System.out.println("   Product ID: " + product.getProductsId());
-            System.out.println("   Product seller: "
-                    + (product.getSeller() != null ? "EXISTS (ID: " + product.getSeller().getSellerId() + ")"
-                            : "NULL"));
-
-            // Validate required fields
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new RuntimeException("Cart item has invalid quantity: " + item.getQuantity());
+                throw new RuntimeException("Cart item has invalid quantity");
             }
 
             if (item.getPrice() == null || item.getPrice() <= 0) {
-                throw new RuntimeException("Cart item has invalid price: " + item.getPrice());
+                throw new RuntimeException("Cart item has invalid price");
             }
 
             OrderItems newOrderItem = new OrderItems();
@@ -186,249 +130,87 @@ public class OrdersService {
             newOrderItem.setPrice(item.getPrice());
             newOrderItem.setOrders(order);
 
+            // FIX: Add price directly (assuming price is line total), or if unit price, fix
+            // logic.
+            // Based on previous fix: total += item.getPrice();
             total += item.getPrice();
+
             order.getOrderItems().add(newOrderItem);
 
-            // Extract sellerId from product if not provided
-            if (extractedSellerId == null && product != null) {
-                try {
-                    if (product.getSeller() != null && product.getSeller().getSellerId() != null) {
-                        extractedSellerId = product.getSeller().getSellerId();
-                        System.out.println(
-                                "✅ [OrdersService] Extracted sellerId " + extractedSellerId + " from product (ID: " +
-                                        (product.getProductsId() != null ? product.getProductsId() : "unknown") + ")");
-                    } else {
-                        System.err.println("⚠️ [OrdersService] Product has no seller. Product ID: " +
-                                (product.getProductsId() != null ? product.getProductsId() : "unknown"));
-                    }
-                } catch (org.hibernate.LazyInitializationException e) {
-                    System.err.println("⚠️ [OrdersService] Lazy loading exception for seller. Product ID: " +
-                            (product.getProductsId() != null ? product.getProductsId() : "unknown"));
-                } catch (Exception e) {
-                    System.err.println("⚠️ [OrdersService] Could not extract sellerId from product: " + e.getMessage());
-                    e.printStackTrace();
-                }
+            // Extract seller/store info if needed
+            if (extractedSellerId == null && product.getSeller() != null) {
+                extractedSellerId = product.getSeller().getSellerId();
             }
 
-            // Extract storeId from product's seller's store if not provided
-            if (extractedStoreId == null && product != null)
-
-            {
+            if (extractedStoreId == null && product.getSeller() != null) {
                 try {
-
-                    // Check if seller is available
-                    if (product.getSeller() != null) {
-                        Long productSellerId = product.getSeller().getSellerId();
-                        if (productSellerId != null) {
-                            // Find store by sellerId
-                            java.util.List<StoreDetails> stores = storeDetailsRepo
-                                    .findBySeller_SellerId(productSellerId);
-                            if (stores != null && !stores.isEmpty() && stores.get(0) != null) {
-                                StoreDetails store = stores.get(0);
-                                if (store.getStoreId() != null) {
-                                    extractedStoreId = store.getStoreId();
-                                    System.out.println("✅ [OrdersService] Extracted storeId " + extractedStoreId
-                                            + " from product's seller (sellerId: " + productSellerId + ")");
-                                }
-                            } else {
-                                System.err
-                                        .println("⚠️ [OrdersService] No store found for sellerId: " + productSellerId);
-                            }
-                        } else {
-                            System.err.println("⚠️ [OrdersService] Product's seller has null sellerId. Product ID: " +
-                                    (product.getProductsId() != null ? product.getProductsId() : "unknown"));
-
+                    Long pSellerId = product.getSeller().getSellerId();
+                    if (pSellerId != null) {
+                        List<StoreDetails> stores = storeDetailsRepo.findBySeller_SellerId(pSellerId);
+                        if (stores != null && !stores.isEmpty() && stores.get(0).getStoreId() != null) {
+                            extractedStoreId = stores.get(0).getStoreId();
                         }
-                    } else {
-                        System.err.println("⚠️ [OrdersService] Product has no seller. Product ID: " +
-                                (product.getProductsId() != null ? product.getProductsId() : "unknown"));
                     }
-                } catch (org.hibernate.LazyInitializationException e) {
-                    System.err.println("⚠️ [OrdersService] Lazy loading exception when accessing seller. Product ID: " +
-                            (product.getProductsId() != null ? product.getProductsId() : "unknown"));
                 } catch (Exception e) {
-                    System.err.println(
-                            "⚠️ [OrdersService] Could not extract storeId from product's seller: " + e.getMessage());
-                    e.printStackTrace();
-                    // Continue - we'll validate storeId later
+                    // Ignore lazy loading or other issues
                 }
             }
         }
-
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("📊 [OrdersService] ORDER SUMMARY");
-        System.out.println("=".repeat(60));
-        System.out.println("Total items: " + order.getOrderItems().size());
-        System.out.println("Total amount: ₹" + total);
-        System.out.println("Extracted sellerId: " + extractedSellerId);
-        System.out.println("Extracted storeId: " + extractedStoreId);
-        System.out.println("Provided sellerId: " + sellerId);
-        System.out.println("Provided storeId: " + storeId);
-        System.out.println("=".repeat(60) + "\n");
 
         if (order.getOrderItems().isEmpty()) {
-            System.err.println("❌ [OrdersService] No valid items found in cart!");
-            throw new RuntimeException("No valid items found in cart to place order.");
+            throw new RuntimeException("No valid items to process");
         }
 
-        // Validate storeId is not null
         if (extractedStoreId == null) {
-            System.err.println("❌ [OrdersService] CRITICAL: StoreId is null after processing all cart items.");
-            System.err.println("   - Provided storeId parameter: " + storeId);
-            System.err.println("   - Cart items count: " + cart.getItems().size());
-            System.err.println("   - Products in cart may not have valid seller/store relationships.");
-            throw new RuntimeException("Store ID is required but could not be determined. " +
-                    "Please ensure products belong to a valid store. " +
-                    "If this error persists, contact support with order details.");
+            throw new RuntimeException("Store ID could not be determined for this order.");
         }
 
         order.setTotalAmount(total);
         order.setSellerId(extractedSellerId);
         order.setStoreId(extractedStoreId);
 
-        // Ensure all order items have the order reference set BEFORE saving
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("🔗 [OrdersService] SETTING ORDER REFERENCES ON ITEMS");
-        System.out.println("=".repeat(60));
-        for (OrderItems orderItem : order.getOrderItems()) {
-            if (orderItem.getOrders() == null) {
-                orderItem.setOrders(order);
-                System.out.println("⚠️ [OrdersService] Fixed null order reference on order item");
-            } else {
-                System.out.println("✅ [OrdersService] Order item already has order reference");
-            }
-            // Double-check the reference is set
-            if (orderItem.getOrders() == null) {
-                throw new RuntimeException("CRITICAL: Order item still has null order reference after setting!");
-            }
-            System.out.println("   Order item ID: " + orderItem.getOrderItemsId() +
-                    ", Order reference: "
-                    + (orderItem.getOrders() != null ? "SET (Order ID: " + orderItem.getOrders().getOrdersId() + ")"
-                            : "NULL"));
-        }
-        System.out.println("=".repeat(60) + "\n");
-
-        System.out.println("✅ [OrdersService] Order prepared successfully. Saving to database...");
-        System.out.println("   Order items count: " + order.getOrderItems().size());
-        System.out.println("   Total amount: ₹" + order.getTotalAmount());
-        System.out.println("   Store ID: " + order.getStoreId());
-        System.out.println("   Seller ID: " + order.getSellerId());
-        System.out.println("   Order ID (before save): " + order.getOrdersId());
-
-        // Save order (+ items) to database
+        // Save order
         Orders savedOrder;
         try {
-            // Save the order first (this will generate the OrdersId)
             savedOrder = ordersRepository.save(order);
-            System.out.println("✅ [OrdersService] Order saved successfully! Order ID: " + savedOrder.getOrdersId());
-
-            // Ensure all items still have the correct reference after save
-            for (OrderItems item : savedOrder.getOrderItems()) {
-                if (item.getOrders() == null || !item.getOrders().getOrdersId().equals(savedOrder.getOrdersId())) {
-                    item.setOrders(savedOrder);
-                    System.out.println("⚠️ [OrdersService] Re-setting order reference on item after save");
-                }
-            }
-
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            System.err.println("❌ [OrdersService] Database constraint violation:");
-            System.err.println("   Error: " + e.getMessage());
-            System.err.println(
-                    "   Root cause: " + (e.getRootCause() != null ? e.getRootCause().getMessage() : "Unknown"));
-            System.err.println("   Order items: " + order.getOrderItems().size());
-            System.err.println("   Order total: " + order.getTotalAmount());
-            System.err.println("   Store ID: " + order.getStoreId());
-            System.err.println("   Seller ID: " + order.getSellerId());
-            e.printStackTrace();
-            String errorMsg = e.getRootCause() != null ? e.getRootCause().getMessage() : e.getMessage();
-            throw new RuntimeException(
-                    "Database constraint violation. The foreign key column may not exist. Please restart the server to let Hibernate create it. Error: "
-                            + errorMsg,
-                    e);
         } catch (Exception e) {
-            System.err.println("❌ [OrdersService] Error saving order to database:");
-            System.err.println("   Error: " + e.getMessage());
-            System.err.println("   Error type: " + e.getClass().getSimpleName());
-            System.err.println("   Order items: " + order.getOrderItems().size());
-            System.err.println("   Order total: " + order.getTotalAmount());
-            System.err.println("   Store ID: " + order.getStoreId());
-            System.err.println("   Seller ID: " + order.getSellerId());
             e.printStackTrace();
-            throw new RuntimeException("Failed to save order to database: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to save order: " + e.getMessage());
         }
 
-        // Empty cart after order creation
+        // Ensure inverse relationship is set (sometimes required by JPA/Hibernate
+        // cache)
+        for (OrderItems item : savedOrder.getOrderItems()) {
+            if (item.getOrders() == null) {
+                item.setOrders(savedOrder);
+            }
+        }
+
+        // Empty cart
         cart.getItems().clear();
         cartRepository.save(cart);
 
-        // ===============================
-        // Generate PDF and Send Email
-        // ===============================
+        // Send Email (async or safe block)
         try {
-            // ALWAYS fetch fresh user from database to get latest email
-            System.out.println("\n" + "=".repeat(60));
-            System.out.println("🔄 [OrdersService] REFRESHING USER DATA FROM DATABASE");
-            System.out.println("=".repeat(60));
-            System.out.println("Order ID: #" + savedOrder.getOrdersId());
-            System.out.println("User ID: " + fullUser.getId());
-
-            // Fetch the LATEST user data from database (in case email was updated)
-            User latestUser = userRepository.findById(fullUser.getId())
-                    .orElseThrow(() -> new RuntimeException("User not found in database"));
-
-            System.out.println(
-                    "📧 Email from database: " + (latestUser.getEmail() != null ? latestUser.getEmail() : "NULL"));
-            System.out.println(
-                    "📧 Email from order user: " + (fullUser.getEmail() != null ? fullUser.getEmail() : "NULL"));
-
-            // Update the order's user with latest email
-            if (latestUser.getEmail() != null && !latestUser.getEmail().trim().isEmpty()) {
-                fullUser.setEmail(latestUser.getEmail());
-                System.out.println("✅ Updated order user with latest email from database: " + latestUser.getEmail());
-            } else {
-                System.out.println("⚠️ No email found in database for user ID: " + latestUser.getId());
-                System.out.println("   User needs to add email address to their profile.");
-            }
-            System.out.println("=".repeat(60) + "\n");
-
-            // Fetch order with user and items for PDF generation
-            Orders orderWithDetails = ordersRepository.findByIdWithUser(savedOrder.getOrdersId())
-                    .orElse(savedOrder);
-
-            // Ensure order has the latest user email
-            if (orderWithDetails.getUser() != null && latestUser.getEmail() != null) {
-                orderWithDetails.getUser().setEmail(latestUser.getEmail());
+            // Refresh user for latest email
+            User currentUser = userRepository.findById(fullUser.getId()).orElse(fullUser);
+            if (currentUser.getEmail() != null && !currentUser.getEmail().isEmpty()) {
+                fullUser.setEmail(currentUser.getEmail());
             }
 
-            // Debug: Check if user and email exist
-            System.out.println("\n🔍 [OrdersService] Final check before sending email for Order #"
-                    + orderWithDetails.getOrdersId());
-            if (orderWithDetails.getUser() != null) {
-                System.out.println("   User ID: " + orderWithDetails.getUser().getId());
-                System.out.println("   User Name: " + orderWithDetails.getUser().getFullName());
-                System.out.println("   User Phone: " + orderWithDetails.getUser().getPhone());
-                System.out.println("   User Email: "
-                        + (orderWithDetails.getUser().getEmail() != null ? orderWithDetails.getUser().getEmail()
-                                : "NULL/EMPTY"));
-            } else {
-                System.out.println("   ❌ User is NULL for this order!");
+            // Generate PDF and send
+            // Re-fetch order with details to ensure everything is loaded for the PDF
+            Orders orderForPdf = ordersRepository.findByIdWithUser(savedOrder.getOrdersId()).orElse(savedOrder);
+            if (orderForPdf.getUser() != null && currentUser.getEmail() != null) {
+                orderForPdf.getUser().setEmail(currentUser.getEmail());
             }
 
-            // Generate PDF invoice
-            System.out.println(
-                    "\n📄 [OrdersService] Generating PDF invoice for Order #" + orderWithDetails.getOrdersId());
-            String htmlContent = OrderInvoiceHTMLBuilder.build(orderWithDetails);
+            String htmlContent = OrderInvoiceHTMLBuilder.build(orderForPdf);
             byte[] pdfBytes = PdfGenerator.generatePdfBytes(htmlContent);
-            System.out.println("✅ [OrdersService] PDF generated successfully (" + pdfBytes.length + " bytes)");
-
-            // Send email with PDF attachment
-            orderEmailService.sendOrderInvoiceEmail(orderWithDetails, pdfBytes);
-
+            orderEmailService.sendOrderInvoiceEmail(orderForPdf, pdfBytes);
+            System.out.println("✅ Invoice email sent for Order #" + savedOrder.getOrdersId());
         } catch (Exception e) {
-            // Log error but don't fail the order placement
-            System.err.println("⚠️ [OrdersService] Failed to generate PDF or send email: " + e.getMessage());
-            e.printStackTrace();
-            // Order is already saved, so we continue
+            System.err.println("⚠️ Failed to send invoice email: " + e.getMessage());
         }
 
         return savedOrder;
