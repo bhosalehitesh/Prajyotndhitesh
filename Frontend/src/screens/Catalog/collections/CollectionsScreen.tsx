@@ -405,12 +405,12 @@ const CollectionsScreen: React.FC<CollectionsScreenProps> = ({ navigation }) => 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5', // SmartBiz: same as CategoriesScreen
+    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E3A8A', // SmartBiz: same blue as CategoriesScreen
+    backgroundColor: '#e61580',
     paddingHorizontal: 16,
     paddingVertical: 12,
     height: 56,
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     bottom: 80,
     left: 16,
     right: 16,
-    backgroundColor: '#1E3A8A', // SmartBiz: same blue as CategoriesScreen
+    backgroundColor: '#e61580',
     paddingVertical: 16, // SmartBiz: same as CategoriesScreen
     borderRadius: 12,
     alignItems: 'center',

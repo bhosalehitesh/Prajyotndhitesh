@@ -17,11 +17,11 @@ import { storage } from '../../authentication/storage';
 
 const DeliverySettingsScreen: React.FC = () => {
   const navigation = useNavigation();
-  
+
   // State for delivery settings
   const [deliveryCharge, setDeliveryCharge] = useState('0');
   const [deliveryRadius, setDeliveryRadius] = useState('All India coverage');
-  const [deliveryTime] = useState('Delivered in 3-5 Days');
+  const [deliveryTime, setDeliveryTime] = useState('Delivered in 3-5 Days');
 
   // Load delivery settings when screen comes into focus
   useFocusEffect(
@@ -57,13 +57,34 @@ const DeliverySettingsScreen: React.FC = () => {
           } else {
             setDeliveryRadius('All India coverage');
           }
+
+          // Load delivery time
+          const localTime = await storage.getItem('localDeliveryTime');
+          const nationalTime = await storage.getItem('nationalDeliveryTime');
+
+          let timeDisplay = 'Delivered in 3-5 Days';
+
+          if (localTime) {
+            const cleanLocal = localTime.replace('Delivered in ', '');
+            timeDisplay = `Local: ${cleanLocal}`;
+
+            if (nationalTime) {
+              const cleanNational = nationalTime.replace('Delivered in ', '');
+              timeDisplay += ` • National: ${cleanNational}`;
+            }
+          } else if (nationalTime) {
+            timeDisplay = nationalTime;
+          }
+
+          setDeliveryTime(timeDisplay);
         } catch (error) {
           console.error('Error loading delivery settings:', error);
           setDeliveryCharge('0');
           setDeliveryRadius('All India coverage');
+          setDeliveryTime('Delivered in 3-5 Days');
         }
       };
-      
+
       loadDeliverySettings();
     }, [])
   );
@@ -116,8 +137,7 @@ const DeliverySettingsScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.settingRow}
           onPress={() => {
-            // TODO: Navigate to delivery time screen
-            console.log('Navigate to delivery time');
+            navigation.navigate('DeliveryTime' as never);
           }}
         >
           <View style={styles.settingContent}>

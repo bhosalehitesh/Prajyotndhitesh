@@ -16,10 +16,10 @@
  * - refetch: Function to refetch data
  */
 
-import React, {useState, useEffect, useCallback} from 'react';
-import {HomeScreenData, HomeScreenApiResponse} from './types';
-import {mockHomeData} from './mockData';
-import {storage} from '../../authentication/storage';
+import React, { useState, useEffect, useCallback } from 'react';
+import { HomeScreenData, HomeScreenApiResponse } from './types';
+import { mockHomeData } from './mockData';
+import { storage } from '../../authentication/storage';
 import { getCurrentSellerStoreDetails } from '../../utils/api';
 import { getSellerOrders } from '../../utils/orderApi';
 
@@ -88,17 +88,20 @@ export const useHomeData = (): UseHomeDataReturn => {
 
       const finalStoreName =
         backendStore?.storeName || storedStoreName || mockHomeData.profile.storeName;
-      const finalStoreLink =
+      const finalStoreLinkRaw =
         backendStore?.storeLink || storedStoreLink || mockHomeData.profile.storeLink;
+
+      // Ensure we display the correct domain (smartbiz.ltd) even if backend sends old one
+      const finalStoreLink = finalStoreLinkRaw?.replace('thynktech.com', 'smartbiz.ltd');
       // Use backend logoUrl first, then stored, then null
       // IMPORTANT: Even if backend store is not found, use stored logoUrl if available
       const logoUrl = backendStore?.logoUrl || storedLogoUrl || null;
-      
+
       // Update stored logoUrl if backend has a newer one
       if (backendStore?.logoUrl && backendStore.logoUrl !== storedLogoUrl) {
         await storage.setItem('storeLogoUrl', backendStore.logoUrl);
       }
-      
+
       // If we have a stored logoUrl but backend doesn't have store, log it
       if (!backendStore && storedLogoUrl) {
         console.log('Using stored logoUrl (backend store not found):', storedLogoUrl);
@@ -127,7 +130,7 @@ export const useHomeData = (): UseHomeDataReturn => {
       try {
         const userIdRaw = await storage.getItem('userId');
         const sellerId = userIdRaw && !isNaN(Number(userIdRaw)) ? userIdRaw : null;
-        
+
         if (sellerId) {
           const orders = await getSellerOrders(sellerId);
           // Count orders with status PLACED or PENDING (new orders)

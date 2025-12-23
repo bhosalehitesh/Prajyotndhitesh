@@ -46,6 +46,9 @@ import PaymentSetupComingSoon from './src/screens/PaymentSetup/PaymentSetupComin
 import DeliverySettingsScreen from './src/screens/DeliverySettings/DeliverySettingsScreen';
 import SetDeliveryChargesScreen from './src/screens/DeliverySettings/SetDeliveryChargesScreen';
 import SetDeliveryRadiusScreen from './src/screens/DeliverySettings/SetDeliveryRadiusScreen';
+import DeliveryTimeScreen from './src/screens/DeliverySettings/DeliveryTimeScreen';
+import FAQsScreen from './src/screens/Help/FAQsScreen';
+import ContactUsScreen from './src/screens/Help/ContactUsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -175,7 +178,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 // Main Stack Navigator (includes tabs + modal screens)
 function MainStack() {
   return (
-    <Stack.Navigator 
+    <Stack.Navigator
       initialRouteName="MainTabs"
       screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
@@ -190,6 +193,9 @@ function MainStack() {
       <Stack.Screen name="DeliverySettings" component={DeliverySettingsScreen} />
       <Stack.Screen name="SetDeliveryCharges" component={SetDeliveryChargesScreen} />
       <Stack.Screen name="SetDeliveryRadius" component={SetDeliveryRadiusScreen} />
+      <Stack.Screen name="DeliveryTime" component={DeliveryTimeScreen} />
+      <Stack.Screen name="FAQsScreen" component={FAQsScreen} />
+      <Stack.Screen name="ContactUs" component={ContactUsScreen} />
     </Stack.Navigator>
   );
 }
@@ -362,7 +368,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#FFF4FA',
+    backgroundColor: '#f8f9fa',
   },
   mainContent: {
     flex: 1,
@@ -384,9 +390,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#fff5f8',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#e2e4ec',
+    borderTopColor: '#dee2e6',
     height: 60,
     paddingTop: 5,
     paddingBottom: 5,

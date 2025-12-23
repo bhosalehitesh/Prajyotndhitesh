@@ -5,7 +5,7 @@
  * Backend team will replace data fetching logic in useHomeData.ts
  */
 
-import {HomeScreenData} from './types';
+import { HomeScreenData } from './types';
 
 /**
  * Mock Home Screen Data
@@ -54,13 +54,13 @@ export const mockHomeData: HomeScreenData = {
   features: [
     {
       id: '1',
-      title: 'GOOGLE ANALYTICS',
+      title: 'WHATSAPP MARKETING',
       description:
-        'Understand your sales pattern, customer behaviour and much more with Google Analytics',
-      badge: 'New!',
-      actionText: 'Setup Google Analytics',
-      actionRoute: 'GoogleAnalytics',
-      backgroundColor: '#e61580',
+        'Boost your sales by sharing products and sending order updates directly on WhatsApp.',
+      badge: 'Recommended',
+      actionText: 'Start Marketing',
+      actionRoute: 'WhatsAppMarketing',
+      backgroundColor: '#25D366',
     },
     // Add more feature items as needed
   ],
@@ -109,12 +109,7 @@ export const mockHomeData: HomeScreenData = {
       icon: 'help-circle',
       action: 'FAQs',
     },
-    {
-      id: '2',
-      title: 'How Tos',
-      icon: 'document-text',
-      action: 'HowTos',
-    },
+
     {
       id: '3',
       title: 'Contact Us',

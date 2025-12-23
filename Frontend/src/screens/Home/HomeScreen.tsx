@@ -9,7 +9,7 @@
  * - Update mockData.ts or useHomeData.ts for backend integration
  */
 
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   SafeAreaView,
   StyleSheet,
@@ -21,18 +21,18 @@ import {
   Share,
   Image,
 } from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import IconSymbol from '../../components/IconSymbol';
-import {useHomeData} from './useHomeData';
-import {OnboardingTask} from './types';
+import { useHomeData } from './useHomeData';
+import { OnboardingTask } from './types';
 
 interface HomeScreenProps {
   navigation?: any;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({navigation: navProp}) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ navigation: navProp }) => {
   const navigation = useNavigation() || navProp;
-  const {data, loading, refetch} = useHomeData();
+  const { data, loading, refetch } = useHomeData();
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
 
   // Refresh data when screen comes into focus (e.g., after uploading logo)
@@ -92,7 +92,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation: navProp}) => {
   };
 
   const handleHelpPress = (help: typeof data.helpOptions[0]) => {
-    navigation.navigate(help.action);
+    // Navigate to FAQs if the action matches
+    if (help.action === 'FAQs') {
+      navigation.navigate('FAQsScreen');
+    } else {
+      // Fallback or other help options
+      navigation.navigate(help.action);
+    }
   };
 
   const handleEditProfile = () => {
@@ -128,7 +134,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation: navProp}) => {
             <View style={styles.avatarContainer}>
               {data.profile.logoUrl && data.profile.logoUrl.trim() !== '' ? (
                 <Image
-                  source={{uri: data.profile.logoUrl}}
+                  source={{ uri: data.profile.logoUrl }}
                   style={styles.avatarImage}
                   resizeMode="cover"
                   onError={(error) => {
@@ -256,8 +262,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation: navProp}) => {
                     styles.featureHeader,
                     data.features[currentFeatureIndex].backgroundColor
                       ? {
-                          backgroundColor: data.features[currentFeatureIndex].backgroundColor,
-                        }
+                        backgroundColor: data.features[currentFeatureIndex].backgroundColor,
+                      }
                       : undefined,
                   ]}>
                   <Text style={styles.featureTitle}>
@@ -356,7 +362,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({navigation: navProp}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF4FA',
+    backgroundColor: '#f8f9fa',
   },
   scrollView: {
     flex: 1,
@@ -399,7 +405,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
@@ -464,7 +470,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
@@ -518,7 +524,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
@@ -549,7 +555,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
@@ -640,7 +646,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
@@ -669,7 +675,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
