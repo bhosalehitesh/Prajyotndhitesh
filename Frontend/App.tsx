@@ -43,6 +43,9 @@ import ThirdPartyFormScreen from './src/screens/Orders/ThirdPartyFormScreen';
 import DiscountCouponsComingSoon from './src/screens/DiscountCoupons/DiscountCouponsComingSoon';
 import WhatsAppMarketingScreen from './src/screens/WhatsAppMarketing/WhatsAppMarketingScreen';
 import PaymentSetupComingSoon from './src/screens/PaymentSetup/PaymentSetupComingSoon';
+import DeliverySettingsScreen from './src/screens/DeliverySettings/DeliverySettingsScreen';
+import SetDeliveryChargesScreen from './src/screens/DeliverySettings/SetDeliveryChargesScreen';
+import SetDeliveryRadiusScreen from './src/screens/DeliverySettings/SetDeliveryRadiusScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -184,6 +187,9 @@ function MainStack() {
       <Stack.Screen name="DiscountCoupons" component={DiscountCouponsComingSoon} />
       <Stack.Screen name="WhatsAppMarketing" component={WhatsAppMarketingScreen} />
       <Stack.Screen name="PaymentSetup" component={PaymentSetupComingSoon} />
+      <Stack.Screen name="DeliverySettings" component={DeliverySettingsScreen} />
+      <Stack.Screen name="SetDeliveryCharges" component={SetDeliveryChargesScreen} />
+      <Stack.Screen name="SetDeliveryRadius" component={SetDeliveryRadiusScreen} />
     </Stack.Navigator>
   );
 }
