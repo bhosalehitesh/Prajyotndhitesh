@@ -172,7 +172,7 @@ public class OrdersService {
             if (item.getPrice() == null || item.getPrice() <= 0) {
                 throw new RuntimeException("Cart item has invalid price: " + item.getPrice());
             }
-            }
+
             
             OrderItems newOrderItem = new OrderItems();
             newOrderItem.setProduct(product);
@@ -205,41 +205,31 @@ public class OrdersService {
                     e.printStackTrace();
                 }
             }
-            }
+
 
     // Extract storeId from product's seller's store if not provided
     if(extractedStoreId==null&&product!=null)
 
     {
                 try {
-<<<<<<< HEAD
-                    if (product.getSeller() != null && product.getSeller().getSellerId() != null) {
-                        Long productSellerId = product.getSeller().getSellerId();
-                        // Find store by sellerId
-                        java.util.List<StoreDetails> stores = storeDetailsRepo.findBySeller_SellerId(productSellerId);
-                        if (stores != null && !stores.isEmpty() && stores.get(0) != null) {
-                            StoreDetails store = stores.get(0);
-                            if (store.getStoreId() != null) {
-                                extractedStoreId = store.getStoreId();
-                                System.out.println("✅ [OrdersService] Extracted storeId " + extractedStoreId + " from product's seller (sellerId: " + productSellerId + ")");
-                            }
-=======
                     // Check if seller is available
                     if (product.getSeller() != null) {
                         Long productSellerId = product.getSeller().getSellerId();
                         if (productSellerId != null) {
                             // Find store by sellerId
                             java.util.List<StoreDetails> stores = storeDetailsRepo.findBySeller_SellerId(productSellerId);
-                            if (stores != null && !stores.isEmpty()) {
-                                extractedStoreId = stores.get(0).getStoreId();
-                                System.out.println("✅ [OrdersService] Extracted storeId " + extractedStoreId + " from product's seller (sellerId: " + productSellerId + ")");
+                            if (stores != null && !stores.isEmpty() && stores.get(0) != null) {
+                                StoreDetails store = stores.get(0);
+                                if (store.getStoreId() != null) {
+                                    extractedStoreId = store.getStoreId();
+                                    System.out.println("✅ [OrdersService] Extracted storeId " + extractedStoreId + " from product's seller (sellerId: " + productSellerId + ")");
+                                }
                             } else {
                                 System.err.println("⚠️ [OrdersService] No store found for sellerId: " + productSellerId);
                             }
                         } else {
                             System.err.println("⚠️ [OrdersService] Product's seller has null sellerId. Product ID: " + 
                                 (product.getProductsId() != null ? product.getProductsId() : "unknown"));
->>>>>>> 384429e25a0b2d16643efc8887d715cd610cfd07
                         }
                     } else {
                         System.err.println("⚠️ [OrdersService] Product has no seller. Product ID: " + 

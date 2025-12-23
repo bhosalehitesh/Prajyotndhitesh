@@ -340,6 +340,7 @@ public class PaymentController {
                     }
                 }
 
+                }
 
             // CRITICAL: Final verification - ensure order payment status is PAID (only if order exists)
             // Try to get orderId from payment record if not set
