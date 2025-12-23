@@ -186,7 +186,7 @@ public class OrdersService {
             newOrderItem.setPrice(item.getPrice());
             newOrderItem.setOrders(order);
 
-            total += item.getPrice() * item.getQuantity();
+            total += item.getPrice();
             order.getOrderItems().add(newOrderItem);
 
             // Extract sellerId from product if not provided
