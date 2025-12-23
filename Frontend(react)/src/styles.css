@@ -1978,8 +1978,8 @@ body>.page-wrapper>.site-footer {
 .footer-main {
   display: grid;
   grid-template-columns: 2.5fr 1.2fr 1.2fr;
-  gap: 100px;
-  padding: 100px 80px 70px;
+  gap: 40px;
+  padding: 40px 40px 30px;
   width: 100%;
   position: relative;
 }
@@ -1994,7 +1994,7 @@ body>.page-wrapper>.site-footer {
 }
 
 .footer-brand-name {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   -webkit-background-clip: text;
@@ -2006,8 +2006,8 @@ body>.page-wrapper>.site-footer {
 }
 
 .footer-brand-description {
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--text-secondary);
   margin: 0;
   max-width: 450px;
@@ -2022,9 +2022,9 @@ body>.page-wrapper>.site-footer {
 }
 
 .social-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background: var(--white-content);
   border: 2px solid rgba(230, 21, 128, 0.1);
   display: flex;
@@ -2065,8 +2065,8 @@ body>.page-wrapper>.site-footer {
 }
 
 .social-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   transition: all 0.4s ease;
   position: relative;
   z-index: 1;
@@ -2089,10 +2089,10 @@ body.dark-mode .social-icon svg {
 }
 
 .footer-heading {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--footer-text);
-  margin: 0 0 24px 0;
+  margin: 0 0 16px 0;
   letter-spacing: -0.3px;
   position: relative;
   padding-bottom: 8px;
@@ -2115,7 +2115,7 @@ body.dark-mode .social-icon svg {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .footer-links li {
@@ -2125,7 +2125,7 @@ body.dark-mode .social-icon svg {
 .footer-links li a {
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 400;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-flex;
@@ -2178,8 +2178,8 @@ body.dark-mode .social-icon svg {
 
 .contact-line {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.4;
   color: var(--text-secondary);
 }
 
@@ -2198,7 +2198,7 @@ body.dark-mode .social-icon svg {
 /* Footer Bottom */
 .footer-bottom {
   border-top: 1px solid rgba(230, 21, 128, 0.1);
-  padding: 40px 80px;
+  padding: 15px 40px;
   background: var(--footer-bg);
   position: relative;
   overflow: hidden;
@@ -2222,7 +2222,7 @@ body.dark-mode .footer-bottom {
 
 .footer-bottom-content {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 32px;
@@ -2234,10 +2234,10 @@ body.dark-mode .footer-bottom {
 .payment-info {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 15px;
+  gap: 6px;
+  font-size: 12px;
   color: var(--text-secondary);
-  padding: 12px 24px;
+  padding: 4px 10px;
   background: rgba(230, 21, 128, 0.05);
   border-radius: 50px;
   border: 1px solid rgba(230, 21, 128, 0.1);
@@ -2257,7 +2257,7 @@ body.dark-mode .footer-bottom {
 }
 
 .payment-icon {
-  font-size: 22px;
+  font-size: 16px;
   line-height: 1;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
@@ -2271,12 +2271,26 @@ body.dark-mode .footer-bottom {
   letter-spacing: 0.3px;
 }
 
+.powered-by {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.powered-by .payment-label {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
 .smartbiz-logo {
-  height: 20px;
+  height: 55px;
   width: auto;
   vertical-align: middle;
-  opacity: 0.8;
+  opacity: 1;
   transition: opacity 0.3s ease;
+}
+
+body.dark-mode .smartbiz-logo {
   filter: brightness(0) invert(1);
 }
 
@@ -2328,8 +2342,8 @@ body.dark-mode .footer-bottom {
 @media (max-width: 1024px) {
   .footer-main {
     grid-template-columns: 1fr 1fr;
-    gap: 60px;
-    padding: 80px 60px 60px;
+    gap: 40px;
+    padding: 40px 40px 30px;
   }
 
   .footer-brand-column {
@@ -2352,15 +2366,15 @@ body.dark-mode .footer-bottom {
   }
 
   .footer-bottom {
-    padding: 32px 60px;
+    padding: 15px 40px;
   }
 }
 
 @media (max-width: 768px) {
   .footer-main {
     grid-template-columns: 1fr;
-    gap: 48px;
-    padding: 70px 40px 50px;
+    gap: 30px;
+    padding: 40px 20px 30px;
   }
 
   .footer-brand-column {
@@ -2419,19 +2433,19 @@ body.dark-mode .footer-bottom {
   }
 
   .footer-bottom {
-    padding: 32px 40px;
+    padding: 15px 20px;
   }
 
   .footer-bottom-content {
     flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    text-align: center;
+    align-items: flex-start;
+    gap: 15px;
+    text-align: left;
   }
 
   .payment-info {
-    font-size: 14px;
-    padding: 10px 20px;
+    font-size: 11px;
+    padding: 3px 8px;
   }
 }
 
@@ -2494,8 +2508,8 @@ body.dark-mode .footer-bottom {
   }
 
   .payment-info {
-    font-size: 13px;
-    padding: 8px 16px;
+    font-size: 11px;
+    padding: 3px 8px;
     flex-wrap: wrap;
     justify-content: center;
   }
