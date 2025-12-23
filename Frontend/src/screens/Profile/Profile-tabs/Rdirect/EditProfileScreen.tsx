@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaView, ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, Alert, ActivityIndicator } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { storage, AUTH_TOKEN_KEY } from '../../../../authentication/storage';
-import { getCurrentSellerStoreDetails, saveStoreAddress, getSellerDetails, updateSellerDetails, saveBusinessDetails, fetchCategories, fetchProducts } from '../../../../utils/api';
+import { getCurrentSellerStoreDetails, saveStoreAddress, getSellerDetails, saveBusinessDetails, fetchCategories, fetchProducts, updateSellerDetails } from '../../../../utils/api';
+
+// ... (inside component)
+
+// if (Object.keys(sellerUpdateData).length > 0) {
+//   await updateSellerDetails(userId, sellerUpdateData);
+//   console.log('✅ [EditProfile] Seller details updated');
+// }
 
 export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
   const [hideAddress, setHideAddress] = useState(false);

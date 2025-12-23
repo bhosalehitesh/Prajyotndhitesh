@@ -24,3 +24,4 @@ ALTER COLUMN orders_id SET NOT NULL;
 -- Step 5: Make sequence owned by the column (so it gets dropped if column is dropped)
 ALTER SEQUENCE orders_orders_id_seq OWNED BY orders.orders_id;
 
+

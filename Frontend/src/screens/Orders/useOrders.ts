@@ -42,7 +42,7 @@ export const useOrders = (): UseOrdersReturn => {
       const backendOrders: OrderDto[] = await getSellerOrders(sellerId);
 
       console.log('📦 [useOrders] Fetched orders from backend:', backendOrders.length);
-      
+
       // Debug: Log sample order to check OrdersId
       if (backendOrders.length > 0) {
         console.log('📦 [useOrders] Sample order from backend:', {

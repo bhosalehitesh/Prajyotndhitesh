@@ -23,7 +23,6 @@ public class OrderItems {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long OrderItemsId;
 
-
     private Integer quantity;
 
     private Double price;
@@ -33,21 +32,20 @@ public class OrderItems {
     // =======================
     @ManyToOne
     @JoinColumn(name = "variant_id")
-    @JsonIgnore  // Prevent circular references in JSON
+    @JsonIgnore // Prevent circular references in JSON
     private ProductVariant variant;
 
     @ManyToOne
-    @JoinColumn(name = "orders_orders_id", referencedColumnName = "orders_id", nullable = false)
-    @JsonBackReference  // Child side - don't serialize this to prevent circular reference
+    @JoinColumn(name = "orders_orders_id", referencedColumnName = "orders_id", nullable = true)
+    @JsonBackReference // Child side - don't serialize this to prevent circular reference
     private Orders orders;
 
     @ManyToOne
-    private Product product;  // Keep for backward compatibility, but prefer variant
+    private Product product; // Keep for backward compatibility, but prefer variant
 
     @ManyToOne
     @JsonIgnore
     private Cart cart;
-
 
     public Long getOrderItemsId() {
         return OrderItemsId;

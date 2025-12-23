@@ -568,7 +568,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
           style={styles.addProductsLink}
           onPress={handleAddProducts}>
           <Text style={styles.addProductsText}>Add products to Collection</Text>
-          <IconSymbol name="chevron-forward" size={24} color="#008080" />
+          <IconSymbol name="chevron-forward" size={24} color="#e61580" />
         </TouchableOpacity>
 
         {/* Selected Products Summary Row */}
@@ -592,7 +592,7 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
             <Text style={styles.selectedProductsSummaryText}>
               {selectedProducts.length} Product{selectedProducts.length !== 1 ? 's' : ''} Selected
             </Text>
-            <IconSymbol name="chevron-forward" size={20} color="#008080" />
+            <IconSymbol name="chevron-forward" size={20} color="#e61580" />
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -629,13 +629,13 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
             <TouchableOpacity
               style={styles.pickerOption}
               onPress={handleCamera}>
-              <IconSymbol name="camera" size={24} color="#1E3A8A" />
+              <IconSymbol name="camera" size={24} color="#e61580" />
               <Text style={styles.pickerOptionText}>Take Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.pickerOption}
               onPress={handleImageLibrary}>
-              <IconSymbol name="image" size={24} color="#1E3A8A" />
+              <IconSymbol name="image" size={24} color="#e61580" />
               <Text style={styles.pickerOptionText}>Choose from Library</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -653,15 +653,15 @@ const AddCollectionScreen: React.FC<AddCollectionScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF4FA',
+    backgroundColor: '#fff5f8', // Pink theme background
   },
   scrollView: {
-    flex: 1, // SmartBiz: same as AddCategoryScreen
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E3A8A', // SmartBiz: same blue as AddCategoryScreen
+    backgroundColor: '#e61580', // App Theme Pink
     paddingHorizontal: 16,
     paddingVertical: 12,
     height: 56,
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 250, // SmartBiz: same as AddCategoryScreen (for button container + bottom nav)
+    paddingBottom: 250,
   },
   section: {
     marginBottom: 24,
@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
   addProductsText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#008080',
+    color: '#e61580', // Pink
   },
   removeImageButton: {
     position: 'absolute',
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#008080',
+    backgroundColor: '#FCE7F3', // Light Pink
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
   uploadText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#008080', // SmartBiz: Teal to match Add Products link
+    color: '#e61580', // Pink
   },
   selectedProductsSummary: {
     flexDirection: 'row',
@@ -766,15 +766,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     marginTop: 8,
-    // Add background color similar to screenshot 1
   },
   selectedProductsSummaryText: {
-    fontSize: 16, // Bigger font as per screenshot
+    fontSize: 16,
     fontWeight: '600',
-    color: '#008080',
+    color: '#e61580', // Pink
   },
   input: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#FFFFFF', // White input
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -793,7 +792,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: 4,
   },
-
   buttonContainer: {
     position: 'absolute',
     bottom: 0,
@@ -805,14 +803,15 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
   },
   saveButton: {
-    backgroundColor: '#1E3A8A', // SmartBiz: same blue as AddCategoryScreen
+    backgroundColor: '#e61580', // Pink
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
   },
   saveButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: '#FBCFE8',
+    opacity: 0.7,
   },
   saveButtonText: {
     color: '#FFFFFF',
@@ -820,16 +819,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   saveButtonTextDisabled: {
-    color: '#E5E7EB',
+    color: '#FFFFFF',
   },
   secondaryButton: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#1E3A8A', // SmartBiz: same blue as AddCategoryScreen
+    borderColor: '#e61580', // Pink
     marginBottom: 12,
   },
   secondaryButtonText: {
-    color: '#1E3A8A', // SmartBiz: same blue as AddCategoryScreen
+    color: '#e61580', // Pink
   },
   backdrop: {
     flex: 1,
@@ -878,8 +877,8 @@ const styles = StyleSheet.create({
   },
   pickerCancelText: {
     fontSize: 16,
-    color: '#6c757d',
-    fontWeight: '500',
+    color: '#EF4444',
+    fontWeight: '600',
   },
 });
 

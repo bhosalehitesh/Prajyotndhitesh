@@ -3,6 +3,8 @@ package com.smartbiz.sakhistore.modules.category.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -32,14 +34,12 @@ public class CategoryService {
 
     @Autowired
     CloudinaryHelper cloudinaryHelper;
-    
+
     @Autowired
     StoreDetailsRepo storeRepository;
-    
+
     @Autowired
     CollectionRepository collectionRepository;
-    
-    
 
     @Autowired
     private SellerDetailsRepo sellerDetailsRepo;
@@ -56,25 +56,50 @@ public class CategoryService {
             String seoMetaDescription,
             List<MultipartFile> categoryImages,
             MultipartFile socialSharingImage,
-            Long sellerId
-    ) {
+            Long sellerId) {
         try {
             List<String> categoryImageUrls = new ArrayList<>();
 
-            // ✅ Upload multiple category images
+            // ✅ Upload multiple category images in PARALLEL
+            List<CompletableFuture<String>> imageFutures = new ArrayList<>();
             if (categoryImages != null && !categoryImages.isEmpty()) {
-                for (MultipartFile image : categoryImages) {
-                    String imageUrl = cloudinaryHelper.saveImage(image);
-                    if (imageUrl != null) {
-                        categoryImageUrls.add(imageUrl);
+                imageFutures = categoryImages.stream()
+                        .map(image -> CompletableFuture.supplyAsync(() -> cloudinaryHelper.saveImage(image)))
+                        .collect(Collectors.toList());
+            }
+
+            // ✅ Upload social sharing image in PARALLEL
+            CompletableFuture<String> socialImageFuture = null;
+            if (socialSharingImage != null && !socialSharingImage.isEmpty()) {
+                socialImageFuture = CompletableFuture.supplyAsync(() -> cloudinaryHelper.saveImage(socialSharingImage));
+            }
+
+            // Wait for all uploads to complete
+            CompletableFuture.allOf(imageFutures.toArray(new CompletableFuture[0])).join();
+            if (socialImageFuture != null) {
+                socialImageFuture.join();
+            }
+
+            // Collect category images results
+            for (CompletableFuture<String> future : imageFutures) {
+                try {
+                    String url = future.get();
+                    if (url != null) {
+                        categoryImageUrls.add(url);
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
 
-            // ✅ Upload single social sharing image
+            // Collect social image result
             String socialImageUrl = null;
-            if (socialSharingImage != null && !socialSharingImage.isEmpty()) {
-                socialImageUrl = cloudinaryHelper.saveImage(socialSharingImage);
+            if (socialImageFuture != null) {
+                try {
+                    socialImageUrl = socialImageFuture.get();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             // ✅ Create Category entity
@@ -96,7 +121,7 @@ public class CategoryService {
             if (socialImageUrl != null) {
                 category.setSocialSharingImage(socialImageUrl);
             }
-            
+
             // ✅ Link category to seller (prevent cross-seller visibility)
             if (sellerId != null) {
                 SellerDetails seller = sellerDetailsRepo.findById(sellerId)
@@ -119,8 +144,9 @@ public class CategoryService {
         }
         return categoryRepository.findAll();
     }
-    
-    // ✅ Get all categories (backward compatibility - returns all, should be avoided)
+
+    // ✅ Get all categories (backward compatibility - returns all, should be
+    // avoided)
     public List<Category> allCategories() {
         return categoryRepository.findAll();
     }
@@ -134,7 +160,7 @@ public class CategoryService {
         }
         return categoryRepository.save(category);
     }
-    
+
     // ✅ Add category (backward compatibility)
     public Category addCategory(Category category) {
         return categoryRepository.save(category);
@@ -163,28 +189,31 @@ public class CategoryService {
     public void deleteCategory(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new NoSuchElementException("Category not found with ID: " + categoryId));
-        
+
         try {
             // Check if category has associated products
             long productCount = productRepository.countByCategoryId(categoryId);
             if (productCount > 0) {
-                throw new RuntimeException("Cannot delete category: It has " + productCount + " product(s) associated with it. Please remove or reassign products first.");
+                throw new RuntimeException("Cannot delete category: It has " + productCount
+                        + " product(s) associated with it. Please remove or reassign products first.");
             }
         } catch (RuntimeException e) {
             // Re-throw business logic exceptions
             throw e;
         } catch (Exception e) {
             // Log other exceptions but don't fail deletion if count check fails
-            System.err.println("Warning: Could not check product count for category " + categoryId + ": " + e.getMessage());
+            System.err.println(
+                    "Warning: Could not check product count for category " + categoryId + ": " + e.getMessage());
             e.printStackTrace();
         }
-        
+
         try {
             categoryRepository.delete(category);
         } catch (Exception e) {
             // If deletion fails due to foreign key constraint, provide helpful message
             if (e.getMessage() != null && e.getMessage().contains("foreign key")) {
-                throw new RuntimeException("Cannot delete category: It has products associated with it. Please remove or reassign products first.");
+                throw new RuntimeException(
+                        "Cannot delete category: It has products associated with it. Please remove or reassign products first.");
             }
             throw new RuntimeException("Failed to delete category: " + e.getMessage(), e);
         }
@@ -193,17 +222,17 @@ public class CategoryService {
     // ✅ Search by business category (filtered by seller)
     public List<Category> searchCategoriesByBusiness(String businessCategory, Long sellerId) {
         if (sellerId != null) {
-            return categoryRepository.findBySeller_SellerIdAndBusinessCategoryContainingIgnoreCase(sellerId, businessCategory);
+            return categoryRepository.findBySeller_SellerIdAndBusinessCategoryContainingIgnoreCase(sellerId,
+                    businessCategory);
         }
         return categoryRepository.findByBusinessCategoryContainingIgnoreCase(businessCategory);
     }
-    
+
     // ✅ Search by business category (backward compatibility)
     public List<Category> searchCategoriesByBusiness(String businessCategory) {
         return categoryRepository.findByBusinessCategoryContainingIgnoreCase(businessCategory);
     }
-    
-   
+
     // ✅ Get Collections by Store Name
     public List<collection> getCollectionsByStoreName(String storeName) {
 
@@ -225,8 +254,8 @@ public class CategoryService {
         }
         // Convert to lowercase, replace spaces/special chars with hyphens
         String baseSlug = categoryName.toLowerCase()
-            .replaceAll("[^a-z0-9]+", "-")
-            .replaceAll("^-+|-+$", "");
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
         return baseSlug;
     }
 
@@ -239,7 +268,7 @@ public class CategoryService {
         if (sellerId == null) {
             return baseSlug;
         }
-        
+
         // Check if slug already exists for this seller
         String candidateSlug = baseSlug;
         int counter = 1;

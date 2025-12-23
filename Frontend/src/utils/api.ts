@@ -478,8 +478,8 @@ export const loginWithOtp = async (phone: string, otpCode: string): Promise<Auth
       typeof payload.userId === 'number' && payload.userId > 0
         ? payload.userId
         : typeof payload.sellerId === 'number' && payload.sellerId > 0
-        ? payload.sellerId
-        : null;
+          ? payload.sellerId
+          : null;
 
     if (userId === null || isNaN(userId) || userId <= 0) {
       console.error('Invalid userId in loginWithOtp response:', payload);
@@ -665,8 +665,8 @@ export const resetPassword = async (phone: string, newPassword: string): Promise
       typeof payload.userId === 'number' && payload.userId > 0
         ? payload.userId
         : typeof payload.sellerId === 'number' && payload.sellerId > 0
-        ? payload.sellerId
-        : null;
+          ? payload.sellerId
+          : null;
 
     if (userId === null || isNaN(userId) || userId <= 0) {
       console.error('Invalid userId in resetPassword response:', payload);
@@ -703,6 +703,14 @@ export interface StoreDetailsResponse {
   storeName: string;
   storeLink: string;
   logoUrl?: string;
+  storeAddress?: {
+    shopNoBuildingCompanyApartment?: string;
+    areaStreetSectorVillage?: string;
+    landmark?: string;
+    townCity?: string;
+    state?: string;
+    pincode?: string;
+  };
 }
 
 export interface StoreAddressResponse {
@@ -880,6 +888,59 @@ export const checkStoreNameAvailability = async (storeName: string): Promise<Sto
  * Fetch store details for the current seller.
  * Backend: GET /api/stores/by-seller?sellerId=...
  */
+/**
+ * Update seller details.
+ * First fetches existing details, merges updates, then saves.
+ * Backend: POST /api/sellers/editSeller
+ */
+export const updateSellerDetails = async (sellerId: string | number, updates: Partial<any>): Promise<any> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const id = typeof sellerId === 'string' ? sellerId : String(sellerId);
+
+  try {
+    // 1. Fetch current details to ensure we have all required fields
+    // This is needed because the backend endpoint expects the full object for updates
+    const currentDetails = await getSellerDetails(id);
+    if (!currentDetails) {
+      throw new Error('Seller not found');
+    }
+
+    // 2. Merge updates
+    const updatedSeller = {
+      ...currentDetails,
+      ...updates,
+    };
+
+    console.log('📝 [API] Updating seller details:', { id, updates });
+
+    // 3. Send update
+    const url = `${API_BASE_URL}/api/sellers/editSeller`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(updatedSeller),
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok) {
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || 'Failed to update seller details';
+      throw new Error(message);
+    }
+
+    return payload;
+  } catch (error) {
+    console.error('Error updating seller details:', error);
+    throw error;
+  }
+};
+
 /**
  * Get seller details by sellerId.
  * Backend: GET /api/sellers/{sellerId}

@@ -18,6 +18,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,10 +34,10 @@ public class CollectionService {
 
     @Autowired
     private ProductRepository productRepository;
-    
+
     @Autowired
     private SellerDetailsRepo sellerDetailsRepo;
-    
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -47,25 +49,50 @@ public class CollectionService {
             String seoMetaDescription,
             List<MultipartFile> collectionImages,
             MultipartFile socialSharingImage,
-            Long sellerId
-    ) {
+            Long sellerId) {
         try {
             List<String> collectionImageUrls = new ArrayList<>();
 
-            // ✅ Upload multiple images
+            // ✅ Upload multiple images in PARALLEL
+            List<CompletableFuture<String>> imageFutures = new ArrayList<>();
             if (collectionImages != null && !collectionImages.isEmpty()) {
-                for (MultipartFile image : collectionImages) {
-                    String imageUrl = cloudinaryHelper.saveImage(image);
-                    if (imageUrl != null) {
-                        collectionImageUrls.add(imageUrl);
+                imageFutures = collectionImages.stream()
+                        .map(image -> CompletableFuture.supplyAsync(() -> cloudinaryHelper.saveImage(image)))
+                        .collect(Collectors.toList());
+            }
+
+            // ✅ Upload social sharing image in PARALLEL
+            CompletableFuture<String> socialImageFuture = null;
+            if (socialSharingImage != null && !socialSharingImage.isEmpty()) {
+                socialImageFuture = CompletableFuture.supplyAsync(() -> cloudinaryHelper.saveImage(socialSharingImage));
+            }
+
+            // Wait for all uploads to complete
+            CompletableFuture.allOf(imageFutures.toArray(new CompletableFuture[0])).join();
+            if (socialImageFuture != null) {
+                socialImageFuture.join();
+            }
+
+            // Collect collection images results
+            for (CompletableFuture<String> future : imageFutures) {
+                try {
+                    String url = future.get();
+                    if (url != null) {
+                        collectionImageUrls.add(url);
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
 
-            // ✅ Upload social sharing image
+            // Collect social image result
             String socialImageUrl = null;
-            if (socialSharingImage != null && !socialSharingImage.isEmpty()) {
-                socialImageUrl = cloudinaryHelper.saveImage(socialSharingImage);
+            if (socialImageFuture != null) {
+                try {
+                    socialImageUrl = socialImageFuture.get();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             // ✅ Create Collection entity
@@ -76,7 +103,8 @@ public class CollectionService {
             newCollection.setSeoMetaDescription(seoMetaDescription);
             // Default: collection is ACTIVE when created (SmartBiz: same as Category)
             newCollection.setIsActive(true);
-            // Generate unique slug from collection name (SmartBiz: URL-friendly identifier - same as Category)
+            // Generate unique slug from collection name (SmartBiz: URL-friendly identifier
+            // - same as Category)
             String slug = generateUniqueSlug(collectionName, sellerId);
             newCollection.setSlug(slug);
             // Default order index is 0 (SmartBiz: same as Category)
@@ -88,7 +116,7 @@ public class CollectionService {
             }
 
             newCollection.setSocialSharingImage(socialImageUrl);
-            
+
             // ✅ Link collection to seller (prevent cross-seller visibility)
             if (sellerId != null) {
                 SellerDetails seller = sellerDetailsRepo.findById(sellerId)
@@ -112,8 +140,9 @@ public class CollectionService {
         }
         return collectionRepository.findAll();
     }
-    
-    // ✅ Get all collections (backward compatibility - returns all, should be avoided)
+
+    // ✅ Get all collections (backward compatibility - returns all, should be
+    // avoided)
     public List<collection> allCollections() {
         return collectionRepository.findAll();
     }
@@ -125,26 +154,26 @@ public class CollectionService {
                     .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
             col.setSeller(seller);
         }
-        
+
         // SmartBiz: Generate slug if not set (same as Category)
         if (col.getSlug() == null || col.getSlug().trim().isEmpty()) {
             String slug = generateUniqueSlug(col.getCollectionName(), sellerId);
             col.setSlug(slug);
         }
-        
+
         // SmartBiz: Ensure isActive is set (default to true - same as Category)
         if (col.getIsActive() == null) {
             col.setIsActive(true);
         }
-        
+
         // SmartBiz: Ensure orderIndex is set (default to 0 - same as Category)
         if (col.getOrderIndex() == null) {
             col.setOrderIndex(0);
         }
-        
+
         return collectionRepository.save(col);
     }
-    
+
     // ✅ Add / Edit Collection (backward compatibility)
     public collection addCollection(collection col) {
         return collectionRepository.save(col);
@@ -161,29 +190,31 @@ public class CollectionService {
     public void deleteCollection(Long id) {
         // Verify collection exists (will throw NoSuchElementException if not found)
         collection col = findById(id);
-        
+
         try {
             // Get all products that have this collection
             List<Product> productsWithCollection = productRepository.findByCollections_CollectionId(id);
-            
-            // Remove this collection from all products (owning side controls the relationship)
+
+            // Remove this collection from all products (owning side controls the
+            // relationship)
             if (productsWithCollection != null && !productsWithCollection.isEmpty()) {
                 for (Product product : productsWithCollection) {
                     List<collection> productCollections = product.getCollections();
                     if (productCollections != null) {
                         // Remove the collection from the product's list
-                        productCollections.removeIf(c -> c != null && c.getCollectionId() != null && c.getCollectionId().equals(id));
+                        productCollections.removeIf(
+                                c -> c != null && c.getCollectionId() != null && c.getCollectionId().equals(id));
                     }
                 }
                 // Save products to update the join table
                 productRepository.saveAll(productsWithCollection);
                 productRepository.flush();
             }
-            
+
             // Now delete the collection itself
             collectionRepository.delete(col);
             collectionRepository.flush();
-            
+
         } catch (NoSuchElementException e) {
             throw e; // Re-throw as-is
         } catch (Exception e) {
@@ -205,7 +236,7 @@ public class CollectionService {
         }
         return collectionRepository.findAllDistinctCollectionNames();
     }
-    
+
     // ✅ Get all collection names (backward compatibility)
     public List<String> getAllCollectionNames() {
         return collectionRepository.findAllDistinctCollectionNames();
@@ -218,7 +249,7 @@ public class CollectionService {
         }
         return collectionRepository.findByCollectionNameContainingIgnoreCase(name);
     }
-    
+
     // ✅ Search by name (backward compatibility)
     public List<collection> searchCollectionsByName(String name) {
         return collectionRepository.findByCollectionNameContainingIgnoreCase(name);
@@ -242,7 +273,8 @@ public class CollectionService {
         // Load new products to be linked
         List<Product> newProducts = productRepository.findAllById(productIds);
 
-        // Clear old mappings on owning side: remove this collection from existing products
+        // Clear old mappings on owning side: remove this collection from existing
+        // products
         List<Product> existingProducts = col.getProducts();
         if (existingProducts != null) {
             for (Product p : existingProducts) {
@@ -286,7 +318,8 @@ public class CollectionService {
     }
 
     /**
-     * Add a single product to an existing collection without removing other products.
+     * Add a single product to an existing collection without removing other
+     * products.
      */
     @Transactional
     public collection addProductToCollection(Long collectionId, Long productId) {
@@ -331,8 +364,8 @@ public class CollectionService {
         }
         // Convert to lowercase, replace spaces/special chars with hyphens
         String baseSlug = collectionName.toLowerCase()
-            .replaceAll("[^a-z0-9]+", "-")
-            .replaceAll("^-+|-+$", "");
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
         return baseSlug;
     }
 
@@ -345,7 +378,7 @@ public class CollectionService {
         if (sellerId == null) {
             return baseSlug;
         }
-        
+
         // Check if slug already exists for this seller
         String candidateSlug = baseSlug;
         int counter = 1;
@@ -357,7 +390,8 @@ public class CollectionService {
     }
 
     /**
-     * Find collection by slug and seller ID (for public store API - same as Category)
+     * Find collection by slug and seller ID (for public store API - same as
+     * Category)
      */
     public collection findBySlugAndSellerId(String slug, Long sellerId) {
         if (slug == null || slug.isEmpty() || sellerId == null) {
@@ -370,7 +404,7 @@ public class CollectionService {
             return null;
         }
     }
-    
+
     /**
      * Find collection by name and seller ID (for fallback when slug doesn't match)
      */

@@ -254,17 +254,17 @@ const Home = () => {
         console.log('🔍 [HOME] Fetching trending categories for slug:', actualSlug);
         const data = await getStoreTrendingCategories(actualSlug);
         const categoriesArray = Array.isArray(data) ? data : [];
-        
+
         console.log('📦 [HOME] Trending Categories API Response:', {
           isArray: Array.isArray(data),
           count: categoriesArray.length,
         });
-        
+
         if (categoriesArray.length > 0) {
           console.log('✅ [HOME] Trending categories received:', categoriesArray.length);
           console.log('📦 [HOME] First trending category sample:', categoriesArray[0]);
         }
-        
+
         setTrendingCategories(categoriesArray);
       } catch (err) {
         console.error('❌ [HOME] Error fetching trending categories:', err);
@@ -510,11 +510,11 @@ const Home = () => {
                 const categoryName = category.categoryName || category.name || 'Category';
                 const categoryImage = category.categoryImage || category.image || '/assets/categories/default.jpg';
                 const categorySlug = category.slug || categoryName.toLowerCase().replace(/\s+/g, '-');
-                
+
                 return (
-                  <div 
-                    key={category.categoryId || category.id || categoryName} 
-                    className="category-card" 
+                  <div
+                    key={category.categoryId || category.id || categoryName}
+                    className="category-card"
                     onClick={() => {
                       const basePath = actualSlug ? `/store/${actualSlug}` : '';
                       navigate(`${basePath}/categories?category=${categorySlug}`);
@@ -531,12 +531,12 @@ const Home = () => {
       )}
 
       {/* Collections */}
-      <section className="biggest-deals">
-        <div className="container">
-          <h2 className="section-title">Trending Collection</h2>
-          <div className="deals-grid">
-            {collections.length > 0 ? (
-              collections.map((collection, index) => {
+      {collections.length > 0 && (
+        <section className="biggest-deals">
+          <div className="container">
+            <h2 className="section-title">Trending Collection</h2>
+            <div className="deals-grid">
+              {collections.map((collection, index) => {
                 const collectionName =
                   collection.collectionName ||
                   collection.name ||
@@ -560,7 +560,7 @@ const Home = () => {
                 const collectionPath = collectionSlug
                   ? `${basePath}/products?collection=${encodeURIComponent(collectionSlug)}`
                   : getNavPath(ROUTES.PRODUCTS);
-                
+
                 // Debug logging
                 console.log('🔍 [Home] Collection click:', {
                   collectionName: collection.collectionName || collection.name,
@@ -635,24 +635,11 @@ const Home = () => {
                     </div>
                   </div>
                 );
-              })
-            ) : (
-              // Fallback to static DEALS if no collections from backend
-              DEALS.map((deal) => (
-                <div key={deal.id} className="deal-card" onClick={() => navigate(getNavPath(ROUTES.PRODUCTS))}>
-                  <div className="image-wrapper">
-                    <img src={deal.image} alt={deal.name} />
-                    <div className="overlay">
-                      <h3>{deal.name}</h3>
-                      <p className="price">STARTING {deal.price}</p>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
 
       {/* Flash Sale Banner */}
