@@ -337,8 +337,8 @@ public class PaymentController {
                         System.out.println("✅ Created payment without order (testing mode)");
                         // orderId remains null for payments without orders
 
-                    }
                 }
+            }
 
                 }
 
