@@ -15,15 +15,15 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/orders")
+@RequestMapping({ "/orders", "/api/orders" })
 public class OrdersController {
 
     @Autowired
     private OrdersService ordersService;
-    
+
     @Autowired
     private JavaMailSender mailSender;
-    
+
     @Autowired(required = false)
     private com.smartbiz.sakhistore.modules.order.repository.EmailLogRepository emailLogRepository;
 
@@ -31,17 +31,90 @@ public class OrdersController {
     // Place Order From Cart
     // ===============================
     @PostMapping("/place")
-    public Orders placeOrder(
+    public ResponseEntity<?> placeOrder(
             @RequestParam Long userId,
             @RequestParam String address,
             @RequestParam Long mobile,
             @RequestParam(required = false) Long storeId,
-            @RequestParam(required = false) Long sellerId
-    ) {
-        User user = new User();
-        user.setId(userId);
+            @RequestParam(required = false) Long sellerId) {
+        try {
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("🛒 PLACING ORDER - REQUEST RECEIVED");
+            System.out.println("=".repeat(60));
+            System.out.println("User ID: " + userId);
+            System.out.println("Address: "
+                    + (address != null ? address.substring(0, Math.min(50, address.length())) + "..." : "NULL"));
+            System.out.println("Mobile: " + mobile);
+            System.out.println("Store ID: " + storeId);
+            System.out.println("Seller ID: " + sellerId);
+            System.out.println("=".repeat(60) + "\n");
 
-        return ordersService.placeOrder(user, address, mobile, storeId, sellerId);
+            // Validate required parameters
+            if (userId == null || userId <= 0) {
+                throw new IllegalArgumentException("User ID is required and must be greater than 0");
+            }
+            if (address == null || address.trim().isEmpty()) {
+                throw new IllegalArgumentException("Address is required");
+            }
+            if (mobile == null || mobile <= 0) {
+                throw new IllegalArgumentException("Mobile number is required and must be valid");
+            }
+
+            User user = new User();
+            user.setId(userId);
+
+            Orders order = ordersService.placeOrder(user, address, mobile, storeId, sellerId);
+
+            System.out.println("✅ Order placed successfully. Order ID: "
+                    + (order.getOrdersId() != null ? order.getOrdersId() : "N/A"));
+            System.out.println("=".repeat(60) + "\n");
+
+            return ResponseEntity.ok(order);
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("\n" + "=".repeat(60));
+            System.err.println("❌ ORDER PLACEMENT FAILED - VALIDATION ERROR");
+            System.err.println("=".repeat(60));
+            System.err.println("Error: " + e.getMessage());
+            System.err.println("=".repeat(60) + "\n");
+
+            return ResponseEntity.badRequest().body(java.util.Map.of(
+                    "error", "VALIDATION_ERROR",
+                    "message", e.getMessage(),
+                    "timestamp", java.time.LocalDateTime.now().toString()));
+
+        } catch (RuntimeException e) {
+            System.err.println("\n" + "=".repeat(60));
+            System.err.println("❌ ORDER PLACEMENT FAILED - RUNTIME ERROR");
+            System.err.println("=".repeat(60));
+            System.err.println("Error: " + e.getMessage());
+            System.err.println("Error Type: " + e.getClass().getSimpleName());
+            e.printStackTrace();
+            System.err.println("=".repeat(60) + "\n");
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(java.util.Map.of(
+                    "error", "ORDER_PLACEMENT_FAILED",
+                    "message", e.getMessage() != null ? e.getMessage() : "Failed to place order",
+                    "details", "Please ensure your cart has items and all required fields are filled",
+                    "errorType", e.getClass().getSimpleName(),
+                    "timestamp", java.time.LocalDateTime.now().toString()));
+
+        } catch (Exception e) {
+            System.err.println("\n" + "=".repeat(60));
+            System.err.println("❌ ORDER PLACEMENT FAILED - UNEXPECTED ERROR");
+            System.err.println("=".repeat(60));
+            System.err.println("Error: " + e.getMessage());
+            System.err.println("Error Type: " + e.getClass().getSimpleName());
+            e.printStackTrace();
+            System.err.println("=".repeat(60) + "\n");
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(java.util.Map.of(
+                    "error", "INTERNAL_SERVER_ERROR",
+                    "message", "An unexpected error occurred while placing the order",
+                    "details", e.getMessage() != null ? e.getMessage() : "Unknown error",
+                    "errorType", e.getClass().getSimpleName(),
+                    "timestamp", java.time.LocalDateTime.now().toString()));
+        }
     }
 
     // ===============================
@@ -69,8 +142,7 @@ public class OrdersController {
     public Orders updateStatus(
             @PathVariable Long id,
             @RequestParam OrderStatus status,
-            @RequestParam(required = false) String rejectionReason
-    ) {
+            @RequestParam(required = false) String rejectionReason) {
         return ordersService.updateOrderStatus(id, status, rejectionReason);
     }
 
@@ -82,6 +154,15 @@ public class OrdersController {
     @GetMapping("/seller/{sellerId}")
     public List<Orders> getSellerOrders(@PathVariable Long sellerId) {
         return ordersService.getOrdersBySellerId(sellerId);
+    }
+
+    // ===============================
+    // Get All Orders
+    // Returns all orders in the system
+    // ===============================
+    @GetMapping("/all")
+    public List<Orders> getAllOrders() {
+        return ordersService.getAllOrders();
     }
 
     // ===============================
@@ -98,14 +179,14 @@ public class OrdersController {
                 response.put("error", "VALIDATION_ERROR");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             System.out.println("\n" + "=".repeat(60));
             System.out.println("🧪 TESTING EMAIL CONFIGURATION");
             System.out.println("=".repeat(60));
             System.out.println("Sending test email to: " + toEmail);
             System.out.println("From: mindrushikesh8@gmail.com");
             System.out.println("=".repeat(60) + "\n");
-            
+
             // Validate mailSender is available
             if (mailSender == null) {
                 response.put("status", "ERROR");
@@ -113,24 +194,25 @@ public class OrdersController {
                 response.put("error", "CONFIGURATION_ERROR");
                 return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
             }
-            
+
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(toEmail.trim());
             message.setSubject("Test Email from Sakhi Store");
-            message.setText("This is a test email to verify email configuration is working correctly.\n\nIf you receive this email, your email configuration is working!");
+            message.setText(
+                    "This is a test email to verify email configuration is working correctly.\n\nIf you receive this email, your email configuration is working!");
             message.setFrom("mindrushikesh8@gmail.com");
-            
+
             mailSender.send(message);
-            
+
             System.out.println("✅ Test email sent successfully!");
             System.out.println("=".repeat(60) + "\n");
-            
+
             response.put("status", "SUCCESS");
             response.put("message", "Test email sent successfully to " + toEmail);
             response.put("timestamp", java.time.LocalDateTime.now().toString());
             response.put("note", "Check your inbox (and spam folder) for the test email");
             return ResponseEntity.ok(response);
-            
+
         } catch (org.springframework.mail.MailException e) {
             System.err.println("\n" + "=".repeat(60));
             System.err.println("❌ EMAIL TEST FAILED - MAIL EXCEPTION");
@@ -139,13 +221,13 @@ public class OrdersController {
             System.err.println("Error Type: " + e.getClass().getSimpleName());
             e.printStackTrace();
             System.err.println("=".repeat(60) + "\n");
-            
+
             response.put("status", "ERROR");
             response.put("message", "Failed to send test email: " + e.getMessage());
             response.put("error", e.getClass().getSimpleName());
             response.put("details", "Check email configuration in application.properties");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-            
+
         } catch (Exception e) {
             System.err.println("\n" + "=".repeat(60));
             System.err.println("❌ EMAIL TEST FAILED - UNEXPECTED ERROR");
@@ -154,9 +236,10 @@ public class OrdersController {
             System.err.println("Error Type: " + e.getClass().getSimpleName());
             e.printStackTrace();
             System.err.println("=".repeat(60) + "\n");
-            
+
             response.put("status", "ERROR");
-            response.put("message", "Failed to send test email: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
+            response.put("message",
+                    "Failed to send test email: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
             response.put("error", e.getClass().getSimpleName());
             response.put("details", "Check backend console for full error details");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -169,7 +252,7 @@ public class OrdersController {
     @PostMapping("/test-email/{orderId}")
     public ResponseEntity<java.util.Map<String, Object>> testEmail(@PathVariable Long orderId) {
         java.util.Map<String, Object> response = new java.util.HashMap<>();
-        
+
         try {
             // Validate orderId
             if (orderId == null || orderId <= 0) {
@@ -178,7 +261,7 @@ public class OrdersController {
                 response.put("error", "VALIDATION_ERROR");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             // Fetch order
             Orders order;
             try {
@@ -189,7 +272,7 @@ public class OrdersController {
                 response.put("error", "ORDER_NOT_FOUND");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
-            
+
             // Check if user exists
             if (order.getUser() == null) {
                 response.put("status", "ERROR");
@@ -197,26 +280,28 @@ public class OrdersController {
                 response.put("error", "USER_NOT_FOUND");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
-            
+
             // Check if user has email
             String userEmail = order.getUser().getEmail();
             String userName = order.getUser().getFullName();
             Long userId = order.getUser().getId();
-            
+
             response.put("orderId", orderId);
             response.put("userEmail", userEmail != null ? userEmail : "NO EMAIL FOUND");
             response.put("userName", userName != null ? userName : "N/A");
             response.put("userId", userId);
             response.put("hasEmail", userEmail != null && !userEmail.trim().isEmpty());
-            
+
             if (userEmail == null || userEmail.trim().isEmpty()) {
                 response.put("status", "ERROR");
                 response.put("message", "User does not have an email address. Cannot send email.");
-                response.put("solution", "Update user email in database: UPDATE users SET email = 'user@example.com' WHERE id = " + userId);
+                response.put("solution",
+                        "Update user email in database: UPDATE users SET email = 'user@example.com' WHERE id = "
+                                + userId);
                 response.put("error", "EMAIL_NOT_FOUND");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
-            
+
             // Try to send email
             try {
                 System.out.println("\n" + "=".repeat(60));
@@ -227,25 +312,26 @@ public class OrdersController {
                 System.out.println("User Name: " + userName);
                 System.out.println("User Email: " + userEmail);
                 System.out.println("=".repeat(60) + "\n");
-                
+
                 // Generate PDF
                 String htmlContent = com.smartbiz.sakhistore.modules.order.model.OrderInvoiceHTMLBuilder.build(order);
-                byte[] pdfBytes = com.smartbiz.sakhistore.modules.inventory.model.PdfGenerator.generatePdfBytes(htmlContent);
-                
+                byte[] pdfBytes = com.smartbiz.sakhistore.modules.inventory.model.PdfGenerator
+                        .generatePdfBytes(htmlContent);
+
                 System.out.println("✅ PDF generated successfully (" + pdfBytes.length + " bytes)");
-                
+
                 // Send email
                 ordersService.sendTestEmail(order, pdfBytes);
-                
+
                 System.out.println("✅ Test email sent successfully!");
                 System.out.println("=".repeat(60) + "\n");
-                
+
                 response.put("status", "SUCCESS");
                 response.put("message", "Test email sent successfully to " + userEmail);
                 response.put("timestamp", java.time.LocalDateTime.now().toString());
                 response.put("note", "Check inbox (and spam folder) for the invoice email");
                 return ResponseEntity.ok(response);
-                
+
             } catch (org.springframework.mail.MailException e) {
                 System.err.println("\n" + "=".repeat(60));
                 System.err.println("❌ EMAIL SENDING FAILED - MAIL EXCEPTION");
@@ -256,13 +342,13 @@ public class OrdersController {
                 System.err.println("Error Type: " + e.getClass().getSimpleName());
                 e.printStackTrace();
                 System.err.println("=".repeat(60) + "\n");
-                
+
                 response.put("status", "ERROR");
                 response.put("message", "Failed to send email: " + e.getMessage());
                 response.put("error", e.getClass().getSimpleName());
                 response.put("details", "Check email configuration in application.properties");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-                
+
             } catch (Exception e) {
                 System.err.println("\n" + "=".repeat(60));
                 System.err.println("❌ EMAIL SENDING FAILED - UNEXPECTED ERROR");
@@ -273,14 +359,15 @@ public class OrdersController {
                 System.err.println("Error Type: " + e.getClass().getSimpleName());
                 e.printStackTrace();
                 System.err.println("=".repeat(60) + "\n");
-                
+
                 response.put("status", "ERROR");
-                response.put("message", "Failed to send email: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
+                response.put("message",
+                        "Failed to send email: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
                 response.put("error", e.getClass().getSimpleName());
                 response.put("details", "Check backend console for full error details");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
             }
-            
+
         } catch (Exception e) {
             System.err.println("\n" + "=".repeat(60));
             System.err.println("❌ UNEXPECTED ERROR IN TEST EMAIL ENDPOINT");
@@ -290,7 +377,7 @@ public class OrdersController {
             System.err.println("Error Type: " + e.getClass().getSimpleName());
             e.printStackTrace();
             System.err.println("=".repeat(60) + "\n");
-            
+
             response.put("status", "ERROR");
             response.put("message", "Unexpected error: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
             response.put("error", e.getClass().getSimpleName());
@@ -305,35 +392,35 @@ public class OrdersController {
     @GetMapping("/email-status/{orderId}")
     public ResponseEntity<java.util.Map<String, Object>> getEmailStatus(@PathVariable Long orderId) {
         java.util.Map<String, Object> response = new java.util.HashMap<>();
-        
+
         try {
             // Get order
             Orders order = ordersService.getOrder(orderId);
-            
+
             String userEmail = order.getUser() != null ? order.getUser().getEmail() : null;
             String userName = order.getUser() != null ? order.getUser().getFullName() : "N/A";
             boolean hasEmail = userEmail != null && !userEmail.trim().isEmpty();
-            
+
             response.put("orderId", orderId);
             response.put("userEmail", userEmail != null ? userEmail : "NO EMAIL");
             response.put("userName", userName);
             response.put("hasEmail", hasEmail);
-            
+
             // Get email logs from database if repository is available
             if (emailLogRepository != null) {
                 try {
-                    java.util.List<com.smartbiz.sakhistore.modules.order.model.EmailLog> logs = 
-                        emailLogRepository.findByOrderId(orderId);
-                    
+                    java.util.List<com.smartbiz.sakhistore.modules.order.model.EmailLog> logs = emailLogRepository
+                            .findByOrderId(orderId);
+
                     response.put("emailLogCount", logs.size());
-                    
+
                     if (!logs.isEmpty()) {
                         // Get the latest log (most recent)
-                        com.smartbiz.sakhistore.modules.order.model.EmailLog latestLog = 
-                            logs.stream()
-                                .max(java.util.Comparator.comparing(com.smartbiz.sakhistore.modules.order.model.EmailLog::getSentAt))
+                        com.smartbiz.sakhistore.modules.order.model.EmailLog latestLog = logs.stream()
+                                .max(java.util.Comparator
+                                        .comparing(com.smartbiz.sakhistore.modules.order.model.EmailLog::getSentAt))
                                 .orElse(null);
-                        
+
                         if (latestLog != null) {
                             response.put("latestEmailStatus", latestLog.getStatus());
                             response.put("latestEmailSentAt", latestLog.getSentAt());
@@ -346,7 +433,7 @@ public class OrdersController {
                                 response.put("pdfSizeBytes", latestLog.getPdfSizeBytes());
                             }
                         }
-                        
+
                         // Include all logs summary
                         java.util.List<java.util.Map<String, Object>> logsSummary = new java.util.ArrayList<>();
                         for (com.smartbiz.sakhistore.modules.order.model.EmailLog log : logs) {
@@ -363,7 +450,8 @@ public class OrdersController {
                         response.put("emailLogs", logsSummary);
                     } else {
                         response.put("emailLogs", new java.util.ArrayList<>());
-                        response.put("message", "No email logs found for this order. Email may not have been sent yet.");
+                        response.put("message",
+                                "No email logs found for this order. Email may not have been sent yet.");
                     }
                 } catch (Exception e) {
                     response.put("emailLogError", "Could not fetch email logs: " + e.getMessage());
@@ -371,16 +459,16 @@ public class OrdersController {
             } else {
                 response.put("emailLogError", "Email log repository not available");
             }
-            
+
             // Add helpful message
             if (!hasEmail) {
                 response.put("warning", "User does not have an email address. Cannot send invoice email.");
-                response.put("solution", "Update user email: UPDATE users SET email = 'user@example.com' WHERE id = " + 
-                    (order.getUser() != null ? order.getUser().getId() : "USER_ID"));
+                response.put("solution", "Update user email: UPDATE users SET email = 'user@example.com' WHERE id = " +
+                        (order.getUser() != null ? order.getUser().getId() : "USER_ID"));
             }
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("status", "ERROR");
             response.put("message", "Failed to get email status: " + e.getMessage());

@@ -37,6 +37,18 @@ import SelectProductsScreen from './src/screens/Catalog/collections/SelectProduc
 import SelectedProductsPreviewScreen from './src/screens/Catalog/collections/SelectedProductsPreviewScreen';
 import StoreAppearanceScreen from './src/screens/StoreAppearance/StoreAppearanceScreen';
 import OrderDetailsScreen from './src/screens/Orders/OrderDetailsScreen';
+import ShipOrderScreen from './src/screens/Orders/ShipOrderScreen';
+import SelfShipFormScreen from './src/screens/Orders/SelfShipFormScreen';
+import ThirdPartyFormScreen from './src/screens/Orders/ThirdPartyFormScreen';
+import DiscountCouponsComingSoon from './src/screens/DiscountCoupons/DiscountCouponsComingSoon';
+import WhatsAppMarketingScreen from './src/screens/WhatsAppMarketing/WhatsAppMarketingScreen';
+import PaymentSetupComingSoon from './src/screens/PaymentSetup/PaymentSetupComingSoon';
+import DeliverySettingsScreen from './src/screens/DeliverySettings/DeliverySettingsScreen';
+import SetDeliveryChargesScreen from './src/screens/DeliverySettings/SetDeliveryChargesScreen';
+import SetDeliveryRadiusScreen from './src/screens/DeliverySettings/SetDeliveryRadiusScreen';
+import DeliveryTimeScreen from './src/screens/DeliverySettings/DeliveryTimeScreen';
+import FAQsScreen from './src/screens/Help/FAQsScreen';
+import ContactUsScreen from './src/screens/Help/ContactUsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -166,12 +178,24 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 // Main Stack Navigator (includes tabs + modal screens)
 function MainStack() {
   return (
-    <Stack.Navigator 
+    <Stack.Navigator
       initialRouteName="MainTabs"
       screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen name="StoreAppearance" component={StoreAppearanceScreen} />
       <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+      <Stack.Screen name="ShipOrder" component={ShipOrderScreen} />
+      <Stack.Screen name="SelfShipForm" component={SelfShipFormScreen} />
+      <Stack.Screen name="ThirdPartyForm" component={ThirdPartyFormScreen} />
+      <Stack.Screen name="DiscountCoupons" component={DiscountCouponsComingSoon} />
+      <Stack.Screen name="WhatsAppMarketing" component={WhatsAppMarketingScreen} />
+      <Stack.Screen name="PaymentSetup" component={PaymentSetupComingSoon} />
+      <Stack.Screen name="DeliverySettings" component={DeliverySettingsScreen} />
+      <Stack.Screen name="SetDeliveryCharges" component={SetDeliveryChargesScreen} />
+      <Stack.Screen name="SetDeliveryRadius" component={SetDeliveryRadiusScreen} />
+      <Stack.Screen name="DeliveryTime" component={DeliveryTimeScreen} />
+      <Stack.Screen name="FAQsScreen" component={FAQsScreen} />
+      <Stack.Screen name="ContactUs" component={ContactUsScreen} />
     </Stack.Navigator>
   );
 }
@@ -344,7 +368,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#FFF4FA',
+    backgroundColor: '#f8f9fa',
   },
   mainContent: {
     flex: 1,
@@ -366,9 +390,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#fff5f8',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#e2e4ec',
+    borderTopColor: '#dee2e6',
     height: 60,
     paddingTop: 5,
     paddingBottom: 5,

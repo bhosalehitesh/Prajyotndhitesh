@@ -32,6 +32,7 @@ import lombok.Setter;
 public class Orders {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "orders_id")
     private Long OrdersId;
 
     private Double totalAmount;

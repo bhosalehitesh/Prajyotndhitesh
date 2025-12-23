@@ -95,11 +95,11 @@ export const signup = async (data: SignupRequest): Promise<string> => {
 
   try {
     console.log('Signup attempt:', { fullName: data.fullName, phone: data.phone, url });
-    
+
     // Add timeout to prevent hanging
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -127,7 +127,7 @@ export const signup = async (data: SignupRequest): Promise<string> => {
         payload,
         url,
       });
-      
+
       const message =
         typeof payload === 'string'
           ? payload
@@ -152,7 +152,7 @@ export const signup = async (data: SignupRequest): Promise<string> => {
         `Request timed out. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
       );
     }
-    
+
     // Handle network errors with detailed diagnostics
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
       console.error('Network error during signup:', error);
@@ -166,7 +166,7 @@ export const signup = async (data: SignupRequest): Promise<string> => {
         `Network request failed. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
       );
     }
-    
+
     // Re-throw other errors
     console.error('Signup error:', error);
     throw error;
@@ -209,7 +209,7 @@ export const verifyOtp = async (data: VerifyOtpRequest): Promise<AuthResponse> =
 
   // Extract userId from response - check both userId and sellerId fields
   let userId: number | null = null;
-  
+
   if (typeof payload.userId === 'number' && payload.userId > 0) {
     userId = payload.userId;
   } else if (typeof payload.sellerId === 'number' && payload.sellerId > 0) {
@@ -238,21 +238,21 @@ export const verifyOtp = async (data: VerifyOtpRequest): Promise<AuthResponse> =
 export const sendLoginOtp = async (phone: string): Promise<string> => {
   const url = `${API_BASE_URL}/api/sellers/login-otp-seller`;
   const cleanPhone = phone.replace(/\D/g, '');
-  
+
   try {
     console.log('📱 [Login OTP] Starting request...');
     console.log('📱 [Login OTP] Phone:', cleanPhone);
     console.log('📱 [Login OTP] URL:', url);
     console.log('📱 [Login OTP] API_BASE_URL:', API_BASE_URL);
     console.log('📱 [Login OTP] Expected IP: 192.168.1.48:8080');
-    
+
     // Add timeout to prevent hanging
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       console.error('⏱️ Request timeout after 20 seconds');
       controller.abort();
     }, 20000); // 20 second timeout
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -272,8 +272,8 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
     });
 
     clearTimeout(timeoutId);
-    console.log('✅ Login OTP response received:', { 
-      status: response.status, 
+    console.log('✅ Login OTP response received:', {
+      status: response.status,
       statusText: response.statusText,
       ok: response.ok,
       headers: Object.fromEntries(response.headers.entries())
@@ -304,7 +304,7 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
       API_BASE_URL,
       url
     });
-    
+
     // Handle abort/timeout errors
     if (error.name === 'AbortError' || error.message.includes('timeout')) {
       const errorMsg = `Cannot connect to backend server.\n\n` +
@@ -315,10 +315,10 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
         `3. Your device and computer are on the same WiFi network\n` +
         `4. Firewall is not blocking port 8080\n` +
         `5. Try: ping ${API_BASE_URL.replace('http://', '').replace(':8080', '')} from command prompt`;
-      
+
       throw new Error(errorMsg);
     }
-    
+
     // Handle network errors
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network') || error.message.includes('Failed to fetch'))) {
       const errorMsg = `Network connection failed.\n\n` +
@@ -330,10 +330,10 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
         `4. Same network: Ensure phone/emulator and computer are on same WiFi\n` +
         `5. Firewall: Allow port 8080 in Windows Firewall\n` +
         `6. Try ADB reverse: Run 'adb reverse tcp:8080 tcp:8080' and use localhost`;
-      
+
       throw new Error(errorMsg);
     }
-    
+
     // Re-throw other errors with original message
     throw error;
   }
@@ -350,7 +350,7 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
 
   try {
     console.log('Login attempt:', { phone: data.phone, url });
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -373,7 +373,7 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
         payload,
         url,
       });
-      
+
       const message =
         typeof payload === 'string'
           ? payload
@@ -393,7 +393,7 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
 
     // Extract userId from response - check both userId and sellerId fields
     let userId: number | null = null;
-    
+
     if (typeof payload.userId === 'number' && payload.userId > 0) {
       userId = payload.userId;
     } else if (typeof payload.sellerId === 'number' && payload.sellerId > 0) {
@@ -411,7 +411,7 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
       fullName: payload.fullName ?? '',
       phone: payload.phone ?? data.phone,
     };
-    
+
     console.log('Login successful:', { userId: authResponse.userId, fullName: authResponse.fullName });
     return authResponse;
   } catch (error) {
@@ -425,10 +425,10 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
         errorMessage: error.message,
         timestamp: new Date().toISOString(),
       });
-      
+
       // Provide more actionable error message
       const diagnosticMessage = `Network request failed. Backend URL: ${API_BASE_URL}. Troubleshooting: 1) Verify backend is running, 2) Check device can reach this IP, 3) Ensure same WiFi network, 4) Check firewall settings.`;
-      
+
       throw new Error(diagnosticMessage);
     }
     // Re-throw other errors
@@ -527,7 +527,7 @@ export const sendForgotPasswordOtp = async (phone: string): Promise<string> => {
 
   try {
     console.log('📱 [Forgot Password] Sending OTP to:', cleanPhone);
-    
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
@@ -846,7 +846,7 @@ export interface StoreNameAvailabilityResponse {
 
 export const checkStoreNameAvailability = async (storeName: string): Promise<StoreNameAvailabilityResponse> => {
   const url = `${API_BASE_URL}/api/stores/check-availability?storeName=${encodeURIComponent(storeName)}`;
-  
+
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -854,9 +854,9 @@ export const checkStoreNameAvailability = async (storeName: string): Promise<Sto
         'Content-Type': 'application/json',
       },
     });
-    
+
     const payload = await parseJsonOrText(response);
-    
+
     if (!response.ok) {
       return {
         available: false,
@@ -864,7 +864,7 @@ export const checkStoreNameAvailability = async (storeName: string): Promise<Sto
         message: payload?.message || 'Failed to check availability',
       };
     }
-    
+
     return payload as StoreNameAvailabilityResponse;
   } catch (error) {
     console.error('Error checking store name availability:', error);
@@ -956,7 +956,7 @@ export const getCurrentSellerStoreDetails = async (): Promise<StoreDetailsRespon
     storeAddress: payload.storeAddress ?? null, // Include store address from backend
     businessDetails: payload.businessDetails ?? null, // Include business details
   };
-  
+
   // Log for debugging
   if (__DEV__) {
     console.log('getCurrentSellerStoreDetails response:', {
@@ -967,7 +967,7 @@ export const getCurrentSellerStoreDetails = async (): Promise<StoreDetailsRespon
       hasStoreAddress: !!result.storeAddress,
     });
   }
-  
+
   return result;
 };
 
@@ -1317,7 +1317,7 @@ export const uploadCategoryWithImages = async (params: {
 
   try {
     console.log('Uploading category:', { categoryName: params.categoryName, hasImage: !!params.imageUri });
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -1477,7 +1477,7 @@ export const deleteCollection = async (collectionId: string | number): Promise<v
         `Network error. Please check your internet connection and ensure the backend is running at ${API_BASE_URL}`,
       );
     }
-    
+
     // Re-throw other errors
     throw error;
   }
@@ -1731,7 +1731,7 @@ export const fetchProductsByCollection = async (
 
   if (!response.ok) {
     let message = 'Failed to load collection products';
-    
+
     if (response.status === 404) {
       message = `Collection not found (ID: ${id})`;
     } else if (response.status === 403) {
@@ -1743,7 +1743,7 @@ export const fetchProductsByCollection = async (
         ? payload
         : payload?.message || `Failed to load collection products (${response.status})`;
     }
-    
+
     console.error('❌ [API] Failed to fetch collection products:', {
       status: response.status,
       statusText: response.statusText,
@@ -1751,7 +1751,7 @@ export const fetchProductsByCollection = async (
       payload,
       collectionId: id,
     });
-    
+
     throw new Error(message);
   }
 
@@ -1995,13 +1995,13 @@ export const createProduct = async (body: {
   const baseUrl = `${API_BASE_URL}/api/products/addProduct`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userIdRaw = await storage.getItem('userId');
-  
+
   // Debug logging
   console.log('Create product - userId from storage:', userIdRaw, 'type:', typeof userIdRaw);
-  
+
   // Validate userId - must be a valid number > 0
-  const userId = userIdRaw && !isNaN(Number(userIdRaw)) && Number(userIdRaw) > 0 
-    ? String(userIdRaw) 
+  const userId = userIdRaw && !isNaN(Number(userIdRaw)) && Number(userIdRaw) > 0
+    ? String(userIdRaw)
     : null;
 
   if (!userId) {
@@ -2012,7 +2012,7 @@ export const createProduct = async (body: {
     });
     throw new Error('User ID not found. Please logout and login again to refresh your session.');
   }
-  
+
   console.log('Create product - using userId:', userId);
 
   const url = `${baseUrl}?sellerId=${userId}`;
@@ -2070,13 +2070,13 @@ export const uploadProductWithImages = async (params: {
   const url = `${API_BASE_URL}/api/products/upload`;
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userIdRaw = await storage.getItem('userId');
-  
+
   // Debug logging
   console.log('Product upload - userId from storage:', userIdRaw, 'type:', typeof userIdRaw);
-  
+
   // Validate userId - must be a valid number > 0
-  const userId = userIdRaw && !isNaN(Number(userIdRaw)) && Number(userIdRaw) > 0 
-    ? String(userIdRaw) 
+  const userId = userIdRaw && !isNaN(Number(userIdRaw)) && Number(userIdRaw) > 0
+    ? String(userIdRaw)
     : null;
 
   if (!userId) {
@@ -2087,7 +2087,7 @@ export const uploadProductWithImages = async (params: {
     });
     throw new Error('User ID not found. Please logout and login again to refresh your session.');
   }
-  
+
   console.log('Product upload - using userId:', userId);
 
   const form = new FormData();
@@ -2188,7 +2188,7 @@ export interface PincodeValidationResponse {
  */
 export const validatePincode = async (pincode: string): Promise<PincodeDetails> => {
   const url = `${API_BASE_URL}/api/pincodes/validate?pincode=${encodeURIComponent(pincode)}`;
-  
+
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -2196,9 +2196,9 @@ export const validatePincode = async (pincode: string): Promise<PincodeDetails> 
         'Content-Type': 'application/json',
       },
     });
-    
+
     const payload = await parseJsonOrText(response);
-    
+
     if (!response.ok) {
       return {
         valid: false,
@@ -2209,7 +2209,7 @@ export const validatePincode = async (pincode: string): Promise<PincodeDetails> 
         message: payload?.message || 'Failed to validate pincode',
       };
     }
-    
+
     return payload as PincodeDetails;
   } catch (error) {
     console.error('Error validating pincode:', error);
@@ -2233,7 +2233,7 @@ export const checkPincodeForState = async (
   state: string,
 ): Promise<PincodeValidationResponse> => {
   const url = `${API_BASE_URL}/api/pincodes/check-state?pincode=${encodeURIComponent(pincode)}&state=${encodeURIComponent(state)}`;
-  
+
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -2241,9 +2241,9 @@ export const checkPincodeForState = async (
         'Content-Type': 'application/json',
       },
     });
-    
+
     const payload = await parseJsonOrText(response);
-    
+
     if (!response.ok) {
       return {
         valid: false,
@@ -2252,7 +2252,7 @@ export const checkPincodeForState = async (
         message: payload?.message || 'Failed to check pincode',
       };
     }
-    
+
     return payload as PincodeValidationResponse;
   } catch (error) {
     console.error('Error checking pincode for state:', error);
@@ -2271,7 +2271,7 @@ export const checkPincodeForState = async (
  */
 export const getDistrictsByState = async (state: string): Promise<string[]> => {
   const url = `${API_BASE_URL}/api/pincodes/districts?state=${encodeURIComponent(state)}`;
-  
+
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -2279,13 +2279,13 @@ export const getDistrictsByState = async (state: string): Promise<string[]> => {
         'Content-Type': 'application/json',
       },
     });
-    
+
     const payload = await parseJsonOrText(response);
-    
+
     if (!response.ok || !Array.isArray(payload)) {
       return [];
     }
-    
+
     return payload as string[];
   } catch (error) {
     console.error('Error fetching districts:', error);
@@ -2305,7 +2305,7 @@ export const getCitiesByState = async (
   if (district) {
     url += `&district=${encodeURIComponent(district)}`;
   }
-  
+
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -2313,13 +2313,13 @@ export const getCitiesByState = async (
         'Content-Type': 'application/json',
       },
     });
-    
+
     const payload = await parseJsonOrText(response);
-    
+
     if (!response.ok || !Array.isArray(payload)) {
       return [];
     }
-    
+
     return payload as string[];
   } catch (error) {
     console.error('Error fetching cities:', error);
@@ -2333,7 +2333,7 @@ export const getCitiesByState = async (
  */
 export const getAllStates = async (): Promise<string[]> => {
   const url = `${API_BASE_URL}/api/pincodes/states`;
-  
+
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -2341,13 +2341,13 @@ export const getAllStates = async (): Promise<string[]> => {
         'Content-Type': 'application/json',
       },
     });
-    
+
     const payload = await parseJsonOrText(response);
-    
+
     if (!response.ok || !Array.isArray(payload)) {
       return [];
     }
-    
+
     return payload as string[];
   } catch (error) {
     console.error('Error fetching states:', error);
@@ -2376,7 +2376,7 @@ export const validateCityForStateAndDistrict = async (
   if (district) {
     url += `&district=${encodeURIComponent(district)}`;
   }
-  
+
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -2384,9 +2384,9 @@ export const validateCityForStateAndDistrict = async (
         'Content-Type': 'application/json',
       },
     });
-    
+
     const payload = await parseJsonOrText(response);
-    
+
     if (!response.ok) {
       return {
         valid: false,
@@ -2396,7 +2396,7 @@ export const validateCityForStateAndDistrict = async (
         message: payload?.message || 'Failed to validate city',
       };
     }
-    
+
     return payload as CityValidationResponse;
   } catch (error) {
     console.error('Error validating city:', error);
@@ -2428,16 +2428,16 @@ export const uploadStoreLogo = async (
 ): Promise<LogoUploadResponse> => {
   try {
     console.log('Starting logo upload:', { sellerId, logoUri: logoUri.substring(0, 50) + '...' });
-    
+
     const token = await storage.getItem(AUTH_TOKEN_KEY);
-    
+
     // Create FormData for React Native (matching pattern from other uploads)
     const formData = new FormData();
     formData.append('sellerId', sellerId.toString());
-    
+
     // Get file extension from URI
     const fileExtension = logoUri.split('.').pop()?.toLowerCase() || 'jpg';
-    
+
     // Determine MIME type based on extension
     let mimeType = 'image/jpeg';
     if (fileExtension === 'png') {
@@ -2447,7 +2447,7 @@ export const uploadStoreLogo = async (
     } else if (fileExtension === 'webp') {
       mimeType = 'image/webp';
     }
-    
+
     // Append file to FormData (React Native format - matching other uploads)
     formData.append('logo', {
       uri: logoUri,
@@ -2896,10 +2896,10 @@ export const deleteBanner = async (bannerId: number): Promise<{ success: boolean
  */
 export const testBackendConnection = async (): Promise<{ success: boolean; message: string }> => {
   const testUrl = `${API_BASE_URL}/api/sellers/login-seller`;
-  
+
   try {
     console.log('Testing backend connection to:', API_BASE_URL);
-    
+
     // Try a simple OPTIONS request first (CORS preflight)
     const response = await fetch(testUrl, {
       method: 'OPTIONS',
@@ -2907,27 +2907,27 @@ export const testBackendConnection = async (): Promise<{ success: boolean; messa
         'Content-Type': 'application/json',
       },
     });
-    
+
     console.log('Connection test response:', {
       status: response.status,
       statusText: response.statusText,
       ok: response.ok,
     });
-    
+
     return {
       success: true,
       message: `Backend is reachable at ${API_BASE_URL}`,
     };
   } catch (error) {
     console.error('Connection test failed:', error);
-    
+
     if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Network'))) {
       return {
         success: false,
         message: `Cannot reach backend at ${API_BASE_URL}. Check: 1) Backend is running, 2) IP address is correct, 3) Device/emulator can reach this IP, 4) Same WiFi network, 5) Firewall settings.`,
       };
     }
-    
+
     return {
       success: false,
       message: `Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,

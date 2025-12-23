@@ -38,4 +38,7 @@ public interface CollectionRepository extends JpaRepository<collection, Long> {
     
     // Find by slug (for global slug checks - use with caution)
     collection findBySlug(String slug);
+    
+    // Find by collection name and seller ID (for fallback when slug doesn't match)
+    collection findByCollectionNameAndSeller_SellerId(String collectionName, Long sellerId);
 }

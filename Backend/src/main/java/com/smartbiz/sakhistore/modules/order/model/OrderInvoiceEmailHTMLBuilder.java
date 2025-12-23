@@ -149,7 +149,7 @@ public class OrderInvoiceEmailHTMLBuilder {
                 </tr>
               </thead>
               <tbody>
-""" + buildOrderItemsTable(order) + """
+                %s
               </tbody>
             </table>
           </td>

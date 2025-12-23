@@ -370,4 +370,19 @@ public class CollectionService {
             return null;
         }
     }
+    
+    /**
+     * Find collection by name and seller ID (for fallback when slug doesn't match)
+     */
+    public collection findByNameAndSellerId(String collectionName, Long sellerId) {
+        if (collectionName == null || collectionName.isEmpty() || sellerId == null) {
+            return null;
+        }
+        try {
+            return collectionRepository.findByCollectionNameAndSeller_SellerId(collectionName, sellerId);
+        } catch (Exception e) {
+            // Return null if not found (don't throw exception)
+            return null;
+        }
+    }
 }

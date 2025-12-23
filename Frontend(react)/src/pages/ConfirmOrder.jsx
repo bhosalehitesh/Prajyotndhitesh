@@ -864,10 +864,48 @@ const ConfirmOrder = () => {
           }
         },
         modal: {
-          ondismiss: () => {
+          ondismiss: async () => {
             setIsProcessingPayment(false);
             setIsPlacingOrder(false);
             setError('Payment was cancelled. You can try again.');
+            
+            // Mark payment as FAILED in database
+            try {
+              const API_BASE = getBackendUrl();
+              const markFailedUrl = `${API_BASE}/payment/mark-failed`;
+              console.log('Marking payment as failed:', { url: markFailedUrl, orderId });
+              
+              let response = await fetch(markFailedUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  orderId: Number(orderId),
+                }),
+              });
+
+              // Try with /api prefix if 404
+              if (response.status === 404 || response.status === 0) {
+                console.log('Trying mark-failed with /api prefix...');
+                const apiUrl = `${API_BASE}/api/payment/mark-failed`;
+                response = await fetch(apiUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    orderId: Number(orderId),
+                  }),
+                });
+              }
+
+              if (response.ok) {
+                console.log('✅ Payment marked as FAILED in database');
+              } else {
+                const errorText = await response.text();
+                console.warn('⚠️ Could not mark payment as failed:', response.status, errorText);
+              }
+            } catch (err) {
+              console.error('Error marking payment as failed:', err);
+              // Don't show error to user, payment cancellation is already handled
+            }
           },
         },
         theme: { color: '#ff6d2e' },
@@ -1089,7 +1127,20 @@ const ConfirmOrder = () => {
       );
 
       console.log('Order placed successfully:', order);
-      const orderId = order.ordersId || order.id || Date.now();
+      console.log('Order object keys:', Object.keys(order));
+      console.log('Order.OrdersId:', order.OrdersId);
+      console.log('Order.ordersId:', order.ordersId);
+      console.log('Order.id:', order.id);
+      
+      // Backend uses @JsonProperty("OrdersId") so the field is "OrdersId" (capital O, capital I)
+      const orderId = order.OrdersId || order.ordersId || order.id || order.orderId;
+      
+      if (!orderId) {
+        console.error('❌ Could not find order ID in order object:', order);
+        throw new Error('Order ID not found in response. Please check backend logs.');
+      }
+      
+      console.log('✅ Using order ID:', orderId, '(type:', typeof orderId, ')');
 
       // If Razorpay, initiate payment
       if (paymentMethod === 'RAZORPAY') {
