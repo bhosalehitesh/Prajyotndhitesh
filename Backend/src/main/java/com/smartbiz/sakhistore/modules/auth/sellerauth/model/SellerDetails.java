@@ -1,6 +1,5 @@
 package com.smartbiz.sakhistore.modules.auth.sellerauth.model;
 
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -34,6 +33,10 @@ public class SellerDetails {
     @Column(nullable = false)
     private String password;
 
+    private String email;
+
+    private String storeCategory;
+
     @Column(nullable = false)
     private boolean enabled = false;
 
@@ -42,11 +45,12 @@ public class SellerDetails {
 
     private LocalDateTime updatedAt;
 
-    public SellerDetails() {}
+    public SellerDetails() {
+    }
 
     public SellerDetails(Long sellerId, String fullName, String phone, String password, boolean enabled,
-                         LocalDateTime createdAt, LocalDateTime updatedAt, StoreDetails storeDetails,
-                         List<Product> products) {
+            LocalDateTime createdAt, LocalDateTime updatedAt, StoreDetails storeDetails,
+            List<Product> products) {
         this.sellerId = sellerId;
         this.fullName = fullName;
         this.phone = phone;
@@ -56,6 +60,19 @@ public class SellerDetails {
         this.updatedAt = updatedAt;
         this.storeDetails = storeDetails;
         this.products = products;
+    }
+
+    public SellerDetails(Long sellerId, String fullName, String phone, String password, boolean enabled,
+            LocalDateTime createdAt, LocalDateTime updatedAt, String email, String storeCategory) {
+        this.sellerId = sellerId;
+        this.fullName = fullName;
+        this.phone = phone;
+        this.password = password;
+        this.enabled = enabled;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.email = email;
+        this.storeCategory = storeCategory;
     }
 
     // ===========================
@@ -74,38 +91,96 @@ public class SellerDetails {
     // GETTERS & SETTERS
     // ===========================
 
-    public Long getSellerId() { return sellerId; }
-    public void setSellerId(Long sellerId) { this.sellerId = sellerId; }
+    public Long getSellerId() {
+        return sellerId;
+    }
 
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
+    public void setSellerId(Long sellerId) {
+        this.sellerId = sellerId;
+    }
 
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
+    public String getFullName() {
+        return fullName;
+    }
 
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
 
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public String getPhone() {
+        return phone;
+    }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public String getPassword() {
+        return password;
+    }
 
-    public StoreDetails getStoreDetails() { return storeDetails; }
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getStoreCategory() {
+        return storeCategory;
+    }
+
+    public void setStoreCategory(String storeCategory) {
+        this.storeCategory = storeCategory;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public StoreDetails getStoreDetails() {
+        return storeDetails;
+    }
 
     // 🔥 IMPORTANT FIX
     public void setStoreDetails(StoreDetails storeDetails) {
         this.storeDetails = storeDetails;
 
         if (storeDetails != null) {
-            storeDetails.setSeller(this);  // SYNC BOTH SIDES
+            storeDetails.setSeller(this); // SYNC BOTH SIDES
         }
     }
 
-    public List<Product> getProducts() { return products; }
-    public void setProducts(List<Product> products) { this.products = products; }
+    public List<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(List<Product> products) {
+        this.products = products;
+    }
 }

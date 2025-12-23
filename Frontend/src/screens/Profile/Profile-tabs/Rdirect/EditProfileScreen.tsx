@@ -27,7 +27,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
   const loadProfileData = async () => {
     try {
       setLoading(true);
-      
+
       // Get userId from storage
       const userId = await storage.getItem('userId');
       if (!userId) {
@@ -40,17 +40,17 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
       // Load seller details (fullName, phone)
       const sellerDetails = await getSellerDetails(userId);
       console.log('👤 [EditProfile] Loaded sellerDetails:', JSON.stringify(sellerDetails, null, 2));
-      
+
       // Load store details (store name, address)
       const storeDetails = await getCurrentSellerStoreDetails();
       console.log('📦 [EditProfile] Loaded storeDetails:', JSON.stringify(storeDetails, null, 2));
 
       // Load email from storage (check multiple possible keys where email might be stored)
-      let storedEmail = await storage.getItem('userEmail') || 
-                       await storage.getItem('email') || 
-                       await storage.getItem('sellerEmail') ||
-                       '';
-      
+      let storedEmail = await storage.getItem('userEmail') ||
+        await storage.getItem('email') ||
+        await storage.getItem('sellerEmail') ||
+        '';
+
       // Also check if email is in the sellerDetails JSON string stored in storage
       if (!storedEmail) {
         try {
@@ -63,9 +63,9 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
           // Ignore JSON parse errors
         }
       }
-      
+
       console.log('📧 [EditProfile] Email from storage:', storedEmail || 'Not found');
-      
+
       // Load business category - try multiple sources
       let businessCategory = '';
       try {
@@ -81,7 +81,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
               categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
             }
           });
-          
+
           // Find the most common category
           let maxCount = 0;
           let mostCommonCategory = '';
@@ -91,7 +91,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
               mostCommonCategory = cat;
             }
           });
-          
+
           if (mostCommonCategory) {
             businessCategory = mostCommonCategory;
             console.log('📂 [EditProfile] Found most common category from products:', businessCategory);
@@ -104,7 +104,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
             }
           }
         }
-        
+
         // If no category from products, try fetching categories
         if (!businessCategory) {
           const categories = await fetchCategories();
@@ -124,13 +124,14 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
 
       // Update profile data with seller information
       const updatedData: any = {};
-      
+
       if (sellerDetails) {
         updatedData.legalName = sellerDetails.fullName || sellerDetails.legalName || '';
         updatedData.phone = sellerDetails.phone || '';
-        // Email is not in SellerDetails model, so get from storage
-        updatedData.email = storedEmail || sellerDetails.email || '';
-        
+        // Use email and storeCategory from backend
+        updatedData.email = sellerDetails.email || storedEmail || '';
+        updatedData.category = sellerDetails.storeCategory || businessCategory || '';
+
         // Set login number for support option
         if (sellerDetails.phone) {
           setLoginNumber(sellerDetails.phone);
@@ -140,10 +141,10 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
         // If sellerDetails is null, still try to get email from storage
         updatedData.email = storedEmail || '';
       }
-      
+
       // Log what we found
       console.log('📧 [EditProfile] Email loaded:', updatedData.email || 'Not found');
-      console.log('📂 [EditProfile] Category loaded:', businessCategory || 'Not found');
+      console.log('📂 [EditProfile] Category loaded:', updatedData.category || 'Not found');
 
       // Update with store information
       if (storeDetails) {
@@ -151,12 +152,12 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
         if (businessCategory) {
           updatedData.category = businessCategory;
         }
-        
+
         // Load and format address
         if (storeDetails.storeAddress) {
           const addr = storeDetails.storeAddress;
           console.log('📍 [EditProfile] Store address from DB:', JSON.stringify(addr, null, 2));
-          
+
           // Format address from database fields (matching Footer format exactly)
           // Order: shopNoBuildingCompanyApartment, areaStreetSectorVillage, landmark (optional), townCity, state, pincode
           const parts = [];
@@ -167,11 +168,11 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
           if (addr.townCity) parts.push(addr.townCity.trim());
           if (addr.state) parts.push(addr.state.trim());
           if (addr.pincode) parts.push(addr.pincode.trim());
-          
+
           const formattedAddress = parts.join(', ');
           console.log('📋 [EditProfile] Address parts:', parts);
           console.log('✅ [EditProfile] Formatted address:', formattedAddress);
-          
+
           if (parts.length > 0) {
             updatedData.address = formattedAddress;
           }
@@ -213,11 +214,13 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
         const sellerUpdateData: any = {};
         if (profileData.legalName) sellerUpdateData.fullName = profileData.legalName;
         if (profileData.phone) sellerUpdateData.phone = profileData.phone;
-        // Email is not in SellerDetails model, save to storage instead
+        if (profileData.email) sellerUpdateData.email = profileData.email;
+        if (profileData.category) sellerUpdateData.storeCategory = profileData.category;
+
+        // Also save email to storage for local use
         if (profileData.email) {
           await storage.setItem('userEmail', profileData.email);
           await storage.setItem('email', profileData.email);
-          console.log('✅ [EditProfile] Email saved to storage');
         }
 
         if (Object.keys(sellerUpdateData).length > 0) {
@@ -243,7 +246,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
         // Or: "Building, Area, City, State, Pincode" (without landmark)
         const addressParts = profileData.address.split(',').map(p => p.trim()).filter(p => p.length > 0);
         console.log('🔍 [EditProfile] Parsed address parts:', addressParts);
-        
+
         // Extract components - handle both with and without landmark
         let pincode = '';
         let state = '';
@@ -251,16 +254,16 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
         let landmark = '';
         let area = '';
         let building = '';
-        
+
         const numParts = addressParts.length;
-        
+
         if (numParts >= 1) {
           building = addressParts[0] || '';
         }
         if (numParts >= 2) {
           area = addressParts[1] || '';
         }
-        
+
         // Determine if landmark exists by checking if we have 6 parts (with landmark) or 5 parts (without)
         if (numParts === 6) {
           // Format: Building, Area, Landmark, City, State, Pincode
@@ -288,7 +291,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
           state: state || '',
           pincode: pincode || '',
         };
-        
+
         console.log('📤 [EditProfile] Sending address data to backend:', JSON.stringify(addressData, null, 2));
 
         // Save address to backend
@@ -312,7 +315,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
     } catch (error: any) {
       const errorMessage = error?.message || 'Unknown error';
       console.error('❌ [EditProfile] Error saving profile:', errorMessage);
-      
+
       // Show more specific error messages
       if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Network')) {
         Alert.alert('Connection Error', 'Could not connect to server. Please check your internet connection and try again.');
@@ -342,132 +345,132 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
           <Text style={styles.loadingText}>Loading profile data...</Text>
         </View>
       ) : (
-      <ScrollView contentContainerStyle={{ paddingBottom: 50 }}>
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {profileData.legalName ? profileData.legalName.charAt(0).toUpperCase() : 'U'}
+        <ScrollView contentContainerStyle={{ paddingBottom: 50 }}>
+          <View style={styles.avatarSection}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {profileData.legalName ? profileData.legalName.charAt(0).toUpperCase() : 'U'}
+              </Text>
+            </View>
+            <Text style={styles.name}>{profileData.legalName || 'User'}</Text>
+          </View>
+
+          {/* Store Details Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Store Details</Text>
+            <View style={styles.editRow}>
+              <Text style={styles.label}>Legal Name: </Text>
+              <TextInput
+                style={styles.editableValue}
+                value={profileData.legalName}
+                onChangeText={(text) => setProfileData({ ...profileData, legalName: text })}
+              />
+            </View>
+            <View style={styles.editRow}>
+              <Text style={styles.label}>Phone: </Text>
+              <TextInput
+                style={styles.editableValue}
+                value={profileData.phone}
+                onChangeText={(text) => setProfileData({ ...profileData, phone: text })}
+                keyboardType="phone-pad"
+              />
+            </View>
+            <View style={styles.editRow}>
+              <Text style={styles.label}>Email: </Text>
+              <TextInput
+                style={styles.editableValue}
+                value={profileData.email}
+                onChangeText={(text) => setProfileData({ ...profileData, email: text })}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+            <View style={styles.editRow}>
+              <Text style={styles.label}>Category: </Text>
+              <TextInput
+                style={styles.editableValue}
+                value={profileData.category}
+                onChangeText={(text) => setProfileData({ ...profileData, category: text })}
+              />
+            </View>
+          </View>
+
+          {/* Store Address Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Store Address</Text>
+            <View style={styles.editRow}>
+              <TextInput
+                style={[styles.value, styles.editableAddress]}
+                value={profileData.address}
+                onChangeText={(text) => setProfileData({ ...profileData, address: text })}
+                multiline
+              />
+              <MaterialCommunityIcons name="pencil-outline" size={18} color="#e61580" style={{ marginLeft: 8 }} />
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.switchRow}>
+              <Text style={styles.label}>Hide address on store</Text>
+              <Switch value={hideAddress} onValueChange={setHideAddress} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+              <MaterialCommunityIcons name="information" size={16} color="#6B7280" />
+              <Text style={styles.infoText}>  Your customers can see the full address</Text>
+            </View>
+          </View>
+
+          {/* Customer Support Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Customer Support</Text>
+            <Text style={styles.subText}>
+              This mobile number will be displayed on your website for customer support
             </Text>
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={styles.radioRow}
+              onPress={() => setSupportOption('login')}
+            >
+              <MaterialCommunityIcons
+                name={supportOption === 'login' ? 'radiobox-marked' : 'radiobox-blank'}
+                size={20}
+                color={supportOption === 'login' ? '#e61580' : '#ccc'}
+              />
+              <Text style={styles.radioLabel}>Same as Login ({loginNumber})</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.radioRow}
+              onPress={() => setSupportOption('other')}
+            >
+              <MaterialCommunityIcons
+                name={supportOption === 'other' ? 'radiobox-marked' : 'radiobox-blank'}
+                size={20}
+                color={supportOption === 'other' ? '#e61580' : '#ccc'}
+              />
+              <Text style={styles.radioLabel}>Use another number</Text>
+            </TouchableOpacity>
+            {supportOption === 'other' && (
+              <TextInput
+                style={styles.input}
+                placeholder="Enter support phone"
+                value={supportNumber}
+                keyboardType="phone-pad"
+                onChangeText={setSupportNumber}
+              />
+            )}
           </View>
-          <Text style={styles.name}>{profileData.legalName || 'User'}</Text>
-        </View>
 
-        {/* Store Details Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Store Details</Text>
-          <View style={styles.editRow}>
-            <Text style={styles.label}>Legal Name: </Text>
-            <TextInput
-              style={styles.editableValue}
-              value={profileData.legalName}
-              onChangeText={(text) => setProfileData({ ...profileData, legalName: text })}
-            />
-          </View>
-          <View style={styles.editRow}>
-            <Text style={styles.label}>Phone: </Text>
-            <TextInput
-              style={styles.editableValue}
-              value={profileData.phone}
-              onChangeText={(text) => setProfileData({ ...profileData, phone: text })}
-              keyboardType="phone-pad"
-            />
-          </View>
-          <View style={styles.editRow}>
-            <Text style={styles.label}>Email: </Text>
-            <TextInput
-              style={styles.editableValue}
-              value={profileData.email}
-              onChangeText={(text) => setProfileData({ ...profileData, email: text })}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-          <View style={styles.editRow}>
-            <Text style={styles.label}>Category: </Text>
-            <TextInput
-              style={styles.editableValue}
-              value={profileData.category}
-              onChangeText={(text) => setProfileData({ ...profileData, category: text })}
-            />
-          </View>
-        </View>
-
-        {/* Store Address Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Store Address</Text>
-          <View style={styles.editRow}>
-            <TextInput
-              style={[styles.value, styles.editableAddress]}
-              value={profileData.address}
-              onChangeText={(text) => setProfileData({ ...profileData, address: text })}
-              multiline
-            />
-            <MaterialCommunityIcons name="pencil-outline" size={18} color="#e61580" style={{ marginLeft: 8 }} />
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>Hide address on store</Text>
-            <Switch value={hideAddress} onValueChange={setHideAddress} />
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
-            <MaterialCommunityIcons name="information" size={16} color="#6B7280" />
-            <Text style={styles.infoText}>  Your customers can see the full address</Text>
-          </View>
-        </View>
-
-        {/* Customer Support Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Customer Support</Text>
-          <Text style={styles.subText}>
-            This mobile number will be displayed on your website for customer support
-          </Text>
-          <View style={styles.divider} />
+          {/* Save Button */}
           <TouchableOpacity
-            style={styles.radioRow}
-            onPress={() => setSupportOption('login')}
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={loading}
           >
-            <MaterialCommunityIcons
-              name={supportOption === 'login' ? 'radiobox-marked' : 'radiobox-blank'}
-              size={20}
-              color={supportOption === 'login' ? '#e61580' : '#ccc'}
-            />
-            <Text style={styles.radioLabel}>Same as Login ({loginNumber})</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save</Text>
+            )}
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.radioRow}
-            onPress={() => setSupportOption('other')}
-          >
-            <MaterialCommunityIcons
-              name={supportOption === 'other' ? 'radiobox-marked' : 'radiobox-blank'}
-              size={20}
-              color={supportOption === 'other' ? '#e61580' : '#ccc'}
-            />
-            <Text style={styles.radioLabel}>Use another number</Text>
-          </TouchableOpacity>
-          {supportOption === 'other' && (
-            <TextInput
-              style={styles.input}
-              placeholder="Enter support phone"
-              value={supportNumber}
-              keyboardType="phone-pad"
-              onChangeText={setSupportNumber}
-            />
-          )}
-        </View>
-
-        {/* Save Button */}
-        <TouchableOpacity 
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]} 
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <Text style={styles.saveButtonText}>Save</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
       )}
     </SafeAreaView>
   );
