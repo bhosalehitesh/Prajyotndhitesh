@@ -212,7 +212,7 @@ public class OrdersService {
 
     {
                 try {
-<<<<<<< HEAD
+
                     if (product.getSeller() != null && product.getSeller().getSellerId() != null) {
                         Long productSellerId = product.getSeller().getSellerId();
                         // Find store by sellerId
@@ -223,7 +223,7 @@ public class OrdersService {
                                 extractedStoreId = store.getStoreId();
                                 System.out.println("✅ [OrdersService] Extracted storeId " + extractedStoreId + " from product's seller (sellerId: " + productSellerId + ")");
                             }
-=======
+
                     // Check if seller is available
                     if (product.getSeller() != null) {
                         Long productSellerId = product.getSeller().getSellerId();
@@ -239,7 +239,7 @@ public class OrdersService {
                         } else {
                             System.err.println("⚠️ [OrdersService] Product's seller has null sellerId. Product ID: " + 
                                 (product.getProductsId() != null ? product.getProductsId() : "unknown"));
->>>>>>> 384429e25a0b2d16643efc8887d715cd610cfd07
+
                         }
                     } else {
                         System.err.println("⚠️ [OrdersService] Product has no seller. Product ID: " + 
