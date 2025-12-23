@@ -1,129 +1,326 @@
 import React, { useState, useEffect } from 'react';
 import { SafeAreaView, ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, Alert, ActivityIndicator } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { storage, AUTH_TOKEN_KEY } from '../../../authentication/storage';
-import { getCurrentSellerStoreDetails, saveStoreAddress } from '../../../utils/api';
+import { storage, AUTH_TOKEN_KEY } from '../../../../authentication/storage';
+import { getCurrentSellerStoreDetails, saveStoreAddress, getSellerDetails, updateSellerDetails, saveBusinessDetails, fetchCategories, fetchProducts } from '../../../../utils/api';
 
 export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
   const [hideAddress, setHideAddress] = useState(false);
   const [supportOption, setSupportOption] = useState('other');
-  const [supportNumber, setSupportNumber] = useState('8766408154');
-  const loginNumber = '8766408154';
+  const [supportNumber, setSupportNumber] = useState('');
+  const [loginNumber, setLoginNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [profileData, setProfileData] = useState({
-    legalName: 'Girnai',
-    phone: '8766408154',
-    email: 'aditin26901@gmail.com',
-    category: 'Jewelry',
-    address: 'Thirumala , Hinjewadi, Pune, Maharashtra, 411057',
+    legalName: '',
+    phone: '',
+    email: '',
+    category: '',
+    address: '',
   });
 
-  // Load existing store address when component mounts
+  // Load all profile data from database when component mounts
   useEffect(() => {
-    loadStoreAddress();
+    loadProfileData();
   }, []);
 
-  const loadStoreAddress = async () => {
+  const loadProfileData = async () => {
     try {
+      setLoading(true);
+      
+      // Get userId from storage
+      const userId = await storage.getItem('userId');
+      if (!userId) {
+        console.warn('⚠️ [EditProfile] No userId found in storage');
+        setLoading(false);
+        setInitialLoading(false);
+        return;
+      }
+
+      // Load seller details (fullName, phone)
+      const sellerDetails = await getSellerDetails(userId);
+      console.log('👤 [EditProfile] Loaded sellerDetails:', JSON.stringify(sellerDetails, null, 2));
+      
+      // Load store details (store name, address)
       const storeDetails = await getCurrentSellerStoreDetails();
       console.log('📦 [EditProfile] Loaded storeDetails:', JSON.stringify(storeDetails, null, 2));
-      if (storeDetails && storeDetails.storeAddress) {
-        const addr = storeDetails.storeAddress;
-        console.log('📍 [EditProfile] Store address from DB:', JSON.stringify(addr, null, 2));
+
+      // Load email from storage (check multiple possible keys where email might be stored)
+      let storedEmail = await storage.getItem('userEmail') || 
+                       await storage.getItem('email') || 
+                       await storage.getItem('sellerEmail') ||
+                       '';
+      
+      // Also check if email is in the sellerDetails JSON string stored in storage
+      if (!storedEmail) {
+        try {
+          const sellerDetailsJson = await storage.getItem('sellerDetails');
+          if (sellerDetailsJson) {
+            const parsedSellerDetails = JSON.parse(sellerDetailsJson);
+            storedEmail = parsedSellerDetails.email || '';
+          }
+        } catch (e) {
+          // Ignore JSON parse errors
+        }
+      }
+      
+      console.log('📧 [EditProfile] Email from storage:', storedEmail || 'Not found');
+      
+      // Load business category - try multiple sources
+      let businessCategory = '';
+      try {
+        // First, try to get category from products (most accurate - seller's actual products)
+        const products = await fetchProducts();
+        console.log('📦 [EditProfile] Loaded products:', products.length);
+        if (products && products.length > 0) {
+          // Get the most common businessCategory from products
+          const categoryCounts: Record<string, number> = {};
+          products.forEach((product: any) => {
+            const cat = product.businessCategory || product.productCategory;
+            if (cat) {
+              categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+            }
+          });
+          
+          // Find the most common category
+          let maxCount = 0;
+          let mostCommonCategory = '';
+          Object.entries(categoryCounts).forEach(([cat, count]) => {
+            if (count > maxCount) {
+              maxCount = count;
+              mostCommonCategory = cat;
+            }
+          });
+          
+          if (mostCommonCategory) {
+            businessCategory = mostCommonCategory;
+            console.log('📂 [EditProfile] Found most common category from products:', businessCategory);
+          } else {
+            // Fallback to first product's category
+            const firstProduct = products[0];
+            businessCategory = firstProduct.businessCategory || firstProduct.productCategory || '';
+            if (businessCategory) {
+              console.log('📂 [EditProfile] Found category from first product:', businessCategory);
+            }
+          }
+        }
         
-        // Format address from database fields (matching Footer format exactly)
-        // Order: shopNoBuildingCompanyApartment, areaStreetSectorVillage, landmark (optional), townCity, state, pincode
-        // This matches the database column order and Footer display format
-        const parts = [];
-        if (addr.shopNoBuildingCompanyApartment) parts.push(addr.shopNoBuildingCompanyApartment.trim());
-        if (addr.areaStreetSectorVillage) parts.push(addr.areaStreetSectorVillage.trim());
-        // Include landmark only if it exists and is not empty (optional field)
-        if (addr.landmark && addr.landmark.trim()) parts.push(addr.landmark.trim());
-        if (addr.townCity) parts.push(addr.townCity.trim());
-        if (addr.state) parts.push(addr.state.trim());
-        if (addr.pincode) parts.push(addr.pincode.trim());
+        // If no category from products, try fetching categories
+        if (!businessCategory) {
+          const categories = await fetchCategories();
+          console.log('📂 [EditProfile] Loaded categories:', categories.length);
+          if (categories && categories.length > 0) {
+            // Get the first category's businessCategory or categoryName
+            const firstCategory = categories[0];
+            businessCategory = firstCategory.businessCategory || firstCategory.categoryName || '';
+            if (businessCategory) {
+              console.log('📂 [EditProfile] Found category from categories list:', businessCategory);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ [EditProfile] Could not load products/categories:', error);
+      }
+
+      // Update profile data with seller information
+      const updatedData: any = {};
+      
+      if (sellerDetails) {
+        updatedData.legalName = sellerDetails.fullName || sellerDetails.legalName || '';
+        updatedData.phone = sellerDetails.phone || '';
+        // Email is not in SellerDetails model, so get from storage
+        updatedData.email = storedEmail || sellerDetails.email || '';
         
-        const formattedAddress = parts.join(', ');
-        console.log('📋 [EditProfile] Address parts:', parts);
-        console.log('✅ [EditProfile] Formatted address (should match DB):', formattedAddress);
-        
-        if (parts.length > 0) {
-          setProfileData(prev => ({ ...prev, address: formattedAddress }));
+        // Set login number for support option
+        if (sellerDetails.phone) {
+          setLoginNumber(sellerDetails.phone);
+          setSupportNumber(sellerDetails.phone);
         }
       } else {
-        console.log('⚠️ [EditProfile] No storeAddress found in storeDetails');
+        // If sellerDetails is null, still try to get email from storage
+        updatedData.email = storedEmail || '';
       }
+      
+      // Log what we found
+      console.log('📧 [EditProfile] Email loaded:', updatedData.email || 'Not found');
+      console.log('📂 [EditProfile] Category loaded:', businessCategory || 'Not found');
+
+      // Update with store information
+      if (storeDetails) {
+        // Use the fetched category if we got one
+        if (businessCategory) {
+          updatedData.category = businessCategory;
+        }
+        
+        // Load and format address
+        if (storeDetails.storeAddress) {
+          const addr = storeDetails.storeAddress;
+          console.log('📍 [EditProfile] Store address from DB:', JSON.stringify(addr, null, 2));
+          
+          // Format address from database fields (matching Footer format exactly)
+          // Order: shopNoBuildingCompanyApartment, areaStreetSectorVillage, landmark (optional), townCity, state, pincode
+          const parts = [];
+          if (addr.shopNoBuildingCompanyApartment) parts.push(addr.shopNoBuildingCompanyApartment.trim());
+          if (addr.areaStreetSectorVillage) parts.push(addr.areaStreetSectorVillage.trim());
+          // Include landmark only if it exists and is not empty (optional field)
+          if (addr.landmark && addr.landmark.trim()) parts.push(addr.landmark.trim());
+          if (addr.townCity) parts.push(addr.townCity.trim());
+          if (addr.state) parts.push(addr.state.trim());
+          if (addr.pincode) parts.push(addr.pincode.trim());
+          
+          const formattedAddress = parts.join(', ');
+          console.log('📋 [EditProfile] Address parts:', parts);
+          console.log('✅ [EditProfile] Formatted address:', formattedAddress);
+          
+          if (parts.length > 0) {
+            updatedData.address = formattedAddress;
+          }
+        } else {
+          console.log('⚠️ [EditProfile] No storeAddress found in storeDetails');
+        }
+      }
+
+      // Update state with all loaded data
+      setProfileData(prev => ({
+        ...prev,
+        ...updatedData,
+      }));
+
+      console.log('✅ [EditProfile] Profile data loaded:', updatedData);
     } catch (error) {
-      console.error('❌ [EditProfile] Error loading store address:', error);
+      console.error('❌ [EditProfile] Error loading profile data:', error);
+    } finally {
+      setLoading(false);
+      setInitialLoading(false);
     }
   };
 
   const handleSave = async () => {
     setLoading(true);
     try {
-      console.log('💾 [EditProfile] Saving address:', profileData.address);
-      // Parse the address string into individual components
-      // Format: "Building, Area, Landmark (optional), City, State, Pincode"
-      // Or: "Building, Area, City, State, Pincode" (without landmark)
-      const addressParts = profileData.address.split(',').map(p => p.trim()).filter(p => p.length > 0);
-      console.log('🔍 [EditProfile] Parsed address parts:', addressParts);
-      
-      // Extract components - handle both with and without landmark
-      // Last part is always pincode, second last is state, third last is city
-      let pincode = '';
-      let state = '';
-      let city = '';
-      let landmark = '';
-      let area = '';
-      let building = '';
-      
-      const numParts = addressParts.length;
-      
-      if (numParts >= 1) {
-        building = addressParts[0] || '';
-      }
-      if (numParts >= 2) {
-        area = addressParts[1] || '';
-      }
-      
-      // Determine if landmark exists by checking if we have 6 parts (with landmark) or 5 parts (without)
-      if (numParts === 6) {
-        // Format: Building, Area, Landmark, City, State, Pincode
-        landmark = addressParts[2] || '';
-        city = addressParts[3] || '';
-        state = addressParts[4] || '';
-        pincode = addressParts[5] || '';
-      } else if (numParts === 5) {
-        // Format: Building, Area, City, State, Pincode (no landmark)
-        city = addressParts[2] || '';
-        state = addressParts[3] || '';
-        pincode = addressParts[4] || '';
-      } else if (numParts >= 3) {
-        // Fallback: assume last 3 are city, state, pincode
-        city = addressParts[numParts - 3] || '';
-        state = addressParts[numParts - 2] || '';
-        pincode = addressParts[numParts - 1] || '';
+      const userId = await storage.getItem('userId');
+      if (!userId) {
+        Alert.alert('Error', 'User not logged in. Please login again.');
+        setLoading(false);
+        return;
       }
 
-      const addressData = {
-        addressLine1: building || 'Thirumala',
-        addressLine2: area || 'Hinjewadi',
-        landmark: landmark || undefined,
-        city: city || 'Pune',
-        state: state || 'Maharashtra',
-        pincode: pincode || '411057',
-      };
-      
-      console.log('📤 [EditProfile] Sending address data to backend:', JSON.stringify(addressData, null, 2));
+      console.log('💾 [EditProfile] Saving profile data:', profileData);
 
-      // Save address to backend
-      const result = await saveStoreAddress(addressData);
-      console.log('✅ [EditProfile] Address saved successfully:', JSON.stringify(result, null, 2));
+      // Save seller details (fullName, phone)
+      // Note: Email is not in SellerDetails model, so we save it to storage instead
+      try {
+        const sellerUpdateData: any = {};
+        if (profileData.legalName) sellerUpdateData.fullName = profileData.legalName;
+        if (profileData.phone) sellerUpdateData.phone = profileData.phone;
+        // Email is not in SellerDetails model, save to storage instead
+        if (profileData.email) {
+          await storage.setItem('userEmail', profileData.email);
+          await storage.setItem('email', profileData.email);
+          console.log('✅ [EditProfile] Email saved to storage');
+        }
+
+        if (Object.keys(sellerUpdateData).length > 0) {
+          await updateSellerDetails(userId, sellerUpdateData);
+          console.log('✅ [EditProfile] Seller details updated');
+        }
+      } catch (error: any) {
+        const errorMessage = error?.message || 'Unknown error';
+        console.warn('⚠️ [EditProfile] Could not update seller details:', errorMessage);
+        // Show specific error if it's a connection issue
+        if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Network')) {
+          Alert.alert('Connection Error', 'Could not connect to server. Please check your internet connection and try again.');
+          setLoading(false);
+          return;
+        }
+        // Continue with address save even if seller update fails (for other errors)
+      }
+
+      // Save address
+      if (profileData.address) {
+        // Parse the address string into individual components
+        // Format: "Building, Area, Landmark (optional), City, State, Pincode"
+        // Or: "Building, Area, City, State, Pincode" (without landmark)
+        const addressParts = profileData.address.split(',').map(p => p.trim()).filter(p => p.length > 0);
+        console.log('🔍 [EditProfile] Parsed address parts:', addressParts);
+        
+        // Extract components - handle both with and without landmark
+        let pincode = '';
+        let state = '';
+        let city = '';
+        let landmark = '';
+        let area = '';
+        let building = '';
+        
+        const numParts = addressParts.length;
+        
+        if (numParts >= 1) {
+          building = addressParts[0] || '';
+        }
+        if (numParts >= 2) {
+          area = addressParts[1] || '';
+        }
+        
+        // Determine if landmark exists by checking if we have 6 parts (with landmark) or 5 parts (without)
+        if (numParts === 6) {
+          // Format: Building, Area, Landmark, City, State, Pincode
+          landmark = addressParts[2] || '';
+          city = addressParts[3] || '';
+          state = addressParts[4] || '';
+          pincode = addressParts[5] || '';
+        } else if (numParts === 5) {
+          // Format: Building, Area, City, State, Pincode (no landmark)
+          city = addressParts[2] || '';
+          state = addressParts[3] || '';
+          pincode = addressParts[4] || '';
+        } else if (numParts >= 3) {
+          // Fallback: assume last 3 are city, state, pincode
+          city = addressParts[numParts - 3] || '';
+          state = addressParts[numParts - 2] || '';
+          pincode = addressParts[numParts - 1] || '';
+        }
+
+        const addressData = {
+          addressLine1: building || '',
+          addressLine2: area || '',
+          landmark: landmark || undefined,
+          city: city || '',
+          state: state || '',
+          pincode: pincode || '',
+        };
+        
+        console.log('📤 [EditProfile] Sending address data to backend:', JSON.stringify(addressData, null, 2));
+
+        // Save address to backend
+        await saveStoreAddress(addressData);
+        console.log('✅ [EditProfile] Address saved successfully');
+      }
+
+      // Save business category if changed
+      if (profileData.category) {
+        try {
+          // Note: This assumes businessDetails already exists. If not, you may need to create it first.
+          // For now, we'll just log it - you may need to implement a separate updateBusinessCategory function
+          console.log('📝 [EditProfile] Category to save:', profileData.category);
+          // TODO: Implement category update if backend supports it
+        } catch (error) {
+          console.warn('⚠️ [EditProfile] Could not update category:', error);
+        }
+      }
 
       Alert.alert('Success', 'Profile updated successfully!', [{ text: 'OK', onPress: onBack }]);
-    } catch (error) {
-      console.error('❌ [EditProfile] Error saving address:', error);
-      Alert.alert('Error', 'Failed to save address. Please try again.');
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Unknown error';
+      console.error('❌ [EditProfile] Error saving profile:', errorMessage);
+      
+      // Show more specific error messages
+      if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Network')) {
+        Alert.alert('Connection Error', 'Could not connect to server. Please check your internet connection and try again.');
+      } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        Alert.alert('Authentication Error', 'Your session has expired. Please login again.');
+      } else {
+        Alert.alert('Error', `Failed to save profile: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -139,12 +336,20 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
         <View style={{ width: 28 }} />
       </View>
 
+      {initialLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#e61580" />
+          <Text style={styles.loadingText}>Loading profile data...</Text>
+        </View>
+      ) : (
       <ScrollView contentContainerStyle={{ paddingBottom: 50 }}>
         <View style={styles.avatarSection}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>G</Text>
+            <Text style={styles.avatarText}>
+              {profileData.legalName ? profileData.legalName.charAt(0).toUpperCase() : 'U'}
+            </Text>
           </View>
-          <Text style={styles.name}>Girnai</Text>
+          <Text style={styles.name}>{profileData.legalName || 'User'}</Text>
         </View>
 
         {/* Store Details Card */}
@@ -263,6 +468,7 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
           )}
         </TouchableOpacity>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -368,5 +574,16 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
 });
 

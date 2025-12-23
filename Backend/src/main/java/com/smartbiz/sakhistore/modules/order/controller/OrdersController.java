@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/orders")
+@RequestMapping({"/orders", "/api/orders"})
 public class OrdersController {
 
     @Autowired
@@ -31,17 +31,74 @@ public class OrdersController {
     // Place Order From Cart
     // ===============================
     @PostMapping("/place")
-    public Orders placeOrder(
+    public ResponseEntity<?> placeOrder(
             @RequestParam Long userId,
             @RequestParam String address,
             @RequestParam Long mobile,
             @RequestParam(required = false) Long storeId,
             @RequestParam(required = false) Long sellerId
     ) {
-        User user = new User();
-        user.setId(userId);
+        try {
+            // Validate required parameters
+            if (userId == null || userId <= 0) {
+                return ResponseEntity.badRequest().body(
+                    java.util.Map.of("error", "Invalid user ID", "message", "User ID is required and must be greater than 0")
+                );
+            }
+            
+            if (address == null || address.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                    java.util.Map.of("error", "Missing address", "message", "Delivery address is required")
+                );
+            }
+            
+            if (mobile == null || mobile <= 0) {
+                return ResponseEntity.badRequest().body(
+                    java.util.Map.of("error", "Invalid mobile number", "message", "Mobile number is required and must be valid")
+                );
+            }
+            
+            User user = new User();
+            user.setId(userId);
 
-        return ordersService.placeOrder(user, address, mobile, storeId, sellerId);
+            Orders order = ordersService.placeOrder(user, address, mobile, storeId, sellerId);
+            return ResponseEntity.ok(order);
+            
+        } catch (RuntimeException e) {
+            // Log the error for debugging
+            System.err.println("❌ [OrdersController] Error placing order:");
+            System.err.println("   User ID: " + userId);
+            System.err.println("   Error: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Return user-friendly error message
+            String errorMessage = e.getMessage();
+            if (errorMessage == null || errorMessage.isEmpty()) {
+                errorMessage = "Failed to place order. Please check that your cart is not empty and all required information is provided.";
+            }
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                java.util.Map.of(
+                    "error", "Order placement failed",
+                    "message", errorMessage,
+                    "details", "Please ensure your cart has items and all required fields are filled"
+                )
+            );
+        } catch (Exception e) {
+            // Log unexpected errors
+            System.err.println("❌ [OrdersController] Unexpected error placing order:");
+            System.err.println("   User ID: " + userId);
+            System.err.println("   Error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                java.util.Map.of(
+                    "error", "Server error",
+                    "message", "An unexpected error occurred while placing your order. Please try again.",
+                    "details", e.getMessage() != null ? e.getMessage() : "Unknown error"
+                )
+            );
+        }
     }
 
     // ===============================

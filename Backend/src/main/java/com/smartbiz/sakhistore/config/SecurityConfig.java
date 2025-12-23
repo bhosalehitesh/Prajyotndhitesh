@@ -57,7 +57,8 @@ public class SecurityConfig {
             "/orders/test-email-simple",
             "/orders/test-email/**",
             // User email verification
-            "/api/user/verify-email/**"
+            "/api/user/verify-email/**",
+            "/api/user/phone/**"  // Allow user phone endpoint without authentication
     };
 
     @Bean

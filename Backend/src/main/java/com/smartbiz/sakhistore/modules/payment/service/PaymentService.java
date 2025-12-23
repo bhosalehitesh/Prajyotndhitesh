@@ -4,6 +4,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
@@ -177,6 +178,20 @@ public class PaymentService {
     }
 
     // =============================================================
+    // Get Payment by Order ID
+    // =============================================================
+    public Payment getPaymentByOrderId(Long orderId) {
+        return paymentRepository.findByOrders_OrdersId(orderId);
+    }
+
+    // =============================================================
+    // Save Payment
+    // =============================================================
+    public Payment savePayment(Payment payment) {
+        return paymentRepository.save(payment);
+    }
+
+    // =============================================================
     // 5️⃣ FINAL CALLBACK HANDLER (VERIFY + UPDATE)
     // =============================================================
     public Payment verifyAndUpdatePayment(RazorpayCallbackRequest callback) {
@@ -240,6 +255,7 @@ public class PaymentService {
     // =============================================================
     // 9️⃣ Mark payment PAID and store Razorpay details
     // =============================================================
+    @Transactional
     public Payment markPaymentPaidWithRazorpayDetails(String razorpayPaymentId, String razorpayOrderId, String razorpaySignature) {
         if (razorpayPaymentId == null || razorpayOrderId == null || razorpaySignature == null) {
             throw new RuntimeException("Missing Razorpay identifiers while marking payment paid");
@@ -249,17 +265,38 @@ public class PaymentService {
             throw new RuntimeException("Payment not found with id: " + razorpayPaymentId);
         }
 
+        System.out.println("💳 [PaymentService] Marking payment as PAID: " + razorpayPaymentId);
         payment.setRazorpayOrderId(razorpayOrderId);
         payment.setRazorpayPaymentId(razorpayPaymentId);
         payment.setRazorpaySignature(razorpaySignature);
         payment.setStatus(PaymentStatus.PAID);
 
         paymentRepository.save(payment);
+        System.out.println("✅ [PaymentService] Payment status updated to PAID");
 
+        // Update Order entity payment status - reload to ensure we have the latest version
         Orders order = payment.getOrders();
         if (order != null) {
-            order.setPaymentStatus(PaymentStatus.PAID);
-            ordersRepository.save(order);
+            Long orderId = order.getOrdersId();
+            System.out.println("📦 [PaymentService] Found order with ID: " + orderId + ", current status: " + order.getPaymentStatus());
+            
+            // Reload order to ensure we have the latest version
+            Orders freshOrder = ordersRepository.findById(orderId).orElse(null);
+            if (freshOrder != null) {
+                freshOrder.setPaymentStatus(PaymentStatus.PAID);
+                ordersRepository.save(freshOrder);
+                System.out.println("✅ [PaymentService] Order payment status updated to PAID (order ID: " + orderId + ")");
+                
+                // Verify the update
+                Orders verifyOrder = ordersRepository.findById(orderId).orElse(null);
+                if (verifyOrder != null) {
+                    System.out.println("🔍 [PaymentService] Verification - Order payment status: " + verifyOrder.getPaymentStatus());
+                }
+            } else {
+                System.err.println("⚠️ [PaymentService] Could not reload order with ID: " + orderId);
+            }
+        } else {
+            System.err.println("⚠️ [PaymentService] Payment has no associated order!");
         }
 
         return payment;

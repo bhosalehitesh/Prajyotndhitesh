@@ -37,6 +37,7 @@ public class OrderItems {
     private ProductVariant variant;
 
     @ManyToOne
+    @JoinColumn(name = "orders_orders_id", referencedColumnName = "orders_id", nullable = false)
     @JsonBackReference  // Child side - don't serialize this to prevent circular reference
     private Orders orders;
 

@@ -41,6 +41,7 @@ public class Payment {
     private String razorpaySignature;
 
     @OneToOne
+    @JoinColumn(name = "orders_orders_id", referencedColumnName = "orders_id")
     @JsonIgnore
     private Orders orders;
 

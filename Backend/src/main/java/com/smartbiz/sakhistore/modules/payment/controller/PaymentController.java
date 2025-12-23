@@ -15,7 +15,7 @@ import com.smartbiz.sakhistore.modules.order.model.Orders;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/payment")
+@RequestMapping({"/payment", "/api/payment"})
 public class PaymentController {
 
     @Autowired
@@ -146,44 +146,57 @@ public class PaymentController {
                 return ResponseEntity.status(400).body(Map.of("error", "Invalid payment signature"));
             }
 
-            // Check if payment already exists (by our internal paymentId, which we map to Razorpay payment id in test flow)
+            // Get order first
+            Orders order = null;
+            try {
+                order = ordersRepository.findById(orderId).orElse(null);
+                if (order == null) {
+                    System.err.println("⚠️ Order not found with ID: " + orderId);
+                    return ResponseEntity.status(404).body(Map.of("error", "Order not found with id: " + orderId));
+                }
+                System.out.println("✅ Found order with ID: " + orderId + ", current payment status: " + order.getPaymentStatus());
+            } catch (Exception e) {
+                System.err.println("❌ Error finding order: " + e.getMessage());
+                e.printStackTrace();
+                return ResponseEntity.status(500).body(Map.of("error", "Error finding order: " + e.getMessage()));
+            }
+            
+            // Check if payment already exists
             Payment existingPayment = paymentService.getPayment(razorpayPaymentId);
             
             if (existingPayment != null) {
                 // Update existing payment with Razorpay details and status
+                System.out.println("✅ Found existing payment, updating to PAID");
                 paymentService.markPaymentPaidWithRazorpayDetails(razorpayPaymentId, razorpayOrderId, razorpaySignature);
             } else {
-                // Get order to get amount (or use 0.0 if order doesn't exist for testing)
-                Double amount = 0.0;
-                Orders order = null;
-                try {
-                    order = ordersRepository.findById(orderId).orElse(null);
-                    if (order != null) {
-                        amount = order.getTotalAmount() != null ? order.getTotalAmount() : 0.0;
-                    }
-                } catch (Exception e) {
-                    // Order might not exist, use default amount
-                    System.out.println("Order not found, using default amount: " + e.getMessage());
-                }
+                // Create new payment
+                Double amount = order.getTotalAmount() != null ? order.getTotalAmount() : 0.0;
+                System.out.println("📝 Creating new payment for order ID: " + orderId + ", amount: " + amount);
                 
-                // Create payment - with order if exists, without if not (for testing)
-                if (order != null) {
-                    paymentService.createPayment(orderId, amount, razorpayPaymentId);
-                    // Now mark as paid and store Razorpay fields
-                    paymentService.markPaymentPaidWithRazorpayDetails(razorpayPaymentId, razorpayOrderId, razorpaySignature);
-                } else {
-                    // For testing: create payment without order requirement
-                    // Get amount from request if available
-                    try {
-                        Object amountObj = request.get("amount");
-                        if (amountObj != null) {
-                            amount = Double.parseDouble(amountObj.toString());
-                        }
-                    } catch (Exception e) {
-                        // Use default 0.0
+                // Create payment (this will set status to PENDING initially)
+                Payment newPayment = paymentService.createPayment(orderId, amount, razorpayPaymentId);
+                System.out.println("✅ Payment created with ID: " + newPayment.getPaymentAutoId());
+                
+                // Now mark as paid and store Razorpay fields (this will update both payment and order)
+                System.out.println("✅ Marking payment as PAID");
+                paymentService.markPaymentPaidWithRazorpayDetails(razorpayPaymentId, razorpayOrderId, razorpaySignature);
+            }
+            
+            // Final verification: Reload order and ensure it's PAID
+            try {
+                Orders updatedOrder = ordersRepository.findById(orderId).orElse(null);
+                if (updatedOrder != null) {
+                    System.out.println("🔍 Final verification - Order payment status: " + updatedOrder.getPaymentStatus());
+                    if (updatedOrder.getPaymentStatus() != com.smartbiz.sakhistore.modules.payment.model.PaymentStatus.PAID) {
+                        System.err.println("⚠️ WARNING: Order payment status is still not PAID! Force updating...");
+                        updatedOrder.setPaymentStatus(com.smartbiz.sakhistore.modules.payment.model.PaymentStatus.PAID);
+                        ordersRepository.save(updatedOrder);
+                        System.out.println("✅ Force updated order payment status to PAID");
                     }
-                    paymentService.createPaymentWithoutOrder(amount, razorpayPaymentId, razorpayOrderId, razorpaySignature);
                 }
+            } catch (Exception e) {
+                System.err.println("❌ Error in final verification: " + e.getMessage());
+                e.printStackTrace();
             }
 
             return ResponseEntity.ok(Map.of(
@@ -196,6 +209,64 @@ public class PaymentController {
             e.printStackTrace();
             System.err.println("Callback error: " + e.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", "Failed to process callback: " + e.getMessage()));
+        }
+    }
+
+    // ==========================================
+    // Mark Payment as Failed (when user cancels)
+    // ==========================================
+    @PostMapping("/mark-failed")
+    public ResponseEntity<?> markPaymentFailed(@RequestBody Map<String, Object> request) {
+        try {
+            System.out.println("Received payment cancellation request: " + request);
+            
+            if (request.get("orderId") == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing orderId in request"));
+            }
+
+            Long orderId = Long.parseLong(request.get("orderId").toString());
+            
+            // Find the order
+            Orders order = ordersRepository.findById(orderId).orElse(null);
+            if (order == null) {
+                System.err.println("⚠️ Order not found with ID: " + orderId);
+                return ResponseEntity.status(404).body(Map.of("error", "Order not found with id: " + orderId));
+            }
+
+            System.out.println("✅ Found order with ID: " + orderId + ", current payment status: " + order.getPaymentStatus());
+            
+            // Update order payment status to FAILED
+            order.setPaymentStatus(com.smartbiz.sakhistore.modules.payment.model.PaymentStatus.FAILED);
+            ordersRepository.save(order);
+            System.out.println("✅ Updated order payment status to FAILED");
+
+            // Also update payment entity if it exists
+            try {
+                // Try to find payment by order
+                com.smartbiz.sakhistore.modules.payment.model.Payment payment = 
+                    paymentService.getPaymentByOrderId(orderId);
+                if (payment != null) {
+                    payment.setStatus(com.smartbiz.sakhistore.modules.payment.model.PaymentStatus.FAILED);
+                    paymentService.savePayment(payment);
+                    System.out.println("✅ Updated payment entity status to FAILED");
+                } else {
+                    System.out.println("ℹ️ No payment entity found for order ID: " + orderId + " (this is normal if payment was never created)");
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Could not update payment entity: " + e.getMessage());
+                e.printStackTrace();
+                // Continue even if payment entity update fails - don't throw exception
+            }
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Payment marked as failed",
+                "orderId", orderId
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Error marking payment as failed: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to mark payment as failed: " + e.getMessage()));
         }
     }
 }
