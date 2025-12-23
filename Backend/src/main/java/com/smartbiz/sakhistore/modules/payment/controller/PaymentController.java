@@ -17,7 +17,7 @@ import com.smartbiz.sakhistore.modules.order.model.Orders;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/payment")
+@RequestMapping({ "/api/payment", "/payment" })
 public class PaymentController {
 
     @Autowired
@@ -191,31 +191,34 @@ public class PaymentController {
     @PostMapping(value = "/razorpay-callback", produces = "application/json")
     @ResponseBody
     public ResponseEntity<?> razorpayCallback(@RequestBody Map<String, Object> request) {
-        // Declare orderIdFromRequest outside try block so it's accessible in catch block
+        // Declare orderIdFromRequest outside try block so it's accessible in catch
+        // block
         Long orderIdFromRequest = null;
-        
+
         try {
             System.out.println("\n" + "=".repeat(70));
             System.out.println("📞 RAZORPAY CALLBACK RECEIVED");
             System.out.println("=".repeat(70));
             System.out.println("Full request: " + request);
-            
+
             // Validate required fields
-            if (request.get("razorpay_order_id") == null || request.get("razorpay_payment_id") == null || request.get("razorpay_signature") == null) {
+            if (request.get("razorpay_order_id") == null || request.get("razorpay_payment_id") == null
+                    || request.get("razorpay_signature") == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Missing Razorpay identifiers in callback"));
             }
 
             String razorpayOrderId = request.get("razorpay_order_id").toString();
             String razorpayPaymentId = request.get("razorpay_payment_id").toString();
             String razorpaySignature = request.get("razorpay_signature").toString();
-            
+
             // orderId is optional - we'll get it from payment record
             if (request.get("orderId") != null) {
                 try {
                     orderIdFromRequest = Long.parseLong(request.get("orderId").toString());
                     System.out.println("📋 OrderId from request: " + orderIdFromRequest);
                 } catch (Exception e) {
-                    System.out.println("⚠️ Invalid orderId in request: " + request.get("orderId") + ", will get from payment record");
+                    System.out.println("⚠️ Invalid orderId in request: " + request.get("orderId")
+                            + ", will get from payment record");
                 }
             } else {
                 System.out.println("⚠️ No orderId in request, will get from payment record");
@@ -229,33 +232,34 @@ public class PaymentController {
                 return ResponseEntity.status(400).body(Map.of("error", "Invalid payment signature"));
             }
 
-
             // CRITICAL: Use centralized payment success handler for atomic updates
             // This ensures both Payment and Order are updated together
             Payment existingPayment = paymentRepository.findByRazorpayOrderId(razorpayOrderId);
             Long orderId = orderIdFromRequest; // Start with orderId from request
-            
+
             if (existingPayment != null) {
                 // Use the centralized onPaymentSuccess method for atomic update
                 System.out.println("✅ Found existing payment by razorpayOrderId: " + razorpayOrderId);
-                
+
                 // Get orderId from payment record if not provided in request
-                if (orderId == null && existingPayment.getOrders() != null && existingPayment.getOrders().getOrdersId() != null) {
+                if (orderId == null && existingPayment.getOrders() != null
+                        && existingPayment.getOrders().getOrdersId() != null) {
                     orderId = existingPayment.getOrders().getOrdersId();
                     System.out.println("📋 Using orderId from payment record: " + orderId);
                 } else if (orderId != null) {
                     System.out.println("📋 Using orderId from request: " + orderId);
                 }
-                
+
                 // Call the payment success handler
                 try {
                     paymentService.onPaymentSuccess(razorpayOrderId, razorpayPaymentId, razorpaySignature);
                     System.out.println("✅ Payment success handler completed");
-                    
+
                     // CRITICAL: Refresh payment to get the actual orderId after update
                     // The orderId might be different from the request
                     Payment refreshedPayment = paymentRepository.findByRazorpayOrderId(razorpayOrderId);
-                    if (refreshedPayment != null && refreshedPayment.getOrders() != null && refreshedPayment.getOrders().getOrdersId() != null) {
+                    if (refreshedPayment != null && refreshedPayment.getOrders() != null
+                            && refreshedPayment.getOrders().getOrdersId() != null) {
                         orderId = refreshedPayment.getOrders().getOrdersId();
                         System.out.println("📋 Updated orderId from refreshed payment record: " + orderId);
                     }
@@ -283,12 +287,13 @@ public class PaymentController {
             } else {
                 // Try to find by razorpayPaymentId (fallback for test scenarios)
                 existingPayment = paymentService.getPayment(razorpayPaymentId);
-                
+
                 if (existingPayment != null) {
                     // Update existing payment with Razorpay details and status
                     System.out.println("✅ Found existing payment by razorpayPaymentId: " + razorpayPaymentId);
-                    paymentService.markPaymentPaidWithRazorpayDetails(razorpayPaymentId, razorpayOrderId, razorpaySignature);
-                    
+                    paymentService.markPaymentPaidWithRazorpayDetails(razorpayPaymentId, razorpayOrderId,
+                            razorpaySignature);
+
                     // Get orderId from payment record
                     if (existingPayment.getOrders() != null && existingPayment.getOrders().getOrdersId() != null) {
                         orderId = existingPayment.getOrders().getOrdersId();
@@ -298,7 +303,7 @@ public class PaymentController {
                     System.out.println("⚠️ Payment not found, creating new payment record");
                     // Use orderId from request if provided, otherwise create payment without order
                     Long orderIdToUse = orderIdFromRequest;
-                    
+
                     // Get order to get amount (or use 0.0 if order doesn't exist for testing)
                     Double amount = 0.0;
                     Orders order = null;
@@ -314,12 +319,13 @@ public class PaymentController {
                             System.out.println("Order not found, using default amount: " + e.getMessage());
                         }
                     }
-                    
+
                     // Create payment - with order if exists, without if not (for testing)
                     if (order != null) {
                         paymentService.createPayment(orderIdToUse, amount, razorpayPaymentId);
                         // Now mark as paid and store Razorpay fields
-                        paymentService.markPaymentPaidWithRazorpayDetails(razorpayPaymentId, razorpayOrderId, razorpaySignature);
+                        paymentService.markPaymentPaidWithRazorpayDetails(razorpayPaymentId, razorpayOrderId,
+                                razorpaySignature);
                         System.out.println("✅ Created new payment and marked as PAID for order #" + orderIdToUse);
                         orderId = orderIdToUse;
                     } else {
@@ -333,20 +339,23 @@ public class PaymentController {
                         } catch (Exception e) {
                             // Use default 0.0
                         }
-                        paymentService.createPaymentWithoutOrder(amount, razorpayPaymentId, razorpayOrderId, razorpaySignature);
+                        paymentService.createPaymentWithoutOrder(amount, razorpayPaymentId, razorpayOrderId,
+                                razorpaySignature);
                         System.out.println("✅ Created payment without order (testing mode)");
                         // orderId remains null for payments without orders
 
+                    }
                 }
+
             }
 
-                }
-
-            // CRITICAL: Final verification - ensure order payment status is PAID (only if order exists)
+            // CRITICAL: Final verification - ensure order payment status is PAID (only if
+            // order exists)
             // Try to get orderId from payment record if not set
             if (orderId == null) {
                 Payment finalPaymentCheck = paymentRepository.findByRazorpayOrderId(razorpayOrderId);
-                if (finalPaymentCheck != null && finalPaymentCheck.getOrders() != null && finalPaymentCheck.getOrders().getOrdersId() != null) {
+                if (finalPaymentCheck != null && finalPaymentCheck.getOrders() != null
+                        && finalPaymentCheck.getOrders().getOrdersId() != null) {
                     orderId = finalPaymentCheck.getOrders().getOrdersId();
                     System.out.println("📋 Retrieved orderId from payment record for final check: " + orderId);
                 } else if (orderIdFromRequest != null) {
@@ -354,14 +363,14 @@ public class PaymentController {
                     System.out.println("📋 Using orderId from request for final check: " + orderId);
                 }
             }
-            
+
             if (orderId != null) {
                 Orders finalCheckOrder = ordersRepository.findById(orderId).orElse(null);
                 if (finalCheckOrder == null) {
                     System.err.println("❌ CRITICAL: Order #" + orderId + " not found after payment processing");
                     System.err.println("   Attempted orderId from request: " + orderIdFromRequest);
                     System.err.println("   Razorpay Order ID: " + razorpayOrderId);
-                    
+
                     // Try to find order by checking payment record one more time
                     Payment lastAttemptPayment = paymentRepository.findByRazorpayOrderId(razorpayOrderId);
                     if (lastAttemptPayment != null && lastAttemptPayment.getOrders() != null) {
@@ -374,24 +383,25 @@ public class PaymentController {
                             finalCheckOrder = actualOrder;
                         }
                     }
-                    
+
                     if (finalCheckOrder == null) {
                         System.err.println("   Order still not found. Payment may not be linked to an order.");
                         return ResponseEntity.status(500).body(Map.of(
-                            "error", "Order not found after payment processing",
-                            "orderId", orderId,
-                            "orderIdFromRequest", orderIdFromRequest != null ? orderIdFromRequest : "null",
-                            "razorpayOrderId", razorpayOrderId,
-                            "suggestion", "Check if order exists in database. Payment may have been created without order link."
-                        ));
+                                "error", "Order not found after payment processing",
+                                "orderId", orderId,
+                                "orderIdFromRequest", orderIdFromRequest != null ? orderIdFromRequest : "null",
+                                "razorpayOrderId", razorpayOrderId,
+                                "suggestion",
+                                "Check if order exists in database. Payment may have been created without order link."));
                     }
                 }
-                
+
                 String finalPaymentStatus = finalCheckOrder.getPaymentStatus().toString();
                 boolean isPaid = finalCheckOrder.getPaymentStatus() == PaymentStatus.PAID;
-                
-                System.out.println("📊 Final Payment Status Verification for Order #" + orderId + ": " + finalPaymentStatus);
-                
+
+                System.out.println(
+                        "📊 Final Payment Status Verification for Order #" + orderId + ": " + finalPaymentStatus);
+
                 if (!isPaid) {
                     System.err.println("❌ CRITICAL: Order payment status is NOT PAID after processing!");
                     System.err.println("Expected: PAID, Actual: " + finalPaymentStatus);
@@ -399,30 +409,29 @@ public class PaymentController {
                     try {
                         paymentService.syncPaymentStatusForOrder(orderId);
                         finalCheckOrder = ordersRepository.findById(orderId).orElse(null);
-                        finalPaymentStatus = finalCheckOrder != null ? finalCheckOrder.getPaymentStatus().toString() : "UNKNOWN";
+                        finalPaymentStatus = finalCheckOrder != null ? finalCheckOrder.getPaymentStatus().toString()
+                                : "UNKNOWN";
                         isPaid = finalCheckOrder != null && finalCheckOrder.getPaymentStatus() == PaymentStatus.PAID;
                         System.out.println("🔄 Retry sync - New status: " + finalPaymentStatus);
                     } catch (Exception e) {
                         System.err.println("❌ Sync retry failed: " + e.getMessage());
                     }
                 }
-                
+
                 return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Payment verified and saved",
-                    "paymentId", razorpayPaymentId,
-                    "orderId", orderId,
-                    "paymentStatus", finalPaymentStatus,
-                    "verified", isPaid
-                ));
+                        "success", true,
+                        "message", "Payment verified and saved",
+                        "paymentId", razorpayPaymentId,
+                        "orderId", orderId,
+                        "paymentStatus", finalPaymentStatus,
+                        "verified", isPaid));
             } else {
                 // Payment created without order (testing scenario)
                 return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Payment verified and saved (no associated order)",
-                    "paymentId", razorpayPaymentId,
-                    "note", "Payment created without order link"
-                ));
+                        "success", true,
+                        "message", "Payment verified and saved (no associated order)",
+                        "paymentId", razorpayPaymentId,
+                        "note", "Payment created without order link"));
             }
         } catch (Exception e) {
             System.err.println("\n" + "=".repeat(70));
@@ -431,33 +440,33 @@ public class PaymentController {
             e.printStackTrace();
             System.err.println("Error message: " + e.getMessage());
             System.err.println("=".repeat(70) + "\n");
-            
+
             // If we have an orderId, try to manually update it as a last resort
             if (orderIdFromRequest != null) {
                 try {
-                    System.out.println("🔄 Last resort: Attempting manual payment status update for order #" + orderIdFromRequest);
+                    System.out.println(
+                            "🔄 Last resort: Attempting manual payment status update for order #" + orderIdFromRequest);
                     Orders lastResortOrder = ordersRepository.findById(orderIdFromRequest).orElse(null);
                     if (lastResortOrder != null) {
                         lastResortOrder.setPaymentStatus(PaymentStatus.PAID);
                         ordersRepository.save(lastResortOrder);
-                        System.out.println("✅ Last resort update successful - Order #" + orderIdFromRequest + " set to PAID");
+                        System.out.println(
+                                "✅ Last resort update successful - Order #" + orderIdFromRequest + " set to PAID");
                         return ResponseEntity.ok(Map.of(
-                            "success", true,
-                            "message", "Payment processed with manual fallback",
-                            "orderId", orderIdFromRequest,
-                            "paymentStatus", "PAID",
-                            "warning", "Callback had errors but order was updated manually"
-                        ));
+                                "success", true,
+                                "message", "Payment processed with manual fallback",
+                                "orderId", orderIdFromRequest,
+                                "paymentStatus", "PAID",
+                                "warning", "Callback had errors but order was updated manually"));
                     }
                 } catch (Exception manualError) {
                     System.err.println("❌ Last resort update also failed: " + manualError.getMessage());
                 }
             }
-            
+
             return ResponseEntity.status(500).body(Map.of(
-                "error", "Failed to process callback: " + e.getMessage(),
-                "orderId", orderIdFromRequest != null ? orderIdFromRequest : "unknown"
-            ));
+                    "error", "Failed to process callback: " + e.getMessage(),
+                    "orderId", orderIdFromRequest != null ? orderIdFromRequest : "unknown"));
         }
     }
 
