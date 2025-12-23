@@ -40,9 +40,9 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
       }
       return null;
     })();
-    
+
     const slugToUse = storeSlug || slugFromUrl || slugFromStoreLink;
-    
+
     console.log('🛍️ [ProductCard] Navigation:', {
       storeSlug,
       slugFromUrl,
@@ -75,15 +75,15 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
   const handleWishlistToggle = (e) => {
     e.stopPropagation();
     e.preventDefault(); // Prevent any default behavior
-    
+
     try {
       const productId = product?.id || product?.productId;
-      
+
       if (!productId) {
         console.error('❌ [ProductCard] Cannot toggle wishlist: missing product ID');
         return;
       }
-      
+
       // Immediately remove/add - function handles optimistic updates
       if (isInWishlist(productId)) {
         // Remove immediately - state updates synchronously
@@ -189,7 +189,7 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
             style={{ transform: `translateX(-${slideIndex * 100}%)` }}
           >
             {images.map((src, idx) => (
-              <div className="product-card-image-slide" key={`${product.id}_${idx}`}> 
+              <div className="product-card-image-slide" key={`${product.id}_${idx}`}>
                 <img src={src} alt={product.name} className="product-card-image" />
               </div>
             ))}
@@ -208,12 +208,12 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
           const backend = product.product || {};
           const variants = backend.variants || backend.productVariants || [];
           const variantCount = variants.length || product.variantCount || 0;
-          
+
           if (variantCount > 1) {
             return (
-              <div style={{ 
-                fontSize: '0.85rem', 
-                color: '#666', 
+              <div style={{
+                fontSize: '0.85rem',
+                color: '#666',
                 marginBottom: '0.5rem',
                 fontWeight: 500
               }}>
@@ -239,7 +239,7 @@ const ProductCard = ({ product, showQuickAdd = true }) => {
         {showQuickAdd && (
           <div className="product-card-actions">
             <button className="product-card-add-btn" onClick={handleAddToBag}>
-              Add to Bag
+              Add to Cart
             </button>
             <button
               className="product-card-wishlist-btn"

@@ -7,7 +7,7 @@ import ProductCategoriesScreen from './ProductCategoriesScreen';
 import BusinessInfoScreen from './BusinessInfoScreen';
 import CongratulationsScreen from './CongratulationsScreen';
 import { storage } from '../storage';
-import { saveStoreDetails, saveStoreAddress, saveBusinessDetails } from '../../utils/api';
+import { saveStoreDetails, saveStoreAddress, saveBusinessDetails, updateSellerDetails } from '../../utils/api';
 import { useHeaderActions } from '../../utils/headerActions';
 
 interface OnboardingFlowProps {
@@ -112,8 +112,21 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     setCurrentStep('product-categories');
   };
 
-  const handleProductCategoriesNext = (categories: string[]) => {
+  const handleProductCategoriesNext = async (categories: string[]) => {
     setOnboardingData((prev) => ({ ...prev, categories }));
+
+    // Persist category to backend - using the new updateSellerDetails API
+    try {
+      const userId = await storage.getItem('userId');
+      if (userId && categories && categories.length > 0) {
+        // We join categories with comma for storage in the single storeCategory field
+        const categoryString = categories.join(', ');
+        await updateSellerDetails(userId, { storeCategory: categoryString });
+      }
+    } catch (error) {
+      console.error('Failed to save store category:', error);
+    }
+
     setCurrentStep('business-info');
   };
 
@@ -150,12 +163,12 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
       await storage.setItem('storeName', onboardingData.storeName);
       await storage.setItem('storeLink', `sakhi.store/${onboardingData.storeName.toLowerCase()}`);
     }
-    
+
     // Verify it was saved
     const saved = await storage.getItem('onboardingCompleted');
     const savedStoreName = await storage.getItem('storeName');
     console.log('Onboarding completed - saved:', { saved, savedStoreName });
-    
+
     onComplete();
   };
 

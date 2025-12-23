@@ -143,116 +143,129 @@ const Cart = () => {
       </div>
 
       {filteredCart.length === 0 ? (
-        <div style={{
+        <div className="empty-cart-container" style={{
           textAlign: 'center',
-          padding: '3.5rem 1rem',
+          padding: '4rem 2rem',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '30px',
+          boxShadow: '0 20px 40px rgba(232, 59, 143, 0.1)',
+          border: '1px solid rgba(232, 59, 143, 0.1)',
+          margin: '2rem auto',
+          maxWidth: '600px'
         }}>
-          {/* Windy Bag Illustration */}
-          <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
-            {/* Bag Body */}
+          {/* Animated Shopping Cart Illustration */}
+          <div className="empty-cart-icon-wrapper" style={{ marginBottom: '2rem', position: 'relative' }}>
+            <div className="pulse-circle" style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '120px',
+              height: '120px',
+              backgroundColor: 'rgba(232, 59, 143, 0.1)',
+              borderRadius: '50%',
+              animation: 'pulse-ring 2s infinite'
+            }}></div>
             <div style={{
-              width: '90px',
-              height: '105px',
-              backgroundColor: '#ff3f6c',
-              borderRadius: '10px',
-              position: 'relative',
+              width: '100px',
+              height: '100px',
+              backgroundColor: 'var(--vibrant-pink)',
+              borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 8px 16px rgba(255, 63, 108, 0.2)',
-              animation: 'float 3s ease-in-out infinite'
+              boxShadow: '0 10px 20px rgba(232, 59, 143, 0.3)',
+              position: 'relative',
+              zIndex: 1
             }}>
-              {/* Bag Handles */}
-              <div style={{
-                position: 'absolute',
-                top: '-20px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '38px',
-                height: '32px',
-                border: '3px solid #535766',
-                borderBottom: 'none',
-                borderRadius: '20px 20px 0 0'
-              }}></div>
-
-              {/* Bag Logo/Icon */}
-              <svg viewBox="0 0 24 24" width="45" height="45" fill="white" style={{ opacity: 0.9 }}>
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2V7h2v10z" />
+              <svg viewBox="0 0 24 24" width="50" height="50" fill="white">
+                <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
               </svg>
             </div>
-
-            {/* Wind Effect Lines */}
-            <div style={{
-              position: 'absolute',
-              left: '-45px',
-              top: '40%',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px'
-            }}>
-              <div style={{ width: '30px', height: '2px', backgroundColor: '#eaeaec', borderRadius: '10px' }}></div>
-              <div style={{ width: '22px', height: '2px', backgroundColor: '#eaeaec', borderRadius: '10px', marginLeft: '8px' }}></div>
-              <div style={{ width: '26px', height: '2px', backgroundColor: '#eaeaec', borderRadius: '10px' }}></div>
-            </div>
-
-            {/* Shadow beneath bag */}
-            <div style={{
-              width: '60px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(0,0,0,0.05)',
-              margin: '15px auto 0',
-              filter: 'blur(3px)'
-            }}></div>
           </div>
 
           <h2 style={{
-            fontSize: '1.2rem',
-            fontWeight: '700',
-            color: 'var(--text-color, #282c3f)',
-            marginBottom: '0.4rem'
+            fontSize: '1.8rem',
+            fontWeight: '800',
+            color: 'var(--text-color)',
+            marginBottom: '0.8rem',
+            background: 'linear-gradient(135deg, var(--vibrant-pink) 0%, var(--vibrant-pink-alt) 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
           }}>
-            Hey, it feels so light!
+            Your cart is feeling lonely
           </h2>
           <p style={{
-            fontSize: '0.9rem',
-            color: 'var(--text-secondary, #94969f)',
-            marginBottom: '1.5rem'
+            fontSize: '1rem',
+            color: 'var(--text-secondary)',
+            marginBottom: '2.5rem',
+            maxWidth: '300px'
           }}>
-            There is nothing in your bag. Let's add some items.
+            Explore our latest collections and find something special for yourself.
           </p>
 
-          <button
-            onClick={() => navigate(getRoute(ROUTES.WISHLIST, storeSlug))}
-            style={{
-              padding: '0.8rem 1.6rem',
-              background: 'transparent',
-              color: '#ff3f6c',
-              border: '1px solid #ff3f6c',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: '700',
-              letterSpacing: '0.5px',
-              textTransform: 'uppercase',
-              transition: 'background 0.2s'
-            }}
-            onMouseOver={(e) => e.target.style.background = 'rgba(255, 63, 108, 0.05)'}
-            onMouseOut={(e) => e.target.style.background = 'transparent'}
-          >
-            Add Items From Wishlist
-          </button>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button
+              onClick={() => navigate(getRoute(ROUTES.PRODUCTS, storeSlug))}
+              style={{
+                padding: '1rem 2rem',
+                background: 'linear-gradient(135deg, var(--vibrant-pink) 0%, var(--vibrant-pink-alt) 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '50px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '700',
+                boxShadow: '0 10px 20px rgba(232, 59, 143, 0.2)',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 15px 30px rgba(232, 59, 143, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 10px 20px rgba(232, 59, 143, 0.2)';
+              }}
+            >
+              Start Shopping
+            </button>
+            <button
+              onClick={() => navigate(getRoute(ROUTES.WISHLIST, storeSlug))}
+              style={{
+                padding: '1rem 2rem',
+                background: 'transparent',
+                color: 'var(--vibrant-pink)',
+                border: '2px solid var(--vibrant-pink)',
+                borderRadius: '50px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '700',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(232, 59, 143, 0.05)';
+                e.currentTarget.style.transform = 'translateY(-3px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              From Wishlist
+            </button>
+          </div>
 
           <style>
             {`
-              @keyframes float {
-                0% { transform: translateY(0px) rotate(0deg); }
-                50% { transform: translateY(-10px) rotate(-2deg); }
-                100% { transform: translateY(0px) rotate(0deg); }
+              @keyframes pulse-ring {
+                0% { transform: translate(-50%, -50%) scale(0.33); opacity: 1; }
+                80%, 100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
               }
             `}
           </style>
@@ -277,109 +290,140 @@ const Cart = () => {
                     key={item.id}
                     style={{
                       display: 'flex',
-                      gap: '1rem',
-                      padding: '1rem',
-                      background: '#fff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '12px',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                      gap: '1.25rem',
+                      padding: '1.25rem',
+                      background: 'rgba(255, 255, 255, 0.9)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(232, 59, 143, 0.08)',
+                      borderRadius: '20px',
+                      boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(232, 59, 143, 0.08)';
+                      e.currentTarget.style.borderColor = 'rgba(232, 59, 143, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.03)';
+                      e.currentTarget.style.borderColor = 'rgba(232, 59, 143, 0.08)';
                     }}
                   >
-                    <img
-                      src={item.image || '/assets/products/p1.jpg'}
-                      alt={item.name}
-                      style={{
-                        width: '100px',
-                        height: '100px',
-                        objectFit: 'cover',
-                        borderRadius: '8px',
-                        flexShrink: 0
-                      }}
-                    />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <h3 style={{ fontSize: '1rem', fontWeight: '600', margin: 0 }}>{item.name}</h3>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '1rem', fontWeight: '700', color: '#f97316' }}>₹{item.price.toLocaleString('en-IN')}</span>
-                        {originalPrice > item.price && (
-                          <>
-                            <span style={{ fontSize: '0.9rem', textDecoration: 'line-through', color: '#999' }}>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <img
+                        src={item.image || '/assets/products/p1.jpg'}
+                        alt={item.name}
+                        style={{
+                          width: '110px',
+                          height: '110px',
+                          objectFit: 'cover',
+                          borderRadius: '16px',
+                          backgroundColor: '#f8f9fa'
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <h3 style={{ fontSize: '1.05rem', fontWeight: '700', color: '#1a1a1a', margin: '0 0 0.25rem 0' }}>{item.name}</h3>
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.08)',
+                              color: '#ef4444',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '32px',
+                              height: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#fee2e2'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'}
+                            title="Remove"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" />
+                            </svg>
+                          </button>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.5rem' }}>{item.brand || 'Store'}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--vibrant-pink)' }}>₹{item.price.toLocaleString('en-IN')}</span>
+                          {originalPrice > item.price && (
+                            <span style={{ fontSize: '0.9rem', textDecoration: 'line-through', color: '#999', opacity: 0.7 }}>
                               ₹{originalPrice.toLocaleString('en-IN')}
                             </span>
-                            <span style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: '600' }}>{discount}% Off</span>
-                          </>
-                        )}
+                          )}
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '0.25rem' }}>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          background: '#f8fafc',
+                          borderRadius: '50px',
+                          padding: '0.2rem',
+                          border: '1px solid #e2e8f0'
+                        }}>
                           <button
                             onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
                             style={{
                               width: '28px',
                               height: '28px',
                               border: 'none',
-                              background: '#f3f4f6',
-                              borderRadius: '4px',
+                              background: '#fff',
+                              borderRadius: '50%',
                               cursor: 'pointer',
-                              fontSize: '1.2rem',
+                              fontSize: '1rem',
+                              fontWeight: 'bold',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
                             }}
                           >
                             −
                           </button>
-                          <input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const qty = parseInt(e.target.value) || 1;
-                              updateQuantity(item.id, Math.max(1, qty));
-                            }}
-                            style={{
-                              width: '50px',
-                              textAlign: 'center',
-                              border: 'none',
-                              fontSize: '0.95rem',
-                              fontWeight: '600'
-                            }}
-                            min="1"
-                          />
+                          <span style={{
+                            width: '35px',
+                            textAlign: 'center',
+                            fontSize: '0.95rem',
+                            fontWeight: '700',
+                            color: '#334155'
+                          }}>
+                            {item.quantity}
+                          </span>
                           <button
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             style={{
                               width: '28px',
                               height: '28px',
                               border: 'none',
-                              background: '#f3f4f6',
-                              borderRadius: '4px',
+                              background: '#fff',
+                              borderRadius: '50%',
                               cursor: 'pointer',
-                              fontSize: '1.2rem',
+                              fontSize: '1rem',
+                              fontWeight: 'bold',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
                             }}
                           >
                             +
                           </button>
                         </div>
-                        <button
-                          onClick={() => removeFromCart(item.id)}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            background: '#fee2e2',
-                            color: '#dc2626',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '600',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem'
-                          }}
-                        >
-                          🗑️ Remove
-                        </button>
+                        <span style={{ fontSize: '1rem', fontWeight: '700', color: '#1e293b' }}>
+                          ₹{itemSubtotal.toLocaleString('en-IN')}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -391,42 +435,62 @@ const Cart = () => {
           {/* Payment & Bill Details - Right */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Bill Details */}
-            <div style={{ padding: '1.5rem', background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem' }}>Bill Details</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#666' }}>Item Total</span>
-                  <span style={{ fontWeight: '600' }}>₹{itemTotal.toLocaleString('en-IN')}</span>
+            <div style={{
+              padding: '1.75rem',
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(232, 59, 143, 0.1)',
+              borderRadius: '24px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.04)'
+            }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '1.5rem', color: '#1e293b' }}>Order Summary</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                  <span>Item Total ({filteredCart.length} units)</span>
+                  <span style={{ fontWeight: '600', color: '#1e293b' }}>₹{itemTotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#666' }}>Delivery Fee</span>
-                  <span style={{ fontWeight: '600', color: '#16a34a' }}>FREE</span>
+                  <span style={{ color: '#64748b' }}>Delivery Fee</span>
+                  <span style={{ fontWeight: '700', color: '#10b981' }}>FREE</span>
                 </div>
-                <div style={{ height: '1px', background: '#e5e7eb', margin: '0.5rem 0' }}></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: '700' }}>
-                  <span>Order Total</span>
-                  <span>₹{orderTotal.toLocaleString('en-IN')}</span>
+
+                <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, #e2e8f0, transparent)', margin: '0.5rem 0' }}></div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.3rem', fontWeight: '800', color: '#1e293b' }}>
+                  <span>Total Amount</span>
+                  <span style={{ color: 'var(--vibrant-pink)' }}>₹{orderTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
 
-            {/* Add Address / Proceed Button */}
+            {/* Checkout Button */}
             <button
               onClick={handleProceedToCheckout}
               style={{
-                padding: '1rem 2rem',
+                padding: '1.15rem 2rem',
                 fontSize: '1.1rem',
-                background: 'linear-gradient(135deg, #f97316 0%, #f59e0b 100%)',
+                background: 'linear-gradient(135deg, var(--vibrant-pink) 0%, var(--vibrant-pink-alt) 100%)',
                 color: '#fff',
                 border: 'none',
-                borderRadius: '10px',
+                borderRadius: '50px',
                 cursor: 'pointer',
-                boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
-                fontWeight: '700',
-                width: '100%'
+                boxShadow: '0 12px 24px rgba(232, 59, 143, 0.3)',
+                fontWeight: '800',
+                width: '100%',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 15px 35px rgba(232, 59, 143, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 12px 24px rgba(232, 59, 143, 0.3)';
               }}
             >
-              Add Address
+              Proceed to Address
             </button>
           </div>
         </div>

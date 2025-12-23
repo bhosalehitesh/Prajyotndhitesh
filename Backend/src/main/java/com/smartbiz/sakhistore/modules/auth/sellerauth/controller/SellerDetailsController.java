@@ -72,9 +72,9 @@ public class SellerDetailsController {
             if (req.getPassword() == null || req.getPassword().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Password is required"));
             }
-            
+
             String otp = authService.signup(req.getFullName(), req.getPhone(), req.getPassword());
-            return ResponseEntity.ok(Map.of("message","OTP sent","otp",otp));
+            return ResponseEntity.ok(Map.of("message", "OTP sent", "otp", otp));
         } catch (RuntimeException ex) {
             String message = ex.getMessage();
             if (message == null || message.isEmpty()) {
@@ -97,14 +97,17 @@ public class SellerDetailsController {
     @PostMapping(value = "/verify-otp-seller", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> verifyOtp(@RequestBody VerifyOtpRequest req) {
         String token = authService.verifyOtpAndCreateToken(req.getPhone(), req.getCode());
-        if (token == null) return ResponseEntity.badRequest().body("Invalid/Expired OTP");
+        if (token == null)
+            return ResponseEntity.badRequest().body("Invalid/Expired OTP");
         var seller = userRepository.findByPhone(req.getPhone()).get();
-        Map<String,Object> res = new HashMap<>();
-        res.put("message","OTP verified and token created");
+        Map<String, Object> res = new HashMap<>();
+        res.put("message", "OTP verified and token created");
         res.put("token", token);
         res.put("sellerId", seller.getSellerId());
         res.put("fullName", seller.getFullName());
         res.put("phone", seller.getPhone());
+        res.put("email", seller.getEmail());
+        res.put("storeCategory", seller.getStoreCategory());
         return ResponseEntity.ok(res);
     }
 
@@ -121,15 +124,16 @@ public class SellerDetailsController {
             if (req.getPassword() == null || req.getPassword().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Password is required"));
             }
-            
+
             String token = authService.login(req.getPhone(), req.getPassword());
             var sellerOpt = userRepository.findByPhone(req.getPhone());
             if (!sellerOpt.isPresent()) {
                 return ResponseEntity.status(400).body(Map.of("message", "Seller not found"));
             }
             var seller = sellerOpt.get();
-            
-            return ResponseEntity.ok(new SellerAuthResponse(token, seller.getSellerId(), seller.getFullName(), seller.getPhone()));
+
+            return ResponseEntity.ok(new SellerAuthResponse(token, seller.getSellerId(), seller.getFullName(),
+                    seller.getPhone(), seller.getEmail(), seller.getStoreCategory()));
         } catch (RuntimeException ex) {
             String message = ex.getMessage();
             if (message == null || message.isEmpty()) {
@@ -151,22 +155,23 @@ public class SellerDetailsController {
     @PostMapping("/resend-otp-seller")
     public ResponseEntity<?> resendOtp(@RequestBody PhoneRequest req) {
         String otp = authService.resendOtp(req.getPhone());
-        return ResponseEntity.ok(Map.of("message","OTP resent","otp",otp));
+        return ResponseEntity.ok(Map.of("message", "OTP resent", "otp", otp));
     }
 
     // FORGOT — send OTP
     @PostMapping("/forgot-password-seller")
     public ResponseEntity<?> forgotPassword(@RequestBody PhoneRequest req) {
         String otp = authService.sendForgotPasswordOtp(req.getPhone());
-        return ResponseEntity.ok(Map.of("message","Forgot password OTP sent","otp",otp));
+        return ResponseEntity.ok(Map.of("message", "Forgot password OTP sent", "otp", otp));
     }
 
     // VERIFY forgot OTP (just verification to allow reset)
     @PostMapping("/verify-forgot-otp-seller")
     public ResponseEntity<?> verifyForgotOtp(@RequestBody VerifyOtpRequest req) {
         boolean ok = authService.verifyForgotPasswordOtp(req.getPhone(), req.getCode());
-        if (!ok) return ResponseEntity.badRequest().body("Invalid/Expired OTP");
-        return ResponseEntity.ok(Map.of("message","OTP verified. You may reset password."));
+        if (!ok)
+            return ResponseEntity.badRequest().body("Invalid/Expired OTP");
+        return ResponseEntity.ok(Map.of("message", "OTP verified. You may reset password."));
     }
 
     // RESET password -> create token & return
@@ -174,7 +179,8 @@ public class SellerDetailsController {
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
         String newToken = authService.resetPasswordAndCreateToken(req.getPhone(), req.getNewPassword());
         var seller = userRepository.findByPhone(req.getPhone()).get();
-        return ResponseEntity.ok(new SellerAuthResponse(newToken, seller.getSellerId(), seller.getFullName(), seller.getPhone()));
+        return ResponseEntity.ok(new SellerAuthResponse(newToken, seller.getSellerId(), seller.getFullName(),
+                seller.getPhone(), seller.getEmail(), seller.getStoreCategory()));
     }
 
     // LOGIN OTP: send OTP for login
@@ -209,7 +215,8 @@ public class SellerDetailsController {
                 return ResponseEntity.status(400).body(Map.of("message", "Seller not found"));
             }
             var seller = sellerOpt.get();
-            return ResponseEntity.ok(new SellerAuthResponse(token, seller.getSellerId(), seller.getFullName(), seller.getPhone()));
+            return ResponseEntity.ok(new SellerAuthResponse(token, seller.getSellerId(), seller.getFullName(),
+                    seller.getPhone(), seller.getEmail(), seller.getStoreCategory()));
         } catch (RuntimeException ex) {
             return ResponseEntity.status(400).body(Map.of("message", ex.getMessage()));
         } catch (Exception ex) {
@@ -220,10 +227,11 @@ public class SellerDetailsController {
     // LOGOUT
     @PostMapping("/logout-seller")
     public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) return ResponseEntity.badRequest().body("Invalid token");
+        if (authHeader == null || !authHeader.startsWith("Bearer "))
+            return ResponseEntity.badRequest().body("Invalid token");
         String token = authHeader.substring(7);
         authService.logout(token);
-        return ResponseEntity.ok(Map.of("message","Logout successful"));
+        return ResponseEntity.ok(Map.of("message", "Logout successful"));
     }
 
 }

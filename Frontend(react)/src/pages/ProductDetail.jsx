@@ -16,11 +16,11 @@ const ProductDetail = () => {
   const { cart, addToCart, updateQuantity } = useCart();
   const { isDarkMode } = useTheme();
   const { storeSlug, currentStore, loading: storeLoading } = useStore();
-  
+
   // Get slug from route params first (most reliable), then from store context
   // The slug param can come from either /store/:slug/product/detail or /:slug/product/detail
   const actualSlug = slug || storeSlug;
-  
+
   console.log('📦 [ProductDetail] Route params:', {
     slugFromParams: slug,
     storeSlug,
@@ -93,23 +93,23 @@ const ProductDetail = () => {
   const backend = currentProduct?.product || {};
   const isBestseller = backend.isBestseller === true || backend.bestSeller === true;
   const isActive = backend.isActive !== false;
-  
+
   // Get variants from backend (they might be in the response or need to be fetched)
   const backendVariants = backend.variants || backend.productVariants || [];
-  
+
   // Process and group variants by attributes (color, size)
   const processedVariants = useMemo(() => {
     if (!Array.isArray(backendVariants) || backendVariants.length === 0) {
       return [];
     }
-    
+
     return backendVariants.map(v => {
       // Parse attributes JSON if it's a string
       let attributes = {};
       if (v.attributesJson) {
         try {
-          attributes = typeof v.attributesJson === 'string' 
-            ? JSON.parse(v.attributesJson) 
+          attributes = typeof v.attributesJson === 'string'
+            ? JSON.parse(v.attributesJson)
             : v.attributesJson;
         } catch (e) {
           console.warn('Failed to parse variant attributes:', e);
@@ -119,7 +119,7 @@ const ProductDetail = () => {
       if (v.attributes && typeof v.attributes === 'object') {
         attributes = v.attributes;
       }
-      
+
       return {
         variantId: v.variantId || v.id,
         color: attributes.color || v.color || '',
@@ -135,32 +135,32 @@ const ProductDetail = () => {
       };
     }).filter(v => v.isActive && v.stock > 0); // Only show active variants with stock
   }, [backendVariants]);
-  
+
   // Group variants by color and size for selection UI
   const variantGroups = useMemo(() => {
     const groups = {
       colors: new Set(),
       sizes: new Set()
     };
-    
+
     processedVariants.forEach(v => {
       if (v.color) groups.colors.add(v.color);
       if (v.size) groups.sizes.add(v.size);
     });
-    
+
     return {
       colors: Array.from(groups.colors).sort(),
       sizes: Array.from(groups.sizes).sort()
     };
   }, [processedVariants]);
-  
+
   // Auto-select first available variant if none selected
   useEffect(() => {
     if (processedVariants.length > 0 && !selectedVariant) {
       setSelectedVariant(processedVariants[0]);
     }
   }, [processedVariants, selectedVariant]);
-  
+
   // Update selected variant when color/size selection changes
   const handleVariantSelection = (selectedColor, selectedSize) => {
     const matchingVariant = processedVariants.find(v => {
@@ -168,12 +168,12 @@ const ProductDetail = () => {
       const sizeMatch = !selectedSize || v.size === selectedSize;
       return colorMatch && sizeMatch;
     });
-    
+
     if (matchingVariant) {
       setSelectedVariant(matchingVariant);
     }
   };
-  
+
   // Use selected variant data or fallback to product data
   const displayVariant = selectedVariant || (processedVariants.length > 0 ? processedVariants[0] : null);
   const inventory = displayVariant?.stock ?? backend.inventoryQuantity;
@@ -203,12 +203,12 @@ const ProductDetail = () => {
   const imageList = useMemo(() => {
     // First try variant-specific images
     let rawImages = displayVariant?.images || [];
-    
+
     // Fallback to product images if no variant images
     if (!rawImages || rawImages.length === 0) {
       rawImages = currentProduct?.product?.productImages || [];
     }
-    
+
     let normalizedImages = [];
 
     if (Array.isArray(rawImages)) {
@@ -461,7 +461,17 @@ const ProductDetail = () => {
 
           {cartItem && isBuyable ? (
             <div className="product-detail-actions">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: `2px solid var(--vibrant-pink)`, borderRadius: '12px', padding: '0.5rem 0.75rem', background: isDarkMode ? 'var(--nav-bg)' : 'var(--white-content)' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '2.5rem',
+                border: `2px solid var(--vibrant-pink)`,
+                borderRadius: '50px',
+                padding: '0.6rem 1.25rem',
+                background: isDarkMode ? 'var(--nav-bg)' : 'var(--white-content)',
+                marginBottom: '1rem'
+              }}>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -583,30 +593,27 @@ const ProductDetail = () => {
               </button>
             </div>
           ) : isBuyable ? (
-            <div className="product-detail-actions-row">
+            <div className="product-detail-actions-row" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button
                 onClick={handleAddToCart}
                 style={{
                   flex: 1,
-                  padding: '0.9rem 1rem',
+                  padding: '1rem',
                   fontSize: '1rem',
-                  background: 'var(--vibrant-pink)',
-                  color: '#fff',
-                  border: 'none',
+                  fontWeight: '700',
+                  background: 'transparent',
+                  color: 'var(--vibrant-pink)',
+                  border: '2px solid var(--vibrant-pink)',
                   borderRadius: '50px',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(232, 59, 143, 0.3)',
-                  whiteSpace: 'nowrap',
                   transition: 'all 0.3s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--vibrant-pink-alt)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(232, 59, 143, 0.4)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.background = 'rgba(232, 59, 143, 0.05)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--vibrant-pink)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(232, 59, 143, 0.3)';
+                  e.currentTarget.style.background = 'transparent';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
@@ -616,25 +623,25 @@ const ProductDetail = () => {
                 onClick={handleBuyNow}
                 style={{
                   flex: 1,
-                  padding: '0.9rem 1rem',
+                  padding: '1rem',
                   fontSize: '1rem',
-                  background: 'var(--vibrant-pink)',
+                  fontWeight: '700',
+                  background: 'linear-gradient(135deg, var(--vibrant-pink) 0%, var(--vibrant-pink-alt) 100%)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: '50px',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(232, 59, 143, 0.3)',
-                  whiteSpace: 'nowrap',
+                  boxShadow: '0 10px 20px rgba(232, 59, 143, 0.2)',
                   transition: 'all 0.3s ease'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'var(--vibrant-pink-alt)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(232, 59, 143, 0.4)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 15px 30px rgba(232, 59, 143, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'var(--vibrant-pink)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(232, 59, 143, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 10px 20px rgba(232, 59, 143, 0.2)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
@@ -674,7 +681,7 @@ const ProductDetail = () => {
               <span style={{ textDecoration: 'line-through', color: '#999' }}>
                 ₹{Number(originalPriceToShow).toLocaleString('en-IN')}
               </span>
-          )}
+            )}
             {discountPct > 0 && (
               <span style={{ color: 'var(--vibrant-pink)', fontWeight: 700 }}>{discountPct}% Off</span>
             )}
@@ -708,8 +715,8 @@ const ProductDetail = () => {
                             padding: '0.5rem 1rem',
                             border: `2px solid ${isSelected ? 'var(--vibrant-pink)' : (isDarkMode ? 'rgba(255,255,255,0.2)' : '#e5e7eb')}`,
                             borderRadius: '8px',
-                            background: isSelected 
-                              ? 'var(--vibrant-pink)' 
+                            background: isSelected
+                              ? 'var(--vibrant-pink)'
                               : (isDarkMode ? 'var(--nav-bg)' : '#fff'),
                             color: isSelected ? '#fff' : (isDarkMode ? 'var(--text-color)' : '#111827'),
                             cursor: hasStock ? 'pointer' : 'not-allowed',
@@ -753,8 +760,8 @@ const ProductDetail = () => {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {variantGroups.sizes.map((sizeOption) => {
                       const isSelected = selectedVariant?.size === sizeOption;
-                      const hasStock = processedVariants.some(v => 
-                        v.size === sizeOption && 
+                      const hasStock = processedVariants.some(v =>
+                        v.size === sizeOption &&
                         v.stock > 0 &&
                         (!selectedVariant?.color || v.color === selectedVariant.color)
                       );
@@ -767,8 +774,8 @@ const ProductDetail = () => {
                             padding: '0.5rem 1rem',
                             border: `2px solid ${isSelected ? 'var(--vibrant-pink)' : (isDarkMode ? 'rgba(255,255,255,0.2)' : '#e5e7eb')}`,
                             borderRadius: '8px',
-                            background: isSelected 
-                              ? 'var(--vibrant-pink)' 
+                            background: isSelected
+                              ? 'var(--vibrant-pink)'
                               : (isDarkMode ? 'var(--nav-bg)' : '#fff'),
                             color: isSelected ? '#fff' : (isDarkMode ? 'var(--text-color)' : '#111827'),
                             cursor: hasStock ? 'pointer' : 'not-allowed',
