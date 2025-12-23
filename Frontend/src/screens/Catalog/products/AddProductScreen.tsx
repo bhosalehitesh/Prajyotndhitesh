@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 
 import {
 
@@ -30,11 +30,11 @@ import {
 
 import IconSymbol from '../../../components/IconSymbol';
 
-import {launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse} from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary, CameraOptions, ImagePickerResponse } from 'react-native-image-picker';
 
-import ViewShot, {captureRef} from 'react-native-view-shot';
+import ViewShot, { captureRef } from 'react-native-view-shot';
 
-import { createProduct, uploadProductWithImages, updateProduct, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto, fetchCategories, CategoryDto } from '../../../utils/api';
+import { createProduct, uploadProductWithImages, updateProduct, fetchCollectionsWithCounts, addProductToCollection, CollectionWithCountDto } from '../../../utils/api';
 import { storage } from '../../../authentication/storage';
 
 
@@ -48,7 +48,7 @@ interface AddProductScreenProps {
 
 
 
-const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) => {
+const AddProductScreen: React.FC<AddProductScreenProps> = ({ navigation, route }) => {
 
   const isEditMode = route?.params?.mode === 'edit';
 
@@ -100,9 +100,9 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   const [colors, setColors] = useState<string[]>(
     existing?.color
       ? existing.color
-          .split(',')
-          .map((c: string) => c.trim())
-          .filter((c: string) => c)
+        .split(',')
+        .map((c: string) => c.trim())
+        .filter((c: string) => c)
       : [],
   );
   const [size, setSize] = useState(existing?.size || '');
@@ -128,9 +128,6 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
   const [categoryOpen, setCategoryOpen] = useState(false);
 
-  const [productCategoryOpen, setProductCategoryOpen] = useState(false);
-  const [newProductCategoryOpen, setNewProductCategoryOpen] = useState(false);
-  const [newProductCategoryName, setNewProductCategoryName] = useState('');
 
   const [images, setImages] = useState<string[]>(existing?.images || []);
 
@@ -139,19 +136,14 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   const screenShotRef = useRef<ViewShot | null>(null);
 
   const [collectionPickerOpen, setCollectionPickerOpen] = useState(false);
-  const [collections, setCollections] = useState<Array<{id: string; name: string}>>([]);
+  const [collections, setCollections] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedCollections, setSelectedCollections] = useState<Record<string, boolean>>({});
-  const [databaseCategories, setDatabaseCategories] = useState<CategoryDto[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
-    existing?.categoryId || existing?.category_id || null
-  );
-  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false); // prevent double submits
 
 
   const categoryList = [
 
-    'Appliances','Baby','Beauty and Personal Care','Books and Stationery','Clothing','Electronics','Food and Grocery','Footwear','Furniture','General','Health Supplements','Home and Kitchen','Home Care','Jewelry','Lawn and Garden','Luggage and Bags','Multipurpose','Pet Products','Sports and Fitness','Toys and games','Watches',
+    'Appliances', 'Baby', 'Beauty and Personal Care', 'Books and Stationery', 'Clothing', 'Electronics', 'Food and Grocery', 'Footwear', 'Furniture', 'General', 'Health Supplements', 'Home and Kitchen', 'Home Care', 'Jewelry', 'Lawn and Garden', 'Luggage and Bags', 'Multipurpose', 'Pet Products', 'Sports and Fitness', 'Toys and games', 'Watches',
 
   ];
 
@@ -159,47 +151,47 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
   const productCategoryMap: Record<string, string[]> = {
 
-    'Appliances': ['Air Conditioners','Microwave & Oven','Other Appliances','Refrigerators','Small Kitchen Appliances','Televisions','Washing machines'],
+    'Appliances': ['Air Conditioners', 'Microwave & Oven', 'Other Appliances', 'Refrigerators', 'Small Kitchen Appliances', 'Televisions', 'Washing machines'],
 
-    'Baby': ['Baby Bath and skin care','Baby Clothing and accessories','Baby Stroller & Gear','Baby toys & playtime','Bedding and Nursery','Diapers and accessories','Feeding','Other Baby products'],
+    'Baby': ['Baby Bath and skin care', 'Baby Clothing and accessories', 'Baby Stroller & Gear', 'Baby toys & playtime', 'Bedding and Nursery', 'Diapers and accessories', 'Feeding', 'Other Baby products'],
 
-    'Beauty and Personal Care': ['Covid essentials','Feminine Hygiene','Fragrance','Grooming appliances','Hair care','Health & Wellness','Make up and nails','Oral Care','Other Beauty and Personal Care','Personal care Appliances','Skin care'],
+    'Beauty and Personal Care': ['Covid essentials', 'Feminine Hygiene', 'Fragrance', 'Grooming appliances', 'Hair care', 'Health & Wellness', 'Make up and nails', 'Oral Care', 'Other Beauty and Personal Care', 'Personal care Appliances', 'Skin care'],
 
-    'Books and Stationery': ['Art & Craft supplies','Calculators & organizers','Children\'s books','Entrance exam books','Files & Folders','Literature & Fiction books','Non fiction books','Notebooks & Diaries','Office products','Other Books & Stationery','School textbooks & guides','Writing supplies'],
+    'Books and Stationery': ['Art & Craft supplies', 'Calculators & organizers', 'Children\'s books', 'Entrance exam books', 'Files & Folders', 'Literature & Fiction books', 'Non fiction books', 'Notebooks & Diaries', 'Office products', 'Other Books & Stationery', 'School textbooks & guides', 'Writing supplies'],
 
-    'Clothing': ["Dresses & Jumpsuits","Kid's clothing","Kurtis & Salwar Suits","Men's Casual Wear","Men's Formal Wear","Men's Indian Wear","Men's Innerwear and Loungewear","Men's Jeans and Trousers","Men's Sports Clothing","Men's T-shirts & Polos","Men's Winterwear","Other Clothing","Saree","Women's Indian wear","Women's Innerwear & Loungewear","Women's Jeans and Trousers","Women's Skirts & Shorts","Women's Tops, Tees & Shirts"],
+    'Clothing': ["Dresses & Jumpsuits", "Kid's clothing", "Kurtis & Salwar Suits", "Men's Casual Wear", "Men's Formal Wear", "Men's Indian Wear", "Men's Innerwear and Loungewear", "Men's Jeans and Trousers", "Men's Sports Clothing", "Men's T-shirts & Polos", "Men's Winterwear", "Other Clothing", "Saree", "Women's Indian wear", "Women's Innerwear & Loungewear", "Women's Jeans and Trousers", "Women's Skirts & Shorts", "Women's Tops, Tees & Shirts"],
 
-    'Electronics': ['Cameras','Computer & Phone accessories','Laptops, Desktops & Tablets','Mobile','Other Electronics','Speakers & Headphones'],
+    'Electronics': ['Cameras', 'Computer & Phone accessories', 'Laptops, Desktops & Tablets', 'Mobile', 'Other Electronics', 'Speakers & Headphones'],
 
-    'Food and Grocery': ['Appetizers','Baby food','Bakery','Beverages','Chocolates and ice-cream','Dairy','Desserts','Eggs, Meat & Seafood','Food grains, Oil & Masala','Fruits & Vegetables','Gourmet Food','Health food','Instant Food','Mains','Mithai (Indian Sweets)','Namkeen, Snacks & Biscuits','Other Food and Grocery','Pet food'],
+    'Food and Grocery': ['Appetizers', 'Baby food', 'Bakery', 'Beverages', 'Chocolates and ice-cream', 'Dairy', 'Desserts', 'Eggs, Meat & Seafood', 'Food grains, Oil & Masala', 'Fruits & Vegetables', 'Gourmet Food', 'Health food', 'Instant Food', 'Mains', 'Mithai (Indian Sweets)', 'Namkeen, Snacks & Biscuits', 'Other Food and Grocery', 'Pet food'],
 
-    'Footwear': ["Heels","Kid's footwear","Men's Casual Shoes","Men's Flip flops & Sandals","Men's Formal Shoes","Men's Sports shoes","Other Footwear","Women's Casual shoes","Women's Flipflops & Sandals","Women's Sport shoes"],
+    'Footwear': ["Heels", "Kid's footwear", "Men's Casual Shoes", "Men's Flip flops & Sandals", "Men's Formal Shoes", "Men's Sports shoes", "Other Footwear", "Women's Casual shoes", "Women's Flipflops & Sandals", "Women's Sport shoes"],
 
-    'Furniture': ['Bedroom furniture','Dining furniture','Living room furniture','Other furniture','Outdoor furniture','Study furniture','Wardrobes'],
+    'Furniture': ['Bedroom furniture', 'Dining furniture', 'Living room furniture', 'Other furniture', 'Outdoor furniture', 'Study furniture', 'Wardrobes'],
 
     'General': ['Assorted'],
 
-    'Health Supplements': ['Herbal Supplements & Ayurveda','Other health supplements','Probiotics','Proteins & Immunity Boosters','Vitamins & Minerals'],
+    'Health Supplements': ['Herbal Supplements & Ayurveda', 'Other health supplements', 'Probiotics', 'Proteins & Immunity Boosters', 'Vitamins & Minerals'],
 
-    'Home and Kitchen': ['Bedding','Candles','Home & Bath Linen','Home Decor','Home storage and Organization','Kitchen & Dining','Kitchen Linen','Lighting','Other Home and Kitchen'],
+    'Home and Kitchen': ['Bedding', 'Candles', 'Home & Bath Linen', 'Home Decor', 'Home storage and Organization', 'Kitchen & Dining', 'Kitchen Linen', 'Lighting', 'Other Home and Kitchen'],
 
-    'Home Care': ['Dishwashing supplies','Freshener & Repellents','Kitchen & Surface cleaners','Laundry detergents','Mops, Brushes & Scrubs','Other Home Care','Pooja essentials','Toilet cleaners'],
+    'Home Care': ['Dishwashing supplies', 'Freshener & Repellents', 'Kitchen & Surface cleaners', 'Laundry detergents', 'Mops, Brushes & Scrubs', 'Other Home Care', 'Pooja essentials', 'Toilet cleaners'],
 
-    'Jewelry': ['Bangles & Bracelets','Earrings','Hair accessories','Necklace and Jewellery Sets','Other Jewelry','Rings'],
+    'Jewelry': ['Bangles & Bracelets', 'Earrings', 'Hair accessories', 'Necklace and Jewellery Sets', 'Other Jewelry', 'Rings'],
 
-    'Lawn and Garden': ['Barbeque','Fertilizer and Soil','Gardening Tools','Live Plants','Other Lawn and Garden items','Outdoor Decor','Pots and Planters','Seeds','Solar Lamps and Lights','Watering Equipment'],
+    'Lawn and Garden': ['Barbeque', 'Fertilizer and Soil', 'Gardening Tools', 'Live Plants', 'Other Lawn and Garden items', 'Outdoor Decor', 'Pots and Planters', 'Seeds', 'Solar Lamps and Lights', 'Watering Equipment'],
 
-    'Luggage and Bags': ['Backpacks','Duffel Bags','Handbags & Clutches','Laptop bags','Other Luggage & Bags','School bags','Suitcases & trolleys','Wallets'],
+    'Luggage and Bags': ['Backpacks', 'Duffel Bags', 'Handbags & Clutches', 'Laptop bags', 'Other Luggage & Bags', 'School bags', 'Suitcases & trolleys', 'Wallets'],
 
     'Multipurpose': ['Assorted'],
 
-    'Pet Products': ['Bird nest and cages','Fish Aquarium & Accessories','Pet Care and Grooming','Pet Clothing','Pet Dens, beds and feeders','Pet Food','Pet Toys'],
+    'Pet Products': ['Bird nest and cages', 'Fish Aquarium & Accessories', 'Pet Care and Grooming', 'Pet Clothing', 'Pet Dens, beds and feeders', 'Pet Food', 'Pet Toys'],
 
-    'Sports and Fitness': ['Badminton','Camping & Hiking','Cricket','Cycling','Excercise & Fitness','Football','Indoor Sports','Other Sports products','Yoga'],
+    'Sports and Fitness': ['Badminton', 'Camping & Hiking', 'Cricket', 'Cycling', 'Excercise & Fitness', 'Football', 'Indoor Sports', 'Other Sports products', 'Yoga'],
 
-    'Toys and games': ['Games','Other Toys and games','Puzzles','Toys'],
+    'Toys and games': ['Games', 'Other Toys and games', 'Puzzles', 'Toys'],
 
-    'Watches': ["Men's watches","Other Watches","Smartwatches","Women's watches"],
+    'Watches': ["Men's watches", "Other Watches", "Smartwatches", "Women's watches"],
 
   };
 
@@ -220,12 +212,12 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
     const loadCollections = async () => {
       try {
         const apiCollections: CollectionWithCountDto[] = await fetchCollectionsWithCounts();
-        const mapped: Array<{id: string; name: string}> = apiCollections.map(col => ({
+        const mapped: Array<{ id: string; name: string }> = apiCollections.map(col => ({
           id: String(col.collectionId),
           name: col.collectionName,
         }));
         setCollections(mapped);
-        
+
         // Auto-select the first collection if only one exists
         if (mapped.length === 1 && !isEditMode) {
           setSelectedCollections({ [mapped[0].id]: true });
@@ -240,20 +232,6 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
     }
   }, [isEditMode]);
 
-  // Load database categories when screen mounts
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const categories = await fetchCategories();
-        setDatabaseCategories(categories);
-        console.log('Loaded categories:', categories.length);
-      } catch (error) {
-        console.error('Failed to load categories', error);
-      }
-    };
-    loadCategories();
-  }, []);
-
   // Load all product data from existing product in edit mode
   useEffect(() => {
     if (isEditMode && existing) {
@@ -261,7 +239,6 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         id: existing.id,
         title: existing.title,
         hasImages: !!(existing.images || existing.productImages || existing.imageUrl),
-        categoryId: existing.categoryId || existing.category_id,
       });
 
       // Always update all form fields from existing data in edit mode (overwrite current values)
@@ -276,7 +253,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       if (existing.sku !== undefined) setSku(existing.sku || '');
       if (existing.size !== undefined) setSize(existing.size || '');
       if (existing.hsnCode !== undefined) setHsn(existing.hsnCode || '');
-      
+
       // Handle colors - always set from existing data
       if (existing.color) {
         const colorArray = existing.color
@@ -295,39 +272,12 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       }
 
       // Try multiple possible image fields from backend
-      const existingImages = existing.images || 
-                            existing.productImages || 
-                            (existing.imageUrl ? [existing.imageUrl] : []);
+      const existingImages = existing.images ||
+        existing.productImages ||
+        (existing.imageUrl ? [existing.imageUrl] : []);
       if (existingImages.length > 0) {
-        console.log('📸 [AddProductScreen] Loading existing product images:', existingImages.length);
+        console.log('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¸ [AddProductScreen] Loading existing product images:', existingImages.length);
         setImages(existingImages);
-      }
-      
-      // Set selected category if available (check multiple field names)
-      const categoryIdValue = (existing as any).categoryId ?? 
-                           (existing as any).category_id ?? 
-                           null;
-      
-      if (categoryIdValue != null) {
-        const catId = typeof categoryIdValue === 'number' 
-          ? categoryIdValue 
-          : (typeof categoryIdValue === 'string' ? Number(categoryIdValue) : null);
-        
-        if (catId && !isNaN(catId)) {
-          console.log('📁 [AddProductScreen] Setting existing categoryId:', catId);
-          setSelectedCategoryId(catId);
-        } else {
-          console.warn('⚠️ [AddProductScreen] Invalid categoryId value:', categoryIdValue);
-        }
-      } else {
-        // This is just a warning - product can still be updated without categoryId
-        // The backend will keep the existing category if none is provided
-        console.log('ℹ️ [AddProductScreen] No categoryId in product object (this is OK for updates):', {
-          productId: (existing as any).id,
-          productName: (existing as any).title,
-          existingKeys: Object.keys(existing || {}),
-          note: 'Product will update successfully - backend keeps existing category',
-        });
       }
     }
   }, [isEditMode, existing?.id]); // Only re-run when product ID changes to avoid infinite loops
@@ -341,44 +291,45 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   const hasImages = isEditMode || images.length > 0; // Images only required for new products
   const hasBusinessCategory = businessCategory.trim().length > 0;
   const hasProductCategory = productCategory.trim().length > 0;
-  
+
   // Validate that selling price is less than MRP (if MRP is provided)
   const priceNum = price.trim() ? Number(price.trim()) : 0;
   const mrpNum = mrp.trim() ? Number(mrp.trim()) : 0;
   const isPriceValid = !mrp.trim() || mrpNum === 0 || priceNum < mrpNum; // If MRP is not set or is 0, allow any price. Otherwise, price must be less than MRP.
-  
+
   const canSubmit = hasName && hasPrice && hasImages && hasBusinessCategory && hasProductCategory && isPriceValid;
-  
-  // Debug logging for edit mode
-  if (isEditMode && !canSubmit) {
-    console.log('🔍 [AddProductScreen] Validation failed (edit mode):', {
+
+  // Debug logging for validation - show what's missing
+  if (!canSubmit) {
+    console.log('🔍 [AddProductScreen] Validation failed:', {
       hasName,
       hasPrice,
       hasImages,
-      selectedCategoryId,
+      hasBusinessCategory,
+      hasProductCategory,
+      isPriceValid,
+      canSubmit,
       imagesCount: images.length,
       nameLength: name.trim().length,
       priceLength: price.trim().length,
+      businessCategoryLength: businessCategory.trim().length,
+      productCategoryLength: productCategory.trim().length,
     });
   }
 
   // Debug logging for validation (only log when in edit mode and button is disabled)
   useEffect(() => {
     if (isEditMode && !canSubmit) {
-      console.log('🔍 [AddProductScreen] Validation check (edit mode):', {
+      console.log('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â [AddProductScreen] Validation check (edit mode):', {
         nameValid: name.trim().length > 0,
         priceValid: price.trim().length > 0,
         imagesValid: isEditMode || images.length > 0,
         businessCategoryValid: businessCategory.trim().length > 0,
         productCategoryValid: productCategory.trim().length > 0,
-        categoryValid: !!selectedCategoryId,
-        selectedCategoryId,
-        canSubmit,
-        existingCategoryId: (existing as any)?.categoryId,
-        existingCategory_id: (existing as any)?.category_id,
+        categoryValid: !!canSubmit,
       });
     }
-  }, [isEditMode, canSubmit, name, price, images.length, businessCategory, productCategory, selectedCategoryId, existing]);
+  }, [isEditMode, canSubmit, name, price, images.length, businessCategory, productCategory, existing]);
 
 
   const requestCameraPermission = async (): Promise<boolean> => {
@@ -445,7 +396,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
       });
 
-      
+
 
       if (res.didCancel) {
 
@@ -459,7 +410,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
       } else if (res.assets?.[0]?.uri) {
 
-        const {fileSize, type, uri} = res.assets[0];
+        const { fileSize, type, uri } = res.assets[0];
 
         if (fileSize && fileSize > 10 * 1024 * 1024) {
 
@@ -509,7 +460,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
     try {
 
-      const uri = await captureRef(screenShotRef, {format: 'jpg', quality: 0.9} as any);
+      const uri = await captureRef(screenShotRef, { format: 'jpg', quality: 0.9 } as any);
 
       if (uri) {
 
@@ -546,19 +497,18 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
   const handleSubmit = async () => {
     // Prevent multiple submissions
     if (isSubmitting) {
-      console.log('⚠️ [AddProductScreen] Submission already in progress, ignoring duplicate click');
+      console.log('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [AddProductScreen] Submission already in progress, ignoring duplicate click');
       return;
     }
 
     if (!canSubmit) {
-      console.log('⚠️ [AddProductScreen] Submit blocked:', { 
-        canSubmit, 
-        isSubmitting, 
-        name: name.trim().length, 
-        price: price.trim().length, 
-        images: images.length, 
-        selectedCategoryId,
-        isEditMode 
+      console.log('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â [AddProductScreen] Submit blocked:', {
+        canSubmit,
+        isSubmitting,
+        name: name.trim().length,
+        price: price.trim().length,
+        images: images.length,
+        isEditMode
       });
       if (!name.trim().length) {
         Alert.alert('Validation Error', 'Product name is required');
@@ -576,13 +526,13 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
       return;
     }
     setIsSubmitting(true);
-    console.log('Starting product submission...', { name, price, imagesCount: images.length, selectedCategoryId });
+    console.log('Starting product submission...', { name, price, imagesCount: images.length });
 
     // Check userId before submitting
     try {
       const userIdRaw = await storage.getItem('userId');
       console.log('AddProductScreen - userId check:', userIdRaw, 'type:', typeof userIdRaw);
-      
+
       if (!userIdRaw || isNaN(Number(userIdRaw)) || Number(userIdRaw) <= 0) {
         Alert.alert(
           'Authentication Error',
@@ -642,8 +592,6 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
         // IMPORTANT: backend expects isBestseller
         isBestseller: bestSeller,
-        // Category is optional - only include categoryId if it's set
-        categoryId: selectedCategoryId || undefined, // Add categoryId from database category selection
       };
 
 
@@ -652,9 +600,8 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
 
       if (isEditMode && existing?.id) {
-        console.log('🔄 [AddProductScreen] Updating product:', {
+        console.log('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ [AddProductScreen] Updating product:', {
           productId: existing.id,
-          categoryId: common.categoryId,
           productName: common.productName,
           sellingPrice: common.sellingPrice,
         });
@@ -662,9 +609,9 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         // For now, update textual fields / pricing / inventory; images stay as-is in backend.
         try {
           await updateProduct(existing.id, common);
-          console.log('✅ [AddProductScreen] Product updated successfully');
+          console.log('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ [AddProductScreen] Product updated successfully');
         } catch (updateError) {
-          console.error('❌ [AddProductScreen] Update product error:', updateError);
+          console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ [AddProductScreen] Update product error:', updateError);
           throw updateError; // Re-throw to be caught by outer catch
         }
 
@@ -683,13 +630,13 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
             ...common,
           });
         }
-        
+
         // Extract product ID from response
         // Backend returns ProductDto with productsId field
         if (createdProduct && typeof createdProduct === 'object') {
           productId = String(
-            createdProduct.productsId || 
-            createdProduct.id || 
+            createdProduct.productsId ||
+            createdProduct.id ||
             createdProduct.productId ||
             (createdProduct as any).products_id
           );
@@ -699,29 +646,29 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         // new products into collections here. Sellers can add products
         // to collections later from the Products / Collections screens.
       }
-      
+
       // Show success message with collection info
       const collectionMessage = addedToCollectionsCount > 0
         ? ` and automatically added to ${addedToCollectionsCount} collection(s)`
         : '';
-      
+
       Alert.alert(
-        'Success', 
-        isEditMode 
-          ? 'Product updated successfully' 
+        'Success',
+        isEditMode
+          ? 'Product updated successfully'
           : `Product added successfully${collectionMessage}`,
         [
-        {
+          {
 
-          text: 'OK',
+            text: 'OK',
 
-          onPress: () => {
+            onPress: () => {
 
-            navigation.goBack();
+              navigation.goBack();
+
+            },
 
           },
-
-        },
 
         ],
       );
@@ -734,7 +681,6 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
         name,
         price,
         imagesCount: images.length,
-        selectedCategoryId,
         userId: await storage.getItem('userId'),
       });
       Alert.alert(
@@ -776,315 +722,35 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
 
 
-      <ViewShot ref={screenShotRef} style={{flex: 1}}>
+      <ViewShot ref={screenShotRef} style={{ flex: 1 }}>
 
-      <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Multiple Image picker */}
+          {/* Multiple Image picker */}
 
-        <Text style={styles.sectionLabel}>Product Images</Text>
+          <Text style={styles.sectionLabel}>Product Images</Text>
 
-        <View style={styles.imagesContainer}>
+          <View style={styles.imagesContainer}>
 
-          {images.map((uri, index) => (
+            {images.map((uri, index) => (
 
-            <View key={index} style={styles.imageItem}>
+              <View key={index} style={styles.imageItem}>
 
-              <Image source={{uri}} style={styles.previewImg} />
-
-              <TouchableOpacity
-
-                style={styles.removeImageButton}
-
-                onPress={() => {
-
-                  setImages(prev => prev.filter((_, i) => i !== index));
-
-                }}
-
-              >
-
-                <IconSymbol name="close" size={16} color="#FFFFFF" />
-
-              </TouchableOpacity>
-
-            </View>
-
-          ))}
-
-          {images.length < 6 && (
-
-            <TouchableOpacity style={styles.imagePlaceholder} onPress={() => setPickerOpen(true)}>
-
-              <IconSymbol name="add" size={28} color="#6c757d" />
-
-            </TouchableOpacity>
-
-          )}
-
-        </View>
-
-        <Text style={styles.imageHint}>Add up to 6 images (max 10MB each, 1 image mandatory)</Text>
-
-
-
-        {/* Product Name */}
-
-        <Text style={styles.sectionLabel}>Product Name</Text>
-
-        <TextInput
-
-          style={styles.input}
-
-          placeholder="Product Name"
-
-          placeholderTextColor="#9CA3AF"
-
-          value={name}
-
-          onChangeText={setName}
-
-        />
-
-        <Text style={styles.helper}>Maximum 200 characters</Text>
-
-
-
-        {/* Product Description */}
-
-        <Text style={styles.sectionLabel}>Product Description <Text style={styles.optional}>(Optional)</Text></Text>
-
-        <TextInput
-
-          style={[styles.input, styles.textarea]}
-
-          placeholder="Press here to type"
-
-          placeholderTextColor="#9CA3AF"
-
-          value={description}
-
-          onChangeText={setDescription}
-
-          multiline
-
-        />
-
-        <Text style={styles.helper}>Maximum 2000 characters</Text>
-
-
-
-        {/* Prices */}
-
-        <View style={styles.row2}>
-
-          <View style={styles.boxField}>
-
-            <View style={styles.boxLeftIcon}><Text style={styles.currency}>₹</Text></View>
-
-            <TextInput
-
-              style={styles.boxInput}
-
-              placeholder="MRP"
-
-              placeholderTextColor="#6c757d"
-
-              keyboardType="numeric"
-
-              value={mrp}
-
-              onChangeText={setMrp}
-
-            />
-
-          </View>
-
-          <View style={[styles.boxField, !isPriceValid && styles.boxFieldError]}>
-
-            <View style={styles.boxLeftIcon}><Text style={styles.currency}>₹</Text></View>
-
-            <TextInput
-
-              style={styles.boxInput}
-
-              placeholder="Selling Price"
-
-              placeholderTextColor="#6c757d"
-
-              keyboardType="numeric"
-
-              value={price}
-
-              onChangeText={setPrice}
-
-            />
-
-          </View>
-
-        </View>
-        {!isPriceValid && mrp.trim() && (
-          <Text style={styles.errorText}>Selling price must be less than MRP</Text>
-        )}
-
-
-
-        {/* Business Category */}
-        <Text style={styles.sectionLabel}>Business Category <Text style={styles.required}>*</Text></Text>
-        <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryOpen(true)}>
-          <Text style={{color: businessCategory ? '#111827' : '#6c757d'}}>
-            {businessCategory || 'Select Business Category (Required)'}
-          </Text>
-        </TouchableOpacity>
-
-
-
-        {/* Product Category (Text field for organization - not a database category) */}
-        <Text style={styles.sectionLabel}>Product Category <Text style={styles.required}>*</Text></Text>
-        <Text style={styles.helperBody}>Select a product category for organization (this is just a text field, not a database category)</Text>
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => {
-            if (!businessCategory) {
-              Alert.alert('Select Business Category', 'Please choose a business category first');
-              return;
-            }
-            setProductCategoryOpen(true);
-          }}
-        >
-          <Text style={{color: productCategory ? '#111827' : '#6c757d'}}>
-            {productCategory || 'Select Product Category (Required)'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.addSecondary} onPress={() => setNewProductCategoryOpen(true)}>
-          <IconSymbol name="add" size={18} color="#e61580" />
-          <Text style={styles.addSecondaryText}>Add New Product Category</Text>
-        </TouchableOpacity>
-
-
-        {/* Database Category Selection (MANDATORY for SmartBiz-style catalog) */}
-        <Text style={styles.sectionHeader}>Database Category</Text>
-        <Text style={styles.helperBody}>Select a category from your created categories (required). Create categories from the Categories tab.</Text>
-        <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryPickerOpen(true)}>
-          <Text style={{color: selectedCategoryId ? '#111827' : '#6c757d'}}>
-            {selectedCategoryId 
-              ? databaseCategories.find(c => c.category_id === selectedCategoryId)?.categoryName || 'Category Selected'
-              : 'Select Category (Required)'}
-          </Text>
-        </TouchableOpacity>
-
-
-
-        {/* Size Chart + Image guidelines */}
-
-        <Text style={styles.subTitle}>Size Chart <Text style={styles.optional}>(Optional)</Text></Text>
-
-        <TouchableOpacity style={styles.uploadBtn} onPress={() => setSizeChartPickerOpen(true)}>
-
-          <IconSymbol name="add" size={18} color="#111827" />
-
-          <Text style={styles.uploadText}>{sizeChartImage ? 'Change Size Chart' : 'Upload Size Chart'}</Text>
-
-        </TouchableOpacity>
-
-        {sizeChartImage && (
-
-          <View style={styles.sizeChartPreview}>
-
-            <Image source={{uri: sizeChartImage}} style={styles.sizeChartImage} resizeMode="contain" />
-
-            <TouchableOpacity
-
-              style={styles.removeSizeChartBtn}
-
-              onPress={() => setSizeChartImage(null)}
-
-            >
-
-              <IconSymbol name="close" size={20} color="#ef4444" />
-
-            </TouchableOpacity>
-
-          </View>
-
-        )}
-
-        <View style={styles.guidelineCard}>
-
-          <Text style={styles.guidelineTitle}>Image Guidelines:</Text>
-
-          <Text style={styles.guidelineBody}>Recommended Minimum Width for Size Chart: 800px</Text>
-
-        </View>
-
-
-
-        {/* Inventory */}
-
-        <Text style={styles.sectionHeader}>Inventory <Text style={styles.optional}>(Optional)</Text></Text>
-
-        <Text style={styles.helperBody}>Add and manage product inventory</Text>
-
-        <TextInput style={styles.input} placeholder="Enter Available Quantity" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={quantity} onChangeText={setQuantity} />
-
-
-
-        {/* SKU */}
-
-        <Text style={styles.sectionHeader}>Stock Keeping Unit <Text style={styles.optional}>(Optional)</Text></Text>
-
-        <Text style={styles.helperBody}>Add the SKU for this product</Text>
-
-        <TextInput style={styles.input} placeholder="SKU" placeholderTextColor="#9CA3AF" value={sku} onChangeText={setSku} />
-
-        <Text style={styles.helper}>Maximum 40 characters</Text>
-
-
-
-        {/* Features */}
-
-        <Text style={styles.sectionHeader}>Features</Text>
-
-        <Text style={styles.helperBody}>Add color and size information about this product</Text>
-
-        
-
-        {/* Color Selection */}
-
-        <Text style={[styles.sectionLabel, {marginTop: 12}]}>Colors</Text>
-
-        <Text style={styles.helperBody}>Select one or more colors for this product</Text>
-
-        
-
-        {/* Selected Colors Display */}
-
-        {colors.length > 0 && (
-
-          <View style={styles.selectedColorsContainer}>
-
-            {colors.map((selectedColor, index) => (
-
-              <View key={index} style={styles.colorChip}>
-
-                <Text style={styles.colorChipText}>{selectedColor}</Text>
+                <Image source={{ uri }} style={styles.previewImg} />
 
                 <TouchableOpacity
 
+                  style={styles.removeImageButton}
+
                   onPress={() => {
 
-                    const newColors = colors.filter((_, i) => i !== index);
-
-                    setColors(newColors);
+                    setImages(prev => prev.filter((_, i) => i !== index));
 
                   }}
 
-                  style={styles.colorChipRemove}
-
                 >
 
-                  <IconSymbol name="close" size={16} color="#ef4444" />
+                  <IconSymbol name="close" size={16} color="#FFFFFF" />
 
                 </TouchableOpacity>
 
@@ -1092,237 +758,496 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
             ))}
 
-          </View>
+            {images.length < 6 && (
 
-        )}
+              <TouchableOpacity style={styles.imagePlaceholder} onPress={() => setPickerOpen(true)}>
 
-        
+                <IconSymbol name="add" size={28} color="#6c757d" />
 
-        <TouchableOpacity style={styles.dropdown} onPress={() => setColorPickerOpen(true)}>
+              </TouchableOpacity>
 
-          <Text style={{color: '#6c757d'}}>
-
-            {colors.length > 0 ? 'Add More Colors' : 'Select Colors'}
-
-          </Text>
-
-        </TouchableOpacity>
-
-        <Text style={styles.helper}>You can select multiple colors</Text>
-
-
-
-        {/* Color Chart */}
-
-        <Text style={[styles.subTitle, {marginTop: 20}]}>Color Chart <Text style={styles.optional}>(Optional)</Text></Text>
-
-        <TouchableOpacity style={styles.uploadBtn} onPress={() => setColorChartPickerOpen(true)}>
-
-          <IconSymbol name="add" size={18} color="#111827" />
-
-          <Text style={styles.uploadText}>{colorChartImage ? 'Change Color Chart' : 'Upload Color Chart'}</Text>
-
-        </TouchableOpacity>
-
-        {colorChartImage && (
-
-          <View style={styles.sizeChartPreview}>
-
-            <Image source={{uri: colorChartImage}} style={styles.sizeChartImage} resizeMode="contain" />
-
-            <TouchableOpacity
-
-              style={styles.removeSizeChartBtn}
-
-              onPress={() => setColorChartImage(null)}
-
-            >
-
-              <IconSymbol name="close" size={20} color="#ef4444" />
-
-            </TouchableOpacity>
-
-          </View>
-
-        )}
-
-        <View style={styles.guidelineCard}>
-
-          <Text style={styles.guidelineTitle}>Image Guidelines:</Text>
-
-          <Text style={styles.guidelineBody}>Recommended Minimum Width for Color Chart: 800px</Text>
-
-        </View>
-
-        
-
-        {/* Size Input */}
-
-        <Text style={[styles.sectionLabel, {marginTop: 20}]}>Size</Text>
-
-        <TextInput 
-
-          style={styles.input} 
-
-          placeholder="Enter Size" 
-
-          placeholderTextColor="#9CA3AF" 
-
-          value={size} 
-
-          onChangeText={setSize}
-
-          maxLength={50}
-
-        />
-
-        <Text style={styles.helper}>Maximum 50 characters</Text>
-
-
-
-        {/* Variants / Tax */}
-
-        <Text style={styles.sectionHeader}>Variants</Text>
-
-        <Text style={styles.helperBody}>Add different size and color options</Text>
-
-        <TouchableOpacity
-
-          style={styles.addSecondary}
-
-          onPress={() => {
-
-            if (!isEditMode || !existing) {
-
-              Alert.alert(
-
-                'Save product first',
-
-                'Please add the product to your catalog. After it is added, open it from the Products list and use Add New Variant.',
-
-              );
-
-              return;
-
-            }
-
-            // Ensure we have the product ID for the variant
-            const productId = existing?.id || existing?.productsId || null;
-            if (!productId) {
-              Alert.alert('Error', 'Product ID is missing. Cannot add variant.');
-              return;
-            }
-
-            navigation.navigate('AddVariant', {
-              baseProduct: {
-                ...existing,
-                id: productId, // Ensure ID is set
-              },
-            });
-
-          }}>
-
-          <IconSymbol name="add" size={18} color="#e61580" />
-
-          <Text style={styles.addSecondaryText}>Add New Variant</Text>
-
-        </TouchableOpacity>
-
-
-
-        <Text style={styles.sectionHeader}>Tax Details <Text style={styles.optional}>(Optional)</Text></Text>
-
-        <Text style={styles.helperBody}>Enter a valid HSN code with 2, 4, 6 or 8 digits.</Text>
-
-        <TouchableOpacity><Text style={styles.link}>List of HSN Codes</Text></TouchableOpacity>
-
-        <TextInput style={styles.input} placeholder="Enter HSN" placeholderTextColor="#9CA3AF" value={hsn} onChangeText={setHsn} maxLength={8} />
-
-
-
-        {/* Best Seller */}
-
-        <TouchableOpacity style={styles.checkRow} onPress={() => setBestSeller(!bestSeller)}>
-
-          <View style={[styles.checkbox, bestSeller && styles.checkboxChecked]}>
-            {bestSeller && <IconSymbol name="checkmark" size={14} color="#FFFFFF" />}
-          </View>
-
-          <Text style={styles.checkLabel}>Mark as Best Seller</Text>
-
-        </TouchableOpacity>
-
-
-        {/* Collection Selection (only for new products, optional) */}
-        {!isEditMode && (
-          <>
-            <Text style={styles.sectionHeader}>Collections <Text style={styles.optional}>(Optional)</Text></Text>
-            <Text style={styles.helperBody}>
-              {collections.length === 0 
-                ? 'Create a collection first to add products to it'
-                : 'Select collection(s) to add this product to (optional)'}
-            </Text>
-            <TouchableOpacity style={styles.dropdown} onPress={() => setCollectionPickerOpen(true)}>
-              <Text style={{color: Object.keys(selectedCollections).filter(id => selectedCollections[id]).length > 0 ? '#111827' : '#6c757d'}}>
-                {Object.keys(selectedCollections).filter(id => selectedCollections[id]).length > 0
-                  ? `${Object.keys(selectedCollections).filter(id => selectedCollections[id]).length} collection(s) selected`
-                  : 'Select Collections'}
-              </Text>
-            </TouchableOpacity>
-            {Object.keys(selectedCollections).filter(id => selectedCollections[id]).length > 0 && (
-              <View style={styles.selectedCollectionsContainer}>
-                {Object.keys(selectedCollections)
-                  .filter(id => selectedCollections[id])
-                  .map(collectionId => {
-                    const collection = collections.find(c => c.id === collectionId);
-                    return collection ? (
-                      <View key={collectionId} style={styles.collectionChip}>
-                        <Text style={styles.collectionChipText}>{collection.name}</Text>
-                        <TouchableOpacity
-                          onPress={() => {
-                            setSelectedCollections(prev => ({
-                              ...prev,
-                              [collectionId]: false,
-                            }));
-                          }}
-                          style={styles.collectionChipRemove}>
-                          <IconSymbol name="close" size={14} color="#ef4444" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : null;
-                  })}
-              </View>
             )}
-          </>
-        )}
 
-        {/* Category quick actions (edit mode) */}
-        {isEditMode && (
-          <TouchableOpacity
-            style={[styles.submitBtn, styles.secondaryBtn]}
-            onPress={() => navigation.navigate('Categories')}>
-            <Text style={[styles.submitText, styles.secondaryBtnText]}>Edit Categories</Text>
+          </View>
+
+          <Text style={styles.imageHint}>Add up to 6 images (max 10MB each, 1 image mandatory)</Text>
+
+
+
+          {/* Product Name */}
+
+          <Text style={styles.sectionLabel}>Product Name</Text>
+
+          <TextInput
+
+            style={styles.input}
+
+            placeholder="Product Name"
+
+            placeholderTextColor="#9CA3AF"
+
+            value={name}
+
+            onChangeText={setName}
+
+          />
+
+          <Text style={styles.helper}>Maximum 200 characters</Text>
+
+
+
+          {/* Product Description */}
+
+          <Text style={styles.sectionLabel}>Product Description <Text style={styles.optional}>(Optional)</Text></Text>
+
+          <TextInput
+
+            style={[styles.input, styles.textarea]}
+
+            placeholder="Press here to type"
+
+            placeholderTextColor="#9CA3AF"
+
+            value={description}
+
+            onChangeText={setDescription}
+
+            multiline
+
+          />
+
+          <Text style={styles.helper}>Maximum 2000 characters</Text>
+
+
+
+          {/* Prices */}
+
+          <View style={styles.row2}>
+
+            <View style={styles.boxField}>
+
+              <View style={styles.boxLeftIcon}><Text style={styles.currency}>₹</Text></View>
+
+              <TextInput
+
+                style={styles.boxInput}
+
+                placeholder="MRP"
+
+                placeholderTextColor="#6c757d"
+
+                keyboardType="numeric"
+
+                value={mrp}
+
+                onChangeText={setMrp}
+
+              />
+
+            </View>
+
+            <View style={[styles.boxField, !isPriceValid && styles.boxFieldError]}>
+
+              <View style={styles.boxLeftIcon}><Text style={styles.currency}>₹</Text></View>
+
+              <TextInput
+
+                style={styles.boxInput}
+
+                placeholder="Selling Price"
+
+                placeholderTextColor="#6c757d"
+
+                keyboardType="numeric"
+
+                value={price}
+
+                onChangeText={setPrice}
+
+              />
+
+            </View>
+
+          </View>
+          {!isPriceValid && mrp.trim() && (
+            <Text style={styles.errorText}>Selling price must be less than MRP</Text>
+          )}
+
+
+
+
+          {/* Business Category */}
+          <Text style={styles.sectionLabel}>Business Category <Text style={styles.required}>*</Text></Text>
+          <TouchableOpacity style={styles.dropdown} onPress={() => setCategoryOpen(true)}>
+            <Text style={{ color: businessCategory ? '#111827' : '#6c757d' }}>
+              {businessCategory || 'Select Business Category (Required)'}
+            </Text>
           </TouchableOpacity>
-        )}
 
 
-        {/* Submit */}
 
-        <TouchableOpacity
-          style={[
-            styles.submitBtn,
-            (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
-          ]}
-          disabled={!canSubmit || isSubmitting}
-          onPress={handleSubmit}
+          {/* Product Category - Free text input */}
+          <Text style={styles.sectionLabel}>Product Category <Text style={styles.required}>*</Text></Text>
+          <Text style={styles.helperBody}>Enter a product category name for organization</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter Product Category (Required)"
+            placeholderTextColor="#9CA3AF"
+            value={productCategory}
+            onChangeText={setProductCategory}
+            maxLength={100}
+          />
+          <Text style={styles.helper}>Maximum 100 characters</Text>
 
-        >
-          <Text style={styles.submitText}>
-            {isSubmitting ? 'Please wait...' : isEditMode ? 'Update Product' : 'Add Product'}
-          </Text>
-        </TouchableOpacity>
 
-      </ScrollView>
+
+          {/* Size Chart + Image guidelines */}
+
+          <Text style={styles.subTitle}>Size Chart <Text style={styles.optional}>(Optional)</Text></Text>
+
+          <TouchableOpacity style={styles.uploadBtn} onPress={() => setSizeChartPickerOpen(true)}>
+
+            <IconSymbol name="add" size={18} color="#111827" />
+
+            <Text style={styles.uploadText}>{sizeChartImage ? 'Change Size Chart' : 'Upload Size Chart'}</Text>
+
+          </TouchableOpacity>
+
+          {sizeChartImage && (
+
+            <View style={styles.sizeChartPreview}>
+
+              <Image source={{ uri: sizeChartImage }} style={styles.sizeChartImage} resizeMode="contain" />
+
+              <TouchableOpacity
+
+                style={styles.removeSizeChartBtn}
+
+                onPress={() => setSizeChartImage(null)}
+
+              >
+
+                <IconSymbol name="close" size={20} color="#ef4444" />
+
+              </TouchableOpacity>
+
+            </View>
+
+          )}
+
+          <View style={styles.guidelineCard}>
+
+            <Text style={styles.guidelineTitle}>Image Guidelines:</Text>
+
+            <Text style={styles.guidelineBody}>Recommended Minimum Width for Size Chart: 800px</Text>
+
+          </View>
+
+
+
+          {/* Inventory */}
+
+          <Text style={styles.sectionHeader}>Inventory <Text style={styles.optional}>(Optional)</Text></Text>
+
+          <Text style={styles.helperBody}>Add and manage product inventory</Text>
+
+          <TextInput style={styles.input} placeholder="Enter Available Quantity" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={quantity} onChangeText={setQuantity} />
+
+
+
+          {/* SKU */}
+
+          <Text style={styles.sectionHeader}>Stock Keeping Unit <Text style={styles.optional}>(Optional)</Text></Text>
+
+          <Text style={styles.helperBody}>Add the SKU for this product</Text>
+
+          <TextInput style={styles.input} placeholder="SKU" placeholderTextColor="#9CA3AF" value={sku} onChangeText={setSku} />
+
+          <Text style={styles.helper}>Maximum 40 characters</Text>
+
+
+
+          {/* Features */}
+
+          <Text style={styles.sectionHeader}>Features</Text>
+
+          <Text style={styles.helperBody}>Add color and size information about this product</Text>
+
+
+
+          {/* Color Selection */}
+
+          <Text style={[styles.sectionLabel, { marginTop: 12 }]}>Colors</Text>
+
+          <Text style={styles.helperBody}>Select one or more colors for this product</Text>
+
+
+
+          {/* Selected Colors Display */}
+
+          {colors.length > 0 && (
+
+            <View style={styles.selectedColorsContainer}>
+
+              {colors.map((selectedColor, index) => (
+
+                <View key={index} style={styles.colorChip}>
+
+                  <Text style={styles.colorChipText}>{selectedColor}</Text>
+
+                  <TouchableOpacity
+
+                    onPress={() => {
+
+                      const newColors = colors.filter((_, i) => i !== index);
+
+                      setColors(newColors);
+
+                    }}
+
+                    style={styles.colorChipRemove}
+
+                  >
+
+                    <IconSymbol name="close" size={16} color="#ef4444" />
+
+                  </TouchableOpacity>
+
+                </View>
+
+              ))}
+
+            </View>
+
+          )}
+
+
+
+          <TouchableOpacity style={styles.dropdown} onPress={() => setColorPickerOpen(true)}>
+
+            <Text style={{ color: '#6c757d' }}>
+
+              {colors.length > 0 ? 'Add More Colors' : 'Select Colors'}
+
+            </Text>
+
+          </TouchableOpacity>
+
+          <Text style={styles.helper}>You can select multiple colors</Text>
+
+
+
+          {/* Color Chart */}
+
+          <Text style={[styles.subTitle, { marginTop: 20 }]}>Color Chart <Text style={styles.optional}>(Optional)</Text></Text>
+
+          <TouchableOpacity style={styles.uploadBtn} onPress={() => setColorChartPickerOpen(true)}>
+
+            <IconSymbol name="add" size={18} color="#111827" />
+
+            <Text style={styles.uploadText}>{colorChartImage ? 'Change Color Chart' : 'Upload Color Chart'}</Text>
+
+          </TouchableOpacity>
+
+          {colorChartImage && (
+
+            <View style={styles.sizeChartPreview}>
+
+              <Image source={{ uri: colorChartImage }} style={styles.sizeChartImage} resizeMode="contain" />
+
+              <TouchableOpacity
+
+                style={styles.removeSizeChartBtn}
+
+                onPress={() => setColorChartImage(null)}
+
+              >
+
+                <IconSymbol name="close" size={20} color="#ef4444" />
+
+              </TouchableOpacity>
+
+            </View>
+
+          )}
+
+          <View style={styles.guidelineCard}>
+
+            <Text style={styles.guidelineTitle}>Image Guidelines:</Text>
+
+            <Text style={styles.guidelineBody}>Recommended Minimum Width for Color Chart: 800px</Text>
+
+          </View>
+
+
+
+          {/* Size Input */}
+
+          <Text style={[styles.sectionLabel, { marginTop: 20 }]}>Size</Text>
+
+          <TextInput
+
+            style={styles.input}
+
+            placeholder="Enter Size"
+
+            placeholderTextColor="#9CA3AF"
+
+            value={size}
+
+            onChangeText={setSize}
+
+            maxLength={50}
+
+          />
+
+          <Text style={styles.helper}>Maximum 50 characters</Text>
+
+
+
+          {/* Variants / Tax */}
+
+          <Text style={styles.sectionHeader}>Variants</Text>
+
+          <Text style={styles.helperBody}>Add different size and color options</Text>
+
+          <TouchableOpacity
+
+            style={styles.addSecondary}
+
+            onPress={() => {
+
+              if (!isEditMode || !existing) {
+
+                Alert.alert(
+
+                  'Save product first',
+
+                  'Please add the product to your catalog. After it is added, open it from the Products list and use Add New Variant.',
+
+                );
+
+                return;
+
+              }
+
+              // Ensure we have the product ID for the variant
+              const productId = existing?.id || existing?.productsId || null;
+              if (!productId) {
+                Alert.alert('Error', 'Product ID is missing. Cannot add variant.');
+                return;
+              }
+
+              navigation.navigate('AddVariant', {
+                baseProduct: {
+                  ...existing,
+                  id: productId, // Ensure ID is set
+                },
+              });
+
+            }}>
+
+            <IconSymbol name="add" size={18} color="#e61580" />
+
+            <Text style={styles.addSecondaryText}>Add New Variant</Text>
+
+          </TouchableOpacity>
+
+
+
+          <Text style={styles.sectionHeader}>Tax Details <Text style={styles.optional}>(Optional)</Text></Text>
+
+          <Text style={styles.helperBody}>Enter a valid HSN code with 2, 4, 6 or 8 digits.</Text>
+
+          <TouchableOpacity><Text style={styles.link}>List of HSN Codes</Text></TouchableOpacity>
+
+          <TextInput style={styles.input} placeholder="Enter HSN" placeholderTextColor="#9CA3AF" value={hsn} onChangeText={setHsn} maxLength={8} />
+
+
+
+          {/* Best Seller */}
+
+          <TouchableOpacity style={styles.checkRow} onPress={() => setBestSeller(!bestSeller)}>
+
+            <View style={[styles.checkbox, bestSeller && styles.checkboxChecked]}>
+              {bestSeller && <IconSymbol name="checkmark" size={14} color="#FFFFFF" />}
+            </View>
+
+            <Text style={styles.checkLabel}>Mark as Best Seller</Text>
+
+          </TouchableOpacity>
+
+
+          {/* Collection Selection (only for new products, optional) */}
+          {!isEditMode && (
+            <>
+              <Text style={styles.sectionHeader}>Collections <Text style={styles.optional}>(Optional)</Text></Text>
+              <Text style={styles.helperBody}>
+                {collections.length === 0
+                  ? 'Create a collection first to add products to it'
+                  : 'Select collection(s) to add this product to (optional)'}
+              </Text>
+              <TouchableOpacity style={styles.dropdown} onPress={() => setCollectionPickerOpen(true)}>
+                <Text style={{ color: Object.keys(selectedCollections).filter(id => selectedCollections[id]).length > 0 ? '#111827' : '#6c757d' }}>
+                  {Object.keys(selectedCollections).filter(id => selectedCollections[id]).length > 0
+                    ? `${Object.keys(selectedCollections).filter(id => selectedCollections[id]).length} collection(s) selected`
+                    : 'Select Collections'}
+                </Text>
+              </TouchableOpacity>
+              {Object.keys(selectedCollections).filter(id => selectedCollections[id]).length > 0 && (
+                <View style={styles.selectedCollectionsContainer}>
+                  {Object.keys(selectedCollections)
+                    .filter(id => selectedCollections[id])
+                    .map(collectionId => {
+                      const collection = collections.find(c => c.id === collectionId);
+                      return collection ? (
+                        <View key={collectionId} style={styles.collectionChip}>
+                          <Text style={styles.collectionChipText}>{collection.name}</Text>
+                          <TouchableOpacity
+                            onPress={() => {
+                              setSelectedCollections(prev => ({
+                                ...prev,
+                                [collectionId]: false,
+                              }));
+                            }}
+                            style={styles.collectionChipRemove}>
+                            <IconSymbol name="close" size={14} color="#ef4444" />
+                          </TouchableOpacity>
+                        </View>
+                      ) : null;
+                    })}
+                </View>
+              )}
+            </>
+          )}
+
+          {/* Category quick actions (edit mode) */}
+          {isEditMode && (
+            <TouchableOpacity
+              style={[styles.submitBtn, styles.secondaryBtn]}
+              onPress={() => navigation.navigate('Categories')}>
+              <Text style={[styles.submitText, styles.secondaryBtnText]}>Edit Categories</Text>
+            </TouchableOpacity>
+          )}
+
+
+          {/* Submit */}
+
+          <TouchableOpacity
+            style={[
+              styles.submitBtn,
+              (!canSubmit || isSubmitting) && styles.submitBtnDisabled,
+            ]}
+            disabled={!canSubmit || isSubmitting}
+            onPress={handleSubmit}
+
+          >
+            <Text style={styles.submitText}>
+              {isSubmitting ? 'Please wait...' : isEditMode ? 'Update Product' : 'Add Product'}
+            </Text>
+          </TouchableOpacity>
+
+        </ScrollView>
 
       </ViewShot>
 
@@ -1368,7 +1293,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
                     if (asset.uri) {
 
-                      const {fileSize, type, uri} = asset;
+                      const { fileSize, type, uri } = asset;
 
                       if (fileSize && fileSize > 10 * 1024 * 1024) {
 
@@ -1420,9 +1345,9 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
             </View>
 
-            <View style={{marginTop: 12}}>
+            <View style={{ marginTop: 12 }}>
 
-              <Text>{'• Make sure Image size is less than  10 MB'}</Text>
+              <Text>{'• Make sure Image size is less than 10 MB'}</Text>
 
               <Text>{'• Supported formats: JPG, PNG, WEBP, GIF, HEIC, HEIF'}</Text>
 
@@ -1433,12 +1358,6 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
               <Text>{'• Unsupported formats: SVG, MP4'}</Text>
 
             </View>
-
-            <TouchableOpacity style={styles.modalClose} onPress={() => setPickerOpen(false)}>
-
-              <Text style={{fontWeight:'bold', fontSize: 28}}>×</Text>
-
-            </TouchableOpacity>
 
           </View>
 
@@ -1456,11 +1375,11 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
           <View style={styles.listCard}>
 
-            <View style={styles.listHeader}> 
+            <View style={styles.listHeader}>
 
               <Text style={styles.listTitle}>Business Category</Text>
 
-              <TouchableOpacity onPress={() => setCategoryOpen(false)}><Text style={{fontSize:28, fontWeight:'bold'}}>×</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setCategoryOpen(false)}><Text style={{ fontSize: 28, fontWeight: 'bold' }}>ÃƒÆ’Ã¢â‚¬â€</Text></TouchableOpacity>
 
             </View>
 
@@ -1486,160 +1405,8 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
 
 
-      {/* Product Category Modal */}
 
-      <Modal transparent visible={productCategoryOpen} animationType="slide" onRequestClose={() => setProductCategoryOpen(false)}>
 
-        <View style={styles.centerOverlay}>
-
-          <View style={styles.listCard}>
-
-            <View style={styles.listHeader}> 
-
-              <Text style={styles.listTitle}>Product Category</Text>
-
-              <TouchableOpacity onPress={() => setProductCategoryOpen(false)}><Text style={{fontSize:28, fontWeight:'bold'}}>×</Text></TouchableOpacity>
-
-            </View>
-
-            <ScrollView>
-
-              {(productCategoryMap[businessCategory] || []).map(item => (
-
-                <TouchableOpacity key={item} style={styles.listItem} onPress={() => { setProductCategory(item); setProductCategoryOpen(false); }}>
-
-                  <Text style={styles.listItemText}>{item}</Text>
-
-                </TouchableOpacity>
-
-              ))}
-
-            </ScrollView>
-
-          </View>
-
-        </View>
-
-      </Modal>
-
-      {/* Add New Product Category Modal (Text field only - does not create database category) */}
-      <Modal transparent visible={newProductCategoryOpen} animationType="slide" onRequestClose={() => {
-        setNewProductCategoryOpen(false);
-        setNewProductCategoryName('');
-      }}>
-        <View style={styles.centerOverlay}>
-          <View style={styles.listCard}>
-            <View style={styles.listHeader}>
-              <Text style={styles.listTitle}>Add New Product Category</Text>
-              <TouchableOpacity onPress={() => {
-                setNewProductCategoryOpen(false);
-                setNewProductCategoryName('');
-              }}>
-                <Text style={{fontSize:28, fontWeight:'bold'}}>×</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={{padding: 20}}>
-              <Text style={{fontSize: 14, color: '#6c757d', marginBottom: 12}}>
-                Enter a product category name. This is just a text field for organization and will not create a database category.
-              </Text>
-              
-              <TextInput
-                style={{
-                  borderWidth: 1,
-                  borderColor: '#E5E7EB',
-                  borderRadius: 8,
-                  padding: 12,
-                  color: '#111827',
-                  fontSize: 16,
-                }}
-                placeholder="Enter Product Category Name"
-                placeholderTextColor="#9CA3AF"
-                value={newProductCategoryName}
-                onChangeText={setNewProductCategoryName}
-                maxLength={50}
-                autoFocus
-              />
-              
-              <Text style={{textAlign: 'right', color: '#9CA3AF', marginTop: 4, fontSize: 12}}>
-                {newProductCategoryName.length}/50
-              </Text>
-              
-              <TouchableOpacity
-                style={{
-                  backgroundColor: newProductCategoryName.trim() ? '#e61580' : '#D1D5DB',
-                  padding: 14,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                  marginTop: 20,
-                }}
-                disabled={!newProductCategoryName.trim()}
-                onPress={() => {
-                  const trimmedName = newProductCategoryName.trim();
-                  if (trimmedName) {
-                    setProductCategory(trimmedName);
-                    setNewProductCategoryName('');
-                    setNewProductCategoryOpen(false);
-                  }
-                }}
-              >
-                <Text style={{
-                  color: newProductCategoryName.trim() ? '#FFFFFF' : '#9CA3AF',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                  Add Product Category
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Database Category Picker Modal */}
-      <Modal transparent visible={categoryPickerOpen} animationType="slide" onRequestClose={() => setCategoryPickerOpen(false)}>
-        <View style={styles.centerOverlay}>
-          <View style={styles.listCard}>
-            <View style={styles.listHeader}>
-              <Text style={styles.listTitle}>Select Category</Text>
-              <TouchableOpacity onPress={() => setCategoryPickerOpen(false)}>
-                <Text style={{fontSize:28, fontWeight:'bold', color: '#FFFFFF'}}>×</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{maxHeight: 400}}>
-              {databaseCategories.length === 0 ? (
-                <View style={styles.listItem}>
-                  <Text style={styles.listItemText}>No categories found. Create one first.</Text>
-                </View>
-              ) : (
-                databaseCategories.map(category => (
-                  <TouchableOpacity 
-                    key={category.category_id} 
-                    style={[
-                      styles.listItem,
-                      selectedCategoryId === category.category_id && {backgroundColor: '#ECFEFF'}
-                    ]} 
-                    onPress={() => { 
-                      setSelectedCategoryId(category.category_id); 
-                      setProductCategory(category.categoryName); // Auto-fill product category with selected database category name
-                      setCategoryPickerOpen(false);
-                      console.log('Selected category:', category.categoryName, 'ID:', category.category_id);
-                    }}
-                  >
-                    <Text style={styles.listItemText}>
-                      {category.categoryName}
-                      {category.businessCategory && ` (${category.businessCategory})`}
-                    </Text>
-                    {selectedCategoryId === category.category_id && (
-                      <Text style={{color: '#e61580', fontWeight: 'bold', marginLeft: 8}}>✓</Text>
-                    )}
-                  </TouchableOpacity>
-                ))
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
 
 
@@ -1653,11 +1420,11 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
           <View style={styles.listCard}>
 
-            <View style={styles.listHeader}> 
+            <View style={styles.listHeader}>
 
               <Text style={styles.listTitle}>Select Colors</Text>
 
-              <TouchableOpacity onPress={() => setColorPickerOpen(false)}><Text style={{fontSize:28, fontWeight:'bold'}}>×</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setColorPickerOpen(false)}><Text style={{ fontSize: 28, fontWeight: 'bold' }}>ÃƒÆ’Ã¢â‚¬â€</Text></TouchableOpacity>
 
             </View>
 
@@ -1665,7 +1432,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
               {[
 
-                'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'Pink', 'Black', 'White', 
+                'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'Pink', 'Black', 'White',
 
                 'Gray', 'Brown', 'Beige', 'Navy', 'Maroon', 'Teal', 'Cyan', 'Magenta', 'Lime',
 
@@ -1679,13 +1446,13 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
                 return (
 
-                  <TouchableOpacity 
+                  <TouchableOpacity
 
-                    key={item} 
+                    key={item}
 
-                    style={[styles.listItem, isSelected && styles.listItemSelected]} 
+                    style={[styles.listItem, isSelected && styles.listItemSelected]}
 
-                    onPress={() => { 
+                    onPress={() => {
 
                       if (isSelected) {
 
@@ -1719,7 +1486,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
             <View style={styles.modalFooter}>
 
-              <TouchableOpacity 
+              <TouchableOpacity
 
                 style={styles.doneButton}
 
@@ -1763,25 +1530,25 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
                 }
 
-                const res = await launchCamera({mediaType:'photo',quality:0.8});
+                const res = await launchCamera({ mediaType: 'photo', quality: 0.8 });
 
                 if (res.assets?.[0]?.uri) {
 
-                  const {fileSize, type, uri} = res.assets[0];
+                  const { fileSize, type, uri } = res.assets[0];
 
-                  if (fileSize && fileSize > 10 * 1024 * 1024) { 
+                  if (fileSize && fileSize > 10 * 1024 * 1024) {
 
-                    Alert.alert('Image too large','Please select an image less than 10MB'); 
+                    Alert.alert('Image too large', 'Please select an image less than 10MB');
 
-                    return; 
+                    return;
 
                   }
 
-                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) { 
+                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) {
 
-                    Alert.alert('Unsupported format','Use JPG, PNG, WEBP, GIF, HEIC, HEIF'); 
+                    Alert.alert('Unsupported format', 'Use JPG, PNG, WEBP, GIF, HEIC, HEIF');
 
-                    return; 
+                    return;
 
                   }
 
@@ -1801,25 +1568,25 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
               <TouchableOpacity style={styles.pickBox} onPress={async () => {
 
-                const res = await launchImageLibrary({mediaType:'photo',selectionLimit:1,quality:0.8});
+                const res = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1, quality: 0.8 });
 
                 if (res.assets?.[0]?.uri) {
 
-                  const {fileSize, type, uri} = res.assets[0];
+                  const { fileSize, type, uri } = res.assets[0];
 
-                  if (fileSize && fileSize > 10 * 1024 * 1024) { 
+                  if (fileSize && fileSize > 10 * 1024 * 1024) {
 
-                    Alert.alert('Image too large','Please select an image less than 10MB'); 
+                    Alert.alert('Image too large', 'Please select an image less than 10MB');
 
-                    return; 
+                    return;
 
                   }
 
-                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) { 
+                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) {
 
-                    Alert.alert('Unsupported format','Use JPG, PNG, WEBP, GIF, HEIC, HEIF'); 
+                    Alert.alert('Unsupported format', 'Use JPG, PNG, WEBP, GIF, HEIC, HEIF');
 
-                    return; 
+                    return;
 
                   }
 
@@ -1839,19 +1606,19 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
             </View>
 
-            <View style={{marginTop: 12}}>
+            <View style={{ marginTop: 12 }}>
 
-              <Text>{'• Make sure Image size is less than 10 MB'}</Text>
+              <Text>{'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Make sure Image size is less than 10 MB'}</Text>
 
-              <Text>{'• Supported formats: JPG, PNG, WEBP, GIF, HEIC, HEIF'}</Text>
+              <Text>{'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Supported formats: JPG, PNG, WEBP, GIF, HEIC, HEIF'}</Text>
 
-              <Text>{'• Recommended Minimum Width: 800px'}</Text>
+              <Text>{'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Recommended Minimum Width: 800px'}</Text>
 
             </View>
 
             <TouchableOpacity style={styles.modalClose} onPress={() => setSizeChartPickerOpen(false)}>
 
-              <Text style={{fontWeight:'bold', fontSize: 28}}>×</Text>
+              <Text style={{ fontWeight: 'bold', fontSize: 28 }}>ÃƒÆ’Ã¢â‚¬â€</Text>
 
             </TouchableOpacity>
 
@@ -1869,7 +1636,7 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
             <View style={styles.listHeader}>
               <Text style={styles.listTitle}>Select Collections</Text>
               <TouchableOpacity onPress={() => setCollectionPickerOpen(false)}>
-                <Text style={{fontSize: 28, fontWeight: 'bold'}}>×</Text>
+                <Text style={{ fontSize: 28, fontWeight: 'bold' }}>ÃƒÆ’Ã¢â‚¬â€</Text>
               </TouchableOpacity>
             </View>
             <ScrollView>
@@ -1944,25 +1711,25 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
                 }
 
-                const res = await launchCamera({mediaType:'photo',quality:0.8});
+                const res = await launchCamera({ mediaType: 'photo', quality: 0.8 });
 
                 if (res.assets?.[0]?.uri) {
 
-                  const {fileSize, type, uri} = res.assets[0];
+                  const { fileSize, type, uri } = res.assets[0];
 
-                  if (fileSize && fileSize > 10 * 1024 * 1024) { 
+                  if (fileSize && fileSize > 10 * 1024 * 1024) {
 
-                    Alert.alert('Image too large','Please select an image less than 10MB'); 
+                    Alert.alert('Image too large', 'Please select an image less than 10MB');
 
-                    return; 
+                    return;
 
                   }
 
-                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) { 
+                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) {
 
-                    Alert.alert('Unsupported format','Use JPG, PNG, WEBP, GIF, HEIC, HEIF'); 
+                    Alert.alert('Unsupported format', 'Use JPG, PNG, WEBP, GIF, HEIC, HEIF');
 
-                    return; 
+                    return;
 
                   }
 
@@ -1982,25 +1749,25 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
               <TouchableOpacity style={styles.pickBox} onPress={async () => {
 
-                const res = await launchImageLibrary({mediaType:'photo',selectionLimit:1,quality:0.8});
+                const res = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1, quality: 0.8 });
 
                 if (res.assets?.[0]?.uri) {
 
-                  const {fileSize, type, uri} = res.assets[0];
+                  const { fileSize, type, uri } = res.assets[0];
 
-                  if (fileSize && fileSize > 10 * 1024 * 1024) { 
+                  if (fileSize && fileSize > 10 * 1024 * 1024) {
 
-                    Alert.alert('Image too large','Please select an image less than 10MB'); 
+                    Alert.alert('Image too large', 'Please select an image less than 10MB');
 
-                    return; 
+                    return;
 
                   }
 
-                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) { 
+                  if (type && !/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(type)) {
 
-                    Alert.alert('Unsupported format','Use JPG, PNG, WEBP, GIF, HEIC, HEIF'); 
+                    Alert.alert('Unsupported format', 'Use JPG, PNG, WEBP, GIF, HEIC, HEIF');
 
-                    return; 
+                    return;
 
                   }
 
@@ -2020,19 +1787,19 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
             </View>
 
-            <View style={{marginTop: 12}}>
+            <View style={{ marginTop: 12 }}>
 
-              <Text>{'• Make sure Image size is less than 10 MB'}</Text>
+              <Text>{'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Make sure Image size is less than 10 MB'}</Text>
 
-              <Text>{'• Supported formats: JPG, PNG, WEBP, GIF, HEIC, HEIF'}</Text>
+              <Text>{'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Supported formats: JPG, PNG, WEBP, GIF, HEIC, HEIF'}</Text>
 
-              <Text>{'• Recommended Minimum Width: 800px'}</Text>
+              <Text>{'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Recommended Minimum Width: 800px'}</Text>
 
             </View>
 
             <TouchableOpacity style={styles.modalClose} onPress={() => setColorChartPickerOpen(false)}>
 
-              <Text style={{fontWeight:'bold', fontSize: 28}}>×</Text>
+              <Text style={{ fontWeight: 'bold', fontSize: 28 }}>ÃƒÆ’Ã¢â‚¬â€</Text>
 
             </TouchableOpacity>
 
@@ -2052,21 +1819,21 @@ const AddProductScreen: React.FC<AddProductScreenProps> = ({navigation, route}) 
 
 const styles = StyleSheet.create({
 
-  container: {flex: 1, backgroundColor: '#FFFFFF'},
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
 
-  header: {flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB'},
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
 
-  backButton: {width: 30},
+  backButton: { width: 30 },
 
-  headerTitle: {flex: 1, textAlign: 'center', fontWeight: 'bold', fontSize: 18, color: '#111827'},
+  headerTitle: { flex: 1, textAlign: 'center', fontWeight: 'bold', fontSize: 18, color: '#111827' },
 
-  headerRight: {width: 30},
+  headerRight: { width: 30 },
 
 
 
-  content: {padding: 16, paddingBottom: 40},
+  content: { padding: 16, paddingBottom: 40 },
 
-  imageRow: {marginBottom: 16},
+  imageRow: { marginBottom: 16 },
 
   imagesContainer: {
 
@@ -2148,84 +1915,84 @@ const styles = StyleSheet.create({
 
   },
 
-  imageHint: {color: '#6c757d', marginTop: 8, fontSize: 12},
+  imageHint: { color: '#6c757d', marginTop: 8, fontSize: 12 },
 
 
 
-  sectionLabel: {fontWeight: 'bold', color: '#111827', marginTop: 12},
+  sectionLabel: { fontWeight: 'bold', color: '#111827', marginTop: 12 },
 
-  optional: {color: '#9CA3AF', fontWeight: 'normal'},
-  required: {color: '#EF4444', fontWeight: 'bold'},
+  optional: { color: '#9CA3AF', fontWeight: 'normal' },
+  required: { color: '#EF4444', fontWeight: 'bold' },
 
-  input: {borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, marginTop: 8, color: '#111827'},
+  input: { borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, marginTop: 8, color: '#111827' },
 
-  textarea: {height: 160, textAlignVertical: 'top'},
+  textarea: { height: 160, textAlignVertical: 'top' },
 
-  helper: {color: '#9CA3AF', marginTop: 6},
+  helper: { color: '#9CA3AF', marginTop: 6 },
 
-  helperBody: {color: '#6c757d', marginTop: 6},
-
-
-
-  row2: {flexDirection: 'row', gap: 16, marginTop: 8},
-
-  boxField: {flex: 1, flexDirection: 'row', borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, overflow: 'hidden'},
-
-  boxFieldError: {borderColor: '#EF4444', borderWidth: 2},
-
-  boxLeftIcon: {width: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa', borderRightWidth: 1, borderRightColor: '#dee2e6'},
-
-  currency: {fontWeight: 'bold', color: '#111827'},
-
-  boxInput: {flex: 1, paddingHorizontal: 12, color: '#111827'},
-
-  errorText: {color: '#EF4444', fontSize: 12, marginTop: 4, marginLeft: 4},
+  helperBody: { color: '#6c757d', marginTop: 6 },
 
 
 
-  dropdown: {borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, marginTop: 12, color: '#111827'},
+  row2: { flexDirection: 'row', gap: 16, marginTop: 8 },
 
-  addSecondary: {marginTop: 10, borderWidth: 1, borderColor: '#C7F2F9', backgroundColor: '#ECFEFF', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8},
+  boxField: { flex: 1, flexDirection: 'row', borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, overflow: 'hidden' },
 
-  addSecondaryText: {color: '#e61580', fontWeight: '600'},
+  boxFieldError: { borderColor: '#EF4444', borderWidth: 2 },
 
+  boxLeftIcon: { width: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8f9fa', borderRightWidth: 1, borderRightColor: '#dee2e6' },
 
+  currency: { fontWeight: 'bold', color: '#111827' },
 
-  subTitle: {marginTop: 16, fontWeight: 'bold', color: '#111827'},
+  boxInput: { flex: 1, paddingHorizontal: 12, color: '#111827' },
 
-  uploadBtn: {marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, alignSelf: 'flex-start'},
-
-  uploadText: {color: '#111827'},
-
-  guidelineCard: {marginTop: 12, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 8},
-
-  guidelineTitle: {fontWeight: '600', marginBottom: 4, color: '#111827'},
-
-  guidelineBody: {color: '#6c757d'},
+  errorText: { color: '#EF4444', fontSize: 12, marginTop: 4, marginLeft: 4 },
 
 
 
-  sectionHeader: {marginTop: 18, fontWeight: 'bold', color: '#111827'},
+  dropdown: { borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, marginTop: 12, color: '#111827' },
+
+  addSecondary: { marginTop: 10, borderWidth: 1, borderColor: '#C7F2F9', backgroundColor: '#ECFEFF', padding: 12, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
+
+  addSecondaryText: { color: '#e61580', fontWeight: '600' },
 
 
 
-  link: {color: '#e61580', marginTop: 6},
+  subTitle: { marginTop: 16, fontWeight: 'bold', color: '#111827' },
 
-  checkRow: {flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12},
+  uploadBtn: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#dee2e6', borderRadius: 8, padding: 12, alignSelf: 'flex-start' },
 
-  checkbox: {width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center'},
+  uploadText: { color: '#111827' },
 
-  checkboxChecked: {backgroundColor: '#e61580', borderColor: '#e61580'},
+  guidelineCard: { marginTop: 12, padding: 12, backgroundColor: '#f8f9fa', borderRadius: 8 },
 
-  checkLabel: {color: '#111827'},
+  guidelineTitle: { fontWeight: '600', marginBottom: 4, color: '#111827' },
+
+  guidelineBody: { color: '#6c757d' },
 
 
 
-  submitBtn: {marginTop: 16, backgroundColor: '#e61580', padding: 14, borderRadius: 10},
+  sectionHeader: { marginTop: 18, fontWeight: 'bold', color: '#111827' },
 
-  submitBtnDisabled: {backgroundColor: '#D1D5DB'},
 
-  submitText: {textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold'},
+
+  link: { color: '#e61580', marginTop: 6 },
+
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
+
+  checkbox: { width: 18, height: 18, borderRadius: 4, borderWidth: 2, borderColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center' },
+
+  checkboxChecked: { backgroundColor: '#e61580', borderColor: '#e61580' },
+
+  checkLabel: { color: '#111827' },
+
+
+
+  submitBtn: { marginTop: 16, backgroundColor: '#e61580', padding: 14, borderRadius: 10 },
+
+  submitBtnDisabled: { backgroundColor: '#D1D5DB' },
+
+  submitText: { textAlign: 'center', color: '#FFFFFF', fontWeight: 'bold' },
 
   secondaryBtn: {
     backgroundColor: '#FFFFFF',
@@ -2240,32 +2007,32 @@ const styles = StyleSheet.create({
 
   // Modals
 
-  centerOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 16},
+  centerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 16 },
 
-  sheetCard: {backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, width: '100%'},
+  sheetCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, width: '100%' },
 
-  pickRow: {flexDirection:'row', justifyContent: 'space-between'},
+  pickRow: { flexDirection: 'row', justifyContent: 'space-between' },
 
-  pickBox: {flex:1, borderWidth:1, borderColor:'#E5E7EB', borderRadius:8, padding:16, alignItems:'center', marginHorizontal:6},
+  pickBox: { flex: 1, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, padding: 16, alignItems: 'center', marginHorizontal: 6 },
 
-  pickLabel: {marginTop:8, fontWeight:'600', color:'#111827'},
+  pickLabel: { marginTop: 8, fontWeight: '600', color: '#111827' },
 
-  modalClose: {position:'absolute', top:8, right:12},
+  modalClose: { position: 'absolute', top: 8, right: 12 },
 
 
 
-  listCard: {backgroundColor:'#FFFFFF', borderRadius:12, paddingBottom:8, width:'100%', maxHeight:'80%'},
+  listCard: { backgroundColor: '#FFFFFF', borderRadius: 12, paddingBottom: 8, width: '100%', maxHeight: '80%' },
 
-  listHeader: {flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:16, paddingVertical:14, backgroundColor:'#111827', borderTopLeftRadius:12, borderTopRightRadius:12},
+  listHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#111827', borderTopLeftRadius: 12, borderTopRightRadius: 12 },
 
-  listTitle: {color:'#FFFFFF', fontWeight:'600'},
+  listTitle: { color: '#FFFFFF', fontWeight: '600' },
 
-  listItem: {paddingHorizontal:16, paddingVertical:14, borderBottomWidth:1, borderBottomColor:'#dee2e6', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
-  listItemText: {color:'#111827', fontSize:16, flex: 1},
-  selectedListItem: {backgroundColor: '#ECFEFF'},
-  selectedListItemText: {color: '#e61580', fontWeight: '600'},
-  checkmark: {color: '#e61580', fontWeight: 'bold', fontSize: 18},
-  emptyText: {padding: 20, textAlign: 'center', color: '#6c757d'},
+  listItem: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#dee2e6', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  listItemText: { color: '#111827', fontSize: 16, flex: 1 },
+  selectedListItem: { backgroundColor: '#ECFEFF' },
+  selectedListItemText: { color: '#e61580', fontWeight: '600' },
+  checkmark: { color: '#e61580', fontWeight: 'bold', fontSize: 18 },
+  emptyText: { padding: 20, textAlign: 'center', color: '#6c757d' },
 
 
 
@@ -2273,50 +2040,50 @@ const styles = StyleSheet.create({
 
   // Size Chart Preview
 
-  sizeChartPreview: {marginTop: 12, position: 'relative', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#dee2e6'},
+  sizeChartPreview: { marginTop: 12, position: 'relative', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#dee2e6' },
 
-  sizeChartImage: {width: '100%', height: 200, backgroundColor: '#f8f9fa'},
+  sizeChartImage: { width: '100%', height: 200, backgroundColor: '#f8f9fa' },
 
-  removeSizeChartBtn: {position: 'absolute', top: 8, right: 8, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 4},
+  removeSizeChartBtn: { position: 'absolute', top: 8, right: 8, backgroundColor: '#FFFFFF', borderRadius: 20, padding: 4 },
 
 
 
   // Selected Colors
 
-  selectedColorsContainer: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 8},
+  selectedColorsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 8 },
 
-  colorChip: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFEFF', borderWidth: 1, borderColor: '#C7F2F9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6},
+  colorChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFEFF', borderWidth: 1, borderColor: '#C7F2F9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
 
-  colorChipText: {color: '#e61580', fontWeight: '600', fontSize: 14},
+  colorChipText: { color: '#e61580', fontWeight: '600', fontSize: 14 },
 
-  colorChipRemove: {marginLeft: 4},
+  colorChipRemove: { marginLeft: 4 },
 
 
 
   // Color Selection Modal
 
-  listItemSelected: {backgroundColor: '#ECFEFF', borderLeftWidth: 3, borderLeftColor: '#e61580'},
+  listItemSelected: { backgroundColor: '#ECFEFF', borderLeftWidth: 3, borderLeftColor: '#e61580' },
 
-  listItemTextSelected: {color: '#e61580', fontWeight: '600'},
+  listItemTextSelected: { color: '#e61580', fontWeight: '600' },
 
-  modalFooter: {padding: 16, borderTopWidth: 1, borderTopColor: '#dee2e6'},
+  modalFooter: { padding: 16, borderTopWidth: 1, borderTopColor: '#dee2e6' },
 
-  doneButton: {backgroundColor: '#e61580', padding: 14, borderRadius: 8, alignItems: 'center'},
+  doneButton: { backgroundColor: '#e61580', padding: 14, borderRadius: 8, alignItems: 'center' },
 
-  doneButtonText: {color: '#FFFFFF', fontWeight: 'bold', fontSize: 16},
+  doneButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
 
 
   // Selected Collections
-  selectedCollectionsContainer: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 8},
-  collectionChip: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFEFF', borderWidth: 1, borderColor: '#C7F2F9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6},
-  collectionChipText: {color: '#e61580', fontWeight: '600', fontSize: 14},
-  collectionChipRemove: {marginLeft: 4},
-  
+  selectedCollectionsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 8 },
+  collectionChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFEFF', borderWidth: 1, borderColor: '#C7F2F9', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
+  collectionChipText: { color: '#e61580', fontWeight: '600', fontSize: 14 },
+  collectionChipRemove: { marginLeft: 4 },
+
   // Empty Collections
-  emptyCollectionsContainer: {padding: 32, alignItems: 'center'},
-  emptyCollectionsText: {color: '#6c757d', marginBottom: 16, fontSize: 16},
-  addCollectionButton: {flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFEFF', borderWidth: 1, borderColor: '#C7F2F9', borderRadius: 8, padding: 12, gap: 8},
-  addCollectionButtonText: {color: '#e61580', fontWeight: '600'},
+  emptyCollectionsContainer: { padding: 32, alignItems: 'center' },
+  emptyCollectionsText: { color: '#6c757d', marginBottom: 16, fontSize: 16 },
+  addCollectionButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFEFF', borderWidth: 1, borderColor: '#C7F2F9', borderRadius: 8, padding: 12, gap: 8 },
+  addCollectionButtonText: { color: '#e61580', fontWeight: '600' },
 });
 
 

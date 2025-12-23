@@ -35,7 +35,7 @@ const ConfirmOrder = () => {
   const { storeSlug, currentStore, getStoreId } = useStore();
   const { user, isAuthenticated, refreshUser } = useAuth();
   const { isDarkMode } = useTheme();
-  
+
   const [address, setAddress] = useState(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -51,8 +51,8 @@ const ConfirmOrder = () => {
   const itemTotal = getCartTotal();
   const deliveryFee = 0; // Free delivery
   const codCharges = 10; // Cash on Delivery charges
-  const orderTotal = paymentMethod === 'COD' 
-    ? itemTotal + deliveryFee + codCharges 
+  const orderTotal = paymentMethod === 'COD'
+    ? itemTotal + deliveryFee + codCharges
     : itemTotal + deliveryFee;
 
   // Load address from location state, database, or localStorage
@@ -60,9 +60,9 @@ const ConfirmOrder = () => {
     const loadAddresses = async () => {
       setIsLoading(true);
       console.log('ConfirmOrder: Loading addresses, location.state:', location.state);
-      
+
       const addresses = [];
-      
+
       // 1. Priority: Address from location state (just selected from checkout)
       if (location.state?.address) {
         console.log('ConfirmOrder: Address found in location.state:', location.state.address);
@@ -74,17 +74,17 @@ const ConfirmOrder = () => {
         setIsAddressSaved(false);
         // Don't return early - continue to load other saved addresses
       }
-      
+
       // 2. Load from database if user is authenticated
       if (isAuthenticated && user?.phone) {
         try {
           const token = user.token || localStorage.getItem('authToken');
           const userId = user.id || user.userId;
-          
+
           // Get user data from database
           const userData = await getUserByPhone(user.phone, token);
           console.log('ConfirmOrder: User data from database:', userData);
-          
+
           // Add address from User table
           if (userData && (userData.pincode || userData.flatOrHouseNo || userData.areaOrStreet)) {
             const dbAddress = {
@@ -101,41 +101,41 @@ const ConfirmOrder = () => {
               source: 'database'
             };
             addresses.push(dbAddress);
-            
+
             // Set as current address if no address is set yet
             if (!address) {
               setAddress(dbAddress);
               // Mark as saved since it's from database
               setIsAddressSaved(true);
             }
-            
+
             // If address from database matches current address, mark as saved
-            if (address && 
-                address.pincode === dbAddress.pincode &&
-                (address.houseNumber || address.flatOrHouseNo) === dbAddress.houseNumber &&
-                (address.areaStreet || address.areaOrStreet) === dbAddress.areaStreet) {
+            if (address &&
+              address.pincode === dbAddress.pincode &&
+              (address.houseNumber || address.flatOrHouseNo) === dbAddress.houseNumber &&
+              (address.areaStreet || address.areaOrStreet) === dbAddress.areaStreet) {
               setIsAddressSaved(true);
             }
-            
+
             // Mark database address as saved (can be reused)
             dbAddress.isSaved = true;
           }
-          
+
           // Extract unique addresses from order history
           if (userId) {
             try {
               const orders = await getUserOrders(userId);
               console.log('ConfirmOrder: User orders from database:', orders);
-              
+
               if (Array.isArray(orders) && orders.length > 0) {
                 // Extract unique addresses from orders
                 const orderAddresses = new Map();
-                
+
                 orders.forEach(order => {
                   if (order.address && typeof order.address === 'string' && order.address.trim()) {
                     // Parse address string (format: "name, house, area, city, state, pincode")
                     const addressParts = order.address.split(',').map(s => s.trim()).filter(Boolean);
-                    
+
                     if (addressParts.length >= 4) {
                       // Try to parse the address string
                       // Common format: "name, house, area, city, state, pincode"
@@ -150,22 +150,22 @@ const ConfirmOrder = () => {
                         source: 'order_history',
                         orderId: order.ordersId || order.id
                       };
-                      
+
                       // Create a unique key for this address
                       const addressKey = `${parsedAddress.pincode}-${parsedAddress.houseNumber}-${parsedAddress.areaStreet}`;
-                      
+
                       // Only add if not already in map and not duplicate of existing addresses
                       if (!orderAddresses.has(addressKey)) {
                         const isDuplicate = addresses.some(addr => {
                           const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
                           const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
                           const addrPincode = addr.pincode || '';
-                          
+
                           return addrPincode === parsedAddress.pincode &&
-                                 addrHouseNumber === parsedAddress.houseNumber &&
-                                 addrAreaStreet === parsedAddress.areaStreet;
+                            addrHouseNumber === parsedAddress.houseNumber &&
+                            addrAreaStreet === parsedAddress.areaStreet;
                         });
-                        
+
                         if (!isDuplicate) {
                           orderAddresses.set(addressKey, parsedAddress);
                         }
@@ -173,7 +173,7 @@ const ConfirmOrder = () => {
                     }
                   }
                 });
-                
+
                 // Add unique addresses from orders
                 orderAddresses.forEach((orderAddr) => {
                   // Mark order history addresses as saved (can be reused)
@@ -191,7 +191,7 @@ const ConfirmOrder = () => {
           console.error('ConfirmOrder: Error loading address from database:', error);
         }
       }
-      
+
       // 3. Load saved addresses from localStorage (user-specific, up to 5)
       if (isAuthenticated && user?.phone) {
         try {
@@ -200,24 +200,24 @@ const ConfirmOrder = () => {
           if (savedAddressesStr) {
             const parsedAddresses = JSON.parse(savedAddressesStr);
             console.log('ConfirmOrder: Found saved addresses for user:', parsedAddresses.length);
-            
+
             if (Array.isArray(parsedAddresses)) {
               parsedAddresses.forEach(addr => {
                 // Normalize field names for comparison
                 const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
                 const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
                 const addrPincode = addr.pincode || '';
-                
+
                 const isDuplicate = addresses.some(existing => {
                   const existingHouseNumber = existing.houseNumber || existing.flatOrHouseNo || '';
                   const existingAreaStreet = existing.areaStreet || existing.areaOrStreet || '';
                   const existingPincode = existing.pincode || '';
-                  
+
                   return existingPincode === addrPincode &&
-                         existingHouseNumber === addrHouseNumber &&
-                         existingAreaStreet === addrAreaStreet;
+                    existingHouseNumber === addrHouseNumber &&
+                    existingAreaStreet === addrAreaStreet;
                 });
-                
+
                 if (!isDuplicate) {
                   // Mark localStorage saved addresses as saved (can be reused)
                   addresses.push({ ...addr, source: 'saved', isSaved: true });
@@ -229,47 +229,47 @@ const ConfirmOrder = () => {
           console.error('ConfirmOrder: Error loading saved addresses:', e);
         }
       }
-      
+
       // 4. Load from localStorage selectedAddress (fallback)
       try {
         const savedAddressStr = localStorage.getItem('selectedAddress');
         if (savedAddressStr) {
           const parsedAddress = JSON.parse(savedAddressStr);
           console.log('ConfirmOrder: Address found in localStorage (selectedAddress):', parsedAddress);
-          
+
           // Only add if it's different from existing addresses
           const parsedHouseNumber = parsedAddress.houseNumber || parsedAddress.flatOrHouseNo || '';
           const parsedAreaStreet = parsedAddress.areaStreet || parsedAddress.areaOrStreet || '';
           const parsedPincode = parsedAddress.pincode || '';
-          
+
           const isDuplicate = addresses.some(addr => {
             const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
             const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
             const addrPincode = addr.pincode || '';
-            
+
             return addrPincode === parsedPincode &&
-                   addrHouseNumber === parsedHouseNumber &&
-                   addrAreaStreet === parsedAreaStreet;
+              addrHouseNumber === parsedHouseNumber &&
+              addrAreaStreet === parsedAreaStreet;
           });
-          
+
           if (!isDuplicate) {
             addresses.push({ ...parsedAddress, source: 'localStorage' });
           }
-          
+
           // Set as current address if no address is set yet
           if (!address) {
             setAddress(parsedAddress);
             // Mark as saved since it's from localStorage
             setIsAddressSaved(true);
           }
-          
+
           // Mark localStorage address as saved (can be reused)
           parsedAddress.isSaved = true;
         }
       } catch (e) {
         console.error('ConfirmOrder: Error loading address from localStorage:', e);
       }
-      
+
       // 5. Check for additional saved addresses in localStorage (stored as 'addresses' array - legacy)
       try {
         // Check 'addresses' key (used by Checkout page)
@@ -278,31 +278,31 @@ const ConfirmOrder = () => {
           const parsedAddresses = JSON.parse(addressesStr);
           if (Array.isArray(parsedAddresses)) {
             console.log('ConfirmOrder: Found addresses array in localStorage:', parsedAddresses.length, 'addresses');
-            
+
             // Filter addresses by current user's phone if authenticated
             const userPhone = isAuthenticated && user?.phone ? user.phone : null;
-            const userAddresses = userPhone 
-              ? parsedAddresses.filter(addr => 
-                  (addr.userPhone === userPhone || addr.mobileNumber === userPhone || !addr.userPhone)
-                )
+            const userAddresses = userPhone
+              ? parsedAddresses.filter(addr =>
+                (addr.userPhone === userPhone || addr.mobileNumber === userPhone || !addr.userPhone)
+              )
               : parsedAddresses;
-            
+
             userAddresses.forEach(addr => {
               // Normalize field names for comparison
               const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
               const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
               const addrPincode = addr.pincode || '';
-              
+
               const isDuplicate = addresses.some(existing => {
                 const existingHouseNumber = existing.houseNumber || existing.flatOrHouseNo || '';
                 const existingAreaStreet = existing.areaStreet || existing.areaOrStreet || '';
                 const existingPincode = existing.pincode || '';
-                
+
                 return existingPincode === addrPincode &&
-                       existingHouseNumber === addrHouseNumber &&
-                       existingAreaStreet === addrAreaStreet;
+                  existingHouseNumber === addrHouseNumber &&
+                  existingAreaStreet === addrAreaStreet;
               });
-              
+
               if (!isDuplicate) {
                 // Normalize the address object before adding
                 const normalizedAddr = {
@@ -317,30 +317,30 @@ const ConfirmOrder = () => {
             });
           }
         }
-        
+
         // Also check 'savedAddresses' key (legacy/alternative storage)
         const savedAddressesStr = localStorage.getItem('savedAddresses');
         if (savedAddressesStr) {
           const parsedAddresses = JSON.parse(savedAddressesStr);
           if (Array.isArray(parsedAddresses)) {
             console.log('ConfirmOrder: Found savedAddresses array in localStorage:', parsedAddresses.length, 'addresses');
-            
+
             parsedAddresses.forEach(addr => {
               // Normalize field names for comparison
               const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
               const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
               const addrPincode = addr.pincode || '';
-              
+
               const isDuplicate = addresses.some(existing => {
                 const existingHouseNumber = existing.houseNumber || existing.flatOrHouseNo || '';
                 const existingAreaStreet = existing.areaStreet || existing.areaOrStreet || '';
                 const existingPincode = existing.pincode || '';
-                
+
                 return existingPincode === addrPincode &&
-                       existingHouseNumber === addrHouseNumber &&
-                       existingAreaStreet === addrAreaStreet;
+                  existingHouseNumber === addrHouseNumber &&
+                  existingAreaStreet === addrAreaStreet;
               });
-              
+
               if (!isDuplicate) {
                 // Normalize the address object before adding
                 const normalizedAddr = {
@@ -357,37 +357,37 @@ const ConfirmOrder = () => {
       } catch (e) {
         console.error('ConfirmOrder: Error loading saved addresses array:', e);
       }
-      
+
       console.log('ConfirmOrder: Total addresses loaded:', addresses.length);
       console.log('ConfirmOrder: Addresses:', addresses);
-      
+
       // Debug: Check what's in localStorage
       console.log('ConfirmOrder: localStorage.getItem("addresses"):', localStorage.getItem('addresses'));
       console.log('ConfirmOrder: localStorage.getItem("selectedAddress"):', localStorage.getItem('selectedAddress'));
       console.log('ConfirmOrder: localStorage.getItem("savedAddresses"):', localStorage.getItem('savedAddresses'));
-      
+
       // Ensure current address is in the addresses list if it exists
       if (address && addresses.length > 0) {
         const currentHouseNumber = address.houseNumber || address.flatOrHouseNo || '';
         const currentAreaStreet = address.areaStreet || address.areaOrStreet || '';
         const currentPincode = address.pincode || '';
-        
+
         const isCurrentInList = addresses.some(addr => {
           const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
           const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
           const addrPincode = addr.pincode || '';
-          
+
           return currentPincode === addrPincode &&
-                 currentHouseNumber === addrHouseNumber &&
-                 currentAreaStreet === addrAreaStreet;
+            currentHouseNumber === addrHouseNumber &&
+            currentAreaStreet === addrAreaStreet;
         });
-        
+
         if (!isCurrentInList) {
           console.log('ConfirmOrder: Current address not in list, adding it');
           addresses.push({ ...address, source: 'current' });
         }
       }
-      
+
       // Check if current address matches database address (already saved)
       if (address && isAuthenticated && user?.phone) {
         const dbAddress = addresses.find(addr => addr.source === 'database');
@@ -395,23 +395,23 @@ const ConfirmOrder = () => {
           const currentHouseNumber = address.houseNumber || address.flatOrHouseNo || '';
           const currentAreaStreet = address.areaStreet || address.areaOrStreet || '';
           const currentPincode = address.pincode || '';
-          
+
           const dbHouseNumber = dbAddress.houseNumber || dbAddress.flatOrHouseNo || '';
           const dbAreaStreet = dbAddress.areaStreet || dbAddress.areaOrStreet || '';
           const dbPincode = dbAddress.pincode || '';
-          
+
           if (currentPincode === dbPincode &&
-              currentHouseNumber === dbHouseNumber &&
-              currentAreaStreet === dbAreaStreet) {
+            currentHouseNumber === dbHouseNumber &&
+            currentAreaStreet === dbAreaStreet) {
             console.log('ConfirmOrder: Current address matches database address - already saved');
             setIsAddressSaved(true);
           }
         }
       }
-      
+
       // Set saved addresses state
       setSavedAddresses(addresses);
-      
+
       // If we have addresses but no current address is set, set the first one
       if (addresses.length > 0 && !address) {
         console.log('ConfirmOrder: Setting first address as current:', addresses[0]);
@@ -422,29 +422,29 @@ const ConfirmOrder = () => {
           setIsAddressSaved(true);
         }
       }
-      
+
       // If current address exists and is from saved sources, mark as saved
       if (address) {
         const currentHouseNumber = address.houseNumber || address.flatOrHouseNo || '';
         const currentAreaStreet = address.areaStreet || address.areaOrStreet || '';
         const currentPincode = address.pincode || '';
-        
+
         const isFromSavedSource = addresses.some(addr => {
           const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
           const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
           const addrPincode = addr.pincode || '';
-          
+
           return addrPincode === currentPincode &&
-                 addrHouseNumber === currentHouseNumber &&
-                 addrAreaStreet === currentAreaStreet &&
-                 (addr.isSaved || addr.source === 'database' || addr.source === 'saved' || addr.source === 'order_history');
+            addrHouseNumber === currentHouseNumber &&
+            addrAreaStreet === currentAreaStreet &&
+            (addr.isSaved || addr.source === 'database' || addr.source === 'saved' || addr.source === 'order_history');
         });
-        
+
         if (isFromSavedSource) {
           setIsAddressSaved(true);
         }
       }
-      
+
       if (addresses.length === 0) {
         console.log('ConfirmOrder: No addresses found');
         console.log('ConfirmOrder: Debug - isAuthenticated:', isAuthenticated, 'user:', user);
@@ -452,10 +452,10 @@ const ConfirmOrder = () => {
         console.log('ConfirmOrder: Found', addresses.length, 'address(es). Current address:', address);
         console.log('ConfirmOrder: savedAddresses state will be set to:', addresses);
       }
-      
+
       setIsLoading(false);
     };
-    
+
     loadAddresses();
   }, [location.state, isAuthenticated, user]);
 
@@ -483,12 +483,12 @@ const ConfirmOrder = () => {
 
       // Create a unique key for this address to prevent duplicate updates
       const addressKey = `${address.pincode}-${address.houseNumber || address.flatOrHouseNo}-${address.areaStreet || address.areaOrStreet}`;
-      
+
       // Check if we've already attempted to update this address
       if (autoUpdateAttempted.current.has(addressKey)) {
         return;
       }
-      
+
       // Mark this address as attempted
       autoUpdateAttempted.current.add(addressKey);
 
@@ -496,26 +496,26 @@ const ConfirmOrder = () => {
       try {
         const token = user.token || localStorage.getItem('authToken');
         const userData = await getUserByPhone(user.phone, token);
-        
+
         if (userData && (userData.pincode || userData.flatOrHouseNo || userData.areaOrStreet)) {
           const dbPincode = userData.pincode || '';
           const dbHouseNumber = userData.flatOrHouseNo || '';
           const dbAreaStreet = userData.areaOrStreet || '';
-          
+
           const currentPincode = address.pincode || '';
           const currentHouseNumber = address.houseNumber || address.flatOrHouseNo || '';
           const currentAreaStreet = address.areaStreet || address.areaOrStreet || '';
-          
+
           // Check if address is different from database
-          const isDifferent = 
+          const isDifferent =
             dbPincode !== currentPincode ||
             dbHouseNumber !== currentHouseNumber ||
             dbAreaStreet !== currentAreaStreet;
-          
+
           if (isDifferent) {
             console.log('🔄 Address changed, automatically updating in database...');
             setIsSavingAddress(true);
-            
+
             try {
               // Map address to database fields
               const addressData = {
@@ -533,9 +533,9 @@ const ConfirmOrder = () => {
               };
 
               const updatedUser = await updateUserAddressByPhone(userPhone, addressData, token);
-              
+
               console.log('✅ Address automatically updated in database:', updatedUser);
-              
+
               // Refresh user object
               if (updatedUser && refreshUser) {
                 try {
@@ -544,7 +544,7 @@ const ConfirmOrder = () => {
                   console.warn('Could not refresh user object:', refreshError);
                 }
               }
-              
+
               // Update current address with database response
               const updatedAddress = {
                 ...address,
@@ -554,15 +554,15 @@ const ConfirmOrder = () => {
                 isSaved: true,
                 updatedAt: new Date().toISOString()
               };
-              
+
               setAddress(updatedAddress);
               localStorage.setItem('selectedAddress', JSON.stringify(updatedAddress));
-              
+
               // Update in saved addresses list
               const userAddressesKey = `userAddresses_${userPhone}`;
               const existingAddresses = JSON.parse(localStorage.getItem(userAddressesKey) || '[]');
               const addressKey = `${address.pincode}-${address.houseNumber || address.flatOrHouseNo}-${address.areaStreet || address.areaOrStreet}`;
-              
+
               const updatedSavedAddresses = existingAddresses.map(addr => {
                 const addrKey = `${addr.pincode}-${addr.houseNumber || addr.flatOrHouseNo}-${addr.areaStreet || addr.areaOrStreet}`;
                 if (addrKey === addressKey) {
@@ -570,7 +570,7 @@ const ConfirmOrder = () => {
                 }
                 return addr;
               });
-              
+
               // If address wasn't in saved list, add it
               if (!existingAddresses.some(addr => {
                 const addrKey = `${addr.pincode}-${addr.houseNumber || addr.flatOrHouseNo}-${addr.areaStreet || addr.areaOrStreet}`;
@@ -578,40 +578,40 @@ const ConfirmOrder = () => {
               })) {
                 updatedSavedAddresses.push(updatedAddress);
               }
-              
+
               localStorage.setItem(userAddressesKey, JSON.stringify(updatedSavedAddresses));
-              
+
               // Update saved addresses state
               setSavedAddresses(prev => {
                 const updated = prev.map(addr => {
                   const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
                   const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
                   const addrPincode = addr.pincode || '';
-                  
+
                   if (addrPincode === address.pincode &&
-                      addrHouseNumber === (address.houseNumber || address.flatOrHouseNo) &&
-                      addrAreaStreet === (address.areaStreet || address.areaOrStreet)) {
+                    addrHouseNumber === (address.houseNumber || address.flatOrHouseNo) &&
+                    addrAreaStreet === (address.areaStreet || address.areaOrStreet)) {
                     return updatedAddress;
                   }
                   return addr;
                 });
-                
+
                 // If address wasn't in state, add it
                 if (!updated.some(addr => {
                   const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
                   const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
                   const addrPincode = addr.pincode || '';
-                  
+
                   return addrPincode === address.pincode &&
-                         addrHouseNumber === (address.houseNumber || address.flatOrHouseNo) &&
-                         addrAreaStreet === (address.areaStreet || address.areaOrStreet);
+                    addrHouseNumber === (address.houseNumber || address.flatOrHouseNo) &&
+                    addrAreaStreet === (address.areaStreet || address.areaOrStreet);
                 })) {
                   updated.push(updatedAddress);
                 }
-                
+
                 return updated;
               });
-              
+
               setIsAddressSaved(true);
               console.log('✅ Address automatically updated and marked as saved');
             } catch (error) {
@@ -673,7 +673,7 @@ const ConfirmOrder = () => {
           clearInterval(checkScript);
         }
       }, 100);
-      
+
       // Timeout after 10 seconds
       setTimeout(() => {
         clearInterval(checkScript);
@@ -685,7 +685,7 @@ const ConfirmOrder = () => {
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
-    
+
     script.onerror = () => {
       console.error('Failed to load Razorpay script');
     };
@@ -732,7 +732,7 @@ const ConfirmOrder = () => {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
       }
-      
+
       if (!window.Razorpay) {
         throw new Error('Razorpay script not loaded yet. Please refresh the page and try again.');
       }
@@ -746,7 +746,7 @@ const ConfirmOrder = () => {
       // Try without /api first (backend controller is at /payment)
       let createOrderApi = `${API_BASE}/payment/create-razorpay-order`;
       console.log('Creating Razorpay order:', { url: createOrderApi, orderId, amount });
-      
+
       let orderResponse = await fetch(createOrderApi, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -799,7 +799,7 @@ const ConfirmOrder = () => {
             // Step 2: Verify payment with backend
             let callbackUrl = `${API_BASE}/payment/razorpay-callback`;
             console.log('Verifying payment:', { url: callbackUrl, orderId });
-            
+
             let callbackResponse = await fetch(callbackUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -846,15 +846,15 @@ const ConfirmOrder = () => {
             // Navigate to success page
             const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
             const successPath = getRoute(ROUTES.ORDER_SUCCESS, resolvedSlug);
-            navigate(successPath, { 
-              state: { 
+            navigate(successPath, {
+              state: {
                 orderId: orderId,
                 address: address,
                 contactInfo: {
                   phone: address.mobileNumber || user.phone,
                   email: address.emailId || user.email
                 }
-              } 
+              }
             });
           } catch (err) {
             console.error('Payment verification error:', err);
@@ -868,13 +868,13 @@ const ConfirmOrder = () => {
             setIsProcessingPayment(false);
             setIsPlacingOrder(false);
             setError('Payment was cancelled. You can try again.');
-            
+
             // Mark payment as FAILED in database
             try {
               const API_BASE = getBackendUrl();
               const markFailedUrl = `${API_BASE}/payment/mark-failed`;
               console.log('Marking payment as failed:', { url: markFailedUrl, orderId });
-              
+
               let response = await fetch(markFailedUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -943,7 +943,7 @@ const ConfirmOrder = () => {
     try {
       const formattedAddress = formatAddress();
       const mobileNumber = address.mobileNumber || user.phone;
-      
+
       if (!mobileNumber) {
         throw new Error('Mobile number is required');
       }
@@ -956,17 +956,17 @@ const ConfirmOrder = () => {
 
       // Get storeId from multiple sources to ensure it's not null
       let storeId = currentStore?.storeId || currentStore?.id || null;
-      
+
       // Try to get storeId from cart items if currentStore doesn't have it
       if (!storeId && cart.length > 0) {
         storeId = cart[0]?.storeId || null;
       }
-      
+
       // Try to get storeId from StoreContext's getStoreId method
       if (!storeId && getStoreId) {
         storeId = getStoreId() || null;
       }
-      
+
       // If we have a storeSlug but no storeId, fetch the store to get storeId
       if (!storeId && storeSlug) {
         try {
@@ -978,7 +978,7 @@ const ConfirmOrder = () => {
           console.warn('Could not fetch store by slug:', e);
         }
       }
-      
+
       // Ensure sellerId is a number, not a string
       let sellerId = cart[0]?.sellerId || null;
       if (sellerId) {
@@ -987,7 +987,7 @@ const ConfirmOrder = () => {
           sellerId = null;
         }
       }
-      
+
       // Validate storeId is not null before proceeding
       if (!storeId) {
         throw new Error('Store ID is required to place an order. Please ensure you are shopping from a valid store page.');
@@ -1013,13 +1013,13 @@ const ConfirmOrder = () => {
         console.log('Ensuring cart exists in backend for user:', user.userId || user.id);
         const backendCart = await getCart(user.userId || user.id);
         console.log('Backend cart verified:', backendCart);
-        
+
         // Extract storeId from backend cart if we don't have it yet
         if (!storeId && backendCart?.storeId) {
           storeId = backendCart.storeId;
           console.log('Found storeId from backend cart:', storeId);
         }
-        
+
         // If still no storeId, try to extract from cart items' products
         if (!storeId && backendItems.length > 0) {
           const firstItem = backendItems[0];
@@ -1027,14 +1027,16 @@ const ConfirmOrder = () => {
           // But since Product model doesn't have direct storeId, we'll rely on other sources
           console.log('Checking cart items for storeId...');
         }
-        
+
         // Check if backend cart has items
         const backendItems = backendCart?.items || backendCart?.orderItems || [];
         console.log('Backend cart items count:', backendItems.length, 'Frontend cart items count:', cart.length);
-        
+
         // If backend cart is empty but frontend has items, sync them
         if (backendItems.length === 0 && cart.length > 0) {
           console.log('Backend cart is empty, syncing frontend cart items to backend...');
+          let syncedCount = 0;
+
           for (const item of cart) {
             const productId = item.productId || item.id;
             const quantity = item.quantity || 1;
@@ -1042,47 +1044,64 @@ const ConfirmOrder = () => {
               try {
                 await addToCartAPI(user.userId || user.id, productId, quantity);
                 console.log('Synced item to backend:', { productId, quantity });
+                syncedCount++;
+                // Small delay to avoid overwhelming backend
+                await new Promise(resolve => setTimeout(resolve, 100));
               } catch (syncError) {
                 console.error('Error syncing item to backend:', syncError);
-                // Continue with other items
+                // Try one more time
+                try {
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  await addToCartAPI(user.userId || user.id, productId, quantity);
+                  console.log('Retry successful for item:', { productId, quantity });
+                  syncedCount++;
+                } catch (retryError) {
+                  console.error('Retry failed for item:', retryError);
+                }
               }
             }
           }
-          
+
+          console.log(`Synced ${syncedCount} out of ${cart.length} items to backend`);
+
+          // Wait a bit for backend to process
+          await new Promise(resolve => setTimeout(resolve, 500));
+
           // Verify cart again after syncing
           const updatedBackendCart = await getCart(user.userId || user.id);
           const updatedItems = updatedBackendCart?.items || updatedBackendCart?.orderItems || [];
-          
+
           // Try to get storeId from updated backend cart
           if (!storeId && updatedBackendCart?.storeId) {
             storeId = updatedBackendCart.storeId;
             console.log('Found storeId from updated backend cart:', storeId);
           }
-          
+
           if (updatedItems.length === 0) {
-            throw new Error('Failed to sync cart items to backend. Please try adding items to cart again.');
+            console.error('❌ Cart sync failed - backend cart is still empty after sync attempt');
+            throw new Error(`Failed to sync cart items to backend. Synced ${syncedCount} items but backend cart is still empty. Please try refreshing the page and adding items to cart again.`);
           }
-          console.log('Cart items synced successfully. Backend now has', updatedItems.length, 'items');
+          console.log('✅ Cart items synced successfully. Backend now has', updatedItems.length, 'items');
         } else if (backendItems.length === 0) {
-          throw new Error('Your cart is empty in the backend. Please add items to cart and try again.');
+          throw new Error('Your cart is empty. Please add items to cart before placing an order.');
         }
       } catch (cartError) {
         console.error('Error verifying/syncing cart:', cartError);
-        
+
         // Check if it's a connection error
         if (cartError.message && (cartError.message.includes('Failed to fetch') || cartError.message.includes('NetworkError') || cartError.message.includes('ERR_CONNECTION_REFUSED') || cartError.message.includes('Cannot connect to server'))) {
           throw new Error('Cannot connect to backend server. Please ensure the server is running on port 8080.');
         }
-        
+
         // Re-throw other errors
         throw cartError;
       }
-      
+
       // Final validation: storeId must not be null
       if (!storeId) {
         throw new Error('Store ID is required to place an order. Please ensure you are shopping from a valid store page.');
       }
-      
+
       // Ensure storeId is a number, not a string
       if (typeof storeId === 'string') {
         storeId = parseInt(storeId, 10);
@@ -1104,7 +1123,7 @@ const ConfirmOrder = () => {
             const token = user.token || localStorage.getItem('authToken');
             await updateUserAddressByPhone(userPhone, addressData, token);
             console.log('✅ Email saved to database before placing order');
-            
+
             // Refresh user object to get latest email
             if (refreshUser) {
               await refreshUser(user.userId || user.id, userPhone);
@@ -1131,15 +1150,15 @@ const ConfirmOrder = () => {
       console.log('Order.OrdersId:', order.OrdersId);
       console.log('Order.ordersId:', order.ordersId);
       console.log('Order.id:', order.id);
-      
+
       // Backend uses @JsonProperty("OrdersId") so the field is "OrdersId" (capital O, capital I)
       const orderId = order.OrdersId || order.ordersId || order.id || order.orderId;
-      
+
       if (!orderId) {
         console.error('❌ Could not find order ID in order object:', order);
         throw new Error('Order ID not found in response. Please check backend logs.');
       }
-      
+
       console.log('✅ Using order ID:', orderId, '(type:', typeof orderId, ')');
 
       // If Razorpay, initiate payment
@@ -1152,23 +1171,23 @@ const ConfirmOrder = () => {
       // For COD, navigate directly to success page
       const resolvedSlug = storeSlug || (currentStore?.storeLink ? currentStore.storeLink.split('/').filter(Boolean).pop() : null);
       const successPath = resolvedSlug ? `/store/${resolvedSlug}/order/success` : '/order/success';
-      navigate(successPath, { 
-        state: { 
+      navigate(successPath, {
+        state: {
           orderId: orderId,
           address: address,
           contactInfo: {
             phone: mobileNumber,
             email: address.emailId || user.email
           }
-        } 
+        }
       });
     } catch (error) {
       console.error('Error placing order:', error);
       console.error('Error stack:', error.stack);
-      
+
       // Provide user-friendly error messages
       let errorMessage = error.message || 'Failed to place order. Please try again.';
-      
+
       if (error.message && error.message.includes('Cannot connect to server')) {
         errorMessage = '⚠️ Backend server is not running!\n\nPlease start the backend server on port 8080 and try again.\n\nTo start the server:\n1. Navigate to the Backend directory\n2. Run: mvn spring-boot:run\n3. Wait for server to start\n4. Try placing the order again';
       } else if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
@@ -1177,7 +1196,7 @@ const ConfirmOrder = () => {
         // Keep the server error message as-is, it already has details
         errorMessage = error.message;
       }
-      
+
       setError(errorMessage);
       setIsPlacingOrder(false);
       setIsProcessingPayment(false);
@@ -1232,10 +1251,10 @@ const ConfirmOrder = () => {
 
       const token = user.token || localStorage.getItem('authToken');
       const updatedUser = await updateUserAddressByPhone(userPhone, addressData, token);
-      
+
       console.log('Address updated successfully:', updatedUser);
       console.log('📧 Updated email in response:', updatedUser.email);
-      
+
       // Refresh user object in AuthContext and localStorage
       if (updatedUser && updatedUser.email) {
         try {
@@ -1268,7 +1287,7 @@ const ConfirmOrder = () => {
           console.log('✅ User object manually updated (fallback) with new email:', updatedUserObj.email);
         }
       }
-      
+
       // Update current address with database response
       const updatedAddress = {
         ...address,
@@ -1278,15 +1297,15 @@ const ConfirmOrder = () => {
         isSaved: true,
         updatedAt: new Date().toISOString()
       };
-      
+
       setAddress(updatedAddress);
       localStorage.setItem('selectedAddress', JSON.stringify(updatedAddress));
-      
+
       // Update in saved addresses list if it exists there
       const userAddressesKey = `userAddresses_${userPhone}`;
       const existingAddresses = JSON.parse(localStorage.getItem(userAddressesKey) || '[]');
       const addressKey = `${address.pincode}-${address.houseNumber || address.flatOrHouseNo}-${address.areaStreet || address.areaOrStreet}`;
-      
+
       const updatedSavedAddresses = existingAddresses.map(addr => {
         const addrKey = `${addr.pincode}-${addr.houseNumber || addr.flatOrHouseNo}-${addr.areaStreet || addr.areaOrStreet}`;
         if (addrKey === addressKey) {
@@ -1294,7 +1313,7 @@ const ConfirmOrder = () => {
         }
         return addr;
       });
-      
+
       // If address wasn't in saved list, add it
       if (!existingAddresses.some(addr => {
         const addrKey = `${addr.pincode}-${addr.houseNumber || addr.flatOrHouseNo}-${addr.areaStreet || addr.areaOrStreet}`;
@@ -1302,39 +1321,39 @@ const ConfirmOrder = () => {
       })) {
         updatedSavedAddresses.push(updatedAddress);
       }
-      
+
       localStorage.setItem(userAddressesKey, JSON.stringify(updatedSavedAddresses));
-      
+
       // Update saved addresses state
       const allAddresses = savedAddresses.map(addr => {
         const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
         const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
         const addrPincode = addr.pincode || '';
-        
+
         if (addrPincode === address.pincode &&
-            addrHouseNumber === (address.houseNumber || address.flatOrHouseNo) &&
-            addrAreaStreet === (address.areaStreet || address.areaOrStreet)) {
+          addrHouseNumber === (address.houseNumber || address.flatOrHouseNo) &&
+          addrAreaStreet === (address.areaStreet || address.areaOrStreet)) {
           return updatedAddress;
         }
         return addr;
       });
-      
+
       // If address wasn't in state, add it
       if (!allAddresses.some(addr => {
         const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
         const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
         const addrPincode = addr.pincode || '';
-        
+
         return addrPincode === address.pincode &&
-               addrHouseNumber === (address.houseNumber || address.flatOrHouseNo) &&
-               addrAreaStreet === (address.areaStreet || address.areaOrStreet);
+          addrHouseNumber === (address.houseNumber || address.flatOrHouseNo) &&
+          addrAreaStreet === (address.areaStreet || address.areaOrStreet);
       })) {
         allAddresses.push(updatedAddress);
       }
-      
+
       setSavedAddresses(allAddresses);
       setIsAddressSaved(true);
-      
+
       alert('✅ Address updated successfully in database!');
     } catch (error) {
       console.error('Error updating address:', error);
@@ -1372,7 +1391,7 @@ const ConfirmOrder = () => {
     // Check if user already has 5 addresses saved
     const userAddressesKey = `userAddresses_${userPhone}`;
     const existingAddresses = JSON.parse(localStorage.getItem(userAddressesKey) || '[]');
-    
+
     if (existingAddresses.length >= 5) {
       alert('You can only save up to 5 addresses. Please delete an existing address first.');
       return;
@@ -1401,10 +1420,10 @@ const ConfirmOrder = () => {
 
       const token = user.token || localStorage.getItem('authToken');
       const updatedUser = await updateUserAddressByPhone(userPhone, addressData, token);
-      
+
       console.log('Address saved successfully:', updatedUser);
       console.log('📧 Updated email in response:', updatedUser.email);
-      
+
       // Refresh user object in AuthContext and localStorage
       if (updatedUser && updatedUser.email) {
         try {
@@ -1437,7 +1456,7 @@ const ConfirmOrder = () => {
           console.log('✅ User object manually updated (fallback) with new email:', updatedUserObj.email);
         }
       }
-      
+
       // Create saved address object with unique ID
       const savedAddress = {
         ...address,
@@ -1447,54 +1466,54 @@ const ConfirmOrder = () => {
         source: 'database',
         savedAt: new Date().toISOString()
       };
-      
+
       // Check if this address already exists in saved addresses
       const addressKey = `${savedAddress.pincode}-${savedAddress.houseNumber || savedAddress.flatOrHouseNo}-${savedAddress.areaStreet || savedAddress.areaOrStreet}`;
       const isDuplicate = existingAddresses.some(addr => {
         const addrKey = `${addr.pincode}-${addr.houseNumber || addr.flatOrHouseNo}-${addr.areaStreet || addr.areaOrStreet}`;
         return addrKey === addressKey;
       });
-      
+
       if (isDuplicate) {
         alert('This address is already saved!');
         setIsSavingAddress(false);
         return;
       }
-      
+
       // Add to saved addresses list (limit 5)
       const updatedSavedAddresses = [...existingAddresses, savedAddress];
       localStorage.setItem(userAddressesKey, JSON.stringify(updatedSavedAddresses));
-      
+
       // Update current address
       setAddress(savedAddress);
       localStorage.setItem('selectedAddress', JSON.stringify(savedAddress));
-      
+
       // Update saved addresses state
       const allAddresses = [...savedAddresses];
       if (!allAddresses.some(addr => {
         const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
         const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
         const addrPincode = addr.pincode || '';
-        
+
         return addrPincode === savedAddress.pincode &&
-               addrHouseNumber === (savedAddress.houseNumber || savedAddress.flatOrHouseNo) &&
-               addrAreaStreet === (savedAddress.areaStreet || savedAddress.areaOrStreet);
+          addrHouseNumber === (savedAddress.houseNumber || savedAddress.flatOrHouseNo) &&
+          addrAreaStreet === (savedAddress.areaStreet || savedAddress.areaOrStreet);
       })) {
         allAddresses.push(savedAddress);
       }
-      
+
       setSavedAddresses(allAddresses);
       setIsAddressSaved(true);
-      
+
       alert(`✅ Address saved successfully! (${updatedSavedAddresses.length}/5 addresses saved)`);
     } catch (error) {
       console.error('Error saving address:', error);
       let errorMessage = error.message || 'Failed to save address. Please try again.';
-      
+
       if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
         errorMessage = 'Cannot connect to server. Please ensure the backend server is running on port 8080.';
       }
-      
+
       setError(errorMessage);
       alert(`Failed to save address: ${errorMessage}`);
     } finally {
@@ -1520,54 +1539,54 @@ const ConfirmOrder = () => {
 
     const userAddressesKey = `userAddresses_${userPhone}`;
     const existingAddresses = JSON.parse(localStorage.getItem(userAddressesKey) || '[]');
-    
+
     // Remove the address
     const updatedAddresses = existingAddresses.filter(addr => {
       // Match by ID if available, otherwise match by address details
       if (addressToDelete.id && addr.id) {
         return addr.id !== addressToDelete.id;
       }
-      
+
       const addrKey = `${addr.pincode}-${addr.houseNumber || addr.flatOrHouseNo}-${addr.areaStreet || addr.areaOrStreet}`;
       const deleteKey = `${addressToDelete.pincode}-${addressToDelete.houseNumber || addressToDelete.flatOrHouseNo}-${addressToDelete.areaStreet || addressToDelete.areaOrStreet}`;
       return addrKey !== deleteKey;
     });
-    
+
     localStorage.setItem(userAddressesKey, JSON.stringify(updatedAddresses));
-    
+
     // Update saved addresses state
     const updatedSavedAddresses = savedAddresses.filter(addr => {
       if (addressToDelete.id && addr.id) {
         return addr.id !== addressToDelete.id;
       }
-      
+
       const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
       const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
       const addrPincode = addr.pincode || '';
-      
+
       const deleteHouseNumber = addressToDelete.houseNumber || addressToDelete.flatOrHouseNo || '';
       const deleteAreaStreet = addressToDelete.areaStreet || addressToDelete.areaOrStreet || '';
       const deletePincode = addressToDelete.pincode || '';
-      
+
       return !(addrPincode === deletePincode &&
-               addrHouseNumber === deleteHouseNumber &&
-               addrAreaStreet === deleteAreaStreet);
+        addrHouseNumber === deleteHouseNumber &&
+        addrAreaStreet === deleteAreaStreet);
     });
-    
+
     setSavedAddresses(updatedSavedAddresses);
-    
+
     // If deleted address was the current address, set first available address or null
     const currentHouseNumber = address?.houseNumber || address?.flatOrHouseNo || '';
     const currentAreaStreet = address?.areaStreet || address?.areaOrStreet || '';
     const currentPincode = address?.pincode || '';
-    
+
     const deleteHouseNumber = addressToDelete.houseNumber || addressToDelete.flatOrHouseNo || '';
     const deleteAreaStreet = addressToDelete.areaStreet || addressToDelete.areaOrStreet || '';
     const deletePincode = addressToDelete.pincode || '';
-    
+
     if (currentPincode === deletePincode &&
-        currentHouseNumber === deleteHouseNumber &&
-        currentAreaStreet === deleteAreaStreet) {
+      currentHouseNumber === deleteHouseNumber &&
+      currentAreaStreet === deleteAreaStreet) {
       // Set first available address or null
       if (updatedSavedAddresses.length > 0) {
         setAddress(updatedSavedAddresses[0]);
@@ -1578,7 +1597,7 @@ const ConfirmOrder = () => {
       }
       setIsAddressSaved(false);
     }
-    
+
     alert('Address deleted successfully!');
   };
 
@@ -1610,10 +1629,10 @@ const ConfirmOrder = () => {
         Confirm Order
       </h1>
 
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 400px', 
-        gap: '24px' 
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 400px',
+        gap: '24px'
       }}>
         {/* Left Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -1698,7 +1717,7 @@ const ConfirmOrder = () => {
                 </button>
               </div>
             </div>
-            
+
             {/* Show all saved addresses if toggle is on */}
             {showAddressList && savedAddresses.length > 0 && (
               <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1707,16 +1726,16 @@ const ConfirmOrder = () => {
                   const addrHouseNumber = addr.houseNumber || addr.flatOrHouseNo || '';
                   const addrAreaStreet = addr.areaStreet || addr.areaOrStreet || '';
                   const addrPincode = addr.pincode || '';
-                  
+
                   const currentHouseNumber = address?.houseNumber || address?.flatOrHouseNo || '';
                   const currentAreaStreet = address?.areaStreet || address?.areaOrStreet || '';
                   const currentPincode = address?.pincode || '';
-                  
-                  const isSelected = address && 
+
+                  const isSelected = address &&
                     currentPincode === addrPincode &&
                     currentHouseNumber === addrHouseNumber &&
                     currentAreaStreet === addrAreaStreet;
-                  
+
                   return (
                     <div
                       key={index}
@@ -1818,7 +1837,7 @@ const ConfirmOrder = () => {
                 })}
               </div>
             )}
-            
+
             {/* Current Selected Address - Only show when address list is NOT shown */}
             {address && !showAddressList && (
               <div style={{
@@ -1840,7 +1859,7 @@ const ConfirmOrder = () => {
                 )}
               </div>
             )}
-            
+
             {/* Auto-updating indicator - Show when address is being automatically updated */}
             {address && !showAddressList && isAuthenticated && user && isSavingAddress && address.source === 'current' && (
               <div style={{
@@ -1862,7 +1881,7 @@ const ConfirmOrder = () => {
                 <span>Updating address in database...</span>
               </div>
             )}
-            
+
             {/* Save Address Button - Only show for new addresses that aren't being auto-updated */}
             {address && !showAddressList && isAuthenticated && user && !isAddressSaved && address.source !== 'current' && (
               <div>
@@ -1871,7 +1890,7 @@ const ConfirmOrder = () => {
                   const existingAddresses = JSON.parse(localStorage.getItem(userAddressesKey) || '[]');
                   const addressCount = existingAddresses.length;
                   const canSaveMore = addressCount < 5;
-                  
+
                   return (
                     <>
                       <button
@@ -1922,7 +1941,7 @@ const ConfirmOrder = () => {
                 })()}
               </div>
             )}
-            
+
             {/* Address Saved Success Message */}
             {isAddressSaved && !showAddressList && (
               <div style={{
@@ -1944,7 +1963,7 @@ const ConfirmOrder = () => {
                 Address saved successfully!
               </div>
             )}
-            
+
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -2369,14 +2388,14 @@ const ConfirmOrder = () => {
               }
             }}
           >
-            {isProcessingPayment 
-              ? 'Processing Payment...' 
-              : isPlacingOrder 
-                ? 'Placing Order...' 
+            {isProcessingPayment
+              ? 'Processing Payment...'
+              : isPlacingOrder
+                ? 'Placing Order...'
                 : (!address && isAuthenticated && user)
                   ? 'Please Select Address First'
-                  : paymentMethod === 'RAZORPAY' 
-                    ? 'Pay & Place Order' 
+                  : paymentMethod === 'RAZORPAY'
+                    ? 'Pay & Place Order'
                     : 'Continue to Payment'}
           </button>
 

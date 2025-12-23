@@ -31,7 +31,7 @@ export const CartProvider = ({ children }) => {
           console.log('🛒 [Cart] Loading cart from backend for user:', user.userId);
           const backendCart = await getCart(user.userId);
           console.log('🛒 [Cart] Backend cart response:', backendCart);
-          
+
           // Transform backend cart items to frontend format
           const cartItems = backendCart?.items || backendCart?.orderItems || [];
           if (Array.isArray(cartItems) && cartItems.length > 0) {
@@ -39,12 +39,12 @@ export const CartProvider = ({ children }) => {
             const firstItem = cartItems[0];
             const extractedSellerId = firstItem?.product?.seller?.sellerId || firstItem?.product?.sellerId;
             const extractedStoreId = firstItem?.product?.storeId || null; // Products might not have storeId directly
-            
+
             // Set cart-level store/seller IDs from products
             if (extractedSellerId && !cartSellerId) {
               setCartSellerId(String(extractedSellerId));
             }
-            
+
             const transformedCart = cartItems.map(item => ({
               id: item.orderItemsId || item.OrderItemsId || item.id,
               productId: item.product?.productsId || item.productId,
@@ -59,7 +59,7 @@ export const CartProvider = ({ children }) => {
               sellerId: backendCart.sellerId || item.product?.seller?.sellerId || item.product?.sellerId || extractedSellerId || cartSellerId
             }));
             setCart(transformedCart);
-            
+
             // Extract store/seller IDs from cart if available, or from products
             if (backendCart.storeId) {
               setCartStoreId(String(backendCart.storeId));
@@ -133,19 +133,19 @@ export const CartProvider = ({ children }) => {
   // Save cart to backend (if logged in) or localStorage (if guest)
   useEffect(() => {
     if (loading) return; // Don't save during initial load
-    
+
     if (isAuthenticated && user?.userId) {
       // Cart will be saved to backend on each operation (add, update, remove)
       // No need to save here to avoid infinite loops
       console.log('🛒 [Cart] Cart state updated (will sync on next operation)');
     } else {
       // Guest user - save to localStorage
-    localStorage.setItem('cart', JSON.stringify(cart));
-    if (cartStoreId) {
-      localStorage.setItem('cartStoreId', cartStoreId);
-    } else {
-      localStorage.removeItem('cartStoreId');
-    }
+      localStorage.setItem('cart', JSON.stringify(cart));
+      if (cartStoreId) {
+        localStorage.setItem('cartStoreId', cartStoreId);
+      } else {
+        localStorage.removeItem('cartStoreId');
+      }
       if (cartSellerId) {
         localStorage.setItem('cartSellerId', cartSellerId);
       } else {
@@ -170,7 +170,7 @@ export const CartProvider = ({ children }) => {
       );
       return;
     }
-    
+
     console.log('✅ [Cart] User is authenticated, proceeding with add to cart');
 
     // CART LOCKING RULE: Cart is locked to one seller/store
@@ -209,31 +209,31 @@ export const CartProvider = ({ children }) => {
         } else {
           throw new Error('Either variantId or productId is required');
         }
-        
-          // Transform and update local state
-          const cartItems = updatedCart?.items || updatedCart?.orderItems || [];
-          if (Array.isArray(cartItems) && cartItems.length > 0) {
-            const transformedCart = cartItems.map(cartItem => ({
-              id: cartItem.orderItemsId || cartItem.OrderItemsId || cartItem.id,
-              productId: cartItem.product?.productsId || cartItem.productId,
-              variantId: cartItem.variant?.variantId || cartItem.variantId, // SmartBiz: include variant ID
-              name: cartItem.product?.productName || cartItem.name || 'Product',
-              price: cartItem.variant?.sellingPrice || (cartItem.price ? (cartItem.price / (cartItem.quantity || 1)) : (cartItem.product?.sellingPrice || 0)),
-              originalPrice: cartItem.variant?.mrp || cartItem.product?.mrp || cartItem.originalPrice,
-              image: cartItem.product?.productImages?.[0] || cartItem.image || '/assets/products/p1.jpg',
-              quantity: cartItem.quantity || 1,
-              brand: cartItem.product?.brand || 'Store',
-              storeId: updatedCart.storeId || storeId,
-              sellerId: updatedCart.sellerId || cartItem.product?.seller?.sellerId || sellerId
-            }));
+
+        // Transform and update local state
+        const cartItems = updatedCart?.items || updatedCart?.orderItems || [];
+        if (Array.isArray(cartItems) && cartItems.length > 0) {
+          const transformedCart = cartItems.map(cartItem => ({
+            id: cartItem.orderItemsId || cartItem.OrderItemsId || cartItem.id,
+            productId: cartItem.product?.productsId || cartItem.productId,
+            variantId: cartItem.variant?.variantId || cartItem.variantId, // SmartBiz: include variant ID
+            name: cartItem.product?.productName || cartItem.name || 'Product',
+            price: cartItem.variant?.sellingPrice || (cartItem.price ? (cartItem.price / (cartItem.quantity || 1)) : (cartItem.product?.sellingPrice || 0)),
+            originalPrice: cartItem.variant?.mrp || cartItem.product?.mrp || cartItem.originalPrice,
+            image: cartItem.product?.productImages?.[0] || cartItem.image || '/assets/products/p1.jpg',
+            quantity: cartItem.quantity || 1,
+            brand: cartItem.product?.brand || 'Store',
+            storeId: updatedCart.storeId || storeId,
+            sellerId: updatedCart.sellerId || cartItem.product?.seller?.sellerId || sellerId
+          }));
           setCart(transformedCart);
-          
+
           // Extract and store sellerId from products if not already set
           const extractedSellerId = cartItems[0]?.product?.seller?.sellerId || cartItems[0]?.product?.sellerId;
           if (extractedSellerId && !cartSellerId) {
             setCartSellerId(String(extractedSellerId));
           }
-          
+
           if (updatedCart.storeId) setCartStoreId(String(updatedCart.storeId));
           if (updatedCart.sellerId) setCartSellerId(String(updatedCart.sellerId));
           if (extractedSellerId && !updatedCart.sellerId) {
@@ -242,6 +242,7 @@ export const CartProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('❌ [Cart] Error adding to backend cart:', error);
+        alert('⚠️ Warning: Could not sync cart to server. Your cart is saved locally but may cause issues during checkout. Error: ' + error.message);
         // Fallback to local state update
         addToCartLocal(item, storeId, sellerId);
       }
@@ -274,11 +275,11 @@ export const CartProvider = ({ children }) => {
       });
 
       // Check if item already exists
-      const existingIndex = prevCart.findIndex(cartItem => 
-        cartItem.productId === item.productId || 
-        (cartItem.name === item.name && 
-        cartItem.size === (item.size || 'default') &&
-         (cartItem.color || 'default') === (item.color || 'default'))
+      const existingIndex = prevCart.findIndex(cartItem =>
+        cartItem.productId === item.productId ||
+        (cartItem.name === item.name &&
+          cartItem.size === (item.size || 'default') &&
+          (cartItem.color || 'default') === (item.color || 'default'))
       );
 
       if (existingIndex !== -1) {
@@ -318,7 +319,7 @@ export const CartProvider = ({ children }) => {
         } else {
           throw new Error('Either variantId or productId is required');
         }
-        
+
         const cartItems = updatedCart?.items || updatedCart?.orderItems || [];
         if (Array.isArray(cartItems) && cartItems.length > 0) {
           const transformedCart = cartItems.map(cartItem => ({
@@ -371,7 +372,7 @@ export const CartProvider = ({ children }) => {
         } else {
           throw new Error('Either variantId or productId is required');
         }
-        
+
         const cartItems = updatedCart?.items || updatedCart?.orderItems || [];
         if (Array.isArray(cartItems) && cartItems.length > 0) {
           const transformedCart = cartItems.map(cartItem => ({
@@ -396,11 +397,11 @@ export const CartProvider = ({ children }) => {
         );
       }
     } else {
-    setCart(prevCart =>
+      setCart(prevCart =>
         prevCart.map(i =>
           i.id === itemId ? { ...i, quantity } : i
-      )
-    );
+        )
+      );
     }
   };
 
