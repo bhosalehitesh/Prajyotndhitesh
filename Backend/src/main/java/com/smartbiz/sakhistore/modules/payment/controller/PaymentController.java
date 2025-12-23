@@ -337,8 +337,8 @@ public class PaymentController {
                         System.out.println("✅ Created payment without order (testing mode)");
                         // orderId remains null for payments without orders
 
-                    }
                 }
+            }
 
 
             // CRITICAL: Final verification - ensure order payment status is PAID (only if order exists)
