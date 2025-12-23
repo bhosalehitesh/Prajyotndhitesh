@@ -42,6 +42,7 @@ import SelfShipFormScreen from './src/screens/Orders/SelfShipFormScreen';
 import ThirdPartyFormScreen from './src/screens/Orders/ThirdPartyFormScreen';
 import DiscountCouponsComingSoon from './src/screens/DiscountCoupons/DiscountCouponsComingSoon';
 import WhatsAppMarketingScreen from './src/screens/WhatsAppMarketing/WhatsAppMarketingScreen';
+import PaymentSetupComingSoon from './src/screens/PaymentSetup/PaymentSetupComingSoon';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -182,6 +183,7 @@ function MainStack() {
       <Stack.Screen name="ThirdPartyForm" component={ThirdPartyFormScreen} />
       <Stack.Screen name="DiscountCoupons" component={DiscountCouponsComingSoon} />
       <Stack.Screen name="WhatsAppMarketing" component={WhatsAppMarketingScreen} />
+      <Stack.Screen name="PaymentSetup" component={PaymentSetupComingSoon} />
     </Stack.Navigator>
   );
 }
