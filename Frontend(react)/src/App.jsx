@@ -31,6 +31,7 @@ import RazorpayTest from './pages/RazorpayTest';
 // Components
 import ErrorBoundary from './components/ErrorBoundary';
 import CartStoreSync from './components/CartStoreSync';
+import ScrollToTop from './components/ScrollToTop';
 
 // Import CSS
 import './styles.css';
@@ -39,6 +40,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
+        <ScrollToTop />
         <ThemeProvider>
           <AuthProvider>
             <LoginPromptProvider>

@@ -56,6 +56,17 @@ export interface UserProfile {
   storeName?: string;
 }
 
+// Today's tasks data
+export interface TodaysTasks {
+  newOrdersCount: number;
+}
+
+// Discounts & Coupons data
+export interface DiscountsCoupons {
+  activeCount: number;
+  totalCount: number;
+}
+
 // Home screen data
 export interface HomeScreenData {
   profile: UserProfile;
@@ -66,6 +77,8 @@ export interface HomeScreenData {
     message: string;
   };
   tasks: OnboardingTask[];
+  todaysTasks?: TodaysTasks;
+  discountsCoupons?: DiscountsCoupons;
   features: FeatureItem[];
   storeConfiguration: StoreConfigOption[];
   helpOptions: HelpOption[];

@@ -16,11 +16,12 @@
  * - refetch: Function to refetch data
  */
 
-import React, {useState, useEffect, useCallback} from 'react';
-import {HomeScreenData, HomeScreenApiResponse} from './types';
-import {mockHomeData} from './mockData';
-import {storage} from '../../authentication/storage';
+import React, { useState, useEffect, useCallback } from 'react';
+import { HomeScreenData, HomeScreenApiResponse } from './types';
+import { mockHomeData } from './mockData';
+import { storage } from '../../authentication/storage';
 import { getCurrentSellerStoreDetails } from '../../utils/api';
+import { getSellerOrders } from '../../utils/orderApi';
 
 interface UseHomeDataReturn {
   data: HomeScreenData | null;
@@ -87,17 +88,20 @@ export const useHomeData = (): UseHomeDataReturn => {
 
       const finalStoreName =
         backendStore?.storeName || storedStoreName || mockHomeData.profile.storeName;
-      const finalStoreLink =
+      const finalStoreLinkRaw =
         backendStore?.storeLink || storedStoreLink || mockHomeData.profile.storeLink;
+
+      // Ensure we display the correct domain (smartbiz.ltd) even if backend sends old one
+      const finalStoreLink = finalStoreLinkRaw?.replace('thynktech.com', 'smartbiz.ltd');
       // Use backend logoUrl first, then stored, then null
       // IMPORTANT: Even if backend store is not found, use stored logoUrl if available
       const logoUrl = backendStore?.logoUrl || storedLogoUrl || null;
-      
+
       // Update stored logoUrl if backend has a newer one
       if (backendStore?.logoUrl && backendStore.logoUrl !== storedLogoUrl) {
         await storage.setItem('storeLogoUrl', backendStore.logoUrl);
       }
-      
+
       // If we have a stored logoUrl but backend doesn't have store, log it
       if (!backendStore && storedLogoUrl) {
         console.log('Using stored logoUrl (backend store not found):', storedLogoUrl);
@@ -121,6 +125,24 @@ export const useHomeData = (): UseHomeDataReturn => {
         }
       }
 
+      // Fetch new orders count for Today's Tasks
+      let newOrdersCount = 0;
+      try {
+        const userIdRaw = await storage.getItem('userId');
+        const sellerId = userIdRaw && !isNaN(Number(userIdRaw)) ? userIdRaw : null;
+
+        if (sellerId) {
+          const orders = await getSellerOrders(sellerId);
+          // Count orders with status PLACED or PENDING (new orders)
+          newOrdersCount = orders.filter(
+            order => order.orderStatus === 'PLACED' || order.orderStatus === 'PENDING'
+          ).length;
+        }
+      } catch (error) {
+        console.warn('Could not fetch new orders count:', error);
+        // Continue with default count of 0
+      }
+
       // Create data with per-seller profile values or fallback to mock
       const homeData: HomeScreenData = {
         ...mockHomeData,
@@ -130,6 +152,13 @@ export const useHomeData = (): UseHomeDataReturn => {
           storeName: finalStoreName,
           storeLink: finalStoreLink,
           logoUrl: logoUrl || undefined,
+        },
+        todaysTasks: {
+          newOrdersCount: newOrdersCount,
+        },
+        discountsCoupons: {
+          activeCount: 0, // TODO: Fetch from backend API when available
+          totalCount: 0, // TODO: Fetch from backend API when available
         },
       };
 

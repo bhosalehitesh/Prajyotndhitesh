@@ -43,8 +43,9 @@ public class SecurityConfig {
             "/api/auth/verifyOtp",
             "/api/auth/resendOtp",
             "/api/categories",
-            // Payment endpoints
-            "/payment/**",
+            // Payment endpoints (covered by /api/** but explicit for clarity)
+            "/api/payment/**",
+            "/payment/**",  // Keep for backward compatibility
             // Swagger + docs
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -87,7 +88,7 @@ public class SecurityConfig {
                                 // All other public endpoints
                                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                                 // Explicitly allow all payment endpoints with any method
-                                .requestMatchers("/payment/**").permitAll()
+                                .requestMatchers("/api/payment/**", "/payment/**").permitAll()
                                 // Allow everything else (no authentication required)
                                 .anyRequest().permitAll()
                 )

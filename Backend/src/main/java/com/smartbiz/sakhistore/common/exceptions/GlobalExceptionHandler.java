@@ -17,13 +17,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         System.err.println("❌ [GlobalExceptionHandler] Caught RuntimeException: " + ex.getMessage());
         ex.printStackTrace();
-        
+
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now());
         error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         error.put("error", "Internal Server Error");
         error.put("message", ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred");
-        
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
@@ -31,13 +31,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         System.err.println("❌ [GlobalExceptionHandler] Caught Exception: " + ex.getMessage());
         ex.printStackTrace();
-        
+
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now());
         error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         error.put("error", "Internal Server Error");
         error.put("message", ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred");
-        
+
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }

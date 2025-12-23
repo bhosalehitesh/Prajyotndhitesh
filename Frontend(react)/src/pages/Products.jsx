@@ -22,6 +22,21 @@ const Products = () => {
 
   const actualSlug = slug || storeSlug || currentStore?.slug;
 
+  // Scroll to top when route params change (ScrollToTop component handles initial mount)
+  useEffect(() => {
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) {
+        document.documentElement.scrollTop = 0;
+      }
+      if (document.body) {
+        document.body.scrollTop = 0;
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [selectedCategory, selectedCollection]);
+
   useEffect(() => {
     const fetchProducts = async () => {
       if (!actualSlug) {
@@ -40,10 +55,16 @@ const Products = () => {
       setError(null);
       try {
         const slugToUse = actualSlug;
-        console.log('Fetching products for slug:', slugToUse, 'category:', selectedCategory);
+        console.log('Fetching products for slug:', slugToUse, 'category:', selectedCategory, 'collection:', selectedCollection);
 
-        const data = await getStoreProducts(slugToUse, selectedCategory || null);
-        console.log('Received products:', Array.isArray(data) ? data.length : 'not array');
+        const data = await getStoreProducts(slugToUse, selectedCategory || null, selectedCollection || null);
+        console.log('📦 [Products] Received products:', {
+          count: Array.isArray(data) ? data.length : 0,
+          isArray: Array.isArray(data),
+          selectedCategory,
+          selectedCollection,
+          firstProduct: Array.isArray(data) && data.length > 0 ? data[0] : null
+        });
 
         if (Array.isArray(data) && data.length > 0) {
           const transformedProducts = transformProducts(data, currentStore?.name || 'Store');
@@ -55,14 +76,9 @@ const Products = () => {
             const productActive = backend.isActive !== false;
             const categoryActive = backend.category ? backend.category.isActive !== false : true;
 
-            // Collection Filter (if selectedCollection is provided)
-            if (selectedCollection) {
-              const collections = backend.collections || [];
-              const matchesCollection = collections.some(c =>
-                (c.slug || c.name || c.collectionName || '').toLowerCase() === selectedCollection.toLowerCase()
-              );
-              if (!matchesCollection) return false;
-            }
+            // Collection filter is handled by backend
+            // Note: backend.collections is @JsonIgnore so we can't verify here
+            // The backend should have already filtered correctly
 
             const totalStock = typeof backend.totalStock === 'number' ? backend.totalStock : backend.inventoryQuantity;
             const hasStock = totalStock == null || Number(totalStock) > 0;
@@ -143,7 +159,17 @@ const Products = () => {
 
       {products.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}>
-          <p>No products found for this store.</p>
+          <p>No products found{selectedCollection ? ` in collection "${selectedCollection}"` : selectedCategory ? ` in category "${selectedCategory}"` : ' for this store'}.</p>
+          {selectedCollection && (
+            <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
+              <p>Make sure:</p>
+              <ul style={{ textAlign: 'left', display: 'inline-block', marginTop: '0.5rem' }}>
+                <li>The collection exists and is active</li>
+                <li>Products are assigned to this collection</li>
+                <li>Products are active and have stock</li>
+              </ul>
+            </div>
+          )}
         </div>
       ) : (
         <div className="products-grid">
