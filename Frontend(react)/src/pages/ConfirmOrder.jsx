@@ -743,8 +743,8 @@ const ConfirmOrder = () => {
 
     try {
       // Step 1: Create Razorpay order on backend
-      // Try without /api first (backend controller is at /payment)
-      let createOrderApi = `${API_BASE}/payment/create-razorpay-order`;
+      // Backend PaymentController is mapped to /api/payment
+      let createOrderApi = `${API_BASE}/api/payment/create-razorpay-order`;
       console.log('Creating Razorpay order:', { url: createOrderApi, orderId, amount });
 
       let orderResponse = await fetch(createOrderApi, {
@@ -755,20 +755,6 @@ const ConfirmOrder = () => {
           amount: Number(amount),
         }),
       });
-
-      // If 404, try with /api prefix as fallback
-      if (orderResponse.status === 404 || orderResponse.status === 0) {
-        console.log('Trying with /api prefix...');
-        createOrderApi = `${API_BASE}/api/payment/create-razorpay-order`;
-        orderResponse = await fetch(createOrderApi, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: Number(orderId),
-            amount: Number(amount),
-          }),
-        });
-      }
 
       if (!orderResponse.ok) {
         const errorText = await orderResponse.text();
@@ -797,7 +783,8 @@ const ConfirmOrder = () => {
         handler: async (response) => {
           try {
             // Step 2: Verify payment with backend
-            let callbackUrl = `${API_BASE}/payment/razorpay-callback`;
+            // Backend PaymentController is mapped to /api/payment
+            let callbackUrl = `${API_BASE}/api/payment/razorpay-callback`;
             console.log('Verifying payment:', { url: callbackUrl, orderId });
 
             let callbackResponse = await fetch(callbackUrl, {
@@ -811,23 +798,6 @@ const ConfirmOrder = () => {
                 amount: Number(amount),
               }),
             });
-
-            // If 404, try with /api prefix as fallback
-            if (callbackResponse.status === 404 || callbackResponse.status === 0) {
-              console.log('Trying callback with /api prefix...');
-              callbackUrl = `${API_BASE}/api/payment/razorpay-callback`;
-              callbackResponse = await fetch(callbackUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                  orderId: Number(orderId),
-                  amount: Number(amount),
-                }),
-              });
-            }
 
             if (!callbackResponse.ok) {
               const errorText = await callbackResponse.text();
