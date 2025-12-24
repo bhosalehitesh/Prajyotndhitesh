@@ -235,7 +235,7 @@ const RazorpayTest = () => {
             setErrorMsg('Payment was cancelled. You can try again.');
           },
         },
-        theme: { color: '#3399cc' },
+        theme: { color: '#3e66fb' },
       };
 
       // Double check Razorpay is available
