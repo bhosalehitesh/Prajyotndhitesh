@@ -459,12 +459,13 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
     
     // Backend uses @RequestParam, so we send query parameters
     // Don't set Content-Type: application/json for query params
+    // Increase timeout to 60 seconds for order placement (includes email sending)
     const response = await fetchWithTimeout(url, {
       method: 'POST',
       headers: headers
       // No Content-Type header needed for query parameters
       // Spring will parse @RequestParam from query string
-    });
+    }, 60000); // 60 seconds timeout for order placement
 
     if (!response.ok) {
       let errorText = '';

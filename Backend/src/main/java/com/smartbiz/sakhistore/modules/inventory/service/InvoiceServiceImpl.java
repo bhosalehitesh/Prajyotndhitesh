@@ -5,11 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.smartbiz.sakhistore.config.EmailServicePdf;
 import com.smartbiz.sakhistore.modules.customer_user.model.User;
 import com.smartbiz.sakhistore.modules.inventory.model.InvoiceHTMLBuilder;
 import com.smartbiz.sakhistore.modules.inventory.model.InvoiceItem;
+import com.smartbiz.sakhistore.modules.inventory.model.InvoiceStatus;
 import com.smartbiz.sakhistore.modules.inventory.model.PdfGenerator;
 import com.smartbiz.sakhistore.modules.inventory.model.UserInvoice;
 import com.smartbiz.sakhistore.modules.inventory.repository.UserInvoiceItemRepository;
@@ -20,6 +22,7 @@ import com.smartbiz.sakhistore.modules.order.repository.OrdersRepository;
 import com.smartbiz.sakhistore.modules.payment.model.Payment;
 
 @Service
+@Transactional
 public class InvoiceServiceImpl {
 
     private final UserInvoiceRepository invoiceRepo;
@@ -38,83 +41,168 @@ public class InvoiceServiceImpl {
     }
 
     public UserInvoice generateInvoice(Long orderId) {
+        try {
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("🔄 STARTING INVOICE GENERATION");
+            System.out.println("=".repeat(60));
+            System.out.println("Order ID: " + orderId);
+            System.out.println("=".repeat(60) + "\n");
 
-        Orders order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order Not Found"));
+            Orders order = orderRepo.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("Order Not Found with ID: " + orderId));
 
-        User user = order.getUser();
-        Payment payment = order.getPayment();
+            if (order == null) {
+                throw new RuntimeException("Order is null for ID: " + orderId);
+            }
 
-        UserInvoice invoice = new UserInvoice();
-        invoice.setInvoiceNumber("INV-" + System.currentTimeMillis());
-        invoice.setInvoiceDate(LocalDateTime.now());
+            User user = order.getUser();
+            if (user == null) {
+                throw new RuntimeException("User is null for order ID: " + orderId);
+            }
 
-        invoice.setOrderId(orderId);
-        invoice.setUserId(user.getId());
-  //      invoice.setPaymentId(payment.getPayment_idAuto());
+            Payment payment = order.getPayment();
 
-        invoice.setUserName(user.getFullName());
-        invoice.setUserPhone(user.getPhone());
-        invoice.setUserEmail(user.getEmail());
+            UserInvoice invoice = new UserInvoice();
+            invoice.setInvoiceNumber("INV-" + System.currentTimeMillis());
+            invoice.setInvoiceDate(LocalDateTime.now());
+            invoice.setStatus(InvoiceStatus.IN_PROGRESS);
 
-        String address = user.getFlatOrHouseNo() + ", " +
-                user.getAreaOrStreet() + ", " +
-                user.getCity() + ", " +
-                user.getState() + " - " + user.getPincode();
+            invoice.setOrderId(orderId);
+            invoice.setUserId(user.getId());
 
-        invoice.setBillingAddress(address);
-        invoice.setShippingAddress(address);
+            // Set payment ID if payment exists
+            if (payment != null && payment.getPaymentId() != null) {
+                invoice.setPaymentId(payment.getPaymentId());
+            }
 
-        double subtotal = 0.0;
-        double gstTotal = 0.0;
+            invoice.setUserName(user.getFullName() != null ? user.getFullName() : "Customer");
+            invoice.setUserPhone(user.getPhone() != null ? user.getPhone() : "");
+            invoice.setUserEmail(user.getEmail() != null ? user.getEmail() : "");
 
-        for (OrderItems oi : order.getOrderItems()) {
-            double itemSubtotal = oi.getPrice() * oi.getQuantity();
-            double gst = itemSubtotal * 0.05;
+            // Build address safely (handle null values)
+            StringBuilder addressBuilder = new StringBuilder();
+            if (user.getFlatOrHouseNo() != null && !user.getFlatOrHouseNo().trim().isEmpty()) {
+                addressBuilder.append(user.getFlatOrHouseNo().trim());
+            }
+            if (user.getAreaOrStreet() != null && !user.getAreaOrStreet().trim().isEmpty()) {
+                if (addressBuilder.length() > 0) addressBuilder.append(", ");
+                addressBuilder.append(user.getAreaOrStreet().trim());
+            }
+            if (user.getCity() != null && !user.getCity().trim().isEmpty()) {
+                if (addressBuilder.length() > 0) addressBuilder.append(", ");
+                addressBuilder.append(user.getCity().trim());
+            }
+            if (user.getState() != null && !user.getState().trim().isEmpty()) {
+                if (addressBuilder.length() > 0) addressBuilder.append(", ");
+                addressBuilder.append(user.getState().trim());
+            }
+            if (user.getPincode() != null && !user.getPincode().trim().isEmpty()) {
+                if (addressBuilder.length() > 0) addressBuilder.append(" - ");
+                addressBuilder.append(user.getPincode().trim());
+            }
 
-            subtotal += itemSubtotal;
-            gstTotal += gst;
-        }
+            String address = addressBuilder.length() > 0 ? addressBuilder.toString() : "Address not provided";
+            invoice.setBillingAddress(address);
+            invoice.setShippingAddress(address);
 
-        double discount = subtotal * 0.05;
-        double delivery = 30.0;
-        double grandTotal = subtotal + gstTotal + delivery - discount;
+            // Calculate totals
+            double subtotal = 0.0;
+            double gstTotal = 0.0;
 
-        invoice.setSubTotal(subtotal);
-        invoice.setTaxAmount(gstTotal);
-        invoice.setDiscountAmount(discount);
-        invoice.setDeliveryCharges(delivery);
-        invoice.setGrandTotal(grandTotal);
-        invoice.setPaymentStatus(payment.getStatus().name());
-        invoice.setPaymentAmount(payment.getAmount());
+            if (order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
+                throw new RuntimeException("Order has no items. Cannot generate invoice.");
+            }
 
-        List<InvoiceItem> items = new ArrayList<>();
+            for (OrderItems oi : order.getOrderItems()) {
+                if (oi == null) continue;
+                if (oi.getPrice() == null || oi.getQuantity() == null) {
+                    System.err.println("⚠️ Warning: Order item has null price or quantity, skipping...");
+                    continue;
+                }
+                double itemSubtotal = oi.getPrice() * oi.getQuantity();
+                double gst = itemSubtotal * 0.05;
 
-        for (OrderItems oi : order.getOrderItems()) {
+                subtotal += itemSubtotal;
+                gstTotal += gst;
+            }
 
-            InvoiceItem it = new InvoiceItem();
-            it.setInvoice(invoice);
+            if (subtotal == 0.0) {
+                throw new RuntimeException("Cannot generate invoice: Order subtotal is zero.");
+            }
 
-            it.setOrderItemId(oi.getOrderItemsId());
-            it.setProductId(oi.getProduct().getProductsId());
-            it.setProductName(oi.getProduct().getProductName());
-            it.setSize(oi.getProduct().getSize());
-            it.setQuantity(oi.getQuantity());
-            it.setPrice(oi.getPrice());
+            double discount = subtotal * 0.05;
+            double delivery = 30.0;
+            double grandTotal = subtotal + gstTotal + delivery - discount;
 
-            double gst = oi.getPrice() * oi.getQuantity() * 0.05;
+            invoice.setSubTotal(subtotal);
+            invoice.setTaxAmount(gstTotal);
+            invoice.setDiscountAmount(discount);
+            invoice.setDeliveryCharges(delivery);
+            invoice.setGrandTotal(grandTotal);
 
-            it.setGstPercent(5.0);
-            it.setGstAmount(gst);
-            it.setTotal(oi.getPrice() * oi.getQuantity() + gst);
+            // Set payment info safely
+            if (payment != null) {
+                invoice.setPaymentStatus(payment.getStatus() != null ? payment.getStatus().name() : "PENDING");
+                invoice.setPaymentAmount(payment.getAmount() != null ? payment.getAmount() : grandTotal);
+            } else {
+                invoice.setPaymentStatus("PENDING");
+                invoice.setPaymentAmount(grandTotal);
+                System.out.println("⚠️ Warning: Payment is null for order, setting default payment status");
+            }
 
-            items.add(it);
-        }
+            // Create invoice items
+            List<InvoiceItem> items = new ArrayList<>();
 
-        invoice.setItems(items);
+            for (OrderItems oi : order.getOrderItems()) {
+                if (oi == null) continue;
+                if (oi.getProduct() == null) {
+                    System.err.println("⚠️ Warning: Order item has null product, skipping...");
+                    continue;
+                }
 
-        invoiceRepo.save(invoice);
-        itemRepo.saveAll(items);
+                InvoiceItem it = new InvoiceItem();
+                it.setInvoice(invoice);
+
+                it.setOrderItemId(oi.getOrderItemsId());
+                it.setProductId(oi.getProduct().getProductsId());
+                it.setProductName(oi.getProduct().getProductName() != null ? oi.getProduct().getProductName() : "Product");
+                it.setSize(oi.getProduct().getSize() != null ? oi.getProduct().getSize() : "");
+                it.setQuantity(oi.getQuantity() != null ? oi.getQuantity() : 0);
+                it.setPrice(oi.getPrice() != null ? oi.getPrice() : 0.0);
+
+                double itemPrice = oi.getPrice() != null ? oi.getPrice() : 0.0;
+                int itemQuantity = oi.getQuantity() != null ? oi.getQuantity() : 0;
+                double gst = itemPrice * itemQuantity * 0.05;
+
+                it.setGstPercent(5.0);
+                it.setGstAmount(gst);
+                it.setTotal((itemPrice * itemQuantity) + gst);
+
+                items.add(it);
+            }
+
+            if (items.isEmpty()) {
+                throw new RuntimeException("Cannot generate invoice: No valid items found in order.");
+            }
+
+            invoice.setItems(items);
+
+            // Save invoice first
+            System.out.println("💾 Saving invoice to database...");
+            UserInvoice savedInvoice = invoiceRepo.save(invoice);
+            System.out.println("✅ Invoice saved with ID: " + savedInvoice.getInvoiceId());
+
+            // Save invoice items
+            System.out.println("💾 Saving " + items.size() + " invoice items to database...");
+            itemRepo.saveAll(items);
+            System.out.println("✅ Invoice items saved successfully");
+
+            // Update invoice status
+            savedInvoice.setStatus(InvoiceStatus.COMPLETED);
+            savedInvoice = invoiceRepo.save(savedInvoice);
+
+            // Refresh to get all relationships
+            savedInvoice = invoiceRepo.findById(savedInvoice.getInvoiceId()).orElseThrow();
 
         invoice = invoiceRepo.findById(invoice.getInvoiceId()).orElseThrow();
 

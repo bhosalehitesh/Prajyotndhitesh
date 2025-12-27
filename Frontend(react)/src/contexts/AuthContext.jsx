@@ -171,12 +171,19 @@ export const AuthProvider = ({ children }) => {
     try {
       const API_BASE = getBackendUrl();
       let fullUserData = null;
+      const token = user?.token || localStorage.getItem('authToken');
+      
+      // Prepare headers with authorization token
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       
       if (userId) {
         // Fetch by user ID
         const response = await fetch(`${API_BASE}/user/${userId}`, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: headers
         });
         if (response.ok) {
           fullUserData = await response.json();
@@ -184,13 +191,12 @@ export const AuthProvider = ({ children }) => {
       } else if (phone && user) {
         // Fetch by phone
         const { getUserByPhone } = await import('../utils/api');
-        const token = user.token || localStorage.getItem('authToken');
         fullUserData = await getUserByPhone(phone, token);
       } else if (user && user.id) {
         // Use current user ID
         const response = await fetch(`${API_BASE}/user/${user.id}`, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: headers
         });
         if (response.ok) {
           fullUserData = await response.json();
