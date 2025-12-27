@@ -34,7 +34,6 @@ public class PincodeSearchDTO {
 	}
 	public PincodeSearchDTO() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
 	public PincodeSearchDTO(String pincode, String city, String district, String state) {
 		super();

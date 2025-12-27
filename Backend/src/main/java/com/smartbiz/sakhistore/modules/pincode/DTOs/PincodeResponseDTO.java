@@ -49,7 +49,6 @@ public class PincodeResponseDTO {
 	}
 	public PincodeResponseDTO() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
     
     

@@ -66,6 +66,7 @@ public class collection {
     // 🔗 COLLECTION → PRODUCTS
     // =======================
     @ManyToMany(mappedBy = "collections")
+    @JsonIgnore
     private List<Product> products;
 
     // =======================

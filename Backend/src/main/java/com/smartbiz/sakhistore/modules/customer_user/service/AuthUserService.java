@@ -7,6 +7,8 @@ import com.smartbiz.sakhistore.modules.customer_user.repository.UserTokenReposit
 import com.smartbiz.sakhistore.modules.otp.model.Otp;
 import com.smartbiz.sakhistore.modules.otp.model.OtpGenerator;
 import com.smartbiz.sakhistore.modules.otp.repository.SellerOtpRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +16,8 @@ import java.time.LocalDateTime;
 
 @Service
 public class AuthUserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthUserService.class);
 
     // ⭐ ThreadLocal to capture fullName from controller
     public static ThreadLocal<String> USER_FULLNAME = new ThreadLocal<>();
@@ -42,9 +46,9 @@ public class AuthUserService {
 
         otpRepo.save(new Otp(phone, otpCode));
 
-        System.out.println("OTP Sent to USER: " + phone + " OTP: " + otpCode);
+        logger.info("OTP sent to user with phone: {}", phone);
 
-        return otpCode; // for testing (remove in production)
+        return otpCode;
     }
 
     // ===========================================================
@@ -98,7 +102,7 @@ public class AuthUserService {
                         user.getPhone()
                 );
             } catch (Exception e) {
-                System.out.println("Welcome Email Failed: " + e.getMessage());
+                logger.warn("Failed to send welcome email to user {}: {}", user.getEmail(), e.getMessage());
             }
         }
 
@@ -135,8 +139,12 @@ public class AuthUserService {
 
         // Validate email format
         if (email != null && !email.trim().isEmpty()) {
-            // Basic email validation
-            if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            // ✅ UPDATED: More lenient email validation - allows:
+            // 1. Standard emails: user@domain.com
+            // 2. UPI IDs: phone@bank (e.g., 7820866099@ybl)
+            // 3. Emails without TLD: user@domain (for internal systems)
+            boolean isValidEmail = email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+(\\.[A-Za-z]{2,})?$");
+            if (!isValidEmail) {
                 throw new RuntimeException("Invalid email format: " + email);
             }
             user.setEmail(email.trim());
@@ -147,8 +155,7 @@ public class AuthUserService {
         
         // Use saveAndFlush to ensure email is immediately persisted to database
         User savedUser = userRepo.saveAndFlush(user);
-        System.out.println("✅ [AuthUserService] Email updated for user ID: " + id + " to: " + savedUser.getEmail());
-        System.out.println("   Email flushed to database - ready for immediate use");
+        logger.info("Email updated for user ID: {} to: {}", id, savedUser.getEmail());
         return savedUser;
     }
 
@@ -185,21 +192,21 @@ public class AuthUserService {
             // Handle null/empty email
             if (newEmail != null && !newEmail.trim().isEmpty()) {
                 newEmail = newEmail.trim();
-                // Basic email validation
-                if (!newEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
-                    System.err.println("⚠️ Invalid email format: " + newEmail);
+                // ✅ UPDATED: More lenient email validation - allows:
+                // 1. Standard emails: user@domain.com
+                // 2. UPI IDs: phone@bank (e.g., 7820866099@ybl)
+                // 3. Emails without TLD: user@domain (for internal systems)
+                boolean isValidEmail = newEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+(\\.[A-Za-z]{2,})?$");
+                if (!isValidEmail) {
+                    logger.warn("Invalid email format: {}", newEmail);
                     throw new RuntimeException("Invalid email format: " + newEmail);
                 }
                 user.setEmail(newEmail);
-                System.out.println("✅ [AuthUserService] Email updated for user ID: " + user.getId());
-                System.out.println("   Old Email: " + (oldEmail != null ? oldEmail : "NULL"));
-                System.out.println("   New Email: " + newEmail);
+                logger.info("Email updated for user ID: {}, old: {}, new: {}", user.getId(), oldEmail, newEmail);
             } else {
                 // Allow clearing email (set to null)
                 user.setEmail(null);
-                System.out.println("✅ [AuthUserService] Email cleared for user ID: " + user.getId());
-                System.out.println("   Old Email: " + (oldEmail != null ? oldEmail : "NULL"));
-                System.out.println("   New Email: NULL");
+                logger.info("Email cleared for user ID: {}, old: {}", user.getId(), oldEmail);
             }
         }
 
@@ -238,14 +245,9 @@ public class AuthUserService {
 
         User savedUser = userRepo.save(user);
         
-        // Log email update confirmation
         if (addressData.containsKey("email")) {
-            System.out.println("📝 [AuthUserService] User saved to database (by phone)");
-            System.out.println("   User ID: " + savedUser.getId());
-            System.out.println("   Phone: " + savedUser.getPhone());
-            System.out.println("   Email in DB: " + (savedUser.getEmail() != null ? savedUser.getEmail() : "NULL"));
-            System.out.println("   Verification: Email field matches = " + 
-                (savedUser.getEmail() != null && savedUser.getEmail().equals(user.getEmail())));
+            logger.info("User saved to database - ID: {}, Phone: {}, Email: {}", 
+                savedUser.getId(), savedUser.getPhone(), savedUser.getEmail());
         }
         
         return savedUser;
@@ -291,23 +293,23 @@ public class AuthUserService {
             // Handle null/empty email
             if (newEmail != null && !newEmail.trim().isEmpty()) {
                 newEmail = newEmail.trim();
-                // Basic email validation
-                if (!newEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
-                    System.err.println("⚠️ Invalid email format: " + newEmail);
+                // ✅ UPDATED: More lenient email validation - allows:
+                // 1. Standard emails: user@domain.com
+                // 2. UPI IDs: phone@bank (e.g., 7820866099@ybl)
+                // 3. Emails without TLD: user@domain (for internal systems)
+                boolean isValidEmail = newEmail.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+(\\.[A-Za-z]{2,})?$");
+                if (!isValidEmail) {
+                    logger.warn("Invalid email format: {}", newEmail);
                     throw new RuntimeException("Invalid email format: " + newEmail);
                 }
                 user.setEmail(newEmail);
-                System.out.println("✅ [AuthUserService] Email updated for user phone: " + phone);
-                System.out.println("   User ID: " + user.getId());
-                System.out.println("   Old Email: " + (oldEmail != null ? oldEmail : "NULL"));
-                System.out.println("   New Email: " + newEmail);
+                logger.info("Email updated for user phone: {}, ID: {}, old: {}, new: {}", 
+                    phone, user.getId(), oldEmail, newEmail);
             } else {
                 // Allow clearing email (set to null)
                 user.setEmail(null);
-                System.out.println("✅ [AuthUserService] Email cleared for user phone: " + phone);
-                System.out.println("   User ID: " + user.getId());
-                System.out.println("   Old Email: " + (oldEmail != null ? oldEmail : "NULL"));
-                System.out.println("   New Email: NULL");
+                logger.info("Email cleared for user phone: {}, ID: {}, old: {}", 
+                    phone, user.getId(), oldEmail);
             }
         }
 
@@ -347,13 +349,9 @@ public class AuthUserService {
         // Use saveAndFlush to ensure email is immediately persisted to database
         User savedUser = userRepo.saveAndFlush(user);
         
-        // Log email update confirmation
         if (addressData.containsKey("email")) {
-            System.out.println("📝 [AuthUserService] User saved to database (by phone)");
-            System.out.println("   User ID: " + savedUser.getId());
-            System.out.println("   Phone: " + savedUser.getPhone());
-            System.out.println("   Email in DB: " + (savedUser.getEmail() != null ? savedUser.getEmail() : "NULL"));
-            System.out.println("   Verification: Email saved and flushed to database successfully");
+            logger.info("User saved to database - ID: {}, Phone: {}, Email: {}", 
+                savedUser.getId(), savedUser.getPhone(), savedUser.getEmail());
         }
         
         return savedUser;

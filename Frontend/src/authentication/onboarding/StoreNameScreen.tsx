@@ -176,9 +176,9 @@ const StoreNameScreen: React.FC<StoreNameScreenProps> = ({ onNext, onBack }) => 
               <Text style={styles.label}>Store Link</Text>
               <TextInput
                 style={styles.input}
-                placeholder="www.sakhi.store/your-store"
+                placeholder="smartbiz.ltd/your-store"
                 placeholderTextColor="#9ca3af"
-                value={storeName.trim() ? `www.sakhi.store/${storeName.trim().toLowerCase()}` : ''}
+                value={storeName.trim() ? `smartbiz.ltd/${storeName.trim().toLowerCase()}` : ''}
                 editable={false}
               />
               <Text style={styles.storeLinkHelp}>

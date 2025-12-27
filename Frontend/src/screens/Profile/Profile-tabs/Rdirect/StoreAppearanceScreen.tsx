@@ -301,9 +301,9 @@ export default function StoreAppearanceScreen({ onBack }: { onBack: () => void }
             Unlock endless customization possibilities for your store with our Desktop Themes Editor.
             Edit layouts, widgets, images, and more!
           </Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://www.sakhi.store/store-appearance')}>
+          <TouchableOpacity onPress={() => Linking.openURL('https://smartbiz.ltd/store-appearance')}>
             <Text style={styles.infoLink}>
-              Visit sakhi.store/store-appearance for more!
+              Visit smartbiz.ltd/store-appearance for more!
             </Text>
           </TouchableOpacity>
         </View>
@@ -363,7 +363,7 @@ export default function StoreAppearanceScreen({ onBack }: { onBack: () => void }
                 onPress={async () => {
                   try {
                     const storedStoreName = await storage.getItem('storeName') || 'My Store';
-                    const storedStoreLink = await storage.getItem('storeLink') || 'sakhi.store/mystore';
+                    const storedStoreLink = await storage.getItem('storeLink') || 'smartbiz.ltd/mystore';
                     console.log('Creating store with:', { storeName: storedStoreName, storeLink: storedStoreLink });
                     await saveStoreDetails(storedStoreName, storedStoreLink);
                     console.log('✅ Store created successfully!');

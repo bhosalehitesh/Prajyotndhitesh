@@ -122,19 +122,16 @@ public class PostOfficeResponse {
 		}
 		public PostOffice() {
 			super();
-			// TODO Auto-generated constructor stub
 		}
         
         
     }
 
 	public String getStatus() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	public Object getPostOffice() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 }

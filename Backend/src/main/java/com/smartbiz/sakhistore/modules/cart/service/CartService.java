@@ -47,7 +47,8 @@ public class CartService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User Not Found"));
 
-        return cartRepository.findByUser(user)
+        // Use eager fetch to load all product and variant data
+        return cartRepository.findByUserWithItemsAndProducts(user)
                 .orElseGet(() -> {
                     Cart newCart = new Cart();
                     newCart.setUser(user);
@@ -96,7 +97,9 @@ public class CartService {
                 }
                 item.setQuantity(newQuantity);
                 item.setPrice(newQuantity * variant.getSellingPrice());
-                return cartRepository.save(cart);
+                cartRepository.save(cart);
+                // ✅ Reload cart with eager fetch to ensure all product/variant data is loaded
+                return getOrCreateCart(userId);
             }
         }
 
@@ -111,7 +114,9 @@ public class CartService {
         items.add(orderItem);
         cart.setItems(items);
 
-        return cartRepository.save(cart);
+        cartRepository.save(cart);
+        // ✅ Reload cart with eager fetch to ensure all product/variant data is loaded
+        return getOrCreateCart(userId);
     }
 
     // ===============================
@@ -128,7 +133,9 @@ public class CartService {
         Cart cart = getOrCreateCart(userId);
         cart.getItems().removeIf(item ->
                 item.getVariant() != null && item.getVariant().getVariantId().equals(variantId));
-        return cartRepository.save(cart);
+        cartRepository.save(cart);
+        // ✅ Reload cart with eager fetch to ensure all product/variant data is loaded
+        return getOrCreateCart(userId);
     }
 
     // ===============================
@@ -166,7 +173,9 @@ public class CartService {
             }
         }
 
-        return cartRepository.save(cart);
+        cartRepository.save(cart);
+        // ✅ Reload cart with eager fetch to ensure all product/variant data is loaded
+        return getOrCreateCart(userId);
     }
 
     // ===============================

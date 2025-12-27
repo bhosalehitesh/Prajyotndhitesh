@@ -1106,13 +1106,29 @@ const ConfirmOrder = () => {
         }
       }
 
+      // Get token for authentication
+      let token = user?.token || localStorage.getItem('authToken');
+      if (!token) {
+        // Try to get from currentUser in localStorage
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            token = parsedUser?.token;
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+      }
+
       // First, place the order
       const order = await placeOrder(
         user.userId || user.id,
         formattedAddress,
         mobileNum,
         storeId,
-        sellerId
+        sellerId,
+        token
       );
 
       console.log('Order placed successfully:', order);

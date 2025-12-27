@@ -16,8 +16,8 @@
 export const API_BASE_URL_DEV = 'http://localhost:8080';
 
 // Use IP address (only if USE_IP_ADDRESS is true)
-// Updated to current machine IP: 192.168.1.59
-export const API_BASE_URL_DEV_IP = 'http://10.198.183.174:8080'; // Current IP address
+// Updated to current machine IP: 10.163.197.174 (Mobile Hotspot)
+export const API_BASE_URL_DEV_IP = 'http://10.163.197.174:8080'; // Current IP address
 
 // Production URL
 export const API_BASE_URL_PROD = 'https://your-production-api.com';
@@ -30,30 +30,31 @@ let API_BASE_URL_DEV_IP_OVERRIDE = API_BASE_URL_DEV_IP;
 // Using dynamic import pattern that works with TypeScript
 try {
   // @ts-ignore - Local config may not exist
+  // Clear require cache to force reload (for development hot reload)
+  if (__DEV__ && require.cache) {
+    const localConfigPath = require.resolve('./apiConfig.local');
+    delete require.cache[localConfigPath];
+  }
   const localConfig = require('./apiConfig.local');
-  console.log('📱 Local API config loaded:', localConfig);
+  if (__DEV__) {
+    console.log('📱 Local API config loaded');
+  }
   if (localConfig && localConfig.USE_IP_ADDRESS !== undefined) {
     USE_IP_ADDRESS_DEFAULT = localConfig.USE_IP_ADDRESS;
-    console.log('✅ USE_IP_ADDRESS set to:', USE_IP_ADDRESS_DEFAULT);
   }
   if (localConfig && localConfig.API_BASE_URL_DEV_IP) {
     API_BASE_URL_DEV_IP_OVERRIDE = localConfig.API_BASE_URL_DEV_IP;
-    console.log('✅ API_BASE_URL_DEV_IP set to:', API_BASE_URL_DEV_IP_OVERRIDE);
   }
 } catch (e) {
   // Local config doesn't exist, use defaults - this is expected
-  console.log('ℹ️ No local API config found, using defaults');
+  // Silently fail in production
 }
 
 // Export the values (local config overrides defaults if it exists)
 export const USE_IP_ADDRESS = USE_IP_ADDRESS_DEFAULT;
 export const API_BASE_URL_DEV_IP_FINAL = API_BASE_URL_DEV_IP_OVERRIDE;
 
-// Log the final configuration for debugging
-console.log('🔧 [API Config] Final settings:', {
-  USE_IP_ADDRESS,
-  API_BASE_URL_DEV,
-  API_BASE_URL_DEV_IP_FINAL,
-  willUse: USE_IP_ADDRESS ? API_BASE_URL_DEV_IP_FINAL : API_BASE_URL_DEV
-});
-
+// Log the final configuration only in development
+if (__DEV__) {
+  console.log('🔧 [API Config] Using:', USE_IP_ADDRESS ? API_BASE_URL_DEV_IP_FINAL : API_BASE_URL_DEV);
+}

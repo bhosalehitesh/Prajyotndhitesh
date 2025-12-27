@@ -1,11 +1,15 @@
 package com.smartbiz.sakhistore.modules.order.controller;
 
+import com.smartbiz.sakhistore.modules.order.dto.*;
 import com.smartbiz.sakhistore.modules.order.model.OrderItems;
 import com.smartbiz.sakhistore.modules.order.service.OrderItemsService;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-        import java.util.List;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/order-items")
@@ -13,33 +17,48 @@ import org.springframework.web.bind.annotation.*;
 public class OrderItemsController {
 
     private final OrderItemsService orderItemsService;
+    
+    @Autowired
+    private OrderMapper orderMapper;
 
     public OrderItemsController(OrderItemsService orderItemsService) {
         this.orderItemsService = orderItemsService;
     }
 
     // ============================
-    // GET ALL ORDER ITEMS
+    // GET ALL ORDER ITEMS (Using DTO)
     // ============================
     @GetMapping("/all")
-    public List<OrderItems> getAll() {
-        return orderItemsService.getAllOrderItems();
+    public ResponseEntity<List<OrderItemResponseDTO>> getAll() {
+        List<OrderItems> items = orderItemsService.getAllOrderItems();
+        List<OrderItemResponseDTO> itemDTOs = items.stream()
+                .map(orderMapper::toOrderItemResponseDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(itemDTOs);
     }
 
     // ============================
-    // GET ORDER ITEMS BY ORDER ID
+    // GET ORDER ITEMS BY ORDER ID (Using DTO)
     // ============================
     @GetMapping("/order/{orderId}")
-    public List<OrderItems> getByOrder(@PathVariable Long orderId) {
-        return orderItemsService.getOrderItemsByOrder(orderId);
+    public ResponseEntity<List<OrderItemResponseDTO>> getByOrder(@PathVariable Long orderId) {
+        List<OrderItems> items = orderItemsService.getOrderItemsByOrder(orderId);
+        List<OrderItemResponseDTO> itemDTOs = items.stream()
+                .map(orderMapper::toOrderItemResponseDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(itemDTOs);
     }
 
     // ============================
-    // GET ORDER ITEMS BY CART ID
+    // GET ORDER ITEMS BY CART ID (Using DTO)
     // ============================
     @GetMapping("/cart/{cartId}")
-    public List<OrderItems> getByCart(@PathVariable Long cartId) {
-        return orderItemsService.getOrderItemsByCart(cartId);
+    public ResponseEntity<List<OrderItemResponseDTO>> getByCart(@PathVariable Long cartId) {
+        List<OrderItems> items = orderItemsService.getOrderItemsByCart(cartId);
+        List<OrderItemResponseDTO> itemDTOs = items.stream()
+                .map(orderMapper::toOrderItemResponseDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(itemDTOs);
     }
 
     // ============================

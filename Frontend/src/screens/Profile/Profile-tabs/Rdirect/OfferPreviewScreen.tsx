@@ -119,8 +119,8 @@ export default function OfferPreviewScreen({ offerData = {}, onCreateOffer }: Of
             customer.
           </Text>
 
-          <TouchableOpacity onPress={() => Linking.openURL('https://www.sakhi.store/Girnai')}>
-            <Text style={styles.visitLink}>Visit: https://www.sakhi.store/Girnai</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('https://smartbiz.ltd/Girnai')}>
+            <Text style={styles.visitLink}>Visit: https://smartbiz.ltd/Girnai</Text>
           </TouchableOpacity>
         </View>
 

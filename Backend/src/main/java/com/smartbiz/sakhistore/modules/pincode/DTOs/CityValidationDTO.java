@@ -50,7 +50,6 @@ public class CityValidationDTO {
 	}
 	public CityValidationDTO() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
     
     

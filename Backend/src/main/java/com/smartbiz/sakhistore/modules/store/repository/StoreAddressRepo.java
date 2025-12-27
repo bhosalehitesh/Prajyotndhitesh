@@ -12,4 +12,7 @@ public interface StoreAddressRepo extends JpaRepository<StoreAddress, Long> {
     
     // Find address by store_id (for one-to-one relationship)
     Optional<StoreAddress> findByStoreDetails_StoreId(Long storeId);
+    
+    // Find addresses with null store_id (orphaned addresses)
+    List<StoreAddress> findByStoreDetailsIsNull();
 }

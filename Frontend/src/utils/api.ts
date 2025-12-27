@@ -788,11 +788,19 @@ export interface CollectionWithCountDto extends CollectionDto {
 /**
  * Create or update store details for the logged-in seller.
  * Backend: POST /api/stores/addStore
- * Body: { storeName, storeLink, seller: { sellerId } }
+ * Body: { storeName, storeLink, storeAddress?: {...}, seller: { sellerId } }
  */
 export const saveStoreDetails = async (
   storeName: string,
   storeLink: string,
+  address?: {
+    addressLine1: string;
+    addressLine2: string;
+    landmark?: string;
+    city: string;
+    state: string;
+    pincode: string;
+  },
 ): Promise<StoreDetailsResponse> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const userId = await storage.getItem('userId'); // sellerId from auth
@@ -808,6 +816,19 @@ export const saveStoreDetails = async (
     storeName,
     storeLink,
   };
+
+  // ✅ CRITICAL: Include address in store creation request if provided
+  // This ensures address is created WITH the store in a single API call
+  if (address) {
+    body.storeAddress = {
+      shopNoBuildingCompanyApartment: address.addressLine1,
+      areaStreetSectorVillage: address.addressLine2,
+      landmark: address.landmark ?? '',
+      townCity: address.city,
+      state: address.state,
+      pincode: address.pincode,
+    };
+  }
 
   const response = await fetch(url, {
     method: 'POST',
@@ -1033,6 +1054,74 @@ export const getCurrentSellerStoreDetails = async (): Promise<StoreDetailsRespon
 };
 
 /**
+ * Fix orphaned address (link address with null store_id to current seller's store)
+ * Backend: POST /api/store-address/fix-orphaned
+ */
+export const fixOrphanedAddress = async (): Promise<StoreAddressResponse | null> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const url = `${API_BASE_URL}/api/store-address/fix-orphaned`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok || !payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    return {
+      addressId: payload.addressId,
+    };
+  } catch (error) {
+    console.error('Error fixing orphaned address:', error);
+    return null;
+  }
+};
+
+/**
+ * Fix ALL orphaned addresses in the database (admin utility)
+ * Backend: POST /api/store-address/fix-all-orphaned
+ * Returns: { success: boolean, fixedCount: number, message: string }
+ */
+export const fixAllOrphanedAddresses = async (): Promise<{ success: boolean; fixedCount: number; message: string } | null> => {
+  const token = await storage.getItem(AUTH_TOKEN_KEY);
+  const url = `${API_BASE_URL}/api/store-address/fix-all-orphaned`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const payload = await parseJsonOrText(response);
+
+    if (!response.ok || !payload || typeof payload !== 'object') {
+      const errorMessage = typeof payload === 'string' ? payload : payload?.error || 'Failed to fix orphaned addresses';
+      throw new Error(errorMessage);
+    }
+
+    return {
+      success: payload.success || false,
+      fixedCount: payload.fixedCount || 0,
+      message: payload.message || `Fixed ${payload.fixedCount || 0} orphaned address(es)`,
+    };
+  } catch (error: any) {
+    console.error('Error fixing all orphaned addresses:', error);
+    throw error;
+  }
+};
+
+/**
  * Create or update store address for the current store.
  * Backend: POST /api/store-address/addAddress
  */
@@ -1047,7 +1136,27 @@ export const saveStoreAddress = async (params: {
   const url = `${API_BASE_URL}/api/store-address/addAddress`;
 
   const token = await storage.getItem(AUTH_TOKEN_KEY);
-  const storeId = await storage.getItem('storeId');
+  let storeId = await storage.getItem('storeId');
+
+  // ✅ CRITICAL FIX: If storeId is not in storage, try to fetch it from seller's store
+  // If that fails, let the backend find it automatically via JWT token
+  if (!storeId) {
+    console.log('⚠️ [saveStoreAddress] StoreId not in storage, attempting to fetch from seller store...');
+    try {
+      const storeDetails = await getCurrentSellerStoreDetails();
+      if (storeDetails?.storeId) {
+        storeId = String(storeDetails.storeId);
+        // Cache it for future use
+        await storage.setItem('storeId', storeId);
+        console.log('✅ [saveStoreAddress] StoreId fetched and cached:', storeId);
+      } else {
+        console.warn('⚠️ [saveStoreAddress] Store not found via API, backend will find it via JWT token');
+      }
+    } catch (error) {
+      console.warn('⚠️ [saveStoreAddress] Could not fetch store details, backend will find store via JWT token:', error);
+      // Don't throw error - let backend handle it via JWT token extraction
+    }
+  }
 
   const body: any = {
     shopNoBuildingCompanyApartment: params.addressLine1,
@@ -1058,37 +1167,77 @@ export const saveStoreAddress = async (params: {
     state: params.state,
   };
 
-  // Send storeId directly (backend DTO expects storeId, not nested storeDetails)
+  // ✅ Send storeId if available, otherwise let backend find it via JWT token
   if (storeId) {
     body.storeId = Number(storeId);
+    console.log('✅ [saveStoreAddress] Saving address with storeId:', body.storeId);
+  } else {
+    console.log('ℹ️ [saveStoreAddress] StoreId not provided, backend will find store via JWT token');
+    // Backend will automatically find storeId from JWT token if not provided
   }
 
-  const response = await fetch(url, {
+  // ✅ DETAILED LOGGING: Log the complete request
+  console.log('📤 [saveStoreAddress] Sending request:', {
+    url,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
+    hasToken: !!token,
+    body: JSON.stringify(body, null, 2),
+    timestamp: new Date().toISOString(),
   });
 
-  const payload = await parseJsonOrText(response);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
 
-  if (!response.ok) {
-    const message =
-      typeof payload === 'string'
-        ? payload
-        : payload?.message || 'Failed to save store address';
-    throw new Error(message);
+    console.log('📥 [saveStoreAddress] Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries()),
+    });
+
+    const payload = await parseJsonOrText(response);
+    console.log('📦 [saveStoreAddress] Response payload:', JSON.stringify(payload, null, 2));
+
+    if (!response.ok) {
+      const message =
+        typeof payload === 'string'
+          ? payload
+          : payload?.message || 'Failed to save store address';
+      console.error('❌ [saveStoreAddress] Request failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        message,
+        payload,
+      });
+      throw new Error(message);
+    }
+
+    if (!payload || typeof payload !== 'object' || payload.addressId == null) {
+      console.error('❌ [saveStoreAddress] Invalid response format:', payload);
+      throw new Error('Invalid store address response from server');
+    }
+
+    console.log('✅ [saveStoreAddress] Address saved successfully! AddressId:', payload.addressId);
+    return {
+      addressId: payload.addressId,
+    };
+  } catch (error: any) {
+    console.error('❌ [saveStoreAddress] ERROR:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      url,
+      body: JSON.stringify(body, null, 2),
+    });
+    throw error;
   }
-
-  if (!payload || typeof payload !== 'object' || payload.addressId == null) {
-    throw new Error('Invalid store address response from server');
-  }
-
-  return {
-    addressId: payload.addressId,
-  };
 };
 
 /**
@@ -1610,6 +1759,7 @@ export const uploadCollectionWithImages = async (params: {
 /**
  * Save products for a collection (many-to-many mapping).
  * Backend: POST /api/collections/{id}/products
+ * Expects: { collectionId: number, productIds: number[] }
  */
 export const saveCollectionProducts = async (
   collectionId: number,
@@ -1617,6 +1767,15 @@ export const saveCollectionProducts = async (
 ) => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const url = `${API_BASE_URL}/api/collections/${collectionId}/products`;
+
+  // Convert productIds to Long (number) array
+  const productIdsAsNumbers = productIds.map(id => typeof id === 'string' ? Number(id) : id);
+
+  // Send DTO format expected by backend
+  const requestBody = {
+    collectionId: collectionId,
+    productIds: productIdsAsNumbers,
+  };
 
   console.log(`Adding ${productIds.length} product(s) to collection ${collectionId}:`, productIds);
 
@@ -1626,7 +1785,7 @@ export const saveCollectionProducts = async (
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify(productIds),
+    body: JSON.stringify(requestBody),
   });
 
   const payload = await parseJsonOrText(response);
@@ -2481,6 +2640,7 @@ export interface LogoUploadResponse {
   message: string;
   logoUrl?: string;
   storeId?: number;
+  logoId?: number;
 }
 
 export const uploadStoreLogo = async (
@@ -2554,7 +2714,24 @@ export const uploadStoreLogo = async (
       };
     }
 
-    return payload as LogoUploadResponse;
+    // Backend returns StoreLogoResponseDTO with logoUrl, storeId, sellerId, etc.
+    // Map it to our LogoUploadResponse format
+    const backendResponse = payload as any;
+    if (backendResponse.logoUrl) {
+      return {
+        success: true,
+        message: 'Logo uploaded successfully',
+        logoUrl: backendResponse.logoUrl,
+        storeId: backendResponse.storeId,
+        logoId: backendResponse.logoId,
+      };
+    }
+
+    // If no logoUrl, treat as failure
+    return {
+      success: false,
+      message: backendResponse.message || 'Logo upload failed - no URL returned',
+    };
   } catch (error: any) {
     const errorMessage = error.message || 'Network error. Please check your connection.';
     // Use console.warn for expected errors to avoid React Native error overlay
@@ -2583,10 +2760,12 @@ export interface StoreDetailsResponse {
 
 export const getStoreBySellerId = async (sellerId: number): Promise<StoreDetailsResponse | null> => {
   try {
+    const token = await storage.getItem(AUTH_TOKEN_KEY);
     const response = await fetch(`${API_BASE_URL}/api/stores/seller?sellerId=${sellerId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     });
 

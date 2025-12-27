@@ -1,7 +1,7 @@
 package com.smartbiz.sakhistore.modules.pincode.service;
 
-import java.util.List;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -13,17 +13,17 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LivePincodeLookupService {
 
+    private static final Logger logger = LoggerFactory.getLogger(LivePincodeLookupService.class);
+    private static final int MAX_RETRIES = 3;
+    private static final int RETRY_DELAY_MS = 1000;
+
     private final RestTemplate restTemplate;
 
     public PostOfficeResponse.PostOffice getLiveDetails(String pincode) {
-
         String url = "https://api.postalpincode.in/pincode/" + pincode;
-
-        int MAX_RETRIES = 3;
 
         for (int i = 1; i <= MAX_RETRIES; i++) {
             try {
-
                 PostOfficeResponse[] response =
                         restTemplate.getForObject(url, PostOfficeResponse[].class);
 
@@ -44,18 +44,22 @@ public class LivePincodeLookupService {
                 return res.getPostOffice().get(0);
 
             } catch (Exception ex) {
-
-                System.out.println("Attempt " + i + " failed: " + ex.getMessage());
+                logger.warn("Pincode lookup attempt {} failed for pincode {}: {}", i, pincode, ex.getMessage());
 
                 if (i == MAX_RETRIES) {
-                    throw new RuntimeException("India Post API is not responding. Please try again later.");
+                    logger.error("All {} attempts failed for pincode lookup: {}", MAX_RETRIES, pincode);
+                    throw new RuntimeException("India Post API is not responding. Please try again later.", ex);
                 }
 
-                try { Thread.sleep(1000); } catch (Exception ignored) {}
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Thread interrupted during retry", e);
+                }
             }
         }
 
-        throw new RuntimeException("Unexpected error");
+        throw new RuntimeException("Unexpected error in pincode lookup");
     }
-
 }

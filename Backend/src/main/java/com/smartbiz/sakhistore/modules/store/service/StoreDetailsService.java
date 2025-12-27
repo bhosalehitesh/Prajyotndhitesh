@@ -17,8 +17,10 @@ import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.category.repository.CategoryRepository;
 import com.smartbiz.sakhistore.modules.collection.model.collection;
 import com.smartbiz.sakhistore.modules.collection.repository.CollectionRepository;
+import com.smartbiz.sakhistore.modules.store.model.StoreAddress;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.model.StoreLogo;
+import com.smartbiz.sakhistore.modules.store.repository.StoreAddressRepo;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
 import com.smartbiz.sakhistore.modules.store.repository.StoreLogoRepo;
 
@@ -54,6 +56,9 @@ public class StoreDetailsService {
 
     @Autowired
     private StoreLogoRepo storeLogoRepo;
+
+    @Autowired
+    private StoreAddressRepo storeAddressRepo;
 
 
 
@@ -208,7 +213,48 @@ public class StoreDetailsService {
         // ✅ CRITICAL: Link store to seller (prevents null seller_id)
         store.setSeller(seller);
 
-        return storeRepository.save(store);
+        // ✅ CRITICAL: Temporarily remove address from store before saving
+        // We need to save store first to get storeId, then link address
+        StoreAddress addressToLink = store.getStoreAddress();
+        store.setStoreAddress(null); // Temporarily remove to avoid null store_id
+        
+        // ✅ Save store first to get storeId
+        StoreDetails savedStore = storeRepository.save(store);
+
+        // ✅ CRITICAL: Handle store address if provided
+        // Address must be linked AFTER store is saved (so store has an ID)
+        if (addressToLink != null) {
+            // Set the saved store as the owner of the address
+            addressToLink.setStoreDetails(savedStore);
+            
+            // Check if store already has an address (one-to-one relationship)
+            java.util.Optional<StoreAddress> existingAddress = storeAddressRepo.findByStoreDetails_StoreId(savedStore.getStoreId());
+            
+            if (existingAddress.isPresent()) {
+                // Update existing address
+                StoreAddress existing = existingAddress.get();
+                existing.setShopNoBuildingCompanyApartment(addressToLink.getShopNoBuildingCompanyApartment());
+                existing.setAreaStreetSectorVillage(addressToLink.getAreaStreetSectorVillage());
+                existing.setLandmark(addressToLink.getLandmark());
+                existing.setPincode(addressToLink.getPincode());
+                existing.setTownCity(addressToLink.getTownCity());
+                existing.setState(addressToLink.getState());
+                existing.setStoreDetails(savedStore); // Ensure relationship is set
+                storeAddressRepo.save(existing);
+                savedStore.setStoreAddress(existing);
+            } else {
+                // Save address directly via repository to ensure store_id is set
+                StoreAddress savedAddress = storeAddressRepo.save(addressToLink);
+                // Set address back on store for bidirectional relationship
+                savedStore.setStoreAddress(savedAddress);
+            }
+            
+            // Refresh store to ensure address is loaded
+            savedStore = storeRepository.findByIdWithRelations(savedStore.getStoreId())
+                    .orElse(savedStore);
+        }
+
+        return savedStore;
     }
 
     // ---------------------- UPDATE ----------------------

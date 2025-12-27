@@ -2,6 +2,7 @@ package com.smartbiz.sakhistore.modules.store.controller;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -19,10 +20,12 @@ import com.smartbiz.sakhistore.common.exceptions.ResourceNotFoundException;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
 import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.collection.model.collection;
+import com.smartbiz.sakhistore.modules.store.dto.*;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.store.service.StoreDetailsService;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -35,6 +38,9 @@ public class StoreDetailsController {
     
     @Autowired
     private JwtService jwtService;
+    
+    @Autowired
+    private StoreMapper storeMapper;
     
     // Helper method to extract sellerId from JWT token
     private Long extractSellerIdFromToken(HttpServletRequest httpRequest) {
@@ -51,33 +57,77 @@ public class StoreDetailsController {
     }
 
     @GetMapping("/allStores")
-    public List<StoreDetails> allStores(HttpServletRequest httpRequest) {
+    public ResponseEntity<List<StoreDetailsResponseDTO>> allStores(HttpServletRequest httpRequest) {
         Long sellerId = extractSellerIdFromToken(httpRequest);
-        return storeService.allStores(sellerId);
+        List<StoreDetails> stores = storeService.allStores(sellerId);
+        List<StoreDetailsResponseDTO> storeDTOs = stores.stream()
+                .map(storeMapper::toStoreDetailsResponseDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(storeDTOs);
     }
 
     @PostMapping("/addStore")
-    public StoreDetails addStore(
-            @RequestBody StoreDetails store,
+    public ResponseEntity<StoreDetailsResponseDTO> addStore(
+            @Valid @RequestBody StoreDetailsRequest request,
             @RequestParam(value = "sellerId", required = true) Long sellerId) {
-        return storeService.addStore(store, sellerId);
+        if (!request.isValid()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        // Convert DTO to entity
+        StoreDetails store = new StoreDetails();
+        store.setStoreName(request.getStoreName());
+        store.setStoreLink(request.getStoreLink());
+        store.setLogoUrl(request.getLogoUrl());
+        
+        // ✅ CRITICAL: Handle store address if provided in request
+        if (request.getStoreAddress() != null) {
+            com.smartbiz.sakhistore.modules.store.model.StoreAddress address = 
+                new com.smartbiz.sakhistore.modules.store.model.StoreAddress();
+            address.setShopNoBuildingCompanyApartment(request.getStoreAddress().getShopNoBuildingCompanyApartment());
+            address.setAreaStreetSectorVillage(request.getStoreAddress().getAreaStreetSectorVillage());
+            address.setLandmark(request.getStoreAddress().getLandmark());
+            address.setPincode(request.getStoreAddress().getPincode());
+            address.setTownCity(request.getStoreAddress().getTownCity());
+            address.setState(request.getStoreAddress().getState());
+            // Note: storeDetails will be set in addStore() after store is saved
+            store.setStoreAddress(address);
+        }
+        
+        StoreDetails savedStore = storeService.addStore(store, sellerId);
+        StoreDetailsResponseDTO responseDTO = storeMapper.toStoreDetailsResponseDTO(savedStore);
+        return ResponseEntity.ok(responseDTO);
     }
 
     @PostMapping("/editStore")
-    public StoreDetails editStore(
-            @RequestBody StoreDetails store,
+    public ResponseEntity<StoreDetailsResponseDTO> editStore(
+            @Valid @RequestBody StoreDetailsRequest request,
             @RequestParam(value = "sellerId", required = false) Long sellerId) {
+        if (!request.isValid()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        // Convert DTO to entity
+        StoreDetails store = new StoreDetails();
+        store.setStoreName(request.getStoreName());
+        store.setStoreLink(request.getStoreLink());
+        store.setLogoUrl(request.getLogoUrl());
+        
+        StoreDetails savedStore;
         // For edit, sellerId is optional (only needed if creating new store)
-        if (store.getStoreId() != null) {
+        if (request.getStoreId() != null) {
             // Updating existing store - use updateStore method
-            return storeService.updateStore(store.getStoreId(), store);
+            savedStore = storeService.updateStore(request.getStoreId(), store);
         } else {
             // Creating new store - sellerId is required
             if (sellerId == null) {
-                throw new RuntimeException("Seller ID is required when creating a new store.");
+                return ResponseEntity.badRequest().build();
             }
-            return storeService.addStore(store, sellerId);
+            savedStore = storeService.addStore(store, sellerId);
         }
+        
+        StoreDetailsResponseDTO responseDTO = storeMapper.toStoreDetailsResponseDTO(savedStore);
+        return ResponseEntity.ok(responseDTO);
     }
 
     // Check store name availability
@@ -96,65 +146,63 @@ public class StoreDetailsController {
     // Upload logo for a store by seller ID
     // IMPORTANT: This must come before @GetMapping("/{storeId}") to avoid path conflict
     @PostMapping(value = "/upload-logo", consumes = {"multipart/form-data"})
-    public ResponseEntity<?> uploadLogo(
+    public ResponseEntity<StoreLogoResponseDTO> uploadLogo(
             @RequestParam("sellerId") Long sellerId,
             @RequestParam("logo") MultipartFile logoFile) {
         try {
             if (logoFile.isEmpty()) {
-                return ResponseEntity.badRequest().body("Logo file is required");
+                return ResponseEntity.badRequest().build();
             }
 
             // Validate file type
             String contentType = logoFile.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
-                return ResponseEntity.badRequest().body("File must be an image");
+                return ResponseEntity.badRequest().build();
             }
 
             // Validate file size (5MB max)
             if (logoFile.getSize() > 5 * 1024 * 1024) {
-                return ResponseEntity.badRequest().body("Image size must be less than 5MB");
+                return ResponseEntity.badRequest().build();
             }
 
             StoreDetails store = storeService.uploadLogoBySellerId(sellerId, logoFile);
             
-            return ResponseEntity.ok(new java.util.HashMap<String, Object>() {{
-                put("success", true);
-                put("message", "Logo uploaded successfully");
-                put("logoUrl", store.getLogoUrl());
-                put("storeId", store.getStoreId());
-            }});
+            // Get the uploaded logo from store_logos table
+            try {
+                com.smartbiz.sakhistore.modules.store.model.StoreLogo logo = 
+                    storeService.getActiveLogoBySellerId(sellerId);
+                if (logo != null) {
+                    StoreLogoResponseDTO responseDTO = storeMapper.toStoreLogoResponseDTO(logo);
+                    return ResponseEntity.ok(responseDTO);
+                }
+            } catch (Exception e) {
+                // Fallback to store logoUrl
+            }
+            
+            // Fallback response
+            StoreLogoResponseDTO responseDTO = new StoreLogoResponseDTO();
+            responseDTO.setLogoUrl(store.getLogoUrl());
+            responseDTO.setSellerId(sellerId);
+            responseDTO.setStoreId(store.getStoreId());
+            return ResponseEntity.ok(responseDTO);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(new java.util.HashMap<String, Object>() {{
-                put("success", false);
-                put("message", "Failed to upload logo: " + e.getMessage());
-            }});
+            return ResponseEntity.status(500).build();
         }
     }
 
     @GetMapping("/{storeId}")
-    public StoreDetails getStore(@PathVariable Long storeId) throws ResourceNotFoundException {
-        return storeService.findByIdDS(storeId);
+    public ResponseEntity<StoreDetailsResponseDTO> getStore(@PathVariable Long storeId) throws ResourceNotFoundException {
+        StoreDetails store = storeService.findByIdDS(storeId);
+        StoreDetailsResponseDTO responseDTO = storeMapper.toStoreDetailsResponseDTO(store);
+        return ResponseEntity.ok(responseDTO);
     }
 
     // Get store for a specific seller (assumes one store per seller)
     // Use a fixed path segment to avoid conflict with "/{storeId}"
     @GetMapping("/seller")
-    public ResponseEntity<?> getStoreBySeller(@RequestParam("sellerId") Long sellerId) {
+    public ResponseEntity<StoreDetailsResponseDTO> getStoreBySeller(@RequestParam("sellerId") Long sellerId) {
         try {
             StoreDetails store = storeService.findBySellerId(sellerId);
-            
-            // Log storeAddress for debugging
-            if (store.getStoreAddress() != null) {
-                System.out.println("📍 [getStoreBySeller] StoreAddress found for sellerId " + sellerId + ":");
-                System.out.println("   - shopNoBuildingCompanyApartment: " + store.getStoreAddress().getShopNoBuildingCompanyApartment());
-                System.out.println("   - areaStreetSectorVillage: " + store.getStoreAddress().getAreaStreetSectorVillage());
-                System.out.println("   - landmark: " + store.getStoreAddress().getLandmark());
-                System.out.println("   - townCity: " + store.getStoreAddress().getTownCity());
-                System.out.println("   - state: " + store.getStoreAddress().getState());
-                System.out.println("   - pincode: " + store.getStoreAddress().getPincode());
-            } else {
-                System.out.println("⚠️ [getStoreBySeller] No StoreAddress found for sellerId: " + sellerId);
-            }
             
             // Try to get logo from store_logos table first (new table)
             try {
@@ -163,25 +211,18 @@ public class StoreDetailsController {
                 if (activeLogo != null && activeLogo.getLogoUrl() != null) {
                     // Use logo from store_logos table if available
                     store.setLogoUrl(activeLogo.getLogoUrl());
-                    System.out.println("✅ Retrieved logo from store_logos table for sellerId: " + sellerId);
-                } else if (store.getLogoUrl() != null) {
-                    // Fallback to store_details.logoUrl
-                    System.out.println("ℹ️ Using logo from store_details table for sellerId: " + sellerId);
                 }
             } catch (Exception e) {
                 // If new table doesn't exist yet or error, use store_details.logoUrl
-                System.out.println("⚠️ Could not retrieve from store_logos, using store_details: " + e.getMessage());
             }
             
-            return ResponseEntity.ok(store);
+            StoreDetailsResponseDTO responseDTO = storeMapper.toStoreDetailsResponseDTO(store);
+            return ResponseEntity.ok(responseDTO);
         } catch (NoSuchElementException e) {
             // Return null/empty response instead of 500 error when store doesn't exist
             return ResponseEntity.ok(null);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(new java.util.HashMap<String, Object>() {{
-                put("error", "Internal Server Error");
-                put("message", e.getMessage());
-            }});
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -204,8 +245,10 @@ public class StoreDetailsController {
     
     // Get store by slug (for public access)
     @GetMapping("/slug/{slug}")
-    public StoreDetails getStoreBySlug(@PathVariable String slug) {
-        return storeService.findBySlug(slug);
+    public ResponseEntity<StoreDetailsResponseDTO> getStoreBySlug(@PathVariable String slug) {
+        StoreDetails store = storeService.findBySlug(slug);
+        StoreDetailsResponseDTO responseDTO = storeMapper.toStoreDetailsResponseDTO(store);
+        return ResponseEntity.ok(responseDTO);
     }
     
    

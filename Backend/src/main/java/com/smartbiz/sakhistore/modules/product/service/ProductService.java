@@ -156,7 +156,7 @@ public class ProductService {
                         .orElseThrow(() -> new RuntimeException("Category not found with id: " + categoryId));
             } else {
                 // Automatically find category based on productCategory or businessCategory
-                category = findOrCreateCategoryForProduct(productCategory, businessCategory);
+                category = findOrCreateCategoryForProduct(productCategory, businessCategory, sellerId);
                 if (category == null) {
                     throw new RuntimeException(
                             "Category is required. Please provide categoryId or ensure categories exist in database.");
@@ -400,7 +400,10 @@ public class ProductService {
             // not provided
             String productCategory = product.getProductCategory();
             String businessCategory = product.getBusinessCategory();
-            Category category = findOrCreateCategoryForProduct(productCategory, businessCategory);
+            // Use provided sellerId parameter, or fallback to product's seller
+            Long productSellerId = sellerId != null ? sellerId 
+                    : (product.getSeller() != null ? product.getSeller().getSellerId() : null);
+            Category category = findOrCreateCategoryForProduct(productCategory, businessCategory, productSellerId);
             if (category != null) {
                 product.setCategory(category);
             }
@@ -594,10 +597,17 @@ public class ProductService {
     }
 
     // ✅ Automatically find or create category for product based on productCategory
-    // or businessCategory
-    private Category findOrCreateCategoryForProduct(String productCategory, String businessCategory) {
+    // or businessCategory, with seller context for better matching
+    private Category findOrCreateCategoryForProduct(String productCategory, String businessCategory, Long sellerId) {
         if (productCategory == null && businessCategory == null) {
-            // If no category info, try to get first available category or return null
+            // If no category info, try to get first available category for seller or return null
+            if (sellerId != null) {
+                List<Category> sellerCategories = categoryRepository.findBySeller_SellerId(sellerId);
+                if (!sellerCategories.isEmpty()) {
+                    return sellerCategories.get(0); // Return first category for seller as default
+                }
+            }
+            // Fallback to any category if no seller-specific categories exist
             List<Category> allCategories = categoryRepository.findAll();
             if (!allCategories.isEmpty()) {
                 return allCategories.get(0); // Return first category as default
@@ -605,51 +615,113 @@ public class ProductService {
             return null; // No categories exist
         }
 
-        // Try to find by productCategory name (exact match)
-        if (productCategory != null && !productCategory.trim().isEmpty()) {
-            List<Category> categories = categoryRepository.findByCategoryNameIgnoreCase(productCategory.trim());
-            if (!categories.isEmpty()) {
-                return categories.get(0); // Return first match
-            }
+        List<Category> candidateCategories = new ArrayList<>();
+
+        // STEP 1: Filter by seller first (if sellerId provided)
+        if (sellerId != null) {
+            // Get all categories for this seller
+            candidateCategories = categoryRepository.findBySeller_SellerId(sellerId);
+        } else {
+            // If no sellerId, search all categories
+            candidateCategories = categoryRepository.findAll();
         }
 
-        // Try to find by businessCategory (contains match)
-        if (businessCategory != null && !businessCategory.trim().isEmpty()) {
-            List<Category> categories = categoryRepository
-                    .findByBusinessCategoryContainingIgnoreCase(businessCategory.trim());
-            if (!categories.isEmpty()) {
-                return categories.get(0); // Return first match
-            }
-        }
-
-        // If no match found, try to find any category with similar businessCategory
-        if (businessCategory != null && !businessCategory.trim().isEmpty()) {
-            List<Category> allCategories = categoryRepository.findAll();
-            String searchTerm = businessCategory.trim().toLowerCase();
-            for (Category cat : allCategories) {
-                if (cat.getBusinessCategory() != null &&
-                        cat.getBusinessCategory().toLowerCase().contains(searchTerm)) {
+        // STEP 2: Find best match with priority:
+        // Priority 1: Match both productCategory name AND businessCategory (exact match)
+        if (productCategory != null && !productCategory.trim().isEmpty() 
+                && businessCategory != null && !businessCategory.trim().isEmpty()) {
+            String productCatLower = productCategory.trim().toLowerCase();
+            String businessCatLower = businessCategory.trim().toLowerCase();
+            
+            for (Category cat : candidateCategories) {
+                String catName = (cat.getCategoryName() != null) ? cat.getCategoryName().toLowerCase().trim() : "";
+                String catBusiness = (cat.getBusinessCategory() != null) ? cat.getBusinessCategory().toLowerCase().trim() : "";
+                
+                // Check if both productCategory name and businessCategory match
+                if ((catName.equals(productCatLower) || catName.contains(productCatLower) || productCatLower.contains(catName))
+                        && (catBusiness.equals(businessCatLower) || catBusiness.contains(businessCatLower) || businessCatLower.contains(catBusiness))) {
+                    System.out.println("✅ [ProductService] Found category matching both productCategory and businessCategory: " + cat.getCategoryName());
                     return cat;
                 }
             }
         }
 
-        // Last resort: Create new category if none found (Auto-create)
-        Category newCategory = new Category();
-        // Use provided names or defaults
-        String name = productCategory != null && !productCategory.trim().isEmpty() ? productCategory.trim()
-                : (businessCategory != null && !businessCategory.trim().isEmpty() ? businessCategory.trim()
-                        : "General");
+        // Priority 2: Match by productCategory name (exact match) - seller-specific
+        if (productCategory != null && !productCategory.trim().isEmpty()) {
+            String productCatLower = productCategory.trim().toLowerCase();
+            for (Category cat : candidateCategories) {
+                String catName = (cat.getCategoryName() != null) ? cat.getCategoryName().toLowerCase().trim() : "";
+                if (catName.equals(productCatLower) || catName.contains(productCatLower) || productCatLower.contains(catName)) {
+                    System.out.println("✅ [ProductService] Found category matching productCategory: " + cat.getCategoryName());
+                    return cat;
+                }
+            }
+        }
 
-        newCategory.setCategoryName(name);
-        newCategory.setBusinessCategory(businessCategory != null ? businessCategory : "General");
-        newCategory.setIsActive(true);
-        newCategory.setOrderIndex(0);
-        newCategory.setSlug(generateSlug(name));
-        newCategory.setIsTrending(false); // Default
+        // Priority 3: Match by businessCategory (contains match) - seller-specific
+        if (businessCategory != null && !businessCategory.trim().isEmpty()) {
+            String businessCatLower = businessCategory.trim().toLowerCase();
+            
+            // If sellerId provided, use seller-specific search
+            if (sellerId != null) {
+                List<Category> sellerBusinessCategories = categoryRepository
+                        .findBySeller_SellerIdAndBusinessCategoryContainingIgnoreCase(sellerId, businessCategory.trim());
+                if (!sellerBusinessCategories.isEmpty()) {
+                    // If multiple matches, prefer the one that also matches productCategory name (if provided)
+                    if (productCategory != null && !productCategory.trim().isEmpty()) {
+                        String productCatLower = productCategory.trim().toLowerCase();
+                        for (Category cat : sellerBusinessCategories) {
+                            String catName = (cat.getCategoryName() != null) ? cat.getCategoryName().toLowerCase().trim() : "";
+                            if (catName.equals(productCatLower) || catName.contains(productCatLower) || productCatLower.contains(catName)) {
+                                System.out.println("✅ [ProductService] Found seller category matching businessCategory and productCategory: " + cat.getCategoryName());
+                                return cat;
+                            }
+                        }
+                    }
+                    // Return first match if no productCategory match found
+                    System.out.println("✅ [ProductService] Found seller category matching businessCategory: " + sellerBusinessCategories.get(0).getCategoryName());
+                    return sellerBusinessCategories.get(0);
+                }
+            } else {
+                // No sellerId - search all categories
+                for (Category cat : candidateCategories) {
+                    String catBusiness = (cat.getBusinessCategory() != null) ? cat.getBusinessCategory().toLowerCase().trim() : "";
+                    if (catBusiness.contains(businessCatLower) || businessCatLower.contains(catBusiness)) {
+                        System.out.println("✅ [ProductService] Found category matching businessCategory: " + cat.getCategoryName());
+                        return cat;
+                    }
+                }
+            }
+        }
 
-        System.out.println("⚠️ [ProductService] Auto-creating category: " + name);
-        return categoryRepository.save(newCategory);
+        // STEP 3: Last resort - Create new category if none found (Auto-create)
+        // Only create if sellerId is provided (to ensure seller association)
+        if (sellerId != null) {
+            Category newCategory = new Category();
+            // Use provided names or defaults
+            String name = productCategory != null && !productCategory.trim().isEmpty() ? productCategory.trim()
+                    : (businessCategory != null && !businessCategory.trim().isEmpty() ? businessCategory.trim()
+                            : "General");
+
+            newCategory.setCategoryName(name);
+            newCategory.setBusinessCategory(businessCategory != null ? businessCategory : "General");
+            newCategory.setIsActive(true);
+            newCategory.setOrderIndex(0);
+            newCategory.setSlug(generateSlug(name));
+            newCategory.setIsTrending(false); // Default
+            
+            // Link to seller
+            SellerDetails seller = sellerDetailsRepo.findById(sellerId)
+                    .orElseThrow(() -> new RuntimeException("Seller not found with id: " + sellerId));
+            newCategory.setSeller(seller);
+
+            System.out.println("⚠️ [ProductService] Auto-creating category for seller " + sellerId + ": " + name);
+            return categoryRepository.save(newCategory);
+        }
+
+        // If no sellerId and no match found, return null
+        System.out.println("⚠️ [ProductService] No category found and no sellerId provided - cannot auto-create category");
+        return null;
     }
 
     // Get all unique product categories

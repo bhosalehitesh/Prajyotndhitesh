@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SafeAreaView, ScrollView, View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, Alert, ActivityIndicator } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { storage, AUTH_TOKEN_KEY } from '../../../../authentication/storage';
-import { getCurrentSellerStoreDetails, saveStoreAddress, getSellerDetails, saveBusinessDetails, fetchCategories, fetchProducts, updateSellerDetails } from '../../../../utils/api';
+import { getCurrentSellerStoreDetails, saveStoreAddress, getSellerDetails, saveBusinessDetails, fetchCategories, fetchProducts, updateSellerDetails, fixOrphanedAddress, fixAllOrphanedAddresses } from '../../../../utils/api';
 
 // ... (inside component)
 
@@ -185,6 +185,38 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
           }
         } else {
           console.log('⚠️ [EditProfile] No storeAddress found in storeDetails');
+          
+          // ✅ AUTO-FIX: Try to fix orphaned address (address with null store_id)
+          // This happens when address was created but not properly linked to store
+          try {
+            console.log('🔧 [EditProfile] Attempting to fix orphaned address...');
+            const fixedAddress = await fixOrphanedAddress();
+            if (fixedAddress) {
+              console.log('✅ [EditProfile] Orphaned address fixed! Reloading store details...');
+              // Reload store details to get the newly linked address
+              const updatedStoreDetails = await getCurrentSellerStoreDetails();
+              if (updatedStoreDetails?.storeAddress) {
+                const addr = updatedStoreDetails.storeAddress;
+                const parts = [];
+                if (addr.shopNoBuildingCompanyApartment) parts.push(addr.shopNoBuildingCompanyApartment.trim());
+                if (addr.areaStreetSectorVillage) parts.push(addr.areaStreetSectorVillage.trim());
+                if (addr.landmark && addr.landmark.trim()) parts.push(addr.landmark.trim());
+                if (addr.townCity) parts.push(addr.townCity.trim());
+                if (addr.state) parts.push(addr.state.trim());
+                if (addr.pincode) parts.push(addr.pincode.trim());
+                
+                if (parts.length > 0) {
+                  updatedData.address = parts.join(', ');
+                  console.log('✅ [EditProfile] Address loaded after fix:', updatedData.address);
+                }
+              }
+            } else {
+              console.log('ℹ️ [EditProfile] No orphaned address found to fix');
+            }
+          } catch (error) {
+            console.warn('⚠️ [EditProfile] Could not fix orphaned address:', error);
+            // Continue without address - user can add it manually
+          }
         }
       }
 
@@ -201,6 +233,48 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
       setLoading(false);
       setInitialLoading(false);
     }
+  };
+
+  const handleFixAllOrphanedAddresses = async () => {
+    Alert.alert(
+      'Fix All Orphaned Addresses',
+      'This will fix all addresses in the database that have null store_id. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Fix All',
+          style: 'destructive',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const result = await fixAllOrphanedAddresses();
+              if (result && result.success) {
+                Alert.alert(
+                  'Success',
+                  result.message || `Fixed ${result.fixedCount} orphaned address(es)`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        // Reload profile data to see updated address
+                        loadProfileData();
+                      },
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert('Error', 'Failed to fix orphaned addresses. Please try again.');
+              }
+            } catch (error: any) {
+              const errorMessage = error?.message || 'Unknown error';
+              Alert.alert('Error', `Failed to fix orphaned addresses: ${errorMessage}`);
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleSave = async () => {
@@ -465,6 +539,28 @@ export default function EditProfileScreen({ onBack }: { onBack: () => void }) {
             )}
           </View>
 
+          {/* Admin Utility: Fix All Orphaned Addresses */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Admin Utilities</Text>
+            <Text style={styles.subText}>
+              Fix all addresses in the database that have null store_id
+            </Text>
+            <TouchableOpacity
+              style={[styles.fixButton, loading && styles.fixButtonDisabled]}
+              onPress={handleFixAllOrphanedAddresses}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <MaterialCommunityIcons name="wrench" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+                  <Text style={styles.fixButtonText}>Fix All Orphaned Addresses</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
           {/* Save Button */}
           <TouchableOpacity
             style={[styles.saveButton, loading && styles.saveButtonDisabled]}
@@ -584,6 +680,20 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   saveButtonText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
+  fixButton: {
+    backgroundColor: '#10b981',
+    marginTop: 10,
+    borderRadius: 7,
+    padding: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  fixButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+  },
+  fixButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -1,5 +1,6 @@
 package com.smartbiz.sakhistore.modules.order.controller;
 
+import com.smartbiz.sakhistore.modules.order.dto.*;
 import com.smartbiz.sakhistore.modules.order.model.OrderStatus;
 import com.smartbiz.sakhistore.modules.order.model.Orders;
 import com.smartbiz.sakhistore.modules.order.service.OrdersService;
@@ -12,6 +13,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -26,50 +28,92 @@ public class OrdersController {
 
     @Autowired(required = false)
     private com.smartbiz.sakhistore.modules.order.repository.EmailLogRepository emailLogRepository;
+    
+    @Autowired
+    private OrderMapper orderMapper;
 
     // ===============================
-    // Place Order From Cart
+    // Place Order From Cart (Supports both @RequestBody DTO and @RequestParam for backward compatibility)
     // ===============================
     @PostMapping("/place")
     public ResponseEntity<?> placeOrder(
-            @RequestParam Long userId,
-            @RequestParam String address,
-            @RequestParam Long mobile,
+            @RequestBody(required = false) PlaceOrderRequest request,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String address,
+            @RequestParam(required = false) Long mobile,
             @RequestParam(required = false) Long storeId,
             @RequestParam(required = false) Long sellerId) {
         try {
+            // Support both DTO (new way) and RequestParam (old way)
+            Long finalUserId;
+            String finalAddress;
+            Long finalMobile;
+            Long finalStoreId;
+            Long finalSellerId;
+            
+            if (request != null) {
+                // New way: Using DTO
+                if (!request.isValid()) {
+                    return ResponseEntity.badRequest().body(java.util.Map.of(
+                            "error", "VALIDATION_ERROR",
+                            "message", "Invalid request data",
+                            "timestamp", java.time.LocalDateTime.now().toString()));
+                }
+                finalUserId = request.getUserId();
+                finalAddress = request.getAddress();
+                finalMobile = request.getMobile();
+                finalStoreId = request.getStoreId();
+                finalSellerId = request.getSellerId();
+            } else {
+                // Old way: Using RequestParam (backward compatibility)
+                if (userId == null || address == null || mobile == null) {
+                    return ResponseEntity.badRequest().body(java.util.Map.of(
+                            "error", "VALIDATION_ERROR",
+                            "message", "User ID, address, and mobile are required",
+                            "timestamp", java.time.LocalDateTime.now().toString()));
+                }
+                finalUserId = userId;
+                finalAddress = address;
+                finalMobile = mobile;
+                finalStoreId = storeId;
+                finalSellerId = sellerId;
+            }
+
             System.out.println("\n" + "=".repeat(60));
             System.out.println("🛒 PLACING ORDER - REQUEST RECEIVED");
             System.out.println("=".repeat(60));
-            System.out.println("User ID: " + userId);
+            System.out.println("User ID: " + finalUserId);
             System.out.println("Address: "
-                    + (address != null ? address.substring(0, Math.min(50, address.length())) + "..." : "NULL"));
-            System.out.println("Mobile: " + mobile);
-            System.out.println("Store ID: " + storeId);
-            System.out.println("Seller ID: " + sellerId);
+                    + (finalAddress != null ? finalAddress.substring(0, Math.min(50, finalAddress.length())) + "..." : "NULL"));
+            System.out.println("Mobile: " + finalMobile);
+            System.out.println("Store ID: " + finalStoreId);
+            System.out.println("Seller ID: " + finalSellerId);
             System.out.println("=".repeat(60) + "\n");
 
-            // Validate required parameters
-            if (userId == null || userId <= 0) {
-                throw new IllegalArgumentException("User ID is required and must be greater than 0");
-            }
-            if (address == null || address.trim().isEmpty()) {
-                throw new IllegalArgumentException("Address is required");
-            }
-            if (mobile == null || mobile <= 0) {
-                throw new IllegalArgumentException("Mobile number is required and must be valid");
-            }
-
             User user = new User();
-            user.setId(userId);
+            user.setId(finalUserId);
 
-            Orders order = ordersService.placeOrder(user, address, mobile, storeId, sellerId);
+            Orders order = ordersService.placeOrder(user, finalAddress, finalMobile, 
+                    finalStoreId, finalSellerId);
 
             System.out.println("✅ Order placed successfully. Order ID: "
                     + (order.getOrdersId() != null ? order.getOrdersId() : "N/A"));
             System.out.println("=".repeat(60) + "\n");
 
-            return ResponseEntity.ok(order);
+            // Convert to response DTO
+            PlaceOrderResponse placeOrderResponse = new PlaceOrderResponse(
+                    order.getOrdersId(),
+                    order.getTotalAmount(),
+                    order.getOrderStatus() != null ? order.getOrderStatus().name() : null,
+                    order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null,
+                    order.getCreationTime()
+            );
+            
+            if (order.getPayment() != null) {
+                placeOrderResponse.setPaymentId(order.getPayment().getPaymentId());
+            }
+
+            return ResponseEntity.ok(placeOrderResponse);
 
         } catch (IllegalArgumentException e) {
             System.err.println("\n" + "=".repeat(60));
@@ -118,51 +162,65 @@ public class OrdersController {
     }
 
     // ===============================
-    // Get Order Details
+    // Get Order Details (Using DTO)
     // ===============================
     @GetMapping("/{id}")
-    public Orders getOrder(@PathVariable Long id) {
-        return ordersService.getOrder(id);
+    public ResponseEntity<OrderResponseDTO> getOrder(@PathVariable Long id) {
+        Orders order = ordersService.getOrder(id);
+        OrderResponseDTO responseDTO = orderMapper.toOrderResponseDTO(order);
+        return ResponseEntity.ok(responseDTO);
     }
 
     // ===============================
-    // Get All Orders of a User
+    // Get All Orders of a User (Using DTO)
     // ===============================
     @GetMapping("/user/{userId}")
-    public List<Orders> getUserOrders(@PathVariable Long userId) {
+    public ResponseEntity<List<OrderResponseDTO>> getUserOrders(@PathVariable Long userId) {
         User user = new User();
         user.setId(userId);
-        return ordersService.getOrdersByUser(user);
+        List<Orders> orders = ordersService.getOrdersByUser(user);
+        List<OrderResponseDTO> orderDTOs = orderMapper.toOrderResponseDTOList(orders);
+        return ResponseEntity.ok(orderDTOs);
     }
 
     // ===============================
-    // Update Order Status
+    // Update Order Status (Using DTO)
     // ===============================
     @PutMapping("/update-status/{id}")
-    public Orders updateStatus(
+    public ResponseEntity<OrderResponseDTO> updateStatus(
             @PathVariable Long id,
-            @RequestParam OrderStatus status,
-            @RequestParam(required = false) String rejectionReason) {
-        return ordersService.updateOrderStatus(id, status, rejectionReason);
+            @Valid @RequestBody UpdateOrderStatusRequest request) {
+        if (!request.isValid()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        OrderStatus status = OrderStatus.valueOf(request.getOrderStatus());
+        Orders order = ordersService.updateOrderStatus(id, status, request.getRejectionReason());
+        OrderResponseDTO responseDTO = orderMapper.toOrderResponseDTO(order);
+        return ResponseEntity.ok(responseDTO);
     }
 
     // ===============================
-    // Get Orders by Seller ID
+    // Get Orders by Seller ID (Using DTO)
     // Returns all orders containing products from this seller
     // Includes customer information (user details)
     // ===============================
     @GetMapping("/seller/{sellerId}")
-    public List<Orders> getSellerOrders(@PathVariable Long sellerId) {
-        return ordersService.getOrdersBySellerId(sellerId);
+    public ResponseEntity<List<OrderResponseDTO>> getSellerOrders(@PathVariable Long sellerId) {
+        List<Orders> orders = ordersService.getOrdersBySellerId(sellerId);
+        List<OrderResponseDTO> orderDTOs = orderMapper.toOrderResponseDTOList(orders);
+        return ResponseEntity.ok(orderDTOs);
     }
 
     // ===============================
-    // Get All Orders
+    // Get All Orders (Using DTO)
     // Returns all orders in the system
     // ===============================
     @GetMapping("/all")
-    public List<Orders> getAllOrders() {
-        return ordersService.getAllOrders();
+    public ResponseEntity<List<OrderResponseDTO>> getAllOrders() {
+        List<Orders> orders = ordersService.getAllOrders();
+        List<OrderResponseDTO> orderDTOs = orderMapper.toOrderResponseDTOList(orders);
+        return ResponseEntity.ok(orderDTOs);
     }
 
     // ===============================

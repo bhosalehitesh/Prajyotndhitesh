@@ -37,7 +37,6 @@ public class StoreDetails {
 
     public StoreDetails() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
 	public StoreDetails(Long storeId, String storeName, String storeLink, String logoUrl, SellerDetails seller,
 			StoreAddress storeAddress, BusinessDetails businessDetails) {

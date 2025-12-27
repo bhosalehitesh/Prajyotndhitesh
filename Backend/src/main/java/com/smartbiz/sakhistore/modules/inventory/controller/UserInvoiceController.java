@@ -1,20 +1,25 @@
 package com.smartbiz.sakhistore.modules.inventory.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.smartbiz.sakhistore.config.EmailServicePdf;
+import com.smartbiz.sakhistore.modules.inventory.dto.*;
 import com.smartbiz.sakhistore.modules.inventory.model.InvoiceHTMLBuilder;
 import com.smartbiz.sakhistore.modules.inventory.model.PdfGenerator;
 import com.smartbiz.sakhistore.modules.inventory.model.UserInvoice;
 import com.smartbiz.sakhistore.modules.inventory.repository.UserInvoiceRepository;
 import com.smartbiz.sakhistore.modules.inventory.service.InvoiceServiceImpl;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/invoice")
@@ -24,6 +29,9 @@ public class UserInvoiceController {
 
     private final InvoiceServiceImpl invoiceService;
     private final UserInvoiceRepository invoiceRepo;
+    
+    @Autowired
+    private InventoryMapper inventoryMapper;
 
     public UserInvoiceController(InvoiceServiceImpl invoiceService,
                              UserInvoiceRepository invoiceRepo, EmailServicePdf emailServicePdf) {
@@ -33,16 +41,25 @@ public class UserInvoiceController {
     }
 
     // -----------------------------------------------------------
-    // ✔ 1. Generate Invoice from Order ID
+    // ✔ 1. Generate Invoice from Order ID (Using DTO)
     // -----------------------------------------------------------
     @PostMapping("/generate/{orderId}")
-    public ResponseEntity<?> generateInvoice(@PathVariable Long orderId) {
-
+    public ResponseEntity<InvoiceResponseDTO> generateInvoice(@PathVariable Long orderId) {
         UserInvoice invoice = invoiceService.generateInvoice(orderId);
-
-        return ResponseEntity.ok(
-                "Invoice generated successfully. Invoice ID = " + invoice.getInvoiceId()
-        );
+        InvoiceResponseDTO responseDTO = inventoryMapper.toInvoiceResponseDTO(invoice);
+        return ResponseEntity.ok(responseDTO);
+    }
+    
+    // Alternative endpoint using DTO request
+    @PostMapping("/generate")
+    public ResponseEntity<InvoiceResponseDTO> generateInvoiceWithDTO(@Valid @RequestBody InvoiceRequestDTO request) {
+        if (!request.isValid()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        UserInvoice invoice = invoiceService.generateInvoice(request.getOrderId());
+        InvoiceResponseDTO responseDTO = inventoryMapper.toInvoiceResponseDTO(invoice);
+        return ResponseEntity.ok(responseDTO);
     }
 
 
@@ -66,15 +83,15 @@ public class UserInvoiceController {
 
 
     // -----------------------------------------------------------
-    // ✔ 3. Get Invoice Details (Optional)
+    // ✔ 3. Get Invoice Details (Using DTO)
     // -----------------------------------------------------------
     @GetMapping("/{invoiceId}")
-    public ResponseEntity<?> getInvoiceDetails(@PathVariable Long invoiceId) {
-
+    public ResponseEntity<InvoiceResponseDTO> getInvoiceDetails(@PathVariable Long invoiceId) {
         UserInvoice invoice = invoiceRepo.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Invoice Not Found"));
-
-        return ResponseEntity.ok(invoice);
+        
+        InvoiceResponseDTO responseDTO = inventoryMapper.toInvoiceResponseDTO(invoice);
+        return ResponseEntity.ok(responseDTO);
     }
     
     // 📌 NEW: send invoice email manually

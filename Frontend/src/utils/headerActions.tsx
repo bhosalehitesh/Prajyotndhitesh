@@ -56,11 +56,11 @@ export const useHeaderActions = (onLogoutComplete?: () => void) => {
         },
         {
           text: 'Email',
-          onPress: () => Linking.openURL('mailto:support@sakhi.store'),
+          onPress: () => Linking.openURL('mailto:support@smartbiz.ltd'),
         },
         {
           text: 'Website',
-          onPress: () => Linking.openURL('https://www.sakhi.store/help'),
+          onPress: () => Linking.openURL('https://smartbiz.ltd/help'),
         },
       ]
     );
@@ -105,7 +105,7 @@ export const useHeaderActions = (onLogoutComplete?: () => void) => {
               <Text style={styles.sectionTitle}>Quick Links</Text>
               <TouchableOpacity
                 style={styles.linkButton}
-                onPress={() => Linking.openURL('https://www.sakhi.store/help')}
+                onPress={() => Linking.openURL('https://smartbiz.ltd/help')}
               >
                 <Text style={styles.linkText}>Visit Help Center</Text>
                 <MaterialCommunityIcons name="chevron-right" size={20} color="#e61580" />

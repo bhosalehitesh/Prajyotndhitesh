@@ -28,8 +28,24 @@ export const CartProvider = ({ children }) => {
       try {
         if (isAuthenticated && user?.userId) {
           // Fetch cart from backend
+          // Get token from user object or localStorage
+          let token = user?.token;
+          if (!token) {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+              try {
+                const parsedUser = JSON.parse(savedUser);
+                token = parsedUser?.token;
+              } catch (e) {
+                // Ignore parse errors
+              }
+            }
+            if (!token) {
+              token = localStorage.getItem('authToken');
+            }
+          }
           console.log('🛒 [Cart] Loading cart from backend for user:', user.userId);
-          const backendCart = await getCart(user.userId);
+          const backendCart = await getCart(user.userId, token);
           console.log('🛒 [Cart] Backend cart response:', backendCart);
 
           // Transform backend cart items to frontend format
@@ -198,14 +214,32 @@ export const CartProvider = ({ children }) => {
 
     if (isAuthenticated && user?.userId) {
       // Sync to backend (prefer variant-based API if variantId available)
+      // Note: Cart endpoints are now public, so token is optional
       try {
+        // Get token from user object or localStorage (optional - cart endpoints are public)
+        let token = user?.token;
+        if (!token) {
+          const savedUser = localStorage.getItem('currentUser');
+          if (savedUser) {
+            try {
+              const parsedUser = JSON.parse(savedUser);
+              token = parsedUser?.token;
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+          if (!token) {
+            token = localStorage.getItem('authToken');
+          }
+        }
+        // Token is optional - cart endpoints are public, so proceed even without token
         let updatedCart;
         if (variantId) {
           console.log('🛒 [Cart] Adding variant to backend cart:', { userId: user.userId, variantId, quantity });
-          updatedCart = await addVariantToCartAPI(user.userId, variantId, quantity);
+          updatedCart = await addVariantToCartAPI(user.userId, variantId, quantity, token);
         } else if (productId) {
           console.log('🛒 [Cart] Adding product to backend cart (legacy):', { userId: user.userId, productId, quantity });
-          updatedCart = await addToCartAPI(user.userId, productId, quantity);
+          updatedCart = await addToCartAPI(user.userId, productId, quantity, token);
         } else {
           throw new Error('Either variantId or productId is required');
         }
@@ -242,7 +276,11 @@ export const CartProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('❌ [Cart] Error adding to backend cart:', error);
-        alert('⚠️ Warning: Could not sync cart to server. Your cart is saved locally but may cause issues during checkout. Error: ' + error.message);
+        // Don't show alert for guest users or authentication errors - cart endpoints are public
+        // Only show alert for other errors
+        if (!error.message || !error.message.includes('Authentication')) {
+          console.warn('⚠️ [Cart] Could not sync to server, using local cart:', error.message);
+        }
         // Fallback to local state update
         addToCartLocal(item, storeId, sellerId);
       }
@@ -309,13 +347,29 @@ export const CartProvider = ({ children }) => {
 
     if (isAuthenticated && user?.userId) {
       try {
+        // Get token from user object or localStorage
+        let token = user?.token;
+        if (!token) {
+          const savedUser = localStorage.getItem('currentUser');
+          if (savedUser) {
+            try {
+              const parsedUser = JSON.parse(savedUser);
+              token = parsedUser?.token;
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+          if (!token) {
+            token = localStorage.getItem('authToken');
+          }
+        }
         let updatedCart;
         if (variantId) {
           console.log('🛒 [Cart] Removing variant from backend cart:', { userId: user.userId, variantId });
-          updatedCart = await removeVariantFromCartAPI(user.userId, variantId);
+          updatedCart = await removeVariantFromCartAPI(user.userId, variantId, token);
         } else if (productId) {
           console.log('🛒 [Cart] Removing product from backend cart (legacy):', { userId: user.userId, productId });
-          updatedCart = await removeFromCartAPI(user.userId, productId);
+          updatedCart = await removeFromCartAPI(user.userId, productId, token);
         } else {
           throw new Error('Either variantId or productId is required');
         }
@@ -362,13 +416,29 @@ export const CartProvider = ({ children }) => {
 
     if (isAuthenticated && user?.userId) {
       try {
+        // Get token from user object or localStorage
+        let token = user?.token;
+        if (!token) {
+          const savedUser = localStorage.getItem('currentUser');
+          if (savedUser) {
+            try {
+              const parsedUser = JSON.parse(savedUser);
+              token = parsedUser?.token;
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+          if (!token) {
+            token = localStorage.getItem('authToken');
+          }
+        }
         let updatedCart;
         if (variantId) {
           console.log('🛒 [Cart] Updating variant quantity in backend cart:', { userId: user.userId, variantId, quantity });
-          updatedCart = await updateVariantCartQuantity(user.userId, variantId, quantity);
+          updatedCart = await updateVariantCartQuantity(user.userId, variantId, quantity, token);
         } else if (productId) {
           console.log('🛒 [Cart] Updating product quantity in backend cart (legacy):', { userId: user.userId, productId, quantity });
-          updatedCart = await updateCartQuantity(user.userId, productId, quantity);
+          updatedCart = await updateCartQuantity(user.userId, productId, quantity, token);
         } else {
           throw new Error('Either variantId or productId is required');
         }
@@ -408,8 +478,24 @@ export const CartProvider = ({ children }) => {
   const clearCart = async () => {
     if (isAuthenticated && user?.userId) {
       try {
+        // Get token from user object or localStorage
+        let token = user?.token;
+        if (!token) {
+          const savedUser = localStorage.getItem('currentUser');
+          if (savedUser) {
+            try {
+              const parsedUser = JSON.parse(savedUser);
+              token = parsedUser?.token;
+            } catch (e) {
+              // Ignore parse errors
+            }
+          }
+          if (!token) {
+            token = localStorage.getItem('authToken');
+          }
+        }
         console.log('🛒 [Cart] Clearing backend cart for user:', user.userId);
-        await clearCartAPI(user.userId);
+        await clearCartAPI(user.userId, token);
       } catch (error) {
         console.error('❌ [Cart] Error clearing backend cart:', error);
       }

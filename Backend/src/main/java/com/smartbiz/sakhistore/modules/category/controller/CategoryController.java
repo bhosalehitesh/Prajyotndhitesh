@@ -8,10 +8,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
         import org.springframework.web.multipart.MultipartFile;
 
+import com.smartbiz.sakhistore.modules.category.dto.*;
 import com.smartbiz.sakhistore.modules.category.model.Category;
 import com.smartbiz.sakhistore.modules.category.service.CategoryService;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,12 +28,17 @@ public class CategoryController {
     
     @Autowired
     private JwtService jwtService;
+    
+    @Autowired
+    private CategoryMapper categoryMapper;
 
-    // ✅ Get all categories (filtered by authenticated seller)
+    // ✅ Get all categories (filtered by authenticated seller) - Using DTO
     @GetMapping("/allCategory")
-    public List<Category> allCategories(HttpServletRequest httpRequest) {
+    public ResponseEntity<List<CategoryResponseDTO>> allCategories(HttpServletRequest httpRequest) {
         Long sellerId = extractSellerIdFromToken(httpRequest);
-        return categoryService.allCategories(sellerId);
+        List<Category> categories = categoryService.allCategories(sellerId);
+        List<CategoryResponseDTO> categoryDTOs = categoryMapper.toCategoryResponseDTOList(categories);
+        return ResponseEntity.ok(categoryDTOs);
     }
     
     // Helper method to extract sellerId from JWT token
@@ -77,11 +84,34 @@ public class CategoryController {
         }
     }
 
-    // ✅ Add category (normal POST)
+    // ✅ Add category (normal POST) - Using DTO
     @PostMapping("/addCategory")
-    public Category addCategory(Category category, HttpServletRequest httpRequest) {
+    public ResponseEntity<CategoryResponseDTO> addCategory(
+            @Valid @RequestBody CategoryRequestDTO request, 
+            HttpServletRequest httpRequest) {
+        if (!request.isValid()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
         Long sellerId = extractSellerIdFromToken(httpRequest);
-        return categoryService.addCategory(category, sellerId);
+        
+        // Convert DTO to entity
+        Category category = new Category();
+        category.setCategoryName(request.getCategoryName());
+        category.setBusinessCategory(request.getBusinessCategory());
+        category.setDescription(request.getDescription());
+        category.setCategoryImage(request.getCategoryImage());
+        category.setSeoTitleTag(request.getSeoTitleTag());
+        category.setSeoMetaDescription(request.getSeoMetaDescription());
+        category.setSocialSharingImage(request.getSocialSharingImage());
+        category.setIsActive(request.getIsActive());
+        category.setIsTrending(request.getIsTrending());
+        category.setOrderIndex(request.getOrderIndex());
+        category.setSlug(request.getSlug());
+        
+        Category savedCategory = categoryService.addCategory(category, sellerId);
+        CategoryResponseDTO responseDTO = categoryMapper.toCategoryResponseDTO(savedCategory);
+        return ResponseEntity.ok(responseDTO);
     }
 
     // ✅ Edit category (legacy POST endpoint - kept for backward compatibility)
@@ -191,10 +221,12 @@ public class CategoryController {
         }
     }
 
-    // ✅ Get category by ID
+    // ✅ Get category by ID - Using DTO
     @GetMapping("/{category_id}")
-    public Category getCategory(@PathVariable Long category_id) {
-        return categoryService.findById(category_id);
+    public ResponseEntity<CategoryResponseDTO> getCategory(@PathVariable Long category_id) {
+        Category category = categoryService.findById(category_id);
+        CategoryResponseDTO responseDTO = categoryMapper.toCategoryResponseDTO(category);
+        return ResponseEntity.ok(responseDTO);
     }
 
     // ✅ Delete category (with seller verification)
@@ -240,13 +272,14 @@ public class CategoryController {
         }
     }
 
-    // ✅ Find categories by business category (filtered by authenticated seller)
+    // ✅ Find categories by business category (filtered by authenticated seller) - Using DTO
     @GetMapping("/FindByBusinessCategory")
-    public ResponseEntity<List<Category>> searchCategories(
+    public ResponseEntity<List<CategoryResponseDTO>> searchCategories(
             @RequestParam String businessCategory,
             HttpServletRequest httpRequest) {
         Long sellerId = extractSellerIdFromToken(httpRequest);
         List<Category> categories = categoryService.searchCategoriesByBusiness(businessCategory, sellerId);
-        return ResponseEntity.ok(categories);
+        List<CategoryResponseDTO> categoryDTOs = categoryMapper.toCategoryResponseDTOList(categories);
+        return ResponseEntity.ok(categoryDTOs);
     }
 }

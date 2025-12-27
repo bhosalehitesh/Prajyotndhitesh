@@ -53,7 +53,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     setOnboardingData(updatedData);
 
     const slug = storeName.toLowerCase();
-    const storeLink = `sakhi.store/${slug}`;
+    const storeLink = `smartbiz.ltd/${slug}`;
 
     // Save store name/link locally for Home screen, etc.
     await storage.setItem('storeName', storeName);
@@ -86,22 +86,74 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
   }) => {
     setOnboardingData((prev) => ({ ...prev, location }));
 
-    // Persist store address to backend if we have address + location
+    // ✅ CRITICAL: Save address AFTER store is created
+    // The store was already created in handleStoreNameNext, so now we add the address
+    // Using saveStoreAddress which will automatically link to the existing store
     try {
       const data = { ...onboardingData, location };
       if (data.address) {
-        await saveStoreAddress({
-          addressLine1: data.address.addressLine1,
-          addressLine2: data.address.addressLine2,
-          landmark: data.address.landmark,
-          city: location.city,
-          state: location.state,
-          pincode: location.pincode,
-        });
+        // ✅ FIX: Ensure storeId is available - if not, wait a bit and retry
+        let storeId = await storage.getItem('storeId');
+        if (!storeId) {
+          console.warn('⚠️ [Onboarding] StoreId not found in storage, fetching from backend...');
+          
+          // Wait a small delay to ensure store is fully committed to database
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Try to fetch store details from backend
+          try {
+            const { getCurrentSellerStoreDetails } = await import('../../utils/api');
+            const storeDetails = await getCurrentSellerStoreDetails();
+            if (storeDetails?.storeId) {
+              storeId = String(storeDetails.storeId);
+              await storage.setItem('storeId', storeId);
+              console.log('✅ [Onboarding] StoreId fetched and cached:', storeId);
+            } else {
+              throw new Error('Store not found for current seller');
+            }
+          } catch (fetchError) {
+            console.error('❌ [Onboarding] Failed to fetch store details:', fetchError);
+            // Store will be found automatically by saveStoreAddress using sellerId from JWT
+            console.log('✅ [Onboarding] Will rely on backend to find store via JWT token');
+          }
+        }
+        
+        // ✅ Retry logic: Try saving address up to 3 times with delays
+        let saved = false;
+        let lastError: any = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            await saveStoreAddress({
+              addressLine1: data.address.addressLine1,
+              addressLine2: data.address.addressLine2,
+              landmark: data.address.landmark,
+              city: location.city,
+              state: location.state,
+              pincode: location.pincode,
+            });
+            console.log('✅ [Onboarding] Store address saved successfully (attempt ' + attempt + ')');
+            saved = true;
+            break;
+          } catch (error: any) {
+            lastError = error;
+            console.warn(`⚠️ [Onboarding] Address save attempt ${attempt} failed:`, error?.message);
+            if (attempt < 3) {
+              // Wait before retry (exponential backoff)
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            }
+          }
+        }
+        
+        if (!saved) {
+          throw lastError || new Error('Failed to save store address after 3 attempts');
+        }
       }
-    } catch (error) {
-      console.error('Failed to save store address:', error);
-      // Continue onboarding even if this fails; can retry later
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Unknown error';
+      console.error('❌ [Onboarding] Failed to save store address:', errorMessage);
+      // ✅ Don't silently fail - log the error but continue onboarding
+      // User can add address later from Edit Profile
+      // The error is logged so we can debug it
     }
 
     setCurrentStep('store-policies');
@@ -142,7 +194,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     // Ensure store name is also saved separately
     if (updatedData.storeName) {
       await storage.setItem('storeName', updatedData.storeName);
-      await storage.setItem('storeLink', `sakhi.store/${updatedData.storeName.toLowerCase()}`);
+      await storage.setItem('storeLink', `smartbiz.ltd/${updatedData.storeName.toLowerCase()}`);
     }
 
     // Persist business details to backend
@@ -161,7 +213,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
     // Double-check: also ensure store name is saved
     if (onboardingData.storeName) {
       await storage.setItem('storeName', onboardingData.storeName);
-      await storage.setItem('storeLink', `sakhi.store/${onboardingData.storeName.toLowerCase()}`);
+      await storage.setItem('storeLink', `smartbiz.ltd/${onboardingData.storeName.toLowerCase()}`);
     }
 
     // Verify it was saved

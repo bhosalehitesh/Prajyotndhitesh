@@ -3,12 +3,10 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { AuthProvider, useAuth } from './Frontend/src/authentication/AuthContext';
@@ -199,26 +197,19 @@ function TabNavigator() {
 
 // Wrapper component that handles authentication state
 function AppContent() {
-  const [renderKey, setRenderKey] = React.useState(0);
   const { isAuthenticated, isLoading, login } = useAuth();
   const [isCheckingOnboarding, setIsCheckingOnboarding] = React.useState(true);
   const [isOnboardingComplete, setIsOnboardingComplete] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [initialLoadTimeout, setInitialLoadTimeout] = React.useState(false);
-  const [debugInfo, setDebugInfo] = React.useState<string>('');
-
-  // Debug logging
-  React.useEffect(() => {
-    const info = `Auth: ${isAuthenticated}, Loading: ${isLoading}, Checking: ${isCheckingOnboarding}, Complete: ${isOnboardingComplete}`;
-    setDebugInfo(info);
-    console.log('App State:', info);
-  }, [isAuthenticated, isLoading, isCheckingOnboarding, isOnboardingComplete]);
 
   // Add timeout to prevent infinite loading - reduced to 3 seconds
   React.useEffect(() => {
     const timeout = setTimeout(() => {
       if (isLoading || isCheckingOnboarding) {
-        console.warn('App loading timeout - forcing render');
+        if (__DEV__) {
+          console.warn('App loading timeout - forcing render');
+        }
         setInitialLoadTimeout(true);
         setIsCheckingOnboarding(false);
       }
@@ -308,9 +299,6 @@ function AppContent() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#17aba5" />
         <Text style={{ marginTop: 16, color: '#666' }}>Loading...</Text>
-        {__DEV__ && (
-          <Text style={{ marginTop: 8, color: '#999', fontSize: 12 }}>{debugInfo}</Text>
-        )}
       </View>
     );
   }
@@ -331,19 +319,6 @@ function AppContent() {
 }
 
 function App(): JSX.Element {
-  // TEMPORARY: Minimal test to verify React Native is working
-  // Set to false after confirming React Native renders
-  const TEST_MODE = false; // Disabled - React Native is working
-
-  if (TEST_MODE) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f2f4f7' }}>
-        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', marginBottom: 20 }}>React Native Works!</Text>
-        <Text style={{ fontSize: 16, color: '#666' }}>If you see this, React Native is rendering correctly.</Text>
-        <Text style={{ fontSize: 14, color: '#999', marginTop: 10 }}>Set TEST_MODE to false to continue.</Text>
-      </View>
-    );
-  }
 
   const [hasError, setHasError] = React.useState(false);
   const [errorInfo, setErrorInfo] = React.useState<string>('');

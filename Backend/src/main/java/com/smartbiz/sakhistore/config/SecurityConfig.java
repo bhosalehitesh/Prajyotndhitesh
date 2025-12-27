@@ -1,5 +1,6 @@
 package com.smartbiz.sakhistore.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -8,11 +9,14 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import com.smartbiz.sakhistore.modules.auth.sellerauth.dto.JwtAuthenticationFilter;
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,42 +25,63 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // ✅ UPDATED: Only truly public endpoints (authentication endpoints)
     private static final String[] PUBLIC_ENDPOINTS = {
-            // Auth and Seller APIs that should be public
-            "/api/**",
-            "/api/auth/**",
-            "/api/**",
-            "/orders/**", // Allow all order endpoints (including test-email)
-            "/orders/update-status/**",
-            "/api/sellers/**",
-            "/api/products/**",
-            "/api/auth/signup",
-            "/api/auth/login",
-            "/api/auth/verifyOtp",
-            "/api/auth/resendOtp",
-            "/api/categories",
-            // Payment endpoints (covered by /api/** but explicit for clarity)
-            "/api/payment/**",
-            "/payment/**", // Keep for backward compatibility
-            // Swagger + docs
+            // Seller authentication endpoints
+            "/api/sellers/signup-seller",
+            "/api/sellers/login-seller",
+            "/api/sellers/verify-otp-seller",
+            "/api/sellers/verify-login-otp-seller",
+            "/api/sellers/login-otp-seller",
+            "/api/sellers/resend-otp-seller",
+            "/api/sellers/forgot-password-seller",
+            "/api/sellers/verify-forgot-otp-seller",
+            "/api/sellers/reset-password-seller",
+            // Legacy seller endpoints (for backward compatibility)
+            "/api/sellers/signup",
+            "/api/sellers/login",
+            "/api/sellers/verifyOtp",
+            "/api/sellers/resendOtp",
+            "/api/sellers/forgot-password",
+            "/api/sellers/reset-password",
+            
+            // Store endpoints (public for onboarding)
+            "/api/stores/check-availability",
+            
+            // User authentication endpoints
+            "/api/user/send-otp",
+            "/api/user/verify-otp",
+            "/api/user/login",
+            "/api/user/phone/**",
+            "/api/user/verify-email/**",
+            
+            // Swagger/OpenAPI documentation (optional - remove in production)
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/swagger-resources/**",
-            "/api/sellers/signup",
             "/webjars/**",
+            
+            // Health check
             "/api/health",
-            // Test email endpoints
-            "/orders/test-email-simple",
-            "/orders/test-email/**",
-            // User email verification
-            "/api/user/verify-email/**",
-            "/api/user/phone/**" // Allow user phone endpoint without authentication
+            
+            // Public store endpoints (for viewing public store pages)
+            "/api/public/store/**",
+            
+            // Payment endpoints (must be public for Razorpay integration)
+            "/api/payment/**",
+            "/payment/**",
+            
+            // Cart endpoints (public for guest cart functionality)
+            "/api/cart/**"
     };
 
     @Bean
@@ -67,6 +92,9 @@ public class SecurityConfig {
 
                 // Enable CORS - MUST be before authorization
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // ✅ ADD JWT FILTER BEFORE AUTHORIZATION
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // Authorization rules - Swagger endpoints FIRST (highest priority)
                 .authorizeHttpRequests(auth -> auth
@@ -82,12 +110,12 @@ public class SecurityConfig {
                                 "/swagger-ui/swagger-ui-bundle.js",
                                 "/swagger-ui/swagger-ui-standalone-preset.js")
                         .permitAll()
-                        // All other public endpoints
+                        
+                        // ✅ UPDATED: Only public endpoints are allowed
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                        // Explicitly allow all payment endpoints with any method
-                        .requestMatchers("/api/payment/**", "/payment/**").permitAll()
-                        // Allow everything else (no authentication required)
-                        .anyRequest().permitAll())
+                        
+                        // ✅ CHANGED: All other requests require authentication
+                        .anyRequest().authenticated())
 
                 // Disable HTTP Basic Authentication
                 .httpBasic(httpBasic -> httpBasic.disable())

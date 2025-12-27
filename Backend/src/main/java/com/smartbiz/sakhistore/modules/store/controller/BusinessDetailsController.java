@@ -1,17 +1,19 @@
 package com.smartbiz.sakhistore.modules.store.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.smartbiz.sakhistore.modules.store.dto.BusinessDetailsRequest;
+import com.smartbiz.sakhistore.modules.store.dto.*;
 import com.smartbiz.sakhistore.modules.store.model.BusinessDetails;
 import com.smartbiz.sakhistore.modules.store.service.BusinessDetailsService;
 import com.smartbiz.sakhistore.modules.store.service.StoreDetailsService;
 import com.smartbiz.sakhistore.modules.auth.sellerauth.service.JwtService;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,12 +32,19 @@ public class BusinessDetailsController {
     
     @Autowired
     private JwtService jwtService;
+    
+    @Autowired
+    private StoreMapper storeMapper;
 
     // ✅ Get all (filtered by authenticated seller)
     @GetMapping("/allBusinessDetails")
-    public List<BusinessDetails> allBusinessDetails(HttpServletRequest httpRequest) {
+    public ResponseEntity<List<BusinessDetailsResponseDTO>> allBusinessDetails(HttpServletRequest httpRequest) {
         Long sellerId = extractSellerIdFromToken(httpRequest);
-        return businessDetailsService.allBusinessDetails(sellerId);
+        List<BusinessDetails> details = businessDetailsService.allBusinessDetails(sellerId);
+        List<BusinessDetailsResponseDTO> detailDTOs = details.stream()
+                .map(storeMapper::toBusinessDetailsResponseDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(detailDTOs);
     }
     
     // Helper method to extract sellerId from JWT token
@@ -57,8 +66,8 @@ public class BusinessDetailsController {
     // ✅ Add new (accepts DTO with storeId directly)
     // Automatically links to current seller's store if storeId not provided
     @PostMapping("/addBusinessDetails")
-    public BusinessDetails addBusinessDetails(
-            @RequestBody BusinessDetailsRequest request,
+    public ResponseEntity<BusinessDetailsResponseDTO> addBusinessDetails(
+            @Valid @RequestBody BusinessDetailsRequest request,
             HttpServletRequest httpRequest) {
         
         // If storeId is not provided, automatically get it from authenticated seller's store
@@ -89,7 +98,9 @@ public class BusinessDetailsController {
         }
         
         // Use the DTO method which handles storeId directly
-        return businessDetailsService.addBusinessDetailsFromRequest(request);
+        BusinessDetails details = businessDetailsService.addBusinessDetailsFromRequest(request);
+        BusinessDetailsResponseDTO responseDTO = storeMapper.toBusinessDetailsResponseDTO(details);
+        return ResponseEntity.ok(responseDTO);
     }
     
     // ✅ Add new (backward compatibility - accepts BusinessDetails entity)
@@ -117,13 +128,11 @@ public class BusinessDetailsController {
 
 
     // ✅ Get by ID
-
     @GetMapping("/{businessId}")
-
-    public BusinessDetails getBusinessDetails(@PathVariable Long businessId) {
-
-        return businessDetailsService.findById(businessId);
-
+    public ResponseEntity<BusinessDetailsResponseDTO> getBusinessDetails(@PathVariable Long businessId) {
+        BusinessDetails details = businessDetailsService.findById(businessId);
+        BusinessDetailsResponseDTO responseDTO = storeMapper.toBusinessDetailsResponseDTO(details);
+        return ResponseEntity.ok(responseDTO);
     }
 
 

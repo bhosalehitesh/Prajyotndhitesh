@@ -27,7 +27,6 @@ public class BusinessDetails {
     
     public BusinessDetails() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
 	// Getters and Setters
     public Long getBusinessId() { return businessId; }

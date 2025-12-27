@@ -203,7 +203,7 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
   };
 
   const handleViewDemoStore = () => {
-    const url = 'https://www.sakhi.store/store-appearance';
+    const url = 'https://smartbiz.ltd/store-appearance';
     Linking.openURL(url).catch(err =>
       console.error('Error opening URL:', err),
     );
@@ -514,10 +514,10 @@ const StoreAppearanceScreen: React.FC<StoreAppearanceScreenProps> = ({
           </Text>
           <TouchableOpacity
             onPress={() =>
-              Linking.openURL('https://www.sakhi.store/store-appearance')
+              Linking.openURL('https://smartbiz.ltd/store-appearance')
             }>
             <Text style={styles.infoBannerLink}>
-              Visit sakhi.store/store-appearance for more!
+              Visit smartbiz.ltd/store-appearance for more!
             </Text>
           </TouchableOpacity>
         </View>

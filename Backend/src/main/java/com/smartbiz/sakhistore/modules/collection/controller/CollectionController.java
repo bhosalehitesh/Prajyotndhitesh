@@ -1,5 +1,6 @@
 package com.smartbiz.sakhistore.modules.collection.controller;
 
+import com.smartbiz.sakhistore.modules.collection.dto.*;
 import com.smartbiz.sakhistore.modules.collection.model.collection;
 import com.smartbiz.sakhistore.modules.collection.service.CollectionService;
 import com.smartbiz.sakhistore.modules.product.model.Product;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
         import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -24,6 +26,9 @@ public class CollectionController {
     
     @Autowired
     private JwtService jwtService;
+    
+    @Autowired
+    private CollectionMapper collectionMapper;
     
     // Helper method to extract sellerId from JWT token
     private Long extractSellerIdFromToken(HttpServletRequest httpRequest) {
@@ -52,11 +57,13 @@ public class CollectionController {
         public String slug; // SmartBiz: URL-friendly identifier (same as Category)
     }
 
-    // ✅ Get all collections (filtered by authenticated seller)
+    // ✅ Get all collections (filtered by authenticated seller) - Using DTO
     @GetMapping("/all")
-    public List<collection> getAllCollections(HttpServletRequest httpRequest) {
+    public ResponseEntity<List<CollectionResponseDTO>> getAllCollections(HttpServletRequest httpRequest) {
         Long sellerId = extractSellerIdFromToken(httpRequest);
-        return collectionService.allCollections(sellerId);
+        List<collection> collections = collectionService.allCollections(sellerId);
+        List<CollectionResponseDTO> collectionDTOs = collectionMapper.toCollectionResponseDTOList(collections);
+        return ResponseEntity.ok(collectionDTOs);
     }
 
     // ✅ Upload Collection with Images
@@ -85,17 +92,41 @@ public class CollectionController {
         }
     }
 
-    // ✅ Add or Edit collection (via JSON)
+    // ✅ Add or Edit collection (via JSON) - Using DTO
     @PostMapping("/add")
-    public collection addCollection(@RequestBody collection col, HttpServletRequest httpRequest) {
+    public ResponseEntity<CollectionResponseDTO> addCollection(
+            @Valid @RequestBody CollectionRequestDTO request, 
+            HttpServletRequest httpRequest) {
+        if (!request.isValid()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
         Long sellerId = extractSellerIdFromToken(httpRequest);
-        return collectionService.addCollection(col, sellerId);
+        
+        // Convert DTO to entity
+        collection col = new collection();
+        col.setCollectionName(request.getCollectionName());
+        col.setDescription(request.getDescription());
+        col.setCollectionImage(request.getCollectionImage());
+        col.setSeoTitleTag(request.getSeoTitleTag());
+        col.setSeoMetaDescription(request.getSeoMetaDescription());
+        col.setSocialSharingImage(request.getSocialSharingImage());
+        col.setIsActive(request.getIsActive());
+        col.setOrderIndex(request.getOrderIndex());
+        col.setSlug(request.getSlug());
+        col.setHideFromWebsite(request.getHideFromWebsite() != null ? request.getHideFromWebsite() : false);
+        
+        collection savedCollection = collectionService.addCollection(col, sellerId);
+        CollectionResponseDTO responseDTO = collectionMapper.toCollectionResponseDTO(savedCollection);
+        return ResponseEntity.ok(responseDTO);
     }
 
-    // ✅ Get by ID
+    // ✅ Get by ID - Using DTO
     @GetMapping("/{id}")
-    public collection getById(@PathVariable Long id) {
-        return collectionService.findById(id);
+    public ResponseEntity<CollectionResponseDTO> getById(@PathVariable Long id) {
+        collection col = collectionService.findById(id);
+        CollectionResponseDTO responseDTO = collectionMapper.toCollectionResponseDTO(col);
+        return ResponseEntity.ok(responseDTO);
     }
 
     // ✅ Delete collection (with seller verification)
@@ -147,13 +178,18 @@ public class CollectionController {
         return ResponseEntity.ok(collectionService.searchCollectionsByName(name, sellerId));
     }
 
-    // ✅ Set products for a collection (many-to-many mapping)
+    // ✅ Set products for a collection (many-to-many mapping) - Using DTO
     @PostMapping("/{id}/products")
-    public ResponseEntity<collection> setCollectionProducts(
+    public ResponseEntity<CollectionResponseDTO> setCollectionProducts(
             @PathVariable Long id,
-            @RequestBody List<Long> productIds) {
-        collection updated = collectionService.setProductsForCollection(id, productIds);
-        return ResponseEntity.ok(updated);
+            @Valid @RequestBody AddProductsToCollectionRequest request) {
+        if (!request.isValid() || !request.getCollectionId().equals(id)) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        collection updated = collectionService.setProductsForCollection(id, request.getProductIds());
+        CollectionResponseDTO responseDTO = collectionMapper.toCollectionResponseDTO(updated);
+        return ResponseEntity.ok(responseDTO);
     }
 
     // ✅ Get products for a specific collection

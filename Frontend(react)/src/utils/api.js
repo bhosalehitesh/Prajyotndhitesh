@@ -417,7 +417,7 @@ export const getStoreCollections = async (storeSlug) => {
  * @param {number} sellerId - Seller ID (optional, will be extracted from cart if not provided)
  * @returns {Promise<Object>} Created order
  */
-export const placeOrder = async (userId, address, mobile, storeId = null, sellerId = null) => {
+export const placeOrder = async (userId, address, mobile, storeId = null, sellerId = null, token = null) => {
   if (!userId || !address || !mobile) {
     throw new Error('userId, address, and mobile are required for placing orders');
   }
@@ -446,12 +446,22 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
   const url = `${baseUrl}/orders/place?${params.toString()}`;
   console.log('Placing order at:', url);
   console.log('Order parameters:', { userId, address, mobile, storeId, sellerId });
+  console.log('Has token:', !!token);
 
   try {
+    // Prepare headers
+    const headers = {};
+    
+    // Add Authorization header if token is provided
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     // Backend uses @RequestParam, so we send query parameters
     // Don't set Content-Type: application/json for query params
     const response = await fetchWithTimeout(url, {
       method: 'POST',
+      headers: headers
       // No Content-Type header needed for query parameters
       // Spring will parse @RequestParam from query string
     });
@@ -706,11 +716,18 @@ export const getPincodeDetails = async (pincode) => {
 /**
  * Get user's cart
  * @param {number} userId - User ID
+ * @param {string} token - JWT token (required for authenticated requests)
  * @returns {Promise<Object>} Cart object with items
  */
-export const getCart = async (userId) => {
+export const getCart = async (userId, token = null) => {
   if (!userId) throw new Error('User ID is required');
-  return apiRequest(`/cart/${userId}`);
+  return apiRequest(`/cart/${userId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
+  });
 };
 
 /**
@@ -718,9 +735,10 @@ export const getCart = async (userId) => {
  * @param {number} userId - User ID
  * @param {number} variantId - Variant ID
  * @param {number} quantity - Quantity to add
+ * @param {string} token - JWT token (required for authenticated requests)
  * @returns {Promise<Object>} Updated cart
  */
-export const addVariantToCartAPI = async (userId, variantId, quantity = 1) => {
+export const addVariantToCartAPI = async (userId, variantId, quantity = 1, token = null) => {
   if (!userId || !variantId) throw new Error('User ID and Variant ID are required');
   const params = new URLSearchParams({
     userId: String(userId),
@@ -728,7 +746,11 @@ export const addVariantToCartAPI = async (userId, variantId, quantity = 1) => {
     quantity: String(quantity)
   });
   return apiRequest(`/cart/add-variant?${params.toString()}`, {
-    method: 'POST'
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
   });
 };
 
@@ -737,9 +759,10 @@ export const addVariantToCartAPI = async (userId, variantId, quantity = 1) => {
  * @param {number} userId - User ID
  * @param {number} productId - Product ID
  * @param {number} quantity - Quantity to add
+ * @param {string} token - JWT token (required for authenticated requests)
  * @returns {Promise<Object>} Updated cart
  */
-export const addToCartAPI = async (userId, productId, quantity = 1) => {
+export const addToCartAPI = async (userId, productId, quantity = 1, token = null) => {
   if (!userId || !productId) throw new Error('User ID and Product ID are required');
   const params = new URLSearchParams({
     userId: String(userId),
@@ -747,7 +770,11 @@ export const addToCartAPI = async (userId, productId, quantity = 1) => {
     quantity: String(quantity)
   });
   return apiRequest(`/cart/add?${params.toString()}`, {
-    method: 'POST'
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
   });
 };
 
@@ -756,9 +783,10 @@ export const addToCartAPI = async (userId, productId, quantity = 1) => {
  * @param {number} userId - User ID
  * @param {number} variantId - Variant ID
  * @param {number} quantity - New quantity
+ * @param {string} token - JWT token (required for authenticated requests)
  * @returns {Promise<Object>} Updated cart
  */
-export const updateVariantCartQuantity = async (userId, variantId, quantity) => {
+export const updateVariantCartQuantity = async (userId, variantId, quantity, token = null) => {
   if (!userId || !variantId) throw new Error('User ID and Variant ID are required');
   const params = new URLSearchParams({
     userId: String(userId),
@@ -766,7 +794,11 @@ export const updateVariantCartQuantity = async (userId, variantId, quantity) => 
     quantity: String(quantity)
   });
   return apiRequest(`/cart/update-variant?${params.toString()}`, {
-    method: 'PUT'
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
   });
 };
 
@@ -775,9 +807,10 @@ export const updateVariantCartQuantity = async (userId, variantId, quantity) => 
  * @param {number} userId - User ID
  * @param {number} productId - Product ID
  * @param {number} quantity - New quantity
+ * @param {string} token - JWT token (required for authenticated requests)
  * @returns {Promise<Object>} Updated cart
  */
-export const updateCartQuantity = async (userId, productId, quantity) => {
+export const updateCartQuantity = async (userId, productId, quantity, token = null) => {
   if (!userId || !productId) throw new Error('User ID and Product ID are required');
   const params = new URLSearchParams({
     userId: String(userId),
@@ -785,7 +818,11 @@ export const updateCartQuantity = async (userId, productId, quantity) => {
     quantity: String(quantity)
   });
   return apiRequest(`/cart/update?${params.toString()}`, {
-    method: 'PUT'
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
   });
 };
 
@@ -793,16 +830,21 @@ export const updateCartQuantity = async (userId, productId, quantity) => {
  * Remove variant from cart (SmartBiz: preferred method)
  * @param {number} userId - User ID
  * @param {number} variantId - Variant ID
+ * @param {string} token - JWT token (required for authenticated requests)
  * @returns {Promise<Object>} Updated cart
  */
-export const removeVariantFromCartAPI = async (userId, variantId) => {
+export const removeVariantFromCartAPI = async (userId, variantId, token = null) => {
   if (!userId || !variantId) throw new Error('User ID and Variant ID are required');
   const params = new URLSearchParams({
     userId: String(userId),
     variantId: String(variantId)
   });
   return apiRequest(`/cart/remove-variant?${params.toString()}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
   });
 };
 
@@ -810,16 +852,21 @@ export const removeVariantFromCartAPI = async (userId, variantId) => {
  * Remove product from cart (LEGACY - removes all variants of product)
  * @param {number} userId - User ID
  * @param {number} productId - Product ID
+ * @param {string} token - JWT token (required for authenticated requests)
  * @returns {Promise<Object>} Updated cart
  */
-export const removeFromCartAPI = async (userId, productId) => {
+export const removeFromCartAPI = async (userId, productId, token = null) => {
   if (!userId || !productId) throw new Error('User ID and Product ID are required');
   const params = new URLSearchParams({
     userId: String(userId),
     productId: String(productId)
   });
   return apiRequest(`/cart/remove?${params.toString()}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
   });
 };
 
@@ -828,10 +875,14 @@ export const removeFromCartAPI = async (userId, productId) => {
  * @param {number} userId - User ID
  * @returns {Promise<string>} Success message
  */
-export const clearCartAPI = async (userId) => {
+export const clearCartAPI = async (userId, token = null) => {
   if (!userId) throw new Error('User ID is required');
   return apiRequest(`/cart/clear/${userId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
   });
 };
 

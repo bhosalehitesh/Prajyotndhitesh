@@ -69,7 +69,6 @@ public class ReviewResponseDTO {
 	}
 	public ReviewResponseDTO() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
     
     

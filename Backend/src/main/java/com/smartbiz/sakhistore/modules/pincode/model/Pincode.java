@@ -81,7 +81,6 @@ public class Pincode {
 
 	public Pincode() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
     
     

@@ -84,11 +84,15 @@ public class CategoryService {
             for (CompletableFuture<String> future : imageFutures) {
                 try {
                     String url = future.get();
-                    if (url != null) {
+                    if (url != null && !url.trim().isEmpty()) {
                         categoryImageUrls.add(url);
+                    } else {
+                        System.err.println("⚠️ [CategoryService] Image upload returned null or empty URL");
                     }
                 } catch (Exception e) {
+                    System.err.println("❌ [CategoryService] Error getting image upload result: " + e.getMessage());
                     e.printStackTrace();
+                    // Continue processing other images even if one fails
                 }
             }
 
@@ -97,8 +101,13 @@ public class CategoryService {
             if (socialImageFuture != null) {
                 try {
                     socialImageUrl = socialImageFuture.get();
+                    if (socialImageUrl == null || socialImageUrl.trim().isEmpty()) {
+                        System.err.println("⚠️ [CategoryService] Social sharing image upload returned null or empty URL");
+                    }
                 } catch (Exception e) {
+                    System.err.println("❌ [CategoryService] Error getting social image upload result: " + e.getMessage());
                     e.printStackTrace();
+                    // Continue even if social image upload fails
                 }
             }
 

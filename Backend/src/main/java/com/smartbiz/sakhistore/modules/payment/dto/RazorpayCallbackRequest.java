@@ -33,7 +33,6 @@ public class RazorpayCallbackRequest {
 	}
 	public RazorpayCallbackRequest() {
 		super();
-		// TODO Auto-generated constructor stub
 	}
     
     
