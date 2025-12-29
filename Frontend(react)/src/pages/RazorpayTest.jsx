@@ -32,7 +32,7 @@ const RazorpayTest = () => {
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
-  const API_BASE = getBackendUrl() || 'http://192.168.1.21:8080';
+  const API_BASE = getBackendUrl() || 'http://192.168.1.24:8080';
   
   // Get the store slug from URL params or context
   const currentStoreSlug = slug || storeSlug || 'v'; // Default to 'v' if not found

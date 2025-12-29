@@ -17,6 +17,11 @@ import com.smartbiz.sakhistore.modules.payment.model.PaymentStatus;
 import com.smartbiz.sakhistore.modules.store.repository.StoreDetailsRepo;
 import com.smartbiz.sakhistore.modules.store.model.StoreDetails;
 import com.smartbiz.sakhistore.modules.product.model.Product;
+import com.smartbiz.sakhistore.modules.product.model.ProductVariant;
+import com.smartbiz.sakhistore.modules.product.repository.ProductRepository;
+import com.smartbiz.sakhistore.modules.product.repository.ProductVariantRepository;
+import com.smartbiz.sakhistore.modules.inventory.model.Inventory;
+import com.smartbiz.sakhistore.modules.inventory.repository.InventoryRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +49,18 @@ public class OrdersService {
 
     @Autowired(required = false)
     private com.smartbiz.sakhistore.modules.payment.service.PaymentService paymentService;
+
+    @Autowired(required = false)
+    private com.smartbiz.sakhistore.modules.inventory.service.InvoiceServiceImpl invoiceService;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired(required = false)
+    private ProductVariantRepository productVariantRepository;
+
+    @Autowired
+    private InventoryRepository inventoryRepository;
 
     // ===============================
     // Create Order From Cart
@@ -186,9 +203,129 @@ public class OrdersService {
             }
         }
 
+        // Update inventory - decrement stock for each ordered item
+        try {
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("📦 UPDATING INVENTORY");
+            System.out.println("=".repeat(60));
+            
+            for (OrderItems orderItem : savedOrder.getOrderItems()) {
+                if (orderItem == null || orderItem.getQuantity() == null || orderItem.getQuantity() <= 0) {
+                    continue;
+                }
+
+                Integer orderedQuantity = orderItem.getQuantity();
+                Product product = orderItem.getProduct();
+                ProductVariant variant = orderItem.getVariant();
+
+                // Update variant stock if variant exists (preferred method)
+                if (variant != null && variant.getVariantId() != null && productVariantRepository != null) {
+                    ProductVariant dbVariant = productVariantRepository.findById(variant.getVariantId()).orElse(null);
+                    if (dbVariant != null) {
+                        Integer currentStock = dbVariant.getStock() != null ? dbVariant.getStock() : 0;
+                        Integer newStock = Math.max(0, currentStock - orderedQuantity);
+                        dbVariant.setStock(newStock);
+                        
+                        // Disable variant if stock reaches zero
+                        if (newStock == 0) {
+                            dbVariant.setIsActive(false);
+                        }
+                        
+                        productVariantRepository.save(dbVariant);
+                        System.out.println("✅ Updated variant stock: " + dbVariant.getSku() + 
+                            " (Ordered: " + orderedQuantity + ", Stock: " + currentStock + " → " + newStock + ")");
+                    }
+                }
+
+                // Also update product's legacy inventoryQuantity field for backward compatibility
+                if (product != null && product.getProductsId() != null) {
+                    Product dbProduct = productRepository.findById(product.getProductsId()).orElse(null);
+                    if (dbProduct != null) {
+                        Integer currentInventory = dbProduct.getInventoryQuantity() != null ? dbProduct.getInventoryQuantity() : 0;
+                        Integer newInventory = Math.max(0, currentInventory - orderedQuantity);
+                        dbProduct.setInventoryQuantity(newInventory);
+                        productRepository.save(dbProduct);
+                        System.out.println("✅ Updated product inventory: " + dbProduct.getProductName() + 
+                            " (Ordered: " + orderedQuantity + ", Inventory: " + currentInventory + " → " + newInventory + ")");
+
+                        // Create or update Inventory record in inventory table
+                        try {
+                            // Try to find existing inventory record for this product
+                            Optional<Inventory> existingInventoryOpt = inventoryRepository.findByProduct(dbProduct);
+                            
+                            Inventory inventoryRecord;
+                            if (existingInventoryOpt.isPresent()) {
+                                // Update existing record
+                                inventoryRecord = existingInventoryOpt.get();
+                                System.out.println("📝 Updating existing inventory record for product: " + dbProduct.getProductName());
+                            } else {
+                                // Create new record
+                                inventoryRecord = new Inventory();
+                                inventoryRecord.setProduct(dbProduct);
+                                System.out.println("➕ Creating new inventory record for product: " + dbProduct.getProductName());
+                            }
+                            
+                            // Set inventory fields with meaningful values
+                            // Download_currentinventory: Store current inventory quantity as string
+                            String currentInventoryStr = String.valueOf(newInventory);
+                            inventoryRecord.setDownload_currentinventory(currentInventoryStr);
+                            
+                            // Upload_edited_inventory: Store timestamp of last update
+                            String lastUpdateTimestamp = java.time.LocalDateTime.now().toString();
+                            inventoryRecord.setUpload_edited_inventory(lastUpdateTimestamp);
+                            
+                            // Ensure the product relationship is set
+                            inventoryRecord.setProduct(dbProduct);
+                            inventoryRepository.save(inventoryRecord);
+                            System.out.println("✅ Inventory record saved to inventory table (ID: " + inventoryRecord.getInventoryId() + 
+                                ", Product ID: " + dbProduct.getProductsId() + 
+                                ", Current Inventory: " + currentInventoryStr + 
+                                ", Last Updated: " + lastUpdateTimestamp + ")");
+                        } catch (Exception invEx) {
+                            System.err.println("⚠️ Failed to save inventory record: " + invEx.getMessage());
+                            invEx.printStackTrace();
+                            // Don't fail the whole process if inventory record save fails
+                        }
+                    }
+                }
+            }
+            
+            System.out.println("=".repeat(60));
+            System.out.println("✅ Inventory update completed");
+            System.out.println("=".repeat(60) + "\n");
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to update inventory: " + e.getMessage());
+            e.printStackTrace();
+            // Don't fail order placement if inventory update fails
+        }
+
         // Empty cart
         cart.getItems().clear();
         cartRepository.save(cart);
+
+        // Generate and save invoice to database
+        try {
+            System.out.println("\n" + "=".repeat(60));
+            System.out.println("📄 GENERATING INVOICE FOR ORDER");
+            System.out.println("=".repeat(60));
+            System.out.println("Order ID: " + savedOrder.getOrdersId());
+            System.out.println("=".repeat(60) + "\n");
+            
+            if (invoiceService != null) {
+                com.smartbiz.sakhistore.modules.inventory.model.UserInvoice invoice = 
+                    invoiceService.generateInvoice(savedOrder.getOrdersId());
+                System.out.println("✅ Invoice generated and saved to database!");
+                System.out.println("   Invoice ID: " + invoice.getInvoiceId());
+                System.out.println("   Invoice Number: " + invoice.getInvoiceNumber());
+                System.out.println("   Total Amount: ₹" + invoice.getGrandTotal());
+            } else {
+                System.err.println("⚠️ InvoiceService is not available. Invoice will not be generated.");
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Failed to generate invoice: " + e.getMessage());
+            e.printStackTrace();
+            // Don't fail order placement if invoice generation fails
+        }
 
         // Send Email (async or safe block)
         try {

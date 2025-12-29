@@ -19,7 +19,7 @@ export const getBackendUrl = () => {
   // For remote access (mobile device, other devices on network):
   // Always connect to the backend server IP (where backend is actually running)
   // Update this IP if your backend server's IP changes
-  const BACKEND_SERVER_IP = '192.168.1.34'; // Backend server IP - update if changed
+  const BACKEND_SERVER_IP = '192.168.1.24'; // Backend server IP - update if changed
 
   // If accessing frontend from any IP (including mobile), use backend server IP
   return `http://${BACKEND_SERVER_IP}:8080/api`;
@@ -896,7 +896,26 @@ export const clearCartAPI = async (userId, token = null) => {
  */
 export const getWishlist = async (userId) => {
   if (!userId) throw new Error('User ID is required');
-  return apiRequest(`/wishlist/all/${userId}`);
+  // Try to get token from localStorage (either directly or from user object)
+  let token = localStorage.getItem('authToken');
+  if (!token) {
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      try {
+        const userObj = JSON.parse(currentUser);
+        token = userObj?.token;
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }
+  return apiRequest(`/wishlist/all/${userId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
+  });
 };
 
 /**
@@ -907,8 +926,25 @@ export const getWishlist = async (userId) => {
  */
 export const addToWishlistAPI = async (userId, productId) => {
   if (!userId || !productId) throw new Error('User ID and Product ID are required');
+  // Try to get token from localStorage (either directly or from user object)
+  let token = localStorage.getItem('authToken');
+  if (!token) {
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      try {
+        const userObj = JSON.parse(currentUser);
+        token = userObj?.token;
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }
   return apiRequest(`/wishlist/add/${userId}/${productId}`, {
-    method: 'POST'
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
   });
 };
 
@@ -920,8 +956,25 @@ export const addToWishlistAPI = async (userId, productId) => {
  */
 export const removeFromWishlistAPI = async (userId, productId) => {
   if (!userId || !productId) throw new Error('User ID and Product ID are required');
+  // Try to get token from localStorage (either directly or from user object)
+  let token = localStorage.getItem('authToken');
+  if (!token) {
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      try {
+        const userObj = JSON.parse(currentUser);
+        token = userObj?.token;
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }
   return apiRequest(`/wishlist/remove/${userId}/${productId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
   });
 };
 

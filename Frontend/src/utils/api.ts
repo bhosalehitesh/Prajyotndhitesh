@@ -244,7 +244,7 @@ export const sendLoginOtp = async (phone: string): Promise<string> => {
     console.log('📱 [Login OTP] Phone:', cleanPhone);
     console.log('📱 [Login OTP] URL:', url);
     console.log('📱 [Login OTP] API_BASE_URL:', API_BASE_URL);
-    console.log('📱 [Login OTP] Expected IP: 192.168.1.48:8080');
+    console.log('📱 [Login OTP] Expected IP: 192.168.1.24:8080');
 
     // Add timeout to prevent hanging
     const controller = new AbortController();
