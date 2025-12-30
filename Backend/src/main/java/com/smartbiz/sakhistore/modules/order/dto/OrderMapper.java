@@ -75,11 +75,26 @@ public class OrderMapper {
         OrderItemResponseDTO dto = new OrderItemResponseDTO();
         dto.setOrderItemsId(item.getOrderItemsId());
         dto.setQuantity(item.getQuantity());
-        dto.setPrice(item.getPrice());
+        
+        // DO NOT set dto.setPrice(item.getPrice()) because OrderItems.price is already total (unitPrice * quantity)
+        // Instead, get unit price directly from product/variant in database
 
-        // Calculate unit price
-        if (item.getQuantity() != null && item.getQuantity() > 0 && item.getPrice() != null) {
-            dto.setUnitPrice(item.getPrice() / item.getQuantity());
+        // Get unit price directly from database: prefer variant price, fallback to product price
+        Double unitPrice = null;
+        if (item.getVariant() != null && item.getVariant().getSellingPrice() != null) {
+            unitPrice = item.getVariant().getSellingPrice();
+        } else if (item.getProduct() != null && item.getProduct().getSellingPrice() != null) {
+            unitPrice = item.getProduct().getSellingPrice();
+        }
+        
+        // Set unit price (from database)
+        if (unitPrice != null) {
+            dto.setUnitPrice(unitPrice);
+        }
+        
+        // Set price field to unit price (for backward compatibility, but unitPrice should be used)
+        if (unitPrice != null) {
+            dto.setPrice(unitPrice);
         }
 
         // Product information
@@ -104,14 +119,9 @@ public class OrderMapper {
             }
             
             dto.setVariantStock(item.getVariant().getStock());
-
-            // Use variant price if available
-            if (item.getVariant().getSellingPrice() != null) {
-                dto.setUnitPrice(item.getVariant().getSellingPrice());
-            }
         }
 
-        // Calculate total price
+        // Calculate total price using unitPrice * quantity
         dto.calculateTotalPrice();
 
         return dto;

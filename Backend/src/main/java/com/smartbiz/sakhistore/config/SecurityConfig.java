@@ -13,8 +13,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import com.smartbiz.sakhistore.modules.auth.sellerauth.dto.JwtAuthenticationFilter;
 
@@ -81,7 +79,14 @@ public class SecurityConfig {
             "/payment/**",
             
             // Cart endpoints (public for guest cart functionality)
-            "/api/cart/**"
+            "/api/cart/**",
+            
+            // Order placement endpoint (public for guest checkout)
+            "/orders/place",
+            "/api/orders/place",
+            
+            // User address update endpoint (public for guest checkout)
+            "/api/user/update-address-by-phone/**"
     };
 
     @Bean
@@ -138,8 +143,17 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allow all origins
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        // Development and Production domains - use specific origins when allowCredentials is true
+        configuration.setAllowedOrigins(List.of(
+            // Development - specific ports
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173",
+            // Production domains - smartbiz.ltd
+            "https://smartbiz.ltd",
+            "https://www.smartbiz.ltd"
+        ));
 
         // Allow all methods
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
@@ -147,11 +161,11 @@ public class SecurityConfig {
         // Allow all headers
         configuration.setAllowedHeaders(List.of("*"));
 
-        // Allow credentials (set to false if not needed)
-        configuration.setAllowCredentials(false);
+        // Allow credentials for authenticated requests
+        configuration.setAllowCredentials(true);
 
-        // Expose headers if needed
-        configuration.setExposedHeaders(List.of("*"));
+        // Expose headers
+        configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
 
         // Cache preflight for 1 hour
         configuration.setMaxAge(3600L);
@@ -162,17 +176,6 @@ public class SecurityConfig {
         return source;
     }
 
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(@org.springframework.lang.NonNull CorsRegistry registry) {
-                registry.addMapping("/**")
-                        .allowedOriginPatterns("*")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-                        .allowedHeaders("*")
-                        .allowCredentials(false);
-            }
-        };
-    }
+    // CORS is configured via corsConfigurationSource() bean above
+    // WebMvcConfigurer CORS config removed to avoid conflicts with Spring Security CORS
 }

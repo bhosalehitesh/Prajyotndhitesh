@@ -40,10 +40,8 @@ public class InvoiceHTMLBuilder {
                 itemsHtml.append("<tr>")
                         .append("<td>").append(escapeHtml(item.getProductName())).append("</td>")
                         .append("<td>").append(escapeHtml(item.getSize())).append("</td>")
-                        .append("<td style='text-align:center;'>").append(escapeHtml(item.getQuantity())).append("</td>")
-                        .append("<td style='text-align:right;'>").append(escapeHtml(item.getPrice())).append("</td>")
-                        .append("<td style='text-align:right;'>").append(escapeHtml(item.getGstPercent())).append("%</td>")
                         .append("<td style='text-align:right;'>").append(escapeHtml(item.getTotal())).append("</td>")
+                        .append("<td style='text-align:right;'>").append(escapeHtml(item.getGstPercent())).append("%</td>")
                         .append("</tr>");
             });
         }
@@ -87,8 +85,7 @@ public class InvoiceHTMLBuilder {
             + "<h4 style='margin-top:16px'>Items</h4>"
             + "<table>"
             + "<thead><tr>"
-            + "<th>Product</th><th>Size</th><th>Qty</th>"
-            + "<th>Price</th><th>GST</th><th>Total</th>"
+            + "<th>Product</th><th>Size</th><th>Total</th><th>GST</th>"
             + "</tr></thead><tbody>"
             + itemsHtml
             + "</tbody></table>"

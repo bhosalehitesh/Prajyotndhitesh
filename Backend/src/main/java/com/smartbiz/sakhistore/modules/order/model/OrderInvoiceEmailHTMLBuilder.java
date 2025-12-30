@@ -54,7 +54,7 @@ public class OrderInvoiceEmailHTMLBuilder {
         
         // Generate QR code data
         String qrData = String.format(
-            "orderId:%s|customer:%s|amount:₹%s|date:%s",
+            "orderId:%s|customer:%s|amount:Rs.%s|date:%s",
             escapeHtml(orderId),
             escapeHtml(customerName),
             escapeHtml(grandTotal),
@@ -114,7 +114,7 @@ public class OrderInvoiceEmailHTMLBuilder {
 
               <tr><td style="font-size:15px; padding:6px 0; color:#222;">
                 <strong>Total Amount:</strong>
-                <span style="color:#E3007A; font-weight:bold;">₹ %s</span>
+                <span style="color:#E3007A; font-weight:bold;">Rs. %s</span>
               </td></tr>
 
               <tr><td style="font-size:15px; padding:6px 0; color:#222;">
@@ -243,9 +243,21 @@ public class OrderInvoiceEmailHTMLBuilder {
                         : "Product";
                 }
                 
-                Double itemPrice = item.getPrice() != null ? item.getPrice() : 0.0;
+                // Get unit price directly from database: prefer variant price, fallback to product price
+                // DO NOT use item.getPrice() as it is already total (unitPrice * quantity)
+                Double unitPrice = null;
+                if (item.getVariant() != null && item.getVariant().getSellingPrice() != null) {
+                    unitPrice = item.getVariant().getSellingPrice();
+                } else if (item.getProduct() != null && item.getProduct().getSellingPrice() != null) {
+                    unitPrice = item.getProduct().getSellingPrice();
+                } else if (item.getPrice() != null && item.getQuantity() != null && item.getQuantity() > 0) {
+                    // Fallback: calculate unit price from stored total (if relationships not loaded)
+                    unitPrice = item.getPrice() / item.getQuantity();
+                }
+                
+                Double itemPrice = unitPrice != null ? unitPrice : 0.0;
                 Integer quantity = item.getQuantity() != null ? item.getQuantity() : 0;
-                Double itemTotal = itemPrice * quantity;
+                Double itemTotal = itemPrice * quantity; // Calculate total correctly: unitPrice * quantity
 
                 itemsHtml.append("                <tr>")
                         .append("<td style=\"padding:10px; border:1px solid #e5e5e5; font-size:13px; color:#222;\">")
@@ -255,10 +267,10 @@ public class OrderInvoiceEmailHTMLBuilder {
                         .append(escapeHtml(String.valueOf(quantity)))
                         .append("</td>")
                         .append("<td align=\"right\" style=\"padding:10px; border:1px solid #e5e5e5; font-size:13px; color:#222;\">")
-                        .append("₹ ").append(String.format("%.2f", itemPrice))
+                        .append("Rs. ").append(String.format("%.2f", itemPrice))
                         .append("</td>")
                         .append("<td align=\"right\" style=\"padding:10px; border:1px solid #e5e5e5; font-size:13px; color:#222; font-weight:600;\">")
-                        .append("₹ ").append(String.format("%.2f", itemTotal))
+                        .append("Rs. ").append(String.format("%.2f", itemTotal))
                         .append("</td>")
                         .append("</tr>\n");
             }
@@ -289,7 +301,7 @@ public class OrderInvoiceEmailHTMLBuilder {
     <hr>
     <p><strong>Invoice Number:</strong> %s</p>
     <p><strong>Order ID:</strong> #%s</p>
-    <p><strong>Total Amount:</strong> ₹ %s</p>
+    <p><strong>Total Amount:</strong> Rs. %s</p>
     <p><strong>Date:</strong> %s</p>
     <hr>
     <p>Your detailed invoice PDF is attached to this email.</p>

@@ -104,9 +104,8 @@ public class InvoiceServiceImpl {
         invoice.setBillingAddress(address);
         invoice.setShippingAddress(address);
 
-        // Calculate totals
+        // Calculate totals - use product sellingPrice directly from database
         double subtotal = 0.0;
-        double gstTotal = 0.0;
 
         if (order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
             throw new RuntimeException("Order has no items. Cannot generate invoice.");
@@ -114,38 +113,46 @@ public class InvoiceServiceImpl {
 
         for (OrderItems oi : order.getOrderItems()) {
             if (oi == null) continue;
-            if (oi.getPrice() == null || oi.getQuantity() == null) {
-                System.err.println("⚠️ Warning: Order item has null price or quantity, skipping...");
+            if (oi.getQuantity() == null) {
+                System.err.println("⚠️ Warning: Order item has null quantity, skipping...");
                 continue;
             }
-            double itemSubtotal = oi.getPrice() * oi.getQuantity();
-            double gst = itemSubtotal * 0.05;
-
+            
+            // Get unit price directly from database: prefer variant price, fallback to product price
+            double unitPrice = 0.0;
+            if (oi.getVariant() != null && oi.getVariant().getSellingPrice() != null) {
+                unitPrice = oi.getVariant().getSellingPrice();
+            } else if (oi.getProduct() != null && oi.getProduct().getSellingPrice() != null) {
+                unitPrice = oi.getProduct().getSellingPrice();
+            } else {
+                System.err.println("⚠️ Warning: Order item has no valid price (variant or product), skipping...");
+                continue;
+            }
+            
+            int quantity = oi.getQuantity();
+            // Calculate item subtotal: unitPrice * quantity (from database values)
+            double itemSubtotal = unitPrice * quantity;
             subtotal += itemSubtotal;
-            gstTotal += gst;
         }
 
         if (subtotal == 0.0) {
             throw new RuntimeException("Cannot generate invoice: Order subtotal is zero.");
         }
 
-        double discount = subtotal * 0.05;
-        double delivery = 30.0;
-        double grandTotal = subtotal + gstTotal + delivery - discount;
-
+        // Set all totals to be the same (subtotal only, no tax/discount/delivery)
         invoice.setSubTotal(subtotal);
-        invoice.setTaxAmount(gstTotal);
-        invoice.setDiscountAmount(discount);
-        invoice.setDeliveryCharges(delivery);
-        invoice.setGrandTotal(grandTotal);
+        invoice.setTaxAmount(0.0);
+        invoice.setDiscountAmount(0.0);
+        invoice.setDeliveryCharges(0.0);
+        invoice.setGrandTotal(subtotal); // Same as subtotal
 
         // Set payment info safely
         if (payment != null) {
             invoice.setPaymentStatus(payment.getStatus() != null ? payment.getStatus().name() : "PENDING");
-            invoice.setPaymentAmount(payment.getAmount() != null ? payment.getAmount() : grandTotal);
+            invoice.setPaymentAmount(payment.getAmount() != null ? payment.getAmount() : subtotal);
         } else {
             invoice.setPaymentStatus("PENDING");
-            invoice.setPaymentAmount(grandTotal);
+            invoice.setPaymentAmount(subtotal);
             System.out.println("⚠️ Warning: Payment is null for order, setting default payment status");
         }
 
@@ -154,8 +161,8 @@ public class InvoiceServiceImpl {
 
         for (OrderItems oi : order.getOrderItems()) {
             if (oi == null) continue;
-            if (oi.getProduct() == null) {
-                System.err.println("⚠️ Warning: Order item has null product, skipping...");
+            if (oi.getQuantity() == null) {
+                System.err.println("⚠️ Warning: Order item has null quantity, skipping...");
                 continue;
             }
 
@@ -163,19 +170,46 @@ public class InvoiceServiceImpl {
             it.setInvoice(invoice);
 
             it.setOrderItemId(oi.getOrderItemsId());
-            it.setProductId(oi.getProduct().getProductsId());
-            it.setProductName(oi.getProduct().getProductName() != null ? oi.getProduct().getProductName() : "Product");
-            it.setSize(oi.getProduct().getSize() != null ? oi.getProduct().getSize() : "");
-            it.setQuantity(oi.getQuantity() != null ? oi.getQuantity() : 0);
-            it.setPrice(oi.getPrice() != null ? oi.getPrice() : 0.0);
-
-            double itemPrice = oi.getPrice() != null ? oi.getPrice() : 0.0;
-            int itemQuantity = oi.getQuantity() != null ? oi.getQuantity() : 0;
-            double gst = itemPrice * itemQuantity * 0.05;
-
-            it.setGstPercent(5.0);
-            it.setGstAmount(gst);
-            it.setTotal((itemPrice * itemQuantity) + gst);
+            
+            // Get product info - use product if available, otherwise try to get from variant
+            if (oi.getProduct() != null) {
+                it.setProductId(oi.getProduct().getProductsId());
+                it.setProductName(oi.getProduct().getProductName() != null ? oi.getProduct().getProductName() : "Product");
+                it.setSize(oi.getProduct().getSize() != null ? oi.getProduct().getSize() : "");
+            } else if (oi.getVariant() != null && oi.getVariant().getProduct() != null) {
+                it.setProductId(oi.getVariant().getProduct().getProductsId());
+                it.setProductName(oi.getVariant().getProduct().getProductName() != null ? oi.getVariant().getProduct().getProductName() : "Product");
+                // Use product's size since variant stores attributes in JSON
+                it.setSize(oi.getVariant().getProduct().getSize() != null ? oi.getVariant().getProduct().getSize() : "");
+            } else {
+                System.err.println("⚠️ Warning: Order item has no product or variant, skipping...");
+                continue;
+            }
+            
+            // Get quantity directly from database
+            int itemQuantity = oi.getQuantity();
+            it.setQuantity(itemQuantity);
+            
+            // Get unit price directly from database: prefer variant price, fallback to product price
+            // DO NOT use OrderItems.price as it may already be calculated (unitPrice * quantity)
+            double unitPrice = 0.0;
+            if (oi.getVariant() != null && oi.getVariant().getSellingPrice() != null) {
+                unitPrice = oi.getVariant().getSellingPrice();
+            } else if (oi.getProduct() != null && oi.getProduct().getSellingPrice() != null) {
+                unitPrice = oi.getProduct().getSellingPrice();
+            } else {
+                System.err.println("⚠️ Warning: Order item has no valid price, skipping...");
+                continue;
+            }
+            it.setPrice(unitPrice);
+            
+            // Calculate total directly: unitPrice * quantity (from database values)
+            double itemTotal = unitPrice * itemQuantity;
+            it.setTotal(itemTotal);
+            
+            // No GST - set to 0
+            it.setGstPercent(0.0);
+            it.setGstAmount(0.0);
 
             items.add(it);
         }
@@ -213,10 +247,10 @@ public class InvoiceServiceImpl {
         System.out.println("Customer Email: " + finalInvoice.getUserEmail());
         System.out.println("-----------------------------------------------------");
         System.out.println("Subtotal      : ₹" + finalInvoice.getSubTotal());
-        System.out.println("GST (5%)      : ₹" + finalInvoice.getTaxAmount());
-        System.out.println("Discount (5%) : ₹" + finalInvoice.getDiscountAmount());
-        System.out.println("Delivery      : ₹" + finalInvoice.getDeliveryCharges());
-        System.out.println("GRAND TOTAL   : ₹" + finalInvoice.getGrandTotal());
+        System.out.println("GST           : ₹0.0");
+        System.out.println("Discount      : ₹0.0");
+        System.out.println("Delivery      : ₹0.0");
+        System.out.println("GRAND TOTAL   : ₹" + finalInvoice.getSubTotal());
         System.out.println("-----------------------------------------------------");
         System.out.println("Items Count   : " + (finalInvoice.getItems() != null ? finalInvoice.getItems().size() : 0));
         System.out.println("=====================================================\n");

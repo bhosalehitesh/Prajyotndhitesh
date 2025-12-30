@@ -142,7 +142,7 @@ public class Product {
     // =======================
     // 🔗 PRODUCT → VARIANTS (One Product → Many Variants)
     // =======================
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = {jakarta.persistence.CascadeType.PERSIST, jakarta.persistence.CascadeType.MERGE})
     @JsonIgnore
     private List<ProductVariant> variants;
 

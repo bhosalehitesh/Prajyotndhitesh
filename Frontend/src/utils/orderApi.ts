@@ -53,6 +53,7 @@ export interface OrderItemDto {
   OrderItemsId: number;
   quantity: number;
   price: number;
+  unitPrice?: number; // Unit price from database (preferred over price)
   product?: {
     productId: number;
     productName: string;

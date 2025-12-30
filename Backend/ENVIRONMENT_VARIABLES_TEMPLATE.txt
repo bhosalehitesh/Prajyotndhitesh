@@ -1,0 +1,95 @@
+==========================================
+ENVIRONMENT VARIABLES FOR SOLIDCP DEPLOYMENT
+==========================================
+
+Copy these environment variables to SolidCP. Replace the placeholder values with your actual production values.
+
+IMPORTANT: Keep this file secure and never commit it to Git with real values!
+
+==========================================
+REQUIRED ENVIRONMENT VARIABLES
+==========================================
+
+# Database Configuration
+DB_URL=jdbc:postgresql://your-db-host:5432/sakhistore_prod
+DB_USERNAME=your_db_username
+DB_PASSWORD=your_db_password
+
+# Razorpay (Production Keys - Get from Razorpay Dashboard)
+RAZORPAY_KEY=rzp_live_your_production_key_here
+RAZORPAY_SECRET=your_production_secret_here
+
+# Cloudinary
+CLOUDINARY_NAME=dgrxmavho
+CLOUDINARY_KEY=733189736643147
+CLOUDINARY_SECRET=BIaTjViHLyGSiszZCH0R2rqKyRU
+
+# JWT Secret (Generate a strong random string - minimum 64 characters)
+# Use PowerShell command to generate:
+# -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 64 | % {[char]$_})
+JWT_SECRET=your_generated_jwt_secret_here_minimum_64_characters
+
+# Email Configuration
+MAIL_USERNAME=mindrushikesh8@gmail.com
+MAIL_PASSWORD=your_gmail_app_password_here
+
+# SMS Configuration (Kutility)
+SMS_KUTILITY_KEY=your_kutility_api_key
+SMS_KUTILITY_SECRET=your_kutility_api_secret
+
+# Server Configuration
+SERVER_PORT=8080
+
+# Spring Profile (IMPORTANT - Set this to activate production config)
+SPRING_PROFILES_ACTIVE=prod
+
+==========================================
+OPTIONAL ENVIRONMENT VARIABLES
+==========================================
+
+# Mail Host (defaults to smtp.gmail.com if not set)
+MAIL_HOST=smtp.gmail.com
+
+# Mail Port (defaults to 587 if not set)
+MAIL_PORT=587
+
+# Store Domain (defaults to https://smartbiz.ltd if not set)
+STORE_DOMAIN=https://smartbiz.ltd
+
+# Admin Configuration (optional - has defaults)
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_admin_password_here
+
+==========================================
+HOW TO SET IN SOLIDCP
+==========================================
+
+1. Log into SolidCP Control Panel
+2. Navigate to your Java Application
+3. Find "Environment Variables" or "Application Settings"
+4. Add each variable above with its value
+5. Make sure SPRING_PROFILES_ACTIVE=prod is set
+6. Restart the application
+
+==========================================
+GENERATING JWT_SECRET
+==========================================
+
+Windows PowerShell:
+-join ((65..90) + (97..122) + (48..57) | Get-Random -Count 64 | % {[char]$_})
+
+Or use online generator:
+https://www.random.org/strings/
+
+Minimum length: 64 characters
+Recommended: 128+ characters
+
+==========================================
+NOTES
+==========================================
+
+- All values marked with "your_..." need to be replaced with actual values
+- Never share these values publicly
+- Keep a backup of these values in a secure password manager
+- Test the backend after setting these variables
+

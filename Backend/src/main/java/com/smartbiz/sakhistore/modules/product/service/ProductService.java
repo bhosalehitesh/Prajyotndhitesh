@@ -228,19 +228,9 @@ public class ProductService {
                 products.forEach(p -> {
                     List<ProductVariant> productVariants = variantsByProduct.getOrDefault(p.getProductsId(),
                             new java.util.ArrayList<>());
-                    // Use getVariants() to get the existing collection, then clear and add to avoid
-                    // orphan removal issues
-                    List<ProductVariant> existingVariants = p.getVariants();
-                    if (existingVariants == null) {
-                        // If no collection exists, initialize it first
-                        p.setVariants(new java.util.ArrayList<>());
-                        existingVariants = p.getVariants();
-                    }
-                    // Clear existing and add new to maintain collection reference
-                    // Don't modify variant product references - they should already be correct from
-                    // the query
-                    existingVariants.clear();
-                    existingVariants.addAll(productVariants);
+                    // Set variants directly instead of clearing to avoid deletion issues
+                    // This is just for loading/display, not for persisting changes
+                    p.setVariants(productVariants);
                 });
             }
         }

@@ -33,12 +33,14 @@ public class OrderItemResponseDTO {
     public OrderItemResponseDTO() {
     }
 
-    // Calculate total price
+    // Calculate total price - use unitPrice first (from database), fallback to price
     public void calculateTotalPrice() {
-        if (quantity != null && price != null) {
-            this.totalPrice = quantity * price;
-        } else if (quantity != null && unitPrice != null) {
+        if (quantity != null && unitPrice != null) {
+            // Use unitPrice from database (preferred)
             this.totalPrice = quantity * unitPrice;
+        } else if (quantity != null && price != null) {
+            // Fallback to price field (should also be unit price after fix)
+            this.totalPrice = quantity * price;
         }
     }
 }

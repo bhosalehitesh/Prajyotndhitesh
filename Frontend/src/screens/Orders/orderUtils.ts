@@ -49,15 +49,16 @@ const mapPaymentStatus = (backendStatus: OrderDto['paymentStatus']): PaymentStat
  */
 const transformOrderItem = (item: OrderItemDto, index: number): OrderItem => {
   const productName = item.product?.productName || item.variant?.variantName || `Product ${index + 1}`;
-  const price = item.price || 0;
+  // Use unitPrice from database (preferred), fallback to price field
+  const unitPrice = item.unitPrice ?? item.price ?? 0;
   const quantity = item.quantity || 0;
 
   return {
     id: String(item.OrderItemsId || index),
     name: productName,
     quantity: quantity,
-    price: price,
-    totalPrice: price * quantity,
+    price: unitPrice, // Use unit price (from database)
+    totalPrice: unitPrice * quantity, // Calculate total correctly: unitPrice * quantity
   };
 };
 
