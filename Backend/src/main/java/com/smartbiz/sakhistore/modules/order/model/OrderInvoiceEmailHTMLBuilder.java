@@ -126,7 +126,8 @@ public class OrderInvoiceEmailHTMLBuilder {
               </td></tr>
 
               <tr><td style="font-size:15px; padding:6px 0; color:#222;">
-                <strong>Payment Status:</strong> %s
+                <strong>Payment Status:</strong>
+                <span style="display:inline-block; padding:4px 10px; border-radius:4px; background:#f0f0f0; color:#333; font-weight:bold;">%s</span>
               </td></tr>
 
             </table>

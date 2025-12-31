@@ -22,7 +22,8 @@ const parseJsonOrText = async (response: Response): Promise<any> => {
  * Order DTO interface matching backend response
  */
 export interface OrderDto {
-  OrdersId: number;
+  OrdersId?: number | null; // From backend @JsonProperty("OrdersId")
+  orderId?: number | null; // Fallback for backward compatibility
   totalAmount: number;
   paymentStatus: 'PENDING' | 'PAID' | 'FAILED';
   orderStatus: 'PLACED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REJECTED';
@@ -147,7 +148,8 @@ export const getOrderById = async (orderId: string | number): Promise<OrderDto> 
 
 /**
  * Update order status
- * Backend: PUT /orders/update-status/{id}?status={status}&rejectionReason={reason}
+ * Backend: PUT /orders/update-status/{id}
+ * Body: { orderStatus: 'PLACED'|'PROCESSING'|'SHIPPED'|'DELIVERED'|'CANCELLED'|'REJECTED', rejectionReason?: string }
  */
 export const updateOrderStatus = async (
   orderId: string | number,
@@ -156,11 +158,14 @@ export const updateOrderStatus = async (
 ): Promise<OrderDto> => {
   const token = await storage.getItem(AUTH_TOKEN_KEY);
   const id = typeof orderId === 'string' ? orderId : String(orderId);
-  
-  // Build URL with status and optional rejection reason
-  let url = `${API_BASE_URL}/orders/update-status/${id}?status=${status}`;
+  const url = `${API_BASE_URL}/orders/update-status/${id}`;
+
+  // Build request body
+  const requestBody: { orderStatus: string; rejectionReason?: string } = {
+    orderStatus: status,
+  };
   if (rejectionReason && status === 'REJECTED') {
-    url += `&rejectionReason=${encodeURIComponent(rejectionReason)}`;
+    requestBody.rejectionReason = rejectionReason;
   }
 
   console.log('📡 [API] Updating order status:', { url, orderId: id, status, rejectionReason });
@@ -171,6 +176,7 @@ export const updateOrderStatus = async (
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
+    body: JSON.stringify(requestBody),
   });
 
   const payload = await parseJsonOrText(response);

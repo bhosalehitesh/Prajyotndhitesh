@@ -36,6 +36,7 @@ public class EmailServicePdf {
             MimeMessageHelper helper =
                     new MimeMessageHelper(message, true, "UTF-8");
 
+            helper.setFrom("smartbizforhelp@gmail.com", "Sakhi Store");
             helper.setTo(invoice.getUserEmail());
             helper.setSubject("Your Invoice - " + invoice.getInvoiceNumber());
 

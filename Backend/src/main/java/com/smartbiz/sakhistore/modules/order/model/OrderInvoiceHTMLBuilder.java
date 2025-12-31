@@ -134,7 +134,6 @@ public class OrderInvoiceHTMLBuilder {
             + "<strong>Order ID:</strong> #" + escapeHtml(String.valueOf(order.getOrdersId())) + "<br/>"
             + "<strong>Order Date:</strong> " + escapeHtml(orderDate) + "<br/>"
             + "<strong>Order Status:</strong> " + escapeHtml(orderStatus) + "<br/>"
-            + "<strong>Payment Status:</strong> " + escapeHtml(paymentStatus) + "<br/>"
             + "</div>"
             + "</div>"
 

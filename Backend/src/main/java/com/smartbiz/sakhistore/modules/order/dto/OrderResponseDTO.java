@@ -1,6 +1,7 @@
 package com.smartbiz.sakhistore.modules.order.dto;
 
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -10,6 +11,7 @@ import java.util.List;
 @Data
 public class OrderResponseDTO {
 
+    @JsonProperty("OrdersId")
     private Long orderId;
     private Double totalAmount;
     private String orderStatus;

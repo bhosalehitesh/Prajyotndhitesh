@@ -130,21 +130,31 @@ export const transformOrder = (backendOrder: OrderDto, index?: number): Order =>
  * Transform array of backend orders to frontend orders
  * Filters out orders without valid IDs (OrdersId must be a positive number)
  * This prevents "Invalid order ID" errors when clicking on orders
+ * 
+ * Note: Invalid orders typically indicate data issues in the backend database
+ * (corrupted/old records) and should be cleaned up
  */
 export const transformOrders = (backendOrders: OrderDto[]): Order[] => {
   // Log backend orders to debug invalid IDs
-  const invalidBackendOrders = backendOrders.filter(order => 
-    !order.OrdersId || order.OrdersId <= 0
-  );
+  const invalidBackendOrders = backendOrders.filter(order => {
+    const ordersId = order.OrdersId ?? order.orderId;
+    return !ordersId || ordersId <= 0;
+  });
   
   if (invalidBackendOrders.length > 0) {
-    console.warn('⚠️ [transformOrders] Backend returned orders with invalid OrdersId:', 
-      invalidBackendOrders.map(o => ({
-        OrdersId: o.OrdersId,
-        totalAmount: o.totalAmount,
-        orderStatus: o.orderStatus,
-        creationTime: o.creationTime
-      }))
+    console.warn(
+      `⚠️ [transformOrders] Backend returned ${invalidBackendOrders.length} order(s) with invalid OrdersId. ` +
+      `These orders will be filtered out. (This typically indicates data issues in the backend database)`,
+      invalidBackendOrders.map(o => {
+        const ordersId = o.OrdersId ?? o.orderId;
+        return {
+          OrdersId: ordersId ?? 'NULL/UNDEFINED',
+          totalAmount: o.totalAmount,
+          orderStatus: o.orderStatus,
+          creationTime: o.creationTime,
+          customerName: o.customerName || 'N/A'
+        };
+      })
     );
   }
   
@@ -159,16 +169,23 @@ export const transformOrders = (backendOrders: OrderDto[]): Order[] => {
         id: order.id,
         ordersId: order.ordersId,
         orderNumber: order.orderNumber,
-        customerName: order.customerName
+        customerName: order.customerName,
+        reason: order.id.startsWith('temp-') ? 'Temporary ID (invalid OrdersId)' : 'Missing or invalid OrdersId'
       });
     }
     return hasValidId;
   });
   
   if (transformed.length !== validOrders.length) {
-    console.warn(`⚠️ [transformOrders] Filtered out ${transformed.length - validOrders.length} orders with invalid IDs out of ${transformed.length} total`);
-  } else {
+    const filtered = transformed.length - validOrders.length;
+    console.warn(
+      `⚠️ [transformOrders] Filtered out ${filtered} order(s) with invalid IDs out of ${transformed.length} total. ` +
+      `These should be cleaned up in the backend database.`
+    );
+  } else if (validOrders.length > 0) {
     console.log(`✅ [transformOrders] All ${validOrders.length} orders have valid IDs`);
+  } else {
+    console.warn(`⚠️ [transformOrders] No valid orders found`);
   }
   
   return validOrders;

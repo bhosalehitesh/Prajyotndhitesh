@@ -21,6 +21,12 @@ public class OrderMapper {
         if (order == null) {
             return null;
         }
+        
+        // Validate that order has a valid ID
+        if (order.getOrdersId() == null || order.getOrdersId() <= 0) {
+            System.err.println("⚠️ [OrderMapper] Skipping order with invalid ID: " + order.getOrdersId());
+            return null;
+        }
 
         OrderResponseDTO dto = new OrderResponseDTO();
         dto.setOrderId(order.getOrdersId());
@@ -129,13 +135,16 @@ public class OrderMapper {
 
     /**
      * Convert list of Orders to list of OrderResponseDTO
+     * Filters out orders with NULL or invalid OrdersId to prevent serialization issues
      */
     public List<OrderResponseDTO> toOrderResponseDTOList(List<Orders> orders) {
         if (orders == null) {
             return new ArrayList<>();
         }
         return orders.stream()
+                .filter(order -> order != null && order.getOrdersId() != null && order.getOrdersId() > 0)
                 .map(this::toOrderResponseDTO)
+                .filter(dto -> dto != null) // Filter out null DTOs as extra safety
                 .collect(Collectors.toList());
     }
 }

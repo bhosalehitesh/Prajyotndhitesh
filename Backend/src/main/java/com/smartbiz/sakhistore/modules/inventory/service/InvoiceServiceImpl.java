@@ -151,7 +151,7 @@ public class InvoiceServiceImpl {
             invoice.setPaymentStatus(payment.getStatus() != null ? payment.getStatus().name() : "PENDING");
             invoice.setPaymentAmount(payment.getAmount() != null ? payment.getAmount() : subtotal);
         } else {
-            invoice.setPaymentStatus("PENDING");
+            invoice.setPaymentStatus("PAID");
             invoice.setPaymentAmount(subtotal);
             System.out.println("⚠️ Warning: Payment is null for order, setting default payment status");
         }

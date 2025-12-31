@@ -242,7 +242,7 @@ public class OrdersController {
             System.out.println("🧪 TESTING EMAIL CONFIGURATION");
             System.out.println("=".repeat(60));
             System.out.println("Sending test email to: " + toEmail);
-            System.out.println("From: mindrushikesh8@gmail.com");
+            System.out.println("From: support@smartbiz.ltd");
             System.out.println("=".repeat(60) + "\n");
 
             // Validate mailSender is available
@@ -258,7 +258,7 @@ public class OrdersController {
             message.setSubject("Test Email from Sakhi Store");
             message.setText(
                     "This is a test email to verify email configuration is working correctly.\n\nIf you receive this email, your email configuration is working!");
-            message.setFrom("mindrushikesh8@gmail.com");
+            message.setFrom("support@smartbiz.ltd");
 
             mailSender.send(message);
 

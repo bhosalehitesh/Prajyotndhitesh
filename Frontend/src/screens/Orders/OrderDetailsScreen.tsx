@@ -82,7 +82,9 @@ const OrderDetailsScreen = () => {
       console.log('🔍 [OrderDetails] Fetching order:', { orderId, numericId });
       const orderDto: OrderDto = await getOrderById(numericId);
       
-      if (!orderDto || !orderDto.OrdersId) {
+      // Check both OrdersId (from @JsonProperty) and orderId (fallback)
+      const ordersId = orderDto?.OrdersId || orderDto?.orderId;
+      if (!orderDto || !ordersId) {
         throw new Error('Order not found. The order may have been deleted or does not exist.');
       }
       

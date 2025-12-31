@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Utils;
+import com.smartbiz.sakhistore.modules.inventory.repository.UserInvoiceRepository;
+import com.smartbiz.sakhistore.modules.inventory.model.UserInvoice;
 import com.smartbiz.sakhistore.modules.order.model.Orders;
 import com.smartbiz.sakhistore.modules.order.repository.OrdersRepository;
 import com.smartbiz.sakhistore.modules.payment.dto.CreateRazorpayOrderRequest;
@@ -37,6 +39,9 @@ public class PaymentService {
 
     @Autowired
     private OrdersRepository ordersRepository;
+
+    @Autowired
+    private UserInvoiceRepository invoiceRepository;
 
     // =============================================================
     // 1️⃣ CREATE RAZORPAY ORDER (SERVER SIDE)
@@ -219,6 +224,22 @@ public class PaymentService {
             } else {
                 System.err
                         .println("❌ ERROR: Could not find order #" + order.getOrdersId() + " to update payment status");
+            }
+        }
+        
+        // 🔄 ALSO UPDATE INVOICE PAYMENT STATUS - THIS IS THE FIX FOR THE ISSUE
+        // When payment status changes, update the associated invoice
+        if (order != null && order.getOrdersId() != null) {
+            List<UserInvoice> invoices = invoiceRepository.findByOrderId(order.getOrdersId());
+            for (UserInvoice invoice : invoices) {
+                if (invoice != null) {
+                    // Update invoice payment status to match the new payment status
+                    invoice.setPaymentStatus(status.name());
+                    invoice.setPaymentAmount(payment.getAmount() != null ? payment.getAmount() : order.getTotalAmount());
+                    invoiceRepository.save(invoice);
+                    System.out.println("✅ [updatePaymentStatus] Updated invoice #" + invoice.getInvoiceNumber() 
+                            + " (Order #" + order.getOrdersId() + ") payment status to " + status);
+                }
             }
         }
     }

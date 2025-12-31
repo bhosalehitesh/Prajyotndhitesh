@@ -179,6 +179,7 @@ public class OrderEmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+            helper.setFrom("smartbizforhelp@gmail.com", "Sakhi Store");
             helper.setTo(userEmail);
             helper.setSubject("Your Order Invoice - Order #" + orderId);
             helper.setText(htmlContent, true);
