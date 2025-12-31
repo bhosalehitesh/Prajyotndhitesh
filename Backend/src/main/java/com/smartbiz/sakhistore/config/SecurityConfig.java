@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.smartbiz.sakhistore.modules.auth.sellerauth.dto.JwtAuthenticationFilter;
 
@@ -25,6 +26,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,https://store.smartbiz.ltd,https://smartbiz.ltd,https://www.smartbiz.ltd}")
+    private String[] allowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -143,17 +147,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Development and Production domains - use specific origins when allowCredentials is true
-        configuration.setAllowedOrigins(List.of(
-            // Development - specific ports
-            "http://localhost:3000",
-            "http://localhost:5173",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:5173",
-            // Production domains - smartbiz.ltd
-            "https://smartbiz.ltd",
-            "https://www.smartbiz.ltd"
-        ));
+        // Allowed origins (read from property)
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
 
         // Allow all methods
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
