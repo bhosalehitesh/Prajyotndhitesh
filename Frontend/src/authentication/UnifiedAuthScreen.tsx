@@ -622,7 +622,7 @@ const UnifiedAuthScreen: React.FC<UnifiedAuthScreenProps> = ({ onAuthenticated }
             <View style={styles.topSection}>
               <View style={styles.logoSquircle}>
                 <Image
-                  source={require('../assets/images/logo.png.jpg')}
+                  source={require('../assets/images/logo.png')}
                   style={styles.logoImage}
                 // resizeMode="contain" // Handled in style
                 />

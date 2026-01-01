@@ -1,8 +1,8 @@
 import React from 'react';
 import {View, Text, Image, StyleSheet, ImageSourcePropType} from 'react-native';
 
-// Import the logo image - file is at: D:\night\SakhiC\Frontend\src\assets\images\logo.png.jpg
-const logoImage = require('../assets/images/logo.png.jpg');
+// Import the logo image (renamed to logo.png)
+const logoImage = require('../assets/images/logo.png');
 
 interface LogoProps {
   size?: 'small' | 'medium' | 'large';
