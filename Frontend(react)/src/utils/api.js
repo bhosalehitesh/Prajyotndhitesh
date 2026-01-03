@@ -11,18 +11,18 @@ import { API_CONFIG } from '../constants';
 export const getBackendUrl = () => {
   const hostname = window.location.hostname;
 
-  // Always use localhost when running on same machine (browser on dev machine)
+  // Development: use localhost when running on same machine
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return API_CONFIG.BASE_URL; // http://localhost:8080/api
   }
 
-  // For remote access (mobile device, other devices on network):
-  // Always connect to the backend server IP (where backend is actually running)
-  // Update this IP if your backend server's IP changes
-  const BACKEND_SERVER_IP = '192.168.1.24'; // Backend server IP - update if changed
+  // Production: use api.smartbiz.ltd (HTTPS, no port - handled by reverse proxy)
+  if (hostname === 'store.smartbiz.ltd' || hostname === 'smartbiz.ltd' || hostname === 'www.smartbiz.ltd') {
+    return 'https://api.smartbiz.ltd/api';
+  }
 
-  // If accessing frontend from any IP (including mobile), use backend server IP
-  return `http://${BACKEND_SERVER_IP}:8080/api`;
+  // Fallback for production (should not happen, but just in case)
+  return 'https://api.smartbiz.ltd/api';
 };
 
 /**
@@ -435,15 +435,10 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
     params.append('sellerId', String(sellerId));
   }
 
-  // Backend endpoint is at /orders/place (not /api/orders/place)
-  // So we need to call it directly without the /api prefix
-  const hostname = window.location.hostname;
-  const protocol = window.location.protocol;
-  const baseUrl = (hostname === 'localhost' || hostname === '127.0.0.1')
-    ? 'http://localhost:8080'
-    : `${protocol}//${hostname}:8080`;
-
-  const url = `${baseUrl}/orders/place?${params.toString()}`;
+  // Backend endpoint supports both /orders/place and /api/orders/place
+  // Using /api/orders/place to match other API endpoints
+  const API_BASE = getBackendUrl(); // This already returns the correct URL with /api
+  const url = `${API_BASE}/orders/place?${params.toString()}`;
   console.log('Placing order at:', url);
   console.log('Order parameters:', { userId, address, mobile, storeId, sellerId });
   console.log('Has token:', !!token);
@@ -543,8 +538,8 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
     console.error('Error in placeOrder:', error);
 
     // Handle connection errors
-    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('ERR_CONNECTION_REFUSED'))) {
-      throw new Error('Cannot connect to server. Please ensure the backend server is running on port 8080.');
+    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('ERR_CONNECTION_REFUSED') || error.message.includes('ERR_CONNECTION_TIMED_OUT'))) {
+      throw new Error('Cannot connect to server. Please check your internet connection and try again.');
     }
 
     // Re-throw with better message if it's already our custom error

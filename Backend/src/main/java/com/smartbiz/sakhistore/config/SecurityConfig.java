@@ -12,8 +12,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.beans.factory.annotation.Value;
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.smartbiz.sakhistore.modules.auth.sellerauth.dto.JwtAuthenticationFilter;
 
@@ -145,30 +145,40 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+        return new CorsConfigurationSource() {
+            @Override
+            public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+                CorsConfiguration configuration = new CorsConfiguration();
+                
+                String origin = request.getHeader("Origin");
+                
+                // If no Origin header (mobile app request), allow it
+                if (origin == null || origin.isEmpty()) {
+                    // Mobile app request - allow all origins
+                    configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+                    configuration.setAllowCredentials(false); // Can't use credentials with wildcard
+                } else {
+                    // Web request - validate against allowed origins
+                    List<String> origins = Arrays.asList(allowedOrigins);
+                    configuration.setAllowedOriginPatterns(origins);
+                    configuration.setAllowCredentials(true);
+                }
 
-        // Allowed origins (read from property)
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
+                // Allow all methods
+                configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
 
-        // Allow all methods
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+                // Allow all headers
+                configuration.setAllowedHeaders(List.of("*"));
 
-        // Allow all headers
-        configuration.setAllowedHeaders(List.of("*"));
+                // Expose headers
+                configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
 
-        // Allow credentials for authenticated requests
-        configuration.setAllowCredentials(true);
+                // Cache preflight for 1 hour
+                configuration.setMaxAge(3600L);
 
-        // Expose headers
-        configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
-
-        // Cache preflight for 1 hour
-        configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-
-        return source;
+                return configuration;
+            }
+        };
     }
 
     // CORS is configured via corsConfigurationSource() bean above

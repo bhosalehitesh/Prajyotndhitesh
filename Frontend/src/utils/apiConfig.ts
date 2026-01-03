@@ -19,8 +19,8 @@ export const API_BASE_URL_DEV = 'http://localhost:8080';
 // Updated to current machine IP: 192.168.1.46
 export const API_BASE_URL_DEV_IP = 'http://192.168.1.35:8080'; // Current IP address
 
-// Production URL
-export const API_BASE_URL_PROD = 'https://your-production-api.com';
+ // Production URL (Backend deployed on port 9090)
+export const API_BASE_URL_PROD = 'https://api.smartbiz.ltd:9090';
 
 // Default: use IP address for mobile/emulator (set true to use IP, false for localhost with ADB reverse)
 let USE_IP_ADDRESS_DEFAULT = true; // Using IP address since localhost isn't working

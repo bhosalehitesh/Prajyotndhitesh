@@ -1,11 +1,21 @@
 /**
  * Application Configuration Constants
+ * SmartBiz by Sakhi Store - D2C E-commerce Platform
  */
 
 export const APP_CONFIG = {
-  NAME: 'ABhidnya',
-  BRAND: 'V Store',
+  NAME: 'SmartBiz',
+  BRAND: 'SmartBiz by Sakhi Store',
+  FULL_NAME: 'SmartBiz by Sakhi Store',
+  DESCRIPTION: 'Build, Launch & Grow Your D2C Business',
   VERSION: '1.0.0',
+  WEBSITE: 'https://smartbiz.ltd',
+  STORE_URL: 'https://store.smartbiz.ltd',
+  API_URL: 'https://api.smartbiz.ltd',
+  SUPPORT_EMAIL: 'support@smartbiz.ltd',
+  SUPPORT_PHONE: '+91 80696 40559',
+  COMPANY: 'Sakhi Store',
+  COPYRIGHT: '© 2025 Sakhi Store. All rights reserved.',
 };
 
 export const STORAGE_KEYS = {
@@ -26,7 +36,8 @@ export const CAROUSEL_CONFIG = {
 export const FLASH_SALE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 export const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080/api',
+  BASE_URL: process.env.NODE_ENV === 'production' 
+    ? 'https://api.smartbiz.ltd/api'
+    : 'http://localhost:9090/api',
   TIMEOUT: 10000, // 10 seconds
 };
-

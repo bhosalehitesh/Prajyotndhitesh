@@ -30,13 +30,18 @@ export const AuthProvider = ({ children }) => {
 
   const getBackendUrl = () => {
     const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
     
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:8080/api';
     }
     
-    return `${protocol}//${hostname}:8080/api`;
+    // Production: use api.smartbiz.ltd (NO PORT - IIS reverse proxy handles it)
+    if (hostname === 'store.smartbiz.ltd' || hostname === 'smartbiz.ltd' || hostname === 'www.smartbiz.ltd') {
+      return 'https://api.smartbiz.ltd/api';
+    }
+    
+    // Fallback
+    return 'https://api.smartbiz.ltd/api';
   };
 
   const sendOTP = async (phone) => {
@@ -259,4 +264,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-

@@ -17,7 +17,7 @@ const getBackendUrl = () => {
     return 'http://localhost:8080';
   }
 
-  return `${protocol}//${hostname}:8080`;
+  return 'https://api.smartbiz.ltd';
 };
 
 // Get API base URL - try both with and without /api

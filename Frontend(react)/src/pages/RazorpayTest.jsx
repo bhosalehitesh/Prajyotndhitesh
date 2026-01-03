@@ -14,9 +14,8 @@ const getBackendUrl = () => {
     return 'http://localhost:8080';
   }
 
-  // For production or other environments, use the same hostname but port 8080
-  // If frontend is on a different port, backend should be on 8080
-  return `${protocol}//${hostname}:8080`;
+  // Production (NO PORT - IIS reverse proxy handles it)
+  return 'https://api.smartbiz.ltd';
 };
 
 const RazorpayTest = () => {
@@ -32,7 +31,7 @@ const RazorpayTest = () => {
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
-  const API_BASE = getBackendUrl() || 'http://192.168.1.24:8080';
+  const API_BASE = getBackendUrl() || 'https://api.smartbiz.ltd';
   
   // Get the store slug from URL params or context
   const currentStoreSlug = slug || storeSlug || 'v'; // Default to 'v' if not found
@@ -391,4 +390,3 @@ const styles = {
 };
 
 export default RazorpayTest;
-
