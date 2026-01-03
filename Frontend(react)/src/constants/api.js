@@ -5,25 +5,16 @@
 
 import { API_CONFIG } from '../constants';
 
+// Read base API URL from environment (production uses https://api.smartbiz.ltd/api)
+// FALLBACK: the external production API (no localhost or explicit ports)
+const API_BASE = (process.env.REACT_APP_API_URL && process.env.REACT_APP_API_URL.trim())
+  ? process.env.REACT_APP_API_URL.trim().replace(/\/+$/, '')
+  : 'https://api.smartbiz.ltd/api';
+
 /**
- * Get backend URL based on current hostname
+ * Get backend URL (uses REACT_APP_API_URL when available)
  */
-export const getBackendUrl = () => {
-  const hostname = window.location.hostname;
-
-  // Development: use localhost when running on same machine
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return API_CONFIG.BASE_URL; // http://localhost:9090/api
-  }
-
-  // Production: use api.smartbiz.ltd on port 9090
-  if (hostname === 'store.smartbiz.ltd' || hostname === 'smartbiz.ltd' || hostname === 'www.smartbiz.ltd') {
-    return 'https://api.smartbiz.ltd/api';
-  }
-
-  // Fallback for production
-  return 'https://api.smartbiz.ltd/api';
-};
+export const getBackendUrl = () => API_BASE;
 
 /**
  * Create a fetch request with timeout
@@ -436,13 +427,9 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
   }
 
   // Backend endpoint is at /orders/place (not /api/orders/place)
-  // So we need to call it directly without the /api prefix
-  const hostname = window.location.hostname;
-  const protocol = window.location.protocol;
-  const baseUrl = (hostname === 'localhost' || hostname === '127.0.0.1')
-    ? 'http://localhost:9090'
-    : 'https://api.smartbiz.ltd';
-
+  // Use configured API base but strip the trailing /api if present because orders endpoint lives at root
+  const backend = API_BASE; // from module top (reads REACT_APP_API_URL)
+  const baseUrl = backend.replace(/\/api\/?$/, '');
   const url = `${baseUrl}/orders/place?${params.toString()}`;
   console.log('Placing order at:', url);
   console.log('Order parameters:', { userId, address, mobile, storeId, sellerId });
@@ -543,8 +530,8 @@ export const placeOrder = async (userId, address, mobile, storeId = null, seller
     console.error('Error in placeOrder:', error);
 
     // Handle connection errors
-    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('ERR_CONNECTION_REFUSED'))) {
-      throw new Error('Cannot connect to server. Please ensure the backend server is running on port 8080.');
+    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.message.includes('ERR_CONNECTION_REFUSED') || error.message.includes('Request timeout'))) {
+      throw new Error(`Cannot connect to server. Please ensure the backend is reachable at ${API_BASE}`);
     }
 
     // Re-throw with better message if it's already our custom error

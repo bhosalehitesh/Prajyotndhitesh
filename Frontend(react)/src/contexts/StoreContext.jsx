@@ -169,7 +169,10 @@ export const StoreProvider = ({ children }) => {
       if (error.message.includes('404') || error.message.includes('not found')) {
         errorMessage = `Store with slug "${slug}" not found. Please check:\n1. Store exists in database\n2. Store's store_link field contains the slug\n3. Backend is running`;
       } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
-        errorMessage = 'Network error. Please check if backend is running on http://localhost:8080';
+        const API_URL = (process.env.REACT_APP_API_URL && process.env.REACT_APP_API_URL.trim())
+          ? process.env.REACT_APP_API_URL.trim().replace(/\/+$/, '')
+          : 'https://api.smartbiz.ltd/api';
+        errorMessage = `Network error. Please check if frontend can reach the backend at ${API_URL}`;
       } else {
         errorMessage = error.message || 'Unknown error loading store';
       }
